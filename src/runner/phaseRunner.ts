@@ -1,7 +1,7 @@
 import { execSync } from "node:child_process"
 import { RidgelineConfig, PhaseInfo, BuildState } from "../types"
 import { createTag, isWorkingTreeDirty, commitAll } from "../git"
-import { recordCost, getTotalCost } from "../state/budget"
+import { recordCost } from "../state/budget"
 import { ensureHandoffExists } from "../state/handoff"
 import { updatePhaseStatus } from "../state/stateManager"
 import { logPhase, logTrajectory, makeTrajectoryEntry } from "../logging"

@@ -9,6 +9,10 @@
   "scripts": {
     "build": "tsc && cp -r src/agents dist/agents",
     "dev": "tsc --watch",
+    "lint": "npm run lint:code && npm run lint:markdown && npm run lint:agents",
+    "lint:code": "oxlint",
+    "lint:markdown": "markdownlint-cli2 '**/*.md'",
+    "lint:agents": "agnix",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -17,13 +21,14 @@
     "dist"
   ],
   "dependencies": {
-    "commander": "^13.0.0"
+    "commander": "13.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "agnix": "^0.17.0",
-    "markdownlint-cli2": "^0.22.0",
-    "typescript": "^5.7.0",
-    "vitest": "^4.1.2"
+    "@types/node": "22.0.0",
+    "agnix": "0.17.0",
+    "markdownlint-cli2": "0.22.0",
+    "oxlint": "1.58.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.2"
   }
 }

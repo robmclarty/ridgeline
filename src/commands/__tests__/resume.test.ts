@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import type { RidgelineConfig, BuildState } from "../../types"
+import type { RidgelineConfig } from "../../types"
 
 vi.mock("../../logging", () => ({
   logInfo: vi.fn(),

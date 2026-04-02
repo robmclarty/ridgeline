@@ -4,7 +4,7 @@ import { RidgelineConfig } from "../types"
 import { logInfo, logTrajectory, makeTrajectoryEntry } from "../logging"
 import { recordCost } from "../state/budget"
 import { generateSnapshot } from "../state/snapshot"
-import { invokePlanner, scanPhases } from "../runner/planInvoker"
+import { invokePlanner } from "../runner/planInvoker"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   const specPath = path.join(config.buildDir, "spec.md")

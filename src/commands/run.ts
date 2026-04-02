@@ -1,5 +1,4 @@
-import * as fs from "node:fs"
-import { RidgelineConfig, PhaseInfo } from "../types"
+import { RidgelineConfig } from "../types"
 import { logInfo, logError } from "../logging"
 import { scanPhases } from "../runner/planInvoker"
 import { runPhase } from "../runner/phaseRunner"

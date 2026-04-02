@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { EventEmitter } from "node:events"
 import { makeTempDir } from "../../../test/setup"
 
 vi.mock("node:child_process", () => {
