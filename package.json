@@ -2,6 +2,23 @@
   "name": "ridgeline",
   "version": "0.1.1",
   "description": "Build harness for long-horizon software execution",
-  "type": "module",
-  "license": "MIT"
+  "license": "MIT",
+  "bin": {
+    "ridgeline": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && cp -r src/agents dist/agents",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "commander": "^13.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/node": "^22.0.0"
+  }
 }

@@ -1,0 +1,110 @@
+// Resolved CLI flags + file paths for a build run
+export type RidgelineConfig = {
+  buildName: string
+  buildDir: string
+  constraintsPath: string
+  tastePath: string | null
+  snapshotPath: string
+  handoffPath: string
+  phasesDir: string
+  model: string
+  maxRetries: number
+  timeoutMinutes: number
+  verbose: boolean
+  checkCommand: string | null
+  maxBudgetUsd: number | null
+}
+
+// Phase metadata parsed from filesystem
+export type PhaseInfo = {
+  id: string         // "01-scaffold"
+  index: number      // 1
+  slug: string       // "scaffold"
+  filename: string   // "01-scaffold.md"
+  filepath: string   // absolute path
+}
+
+// Per-phase state persisted in state.json
+export type PhaseState = {
+  id: string
+  status: "pending" | "building" | "evaluating" | "complete" | "failed"
+  checkpointTag: string
+  completionTag: string | null
+  retries: number
+  duration: number | null
+  completedAt: string | null
+  failedAt: string | null
+}
+
+// Full state.json structure
+export type BuildState = {
+  buildName: string
+  startedAt: string
+  phases: PhaseState[]
+}
+
+// Parsed result from claude --print --output-format json
+export type ClaudeResult = {
+  success: boolean
+  result: string
+  durationMs: number
+  costUsd: number
+  usage: {
+    inputTokens: number
+    outputTokens: number
+    cacheReadInputTokens: number
+    cacheCreationInputTokens: number
+  }
+  sessionId: string
+}
+
+// Evaluator's structured verdict
+export type EvalVerdict = {
+  passed: boolean
+  summary: string
+  criteriaResults: {
+    criterion: number
+    passed: boolean
+    notes: string
+  }[]
+  issues: string[]
+  suggestions: string[]
+}
+
+// Single entry in budget.json
+export type BudgetEntry = {
+  phase: string
+  role: "planner" | "builder" | "evaluator"
+  attempt: number
+  costUsd: number
+  inputTokens: number
+  outputTokens: number
+  durationMs: number
+  timestamp: string
+}
+
+// Full budget.json structure
+export type BudgetState = {
+  entries: BudgetEntry[]
+  totalCostUsd: number
+}
+
+// Single entry in trajectory.jsonl
+export type TrajectoryEntry = {
+  timestamp: string
+  type:
+    | "plan_start"
+    | "plan_complete"
+    | "build_start"
+    | "build_complete"
+    | "eval_start"
+    | "eval_complete"
+    | "phase_advance"
+    | "phase_fail"
+    | "budget_exceeded"
+  phaseId: string | null
+  duration: number | null
+  tokens: { input: number; output: number } | null
+  costUsd: number | null
+  summary: string
+}
