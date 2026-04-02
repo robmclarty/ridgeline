@@ -9,6 +9,8 @@ export type InvokeOptions = {
   cwd: string
   verbose: boolean
   timeoutMs?: number
+  sessionId?: string
+  jsonSchema?: string
 }
 
 // Parse the JSON envelope from claude --output-format json
@@ -53,6 +55,14 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
 
     if (opts.allowedTools && opts.allowedTools.length > 0) {
       args.push("--allowedTools", opts.allowedTools.join(","))
+    }
+
+    if (opts.sessionId) {
+      args.push("--resume", opts.sessionId)
+    }
+
+    if (opts.jsonSchema) {
+      args.push("--json-schema", opts.jsonSchema)
     }
 
     // System prompt passed via --system-prompt flag

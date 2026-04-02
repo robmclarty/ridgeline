@@ -1,43 +1,63 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { spawn } from "node:child_process"
-import { logInfo } from "../logging"
+import * as readline from "node:readline"
+import { logInfo, logError } from "../logging"
+import { invokeClaude } from "../runner/claudeInvoker"
+import { generateSnapshot } from "../state/snapshot"
 
-const INIT_SYSTEM_PROMPT = `You are a project setup assistant for Ridgeline, a build harness for long-horizon software execution.
+const MAX_CLARIFICATION_ROUNDS = 3
 
-Your job is to help the user create the input files for a new build. Walk them through interactively.
+const QA_JSON_SCHEMA = JSON.stringify({
+  type: "object",
+  properties: {
+    ready: { type: "boolean" },
+    questions: {
+      type: "array",
+      items: { type: "string" },
+    },
+    summary: { type: "string" },
+  },
+  required: ["ready"],
+})
 
-## Step 1: spec.md
-Ask the user to describe their feature or project in a few sentences. Then expand it into a structured spec with:
-- A clear title
-- An overview paragraph
-- Features described as outcomes (what the system does), not implementation steps
-- Any constraints or requirements the user mentions
+const resolveAgentPrompt = (filename: string): string => {
+  const distPath = path.join(__dirname, "agents", filename)
+  if (fs.existsSync(distPath)) return fs.readFileSync(distPath, "utf-8")
+  const srcPath = path.join(__dirname, "..", "agents", filename)
+  if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, "utf-8")
+  throw new Error(`Agent prompt not found: ${filename}`)
+}
 
-Write the result to spec.md in the build directory. Let the user review and suggest edits.
+const askQuestion = (rl: readline.Interface, prompt: string): Promise<string> => {
+  return new Promise((resolve) => {
+    rl.question(prompt, (answer: string) => {
+      resolve(answer.trim())
+    })
+  })
+}
 
-## Step 2: constraints.md
-Ask about their technical setup:
-- Language and runtime (e.g., TypeScript/Node.js, Python, Go, Rust)
-- Framework (e.g., Express, Next.js, FastAPI, none)
-- Directory conventions
-- Naming conventions (camelCase, snake_case, etc.)
-- API style (REST, GraphQL, etc.)
-- Database (if any)
-- Key dependencies
-- A check command that verifies the project builds and tests pass (e.g., "npm run build && npm test")
+type QAResponse = {
+  ready: boolean
+  questions?: string[]
+  summary?: string
+}
 
-Structure the output as a markdown file with clear sections. Include a "## Check Command" section with the command in a fenced code block.
+const parseQAResponse = (resultText: string): QAResponse => {
+  try {
+    return JSON.parse(resultText)
+  } catch {
+    // If JSON parsing fails, treat as ready with the text as summary
+    return { ready: true, summary: resultText }
+  }
+}
 
-Write to constraints.md in the build directory.
+export type InitOptions = {
+  model: string
+  verbose: boolean
+  timeout: number
+}
 
-## Step 3: taste.md (optional)
-Ask if they have coding style preferences: commit message format, test patterns, comment style, etc.
-If yes, write to taste.md. If no, skip.
-
-Be conversational but efficient. Don't over-explain. Write files using the Write tool.`
-
-export const runInit = async (buildName: string): Promise<void> => {
+export const runInit = async (buildName: string, opts: InitOptions): Promise<void> => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const buildDir = path.join(ridgelineDir, "builds", buildName)
   const phasesDir = path.join(buildDir, "phases")
@@ -46,44 +66,155 @@ export const runInit = async (buildName: string): Promise<void> => {
   fs.mkdirSync(phasesDir, { recursive: true })
   logInfo(`Created build directory: ${buildDir}`)
 
+  // Generate codebase snapshot if project has existing code
+  let snapshot = ""
+  const hasExistingCode = fs.readdirSync(process.cwd()).some(
+    (f) => !f.startsWith(".") && f !== "node_modules" && f !== ".ridgeline"
+  )
+  if (hasExistingCode) {
+    snapshot = generateSnapshot(process.cwd(), buildDir)
+    logInfo("Generated codebase snapshot")
+  }
+
   // Check for existing project-level files
   const projectConstraints = path.join(ridgelineDir, "constraints.md")
   const projectTaste = path.join(ridgelineDir, "taste.md")
-
-  let contextHint = ""
+  let existingFileHints = ""
   if (fs.existsSync(projectConstraints)) {
-    contextHint += `\nNote: Project-level constraints.md exists at ${projectConstraints}. Ask if the user wants to reuse it or create a build-specific override.\n`
+    existingFileHints += `\nNote: Project-level constraints.md exists at ${projectConstraints}. The user may want to reuse it rather than creating a new one.\n`
   }
   if (fs.existsSync(projectTaste)) {
-    contextHint += `\nNote: Project-level taste.md exists at ${projectTaste}. Ask if the user wants to reuse it or create a build-specific override.\n`
+    existingFileHints += `\nNote: Project-level taste.md exists at ${projectTaste}. The user may want to reuse it rather than creating a new one.\n`
   }
 
-  const systemPrompt = INIT_SYSTEM_PROMPT + contextHint +
-    `\n\nWrite all files to: ${buildDir}/`
+  const systemPrompt = resolveAgentPrompt("init.md")
+  const timeoutMs = opts.timeout * 60 * 1000
 
-  logInfo("Starting interactive setup session...")
-  logInfo("(This requires the claude CLI with an active subscription)\n")
-
-  const proc = spawn("claude", [
-    "--system-prompt", systemPrompt,
-    "--allowedTools", "Write,Read",
-  ], {
-    cwd: process.cwd(),
-    stdio: "inherit",
+  // Set up readline for user interaction
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
   })
 
-  return new Promise<void>((resolve, reject) => {
-    proc.on("close", (code) => {
-      if (code === 0) {
-        logInfo(`\nInit complete. Build files at: ${buildDir}`)
-        logInfo(`Next: ridgeline plan ${buildName}`)
-        resolve()
-      } else {
-        reject(new Error(`Init session exited with code ${code}`))
+  try {
+    // Step 1: Get initial description from user
+    console.log("")
+    const description = await askQuestion(rl, "Describe what you want to build:\n> ")
+    if (!description) {
+      logError("A description is required")
+      return
+    }
+
+    // Step 2: Intake turn — send description to Claude
+    console.log("\nAnalyzing your description...")
+    let userPrompt = `The user wants to create a new build called "${buildName}".\n\nUser description:\n${description}`
+    if (snapshot) {
+      userPrompt += `\n\n## Existing Codebase Snapshot\n${snapshot}`
+    }
+    if (existingFileHints) {
+      userPrompt += `\n\n## Existing Project Files\n${existingFileHints}`
+    }
+
+    let result = await invokeClaude({
+      systemPrompt,
+      userPrompt,
+      model: opts.model,
+      cwd: process.cwd(),
+      verbose: opts.verbose,
+      timeoutMs,
+      jsonSchema: QA_JSON_SCHEMA,
+    })
+
+    let sessionId = result.sessionId
+    let qa = parseQAResponse(result.result)
+
+    // Step 3: Clarification loop
+    for (let round = 0; round < MAX_CLARIFICATION_ROUNDS && !qa.ready; round++) {
+      // Display summary if present
+      if (qa.summary) {
+        console.log(`\nHere's what I understand so far:\n  ${qa.summary}`)
       }
+
+      // Display and collect answers to questions
+      if (qa.questions && qa.questions.length > 0) {
+        console.log("\nI have a few questions:\n")
+        const answers: string[] = []
+        for (let i = 0; i < qa.questions.length; i++) {
+          const answer = await askQuestion(rl, `  ${i + 1}. ${qa.questions[i]}\n  > `)
+          answers.push(answer)
+        }
+
+        // Send answers back to Claude
+        console.log("\nProcessing your answers...")
+        const answersPrompt = qa.questions
+          .map((q, i) => `Q: ${q}\nA: ${answers[i]}`)
+          .join("\n\n")
+
+        result = await invokeClaude({
+          systemPrompt,
+          userPrompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
+          model: opts.model,
+          cwd: process.cwd(),
+          verbose: opts.verbose,
+          timeoutMs,
+          sessionId,
+          jsonSchema: QA_JSON_SCHEMA,
+        })
+
+        sessionId = result.sessionId
+        qa = parseQAResponse(result.result)
+      } else {
+        // No questions but not ready — shouldn't happen, but break to avoid infinite loop
+        break
+      }
+    }
+
+    // Step 4: Generation turn
+    if (qa.summary) {
+      console.log(`\nFinal understanding:\n  ${qa.summary}`)
+    }
+    console.log("\nGenerating build files...")
+
+    await invokeClaude({
+      systemPrompt,
+      userPrompt: `Generate the build input files now. Write them to: ${buildDir}/\n\nUse the Write tool to create spec.md, constraints.md, and optionally taste.md in that directory.`,
+      model: opts.model,
+      allowedTools: ["Write", "Read", "Glob", "Grep"],
+      cwd: process.cwd(),
+      verbose: opts.verbose,
+      timeoutMs,
+      sessionId,
     })
-    proc.on("error", (err) => {
-      reject(new Error(`Failed to start claude CLI: ${err.message}`))
-    })
-  })
+
+    // Step 5: Verify and report
+    console.log("")
+    const createdFiles: string[] = []
+    for (const filename of ["spec.md", "constraints.md", "taste.md"]) {
+      if (fs.existsSync(path.join(buildDir, filename))) {
+        createdFiles.push(filename)
+      }
+    }
+
+    if (createdFiles.length === 0) {
+      logError("No build files were created. Try running init again.")
+      return
+    }
+
+    logInfo("Created:")
+    for (const f of createdFiles) {
+      console.log(`  ${path.join(buildDir, f)}`)
+    }
+
+    if (!createdFiles.includes("spec.md")) {
+      logError("Warning: spec.md was not created — this is required for planning")
+    }
+    if (!createdFiles.includes("constraints.md")) {
+      logError("Warning: constraints.md was not created — this is required for planning")
+    }
+
+    console.log("")
+    logInfo(`Next: ridgeline plan ${buildName}`)
+  } finally {
+    rl.close()
+  }
 }

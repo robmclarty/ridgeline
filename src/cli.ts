@@ -93,7 +93,10 @@ program
 program
   .command("init [build-name]")
   .description("Interactive helper to scaffold build input files")
-  .action(async (buildName?: string) => {
+  .option("--model <name>", "Model for init assistant", "opus")
+  .option("--verbose", "Stream assistant output to terminal", false)
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
+  .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
     if (!buildName) {
       const readline = require("node:readline")
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
@@ -109,7 +112,11 @@ program
       process.exit(1)
     }
     try {
-      await runInit(buildName)
+      await runInit(buildName, {
+        model: (opts.model as string) ?? "opus",
+        verbose: Boolean(opts.verbose),
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
+      })
     } catch (err) {
       console.error(`Error: ${err}`)
       process.exit(1)
