@@ -3,7 +3,7 @@
 Build harness for long-horizon software execution using AI agents.
 
 Ridgeline decomposes large software ideas into phased builds using a
-three-agent system (planner, builder, evaluator) driven by the Claude CLI. It
+three-agent system (planner, builder, reviewer) driven by the Claude CLI. It
 manages state through git checkpoints, tracks costs, and supports resumable
 execution when things go wrong.
 
@@ -15,7 +15,7 @@ execution when things go wrong.
    files, each with its own scope and acceptance criteria.
 3. **Build** -- for each phase the builder agent implements the spec inside your
    repo, then creates a git checkpoint.
-4. **Evaluate** -- the evaluator agent reviews the output against the acceptance
+4. **Review** -- the reviewer agent checks the output against the acceptance
    criteria and returns a structured verdict.
 5. **Retry or advance** -- failed phases are retried up to a configurable limit;
    passing phases hand off context to the next one.
@@ -71,7 +71,7 @@ Invokes the planner agent to decompose the spec into numbered phase files
 
 ### `ridgeline dry-run [build-name]`
 
-Displays the execution plan without invoking builders or evaluators. Accepts
+Displays the execution plan without invoking builders or reviewers. Accepts
 the same flags as `plan`.
 
 ### `ridgeline run [build-name]`
@@ -81,10 +81,10 @@ and advance on success.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | `opus` | Model for builder and evaluator |
+| `--model <name>` | `opus` | Model for builder and reviewer |
 | `--verbose` | off | Stream output to the terminal |
 | `--timeout <minutes>` | `30` | Max duration per phase |
-| `--max-retries <n>` | `2` | Max evaluator retry loops per phase |
+| `--max-retries <n>` | `2` | Max reviewer retry loops per phase |
 | `--check <command>` | from constraints | Baseline check command |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
 | `--constraints <path>` | auto | Path to constraints file |
