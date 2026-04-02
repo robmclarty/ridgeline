@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+- Fix stream-json parsing crash when Claude CLI emits trailing events after result
+- Fix Buffer type incompatibility and exclude test files from tsc build
+- Add helloworld example as standalone project with README and build artifacts
+
 ## 0.1.4
 
 - Rename evaluator role to reviewer across codebase (types, agents, tests, CLI, docs)
