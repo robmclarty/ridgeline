@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.4
+
+- Rename evaluator role to reviewer across codebase (types, agents, tests, CLI, docs)
+- Add project README with overview, CLI usage, and build structure
+- Add ridgeline lore document with conceptual metaphors
+
 ## 0.1.3
 
 - Add oxlint and markdownlint-cli2 linters with lint scripts (lint, lint:code, lint:markdown, lint:agents)
