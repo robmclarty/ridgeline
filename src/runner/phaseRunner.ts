@@ -45,7 +45,7 @@ export const runPhase = async (
   if (isWorkingTreeDirty()) {
     commitAll(`chore: pre-phase checkpoint for ${phase.id}`)
   }
-  createTag(checkpointTag)
+  createTag(checkpointTag, undefined, true)
 
   ensureHandoffExists(config.buildDir)
 
@@ -130,7 +130,7 @@ export const runPhase = async (
     if (verdict.passed) {
       const duration = Date.now() - startTime
       const completionTag = `ridgeline/phase/${config.buildName}/${phase.id}`
-      createTag(completionTag)
+      createTag(completionTag, undefined, true)
 
       updatePhaseStatus(config.buildDir, state, phase.id, {
         status: "complete",

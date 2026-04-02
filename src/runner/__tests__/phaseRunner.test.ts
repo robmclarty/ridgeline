@@ -155,7 +155,7 @@ describe("phaseRunner", () => {
       })
 
       await runPhase(phase, config, makeState())
-      expect(createTag).toHaveBeenCalledWith("ridgeline/checkpoint/test-build/01-scaffold")
+      expect(createTag).toHaveBeenCalledWith("ridgeline/checkpoint/test-build/01-scaffold", undefined, true)
     })
 
     it("commits dirty tree before checkpointing", async () => {
@@ -255,7 +255,7 @@ describe("phaseRunner", () => {
       })
 
       await runPhase(phase, config, makeState())
-      expect(createTag).toHaveBeenCalledWith("ridgeline/phase/test-build/01-scaffold")
+      expect(createTag).toHaveBeenCalledWith("ridgeline/phase/test-build/01-scaffold", undefined, true)
     })
 
     it("updates phase status to complete on success", async () => {

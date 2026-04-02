@@ -18,7 +18,10 @@ export const commitAll = (message: string, cwd?: string): void => {
   }
 }
 
-export const createTag = (tagName: string, cwd?: string): void => {
+export const createTag = (tagName: string, cwd?: string, force?: boolean): void => {
+  if (force) {
+    deleteTag(tagName, cwd)
+  }
   run(`git tag ${tagName}`, cwd)
 }
 
