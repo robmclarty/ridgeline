@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Add CLI tool with plan, build, evaluate, dry-run, resume, and init commands
+- Add state management, git checkpointing, budget tracking, and trajectory logging
+- Add vitest test suite with 112 tests across 16 files covering all modules
+- Export CLI utility functions (resolveFile, parseCheckCommand, resolveConfig) for testability
+
 ## 0.1.1
 
 - Add builder agent system prompt for implementing single-phase specs
