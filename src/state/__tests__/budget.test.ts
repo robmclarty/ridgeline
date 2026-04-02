@@ -83,7 +83,7 @@ describe("budget", () => {
 
     it("accumulates multiple entries correctly", () => {
       recordCost(tmpDir, "01-scaffold", "builder", 0, makeClaudeResult(0.10))
-      recordCost(tmpDir, "01-scaffold", "evaluator", 0, makeClaudeResult(0.05))
+      recordCost(tmpDir, "01-scaffold", "reviewer", 0, makeClaudeResult(0.05))
       const budget = recordCost(tmpDir, "02-api", "builder", 0, makeClaudeResult(0.20))
 
       expect(budget.entries).toHaveLength(3)
