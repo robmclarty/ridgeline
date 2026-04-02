@@ -2,7 +2,7 @@
 
 Build harness for long-horizon software execution using AI agents.
 
-Ridgeline decomposes large software projects into phased builds using a
+Ridgeline decomposes large software ideas into phased builds using a
 three-agent system (planner, builder, evaluator) driven by the Claude CLI. It
 manages state through git checkpoints, tracks costs, and supports resumable
 execution when things go wrong.
