@@ -97,7 +97,7 @@ same flags as `run`.
 
 ## Build directory structure
 
-```
+```text
 .ridgeline/builds/<build-name>/
 ├── spec.md            # What to build
 ├── constraints.md     # Technical constraints and check commands
