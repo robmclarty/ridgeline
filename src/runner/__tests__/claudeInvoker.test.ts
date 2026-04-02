@@ -30,6 +30,7 @@ const baseOpts: InvokeOptions = {
 }
 
 const sampleJsonOutput = JSON.stringify({
+  type: "result",
   is_error: false,
   result: "All done",
   duration_ms: 3000,

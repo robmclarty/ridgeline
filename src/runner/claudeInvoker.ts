@@ -16,7 +16,7 @@ const parseClaudeJson = (stdout: string): ClaudeResult => {
   const parsed = JSON.parse(stdout)
   return {
     success: !parsed.is_error,
-    result: typeof parsed.result === "string" ? parsed.result : JSON.stringify(parsed.result),
+    result: typeof parsed.result === "string" ? parsed.result : (parsed.result != null ? JSON.stringify(parsed.result) : ""),
     durationMs: parsed.duration_ms ?? 0,
     costUsd: parsed.total_cost_usd ?? 0,
     usage: {
@@ -63,16 +63,16 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
       stdio: ["pipe", "pipe", "pipe"],
     })
 
-    const stdoutChunks: Buffer[] = []
-    const stderrChunks: Buffer[] = []
+    let stdoutData = ""
+    let stderrData = ""
 
     // For stream-json mode, we need to handle line-by-line streaming
     let streamBuffer = ""
 
     proc.stdout?.on("data", (chunk: Buffer) => {
-      stdoutChunks.push(chunk)
+      const text = chunk.toString("utf-8")
+      stdoutData += text
       if (opts.verbose) {
-        const text = chunk.toString("utf-8")
         streamBuffer += text
         const lines = streamBuffer.split("\n")
         // Keep the last incomplete line in the buffer
@@ -84,7 +84,7 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     })
 
     proc.stderr?.on("data", (chunk: Buffer) => {
-      stderrChunks.push(chunk)
+      stderrData += chunk.toString("utf-8")
     })
 
     let timedOut = false
@@ -111,22 +111,35 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
         return
       }
 
-      const stdout = Buffer.concat(stdoutChunks).toString("utf-8")
-      const stderr = Buffer.concat(stderrChunks).toString("utf-8")
-
-      if (code !== 0 && !stdout.trim()) {
-        reject(new Error(`claude exited with code ${code}: ${stderr}`))
+      if (code !== 0 && !stdoutData.trim()) {
+        reject(new Error(`claude exited with code ${code}: ${stderrData}`))
         return
       }
 
       try {
         if (opts.verbose) {
-          // In stream-json mode, the last line is the final result JSON
-          const lines = stdout.trim().split("\n")
-          const lastLine = lines[lines.length - 1]
-          resolve(parseClaudeJson(lastLine))
+          // In stream-json mode, find the line with type "result"
+          // (it's not always the last line — Claude CLI may emit trailing events)
+          const lines = stdoutData.trim().split("\n")
+          let resultLine: string | undefined
+          for (let i = lines.length - 1; i >= 0; i--) {
+            try {
+              const parsed = JSON.parse(lines[i])
+              if (parsed.type === "result") {
+                resultLine = lines[i]
+                break
+              }
+            } catch {
+              // Not valid JSON, skip
+            }
+          }
+          if (!resultLine) {
+            reject(new Error("No result event found in stream-json output"))
+            return
+          }
+          resolve(parseClaudeJson(resultLine))
         } else {
-          resolve(parseClaudeJson(stdout))
+          resolve(parseClaudeJson(stdoutData))
         }
       } catch (err) {
         reject(new Error(`Failed to parse claude output: ${err}`))
