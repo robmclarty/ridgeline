@@ -1,7 +1,6 @@
 ---
 name: builder
 description: Implements a single phase spec using Claude's native tools
-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 model: opus
 ---
 

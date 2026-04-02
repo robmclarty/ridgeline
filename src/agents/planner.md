@@ -1,7 +1,6 @@
 ---
 name: planner
 description: Decomposes a spec into phased build plan files for long-horizon execution
-tools: Write
 model: opus
 ---
 

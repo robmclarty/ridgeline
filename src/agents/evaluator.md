@@ -1,7 +1,6 @@
 ---
 name: evaluator
 description: Reviews phase output against acceptance criteria with adversarial skepticism
-tools: Read, Write, Bash, Glob, Grep
 model: opus
 ---
 
