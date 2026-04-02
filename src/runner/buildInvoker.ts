@@ -62,8 +62,8 @@ const assembleUserPrompt = (
   sections.push("")
 
   if (feedbackPath && fs.existsSync(feedbackPath)) {
-    sections.push("## Evaluator Feedback (RETRY)\n")
-    sections.push("This is a retry. The evaluator found issues with your previous attempt.")
+    sections.push("## Reviewer Feedback (RETRY)\n")
+    sections.push("This is a retry. The reviewer found issues with your previous attempt.")
     sections.push("Focus on fixing these issues. Do not redo work that already passed.\n")
     sections.push(fs.readFileSync(feedbackPath, "utf-8"))
     sections.push("")
