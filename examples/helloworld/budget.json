@@ -1,0 +1,35 @@
+{
+  "entries": [
+    {
+      "phase": "plan",
+      "role": "planner",
+      "attempt": 0,
+      "costUsd": 0.1230895,
+      "inputTokens": 4,
+      "outputTokens": 464,
+      "durationMs": 15239,
+      "timestamp": "2026-04-02T15:56:41.061Z"
+    },
+    {
+      "phase": "01-hello-script",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 0.177659,
+      "inputTokens": 8,
+      "outputTokens": 832,
+      "durationMs": 27336,
+      "timestamp": "2026-04-02T15:57:10.215Z"
+    },
+    {
+      "phase": "01-hello-script",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 0.1416815,
+      "inputTokens": 3,
+      "outputTokens": 958,
+      "durationMs": 17999,
+      "timestamp": "2026-04-02T15:57:29.859Z"
+    }
+  ],
+  "totalCostUsd": 0.44243
+}
