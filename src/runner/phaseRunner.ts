@@ -6,7 +6,7 @@ import { ensureHandoffExists } from "../state/handoff"
 import { updatePhaseStatus } from "../state/stateManager"
 import { logPhase, logTrajectory, makeTrajectoryEntry } from "../logging"
 import { invokeBuilder } from "./buildInvoker"
-import { invokeEvaluator } from "./evalInvoker"
+import { invokeReviewer } from "./reviewerInvoker"
 
 const runCheckCommand = (
   checkCommand: string | null
@@ -98,32 +98,32 @@ export const runPhase = async (
     const checkOutput = runCheckCommand(config.checkCommand)
 
     // Evaluate
-    logPhase(phase.id, "Evaluating...")
-    updatePhaseStatus(config.buildDir, state, phase.id, { status: "evaluating" })
-    logTrajectory(config.buildDir, makeTrajectoryEntry("eval_start", phase.id, `Evaluation attempt ${attempt + 1}`))
+    logPhase(phase.id, "Reviewing...")
+    updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
+    logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}`))
 
-    let evalResult
+    let reviewResult
     try {
-      evalResult = await invokeEvaluator(config, phase, checkpointTag, checkOutput)
+      reviewResult = await invokeReviewer(config, phase, checkpointTag, checkOutput)
     } catch (err) {
-      logPhase(phase.id, `Evaluation failed: ${err}`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry("eval_complete", phase.id, `Eval error: ${err}`))
+      logPhase(phase.id, `Review failed: ${err}`)
+      logTrajectory(config.buildDir, makeTrajectoryEntry("review_complete", phase.id, `Review error: ${err}`))
       attempt++
       continue
     }
 
-    const { result: evalClaudeResult, verdict } = evalResult
+    const { result: reviewClaudeResult, verdict } = reviewResult
 
     logTrajectory(config.buildDir, makeTrajectoryEntry(
-      "eval_complete", phase.id, verdict.summary,
+      "review_complete", phase.id, verdict.summary,
       {
-        duration: evalClaudeResult.durationMs,
-        tokens: { input: evalClaudeResult.usage.inputTokens, output: evalClaudeResult.usage.outputTokens },
-        costUsd: evalClaudeResult.costUsd,
+        duration: reviewClaudeResult.durationMs,
+        tokens: { input: reviewClaudeResult.usage.inputTokens, output: reviewClaudeResult.usage.outputTokens },
+        costUsd: reviewClaudeResult.costUsd,
       }
     ))
 
-    recordCost(config.buildDir, phase.id, "evaluator", attempt, evalClaudeResult)
+    recordCost(config.buildDir, phase.id, "reviewer", attempt, reviewClaudeResult)
 
     // Verdict handling
     if (verdict.passed) {
