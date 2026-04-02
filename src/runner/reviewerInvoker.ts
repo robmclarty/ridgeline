@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, ClaudeResult, EvalVerdict } from "../types"
+import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../types"
 import { invokeClaude } from "./claudeInvoker"
 import { getDiff, getChangedFileContents } from "../git"
 
@@ -13,8 +13,8 @@ const resolveAgentPrompt = (filename: string): string => {
   return fs.readFileSync(rootPath, "utf-8")
 }
 
-// Extract the JSON verdict block from evaluator's text output
-export const parseVerdict = (text: string): EvalVerdict => {
+// Extract the JSON verdict block from reviewer's text output
+export const parseVerdict = (text: string): ReviewVerdict => {
   // Look for a JSON block that contains "passed"
   const jsonMatch = text.match(/\{[\s\S]*?"passed"\s*:[\s\S]*?\n\}/)
   if (jsonMatch) {
@@ -38,9 +38,9 @@ export const parseVerdict = (text: string): EvalVerdict => {
   // Default: assume failure if we can't parse
   return {
     passed: false,
-    summary: "Could not parse evaluator verdict from output",
+    summary: "Could not parse reviewer verdict from output",
     criteriaResults: [],
-    issues: ["Evaluator output did not contain a valid JSON verdict"],
+    issues: ["Reviewer output did not contain a valid JSON verdict"],
     suggestions: [],
   }
 }
@@ -102,13 +102,13 @@ const assembleUserPrompt = (
   return sections.join("\n")
 }
 
-export const invokeEvaluator = async (
+export const invokeReviewer = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
   checkpointTag: string,
   checkOutput: { command: string; output: string; exitCode: number } | null
-): Promise<{ result: ClaudeResult; verdict: EvalVerdict }> => {
-  const systemPrompt = resolveAgentPrompt("evaluator.md")
+): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
+  const systemPrompt = resolveAgentPrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag, checkOutput)
 
   const result = await invokeClaude({
