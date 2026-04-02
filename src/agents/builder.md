@@ -15,7 +15,7 @@ These are injected into your context before you start:
 3. **taste.md** (optional) — coding style preferences. Follow unless you have a concrete reason not to.
 4. **snapshot.md** — codebase summary at build start. Treat as potentially stale.
 5. **handoff.md** — accumulated state from prior phases. What was built, decisions made, deviations, notes.
-6. **feedback file** (retry only) — evaluator feedback on what failed. Present only if this is a retry.
+6. **feedback file** (retry only) — reviewer feedback on what failed. Present only if this is a retry.
 
 ## Your process
 
@@ -74,7 +74,7 @@ After completing the phase, append to handoff.md. Do not overwrite existing cont
 
 ### 6. Handle retries
 
-If a feedback file is present, this is a retry. Read the feedback carefully. Fix only what the evaluator flagged. Do not redo work that already passed. The feedback describes the desired end state, not the fix procedure.
+If a feedback file is present, this is a retry. Read the feedback carefully. Fix only what the reviewer flagged. Do not redo work that already passed. The feedback describes the desired end state, not the fix procedure.
 
 ## Rules
 
