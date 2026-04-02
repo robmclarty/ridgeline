@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
-import { parseVerdict } from "../evalInvoker"
+import { parseVerdict } from "../reviewerInvoker"
 
-describe("evalInvoker", () => {
+describe("reviewerInvoker", () => {
   describe("parseVerdict", () => {
     it("parses a valid JSON verdict block", () => {
       const text = `
