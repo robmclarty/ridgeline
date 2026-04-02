@@ -11,7 +11,7 @@ import { runBuild } from "./commands/run"
 import { runResume } from "./commands/resume"
 
 // Resolve a file through the fallback chain: CLI flag > build-level > project-level
-const resolveFile = (
+export const resolveFile = (
   cliFlag: string | undefined,
   buildDir: string,
   filename: string,
@@ -26,7 +26,7 @@ const resolveFile = (
 }
 
 // Parse the check command from constraints.md
-const parseCheckCommand = (constraintsPath: string): string | null => {
+export const parseCheckCommand = (constraintsPath: string): string | null => {
   try {
     const content = fs.readFileSync(constraintsPath, "utf-8")
     const match = content.match(/## Check Command\s*\n+```[^\n]*\n([\s\S]*?)```/)
@@ -37,7 +37,7 @@ const parseCheckCommand = (constraintsPath: string): string | null => {
 }
 
 // Build RidgelineConfig from command options
-const resolveConfig = (buildName: string, opts: Record<string, string | boolean | undefined>): RidgelineConfig => {
+export const resolveConfig = (buildName: string, opts: Record<string, string | boolean | undefined>): RidgelineConfig => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const buildDir = path.join(ridgelineDir, "builds", buildName)
   const phasesDir = path.join(buildDir, "phases")
