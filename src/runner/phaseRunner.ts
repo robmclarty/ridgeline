@@ -1,3 +1,4 @@
+import * as fs from "node:fs"
 import { execSync } from "node:child_process"
 import { RidgelineConfig, PhaseInfo, BuildState } from "../types"
 import { createTag, isWorkingTreeDirty, commitAll } from "../git"
@@ -6,7 +7,7 @@ import { ensureHandoffExists } from "../state/handoff"
 import { updatePhaseStatus } from "../state/stateManager"
 import { logPhase, logTrajectory, makeTrajectoryEntry } from "../logging"
 import { invokeBuilder } from "./buildInvoker"
-import { invokeReviewer } from "./reviewerInvoker"
+import { invokeReviewer, formatIssue, generateFeedback } from "./reviewerInvoker"
 
 const runCheckCommand = (
   checkCommand: string | null
@@ -143,11 +144,14 @@ export const runPhase = async (
       return "passed"
     }
 
-    // Failed
+    // Failed — write feedback for builder retry
     logPhase(phase.id, `FAILED: ${verdict.summary}`)
     for (const issue of verdict.issues) {
-      logPhase(phase.id, `  - ${issue}`)
+      logPhase(phase.id, `  - ${formatIssue(issue)}`)
     }
+
+    const feedbackFilePath = phase.filepath.replace(/\.md$/, ".feedback.md")
+    fs.writeFileSync(feedbackFilePath, generateFeedback(phase.id, verdict), "utf-8")
 
     attempt++
 

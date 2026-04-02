@@ -58,6 +58,15 @@ export type ClaudeResult = {
   sessionId: string
 }
 
+// Structured issue from reviewer
+export type ReviewIssue = {
+  criterion?: number
+  description: string
+  file?: string
+  severity: "blocking" | "suggestion"
+  requiredState?: string
+}
+
 // Reviewer's structured verdict
 export type ReviewVerdict = {
   passed: boolean
@@ -67,8 +76,8 @@ export type ReviewVerdict = {
     passed: boolean
     notes: string
   }[]
-  issues: string[]
-  suggestions: string[]
+  issues: ReviewIssue[]
+  suggestions: ReviewIssue[]
 }
 
 // Single entry in budget.json

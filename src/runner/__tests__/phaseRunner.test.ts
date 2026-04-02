@@ -45,7 +45,16 @@ vi.mock("../buildInvoker", () => ({
 
 vi.mock("../reviewerInvoker", () => ({
   invokeReviewer: vi.fn(),
+  formatIssue: vi.fn((issue: { description: string; file?: string }) =>
+    issue.file ? `${issue.file}: ${issue.description}` : issue.description
+  ),
+  generateFeedback: vi.fn(() => "# Feedback"),
 }))
+
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
+  return { ...actual, writeFileSync: vi.fn() }
+})
 
 import { runPhase } from "../phaseRunner"
 import { invokeBuilder } from "../buildInvoker"
@@ -75,8 +84,8 @@ const failVerdict: ReviewVerdict = {
   passed: false,
   summary: "Issues found",
   criteriaResults: [{ criterion: 1, passed: false, notes: "bad" }],
-  issues: ["thing is broken"],
-  suggestions: ["fix it"],
+  issues: [{ description: "thing is broken", severity: "blocking" as const }],
+  suggestions: [{ description: "fix it", severity: "suggestion" as const }],
 }
 
 const config: RidgelineConfig = {

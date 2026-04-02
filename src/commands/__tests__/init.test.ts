@@ -3,25 +3,41 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 
-vi.mock("node:child_process", () => {
-  const EventEmitter = require("node:events")
-  return {
-    spawn: vi.fn(() => {
-      const proc = new EventEmitter()
-      proc.stdin = { write: vi.fn(), end: vi.fn() }
-      proc.stdout = new EventEmitter()
-      proc.stderr = new EventEmitter()
-      return proc
-    }),
-  }
-})
+vi.mock("../../runner/claudeInvoker", () => ({
+  invokeClaude: vi.fn(),
+}))
+
+vi.mock("../../state/snapshot", () => ({
+  generateSnapshot: vi.fn(() => "snapshot content"),
+}))
 
 vi.mock("../../logging", () => ({
   logInfo: vi.fn(),
+  logError: vi.fn(),
 }))
 
-import { spawn } from "node:child_process"
+vi.mock("node:readline", () => ({
+  createInterface: vi.fn(() => ({
+    question: vi.fn((_prompt: string, cb: (answer: string) => void) => {
+      cb("Build a CLI tool")
+    }),
+    close: vi.fn(),
+  })),
+}))
+
+import { invokeClaude } from "../../runner/claudeInvoker"
 import { runInit } from "../init"
+
+const makeClaudeResult = (result: string, sessionId = "sess-1") => ({
+  success: true,
+  result,
+  durationMs: 1000,
+  costUsd: 0.01,
+  usage: { inputTokens: 100, outputTokens: 50, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+  sessionId,
+})
+
+const defaultOpts = { model: "opus", verbose: false, timeout: 10 }
 
 describe("commands/init", () => {
   let origCwd: string
@@ -40,48 +56,84 @@ describe("commands/init", () => {
   })
 
   it("creates build directory structure", async () => {
-    const promise = runInit("my-build")
+    // First call: intake turn (returns ready)
+    // Second call: generation turn
+    vi.mocked(invokeClaude)
+      .mockResolvedValueOnce(makeClaudeResult(JSON.stringify({ ready: true, summary: "A CLI tool" })))
+      .mockResolvedValueOnce(makeClaudeResult("done"))
 
-    // Simulate claude CLI exiting successfully
-    const proc = vi.mocked(spawn).mock.results[0].value
-    proc.emit("close", 0)
+    // Create spec.md so verification passes
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+    // runInit creates the directory, but we need to pre-create the file after the dir exists
+    // Use a side-effect on the second invokeClaude call to simulate file creation
+    vi.mocked(invokeClaude).mockImplementation(async (opts) => {
+      if (opts.allowedTools?.includes("Write")) {
+        fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+        fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      }
+      return makeClaudeResult(JSON.stringify({ ready: true, summary: "A CLI tool" }))
+    })
 
-    await promise
+    await runInit("my-build", defaultOpts)
 
     const phasesDir = path.join(tmpDir, ".ridgeline", "builds", "my-build", "phases")
     expect(fs.existsSync(phasesDir)).toBe(true)
   })
 
-  it("spawns claude with system prompt and allowed tools", async () => {
-    const promise = runInit("my-build")
+  it("invokes claude with json schema for clarification and tools for generation", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
 
-    expect(spawn).toHaveBeenCalledWith(
-      "claude",
-      expect.arrayContaining(["--allowedTools", "Write,Read"]),
-      expect.objectContaining({ stdio: "inherit" })
-    )
+    vi.mocked(invokeClaude).mockImplementation(async (opts) => {
+      if (opts.allowedTools?.includes("Write")) {
+        fs.mkdirSync(buildDir, { recursive: true })
+        fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+        fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      }
+      return makeClaudeResult(JSON.stringify({ ready: true, summary: "A CLI tool" }))
+    })
 
-    const proc = vi.mocked(spawn).mock.results[0].value
-    proc.emit("close", 0)
+    await runInit("my-build", defaultOpts)
 
-    await promise
+    // First call: intake with jsonSchema
+    expect(invokeClaude).toHaveBeenCalledTimes(2)
+    const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+    expect(firstCall.jsonSchema).toBeDefined()
+    expect(firstCall.model).toBe("opus")
+
+    // Second call: generation with tools
+    const secondCall = vi.mocked(invokeClaude).mock.calls[1][0]
+    expect(secondCall.allowedTools).toContain("Write")
   })
 
-  it("rejects when claude exits with non-zero code", async () => {
-    const promise = runInit("my-build")
+  it("runs clarification loop when claude asks questions", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
 
-    const proc = vi.mocked(spawn).mock.results[0].value
-    proc.emit("close", 1)
+    vi.mocked(invokeClaude)
+      // Intake: not ready, has questions
+      .mockResolvedValueOnce(makeClaudeResult(
+        JSON.stringify({ ready: false, questions: ["What language?"], summary: "Need more info" }),
+        "sess-1"
+      ))
+      // Clarification: now ready
+      .mockResolvedValueOnce(makeClaudeResult(
+        JSON.stringify({ ready: true, summary: "A TypeScript CLI tool" }),
+        "sess-1"
+      ))
+      // Generation
+      .mockImplementationOnce(async () => {
+        fs.mkdirSync(buildDir, { recursive: true })
+        fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+        fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+        return makeClaudeResult("done", "sess-1")
+      })
 
-    await expect(promise).rejects.toThrow("exited with code 1")
-  })
+    await runInit("my-build", defaultOpts)
 
-  it("rejects when claude fails to start", async () => {
-    const promise = runInit("my-build")
+    // 3 calls: intake, clarification, generation
+    expect(invokeClaude).toHaveBeenCalledTimes(3)
 
-    const proc = vi.mocked(spawn).mock.results[0].value
-    proc.emit("error", new Error("command not found"))
-
-    await expect(promise).rejects.toThrow("Failed to start claude CLI")
+    // Clarification call should resume the session
+    const clarificationCall = vi.mocked(invokeClaude).mock.calls[1][0]
+    expect(clarificationCall.sessionId).toBe("sess-1")
   })
 })
