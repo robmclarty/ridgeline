@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+- Fix crash when re-running or resuming builds with pre-existing checkpoint/completion git tags
+- Update README to reflect read-only reviewer and harness-generated feedback
+
 ## 0.1.7
 
 - Make reviewer agent read-only to fix verdict parsing failures (JSON verdict was lost after Write tool calls)
