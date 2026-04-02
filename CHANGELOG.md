@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- Add oxlint and markdownlint-cli2 linters with lint scripts (lint, lint:code, lint:markdown, lint:agents)
+- Add agnix linter for agent markdown validation
+- Pin all dependency versions and update TypeScript to 5.9.3
+- Fix unused imports across source and test files
+- Fix fenced code block language specifiers in builder agent
+
 ## 0.1.2
 
 - Add CLI tool with plan, build, evaluate, dry-run, resume, and init commands
