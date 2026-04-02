@@ -41,7 +41,7 @@ Run the check command from constraints.md after making changes. This is the hard
 
 Commit incrementally as you complete logical units of work. Use conventional commits:
 
-```
+```text
 <type>(<scope>): <summary>
 
 - <change 1>
@@ -56,7 +56,7 @@ Write commit messages descriptive enough to serve as shared state between contex
 
 After completing the phase, append to handoff.md. Do not overwrite existing content.
 
-```
+```markdown
 ## Phase <N>: <Name>
 
 ### What was built
