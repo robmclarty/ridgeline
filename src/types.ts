@@ -27,7 +27,7 @@ export type PhaseInfo = {
 // Per-phase state persisted in state.json
 export type PhaseState = {
   id: string
-  status: "pending" | "building" | "evaluating" | "complete" | "failed"
+  status: "pending" | "building" | "reviewing" | "complete" | "failed"
   checkpointTag: string
   completionTag: string | null
   retries: number
@@ -58,8 +58,8 @@ export type ClaudeResult = {
   sessionId: string
 }
 
-// Evaluator's structured verdict
-export type EvalVerdict = {
+// Reviewer's structured verdict
+export type ReviewVerdict = {
   passed: boolean
   summary: string
   criteriaResults: {
@@ -74,7 +74,7 @@ export type EvalVerdict = {
 // Single entry in budget.json
 export type BudgetEntry = {
   phase: string
-  role: "planner" | "builder" | "evaluator"
+  role: "planner" | "builder" | "reviewer"
   attempt: number
   costUsd: number
   inputTokens: number
@@ -97,8 +97,8 @@ export type TrajectoryEntry = {
     | "plan_complete"
     | "build_start"
     | "build_complete"
-    | "eval_start"
-    | "eval_complete"
+    | "review_start"
+    | "review_complete"
     | "phase_advance"
     | "phase_fail"
     | "budget_exceeded"
