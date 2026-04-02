@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6
+
+- Redesign init command as CLI-driven multi-turn conversation instead of spawning interactive Claude Code session
+- Add `--resume` and `--json-schema` support to `invokeClaude()` for session continuity and structured output
+- Add init agent prompt (`src/agents/init.md`) for guided Q&A and build file generation
+- Add `--model`, `--verbose`, and `--timeout` options to `ridgeline init`
+
 ## 0.1.5
 
 - Fix stream-json parsing crash when Claude CLI emits trailing events after result
