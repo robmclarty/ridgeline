@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.7
+
+- Make reviewer agent read-only to fix verdict parsing failures (JSON verdict was lost after Write tool calls)
+- Add structured `ReviewIssue` type with description, file, severity, and requiredState fields
+- Replace regex-based verdict parser with brute-force JSON extraction for robustness
+- Move feedback.md generation from reviewer agent into harness (phaseRunner)
+- Fix stale init command tests broken by prior multi-turn conversation refactor
+
 ## 0.1.6
 
 - Redesign init command as CLI-driven multi-turn conversation instead of spawning interactive Claude Code session
