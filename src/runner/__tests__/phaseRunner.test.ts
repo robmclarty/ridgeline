@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, EvalVerdict } from "../../types"
+import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
 
 // Mock all external dependencies
 vi.mock("node:child_process", () => ({
@@ -43,13 +43,13 @@ vi.mock("../buildInvoker", () => ({
   invokeBuilder: vi.fn(),
 }))
 
-vi.mock("../evalInvoker", () => ({
-  invokeEvaluator: vi.fn(),
+vi.mock("../reviewerInvoker", () => ({
+  invokeReviewer: vi.fn(),
 }))
 
 import { runPhase } from "../phaseRunner"
 import { invokeBuilder } from "../buildInvoker"
-import { invokeEvaluator } from "../evalInvoker"
+import { invokeReviewer } from "../reviewerInvoker"
 import { isWorkingTreeDirty, commitAll, createTag } from "../../git"
 import { recordCost } from "../../state/budget"
 import { updatePhaseStatus } from "../../state/stateManager"
@@ -63,7 +63,7 @@ const makeResult = (cost = 0.05): ClaudeResult => ({
   sessionId: "sess",
 })
 
-const passVerdict: EvalVerdict = {
+const passVerdict: ReviewVerdict = {
   passed: true,
   summary: "All good",
   criteriaResults: [{ criterion: 1, passed: true, notes: "ok" }],
@@ -71,7 +71,7 @@ const passVerdict: EvalVerdict = {
   suggestions: [],
 }
 
-const failVerdict: EvalVerdict = {
+const failVerdict: ReviewVerdict = {
   passed: false,
   summary: "Issues found",
   criteriaResults: [{ criterion: 1, passed: false, notes: "bad" }],
@@ -127,9 +127,9 @@ describe("phaseRunner", () => {
   })
 
   describe("runPhase", () => {
-    it("returns 'passed' when builder and evaluator succeed", async () => {
+    it("returns 'passed' when builder and reviewer succeed", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
@@ -140,7 +140,7 @@ describe("phaseRunner", () => {
 
     it("creates checkpoint tag before building", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
@@ -152,7 +152,7 @@ describe("phaseRunner", () => {
     it("commits dirty tree before checkpointing", async () => {
       vi.mocked(isWorkingTreeDirty).mockReturnValue(true)
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
@@ -161,9 +161,9 @@ describe("phaseRunner", () => {
       expect(commitAll).toHaveBeenCalledWith("chore: pre-phase checkpoint for 01-scaffold")
     })
 
-    it("retries on evaluator failure up to maxRetries", async () => {
+    it("retries on reviewer failure up to maxRetries", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator)
+      vi.mocked(invokeReviewer)
         .mockResolvedValueOnce({ result: makeResult(), verdict: failVerdict })
         .mockResolvedValueOnce({ result: makeResult(), verdict: failVerdict })
         .mockResolvedValueOnce({ result: makeResult(), verdict: passVerdict })
@@ -175,7 +175,7 @@ describe("phaseRunner", () => {
 
     it("returns 'failed' when retries exhausted", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: failVerdict,
       })
@@ -188,13 +188,13 @@ describe("phaseRunner", () => {
 
     it("records costs for each attempt", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
 
       await runPhase(phase, config, makeState())
-      // builder + evaluator
+      // builder + reviewer
       expect(recordCost).toHaveBeenCalledTimes(2)
     })
 
@@ -218,7 +218,7 @@ describe("phaseRunner", () => {
         .mockRejectedValueOnce(new Error("builder crashed"))
         .mockResolvedValueOnce(makeResult())
         .mockResolvedValueOnce(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
@@ -228,9 +228,9 @@ describe("phaseRunner", () => {
       expect(result).toBe("passed")
     })
 
-    it("continues to next attempt when evaluator throws", async () => {
+    it("continues to next attempt when reviewer throws", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator)
+      vi.mocked(invokeReviewer)
         .mockRejectedValueOnce(new Error("eval crashed"))
         .mockResolvedValueOnce({ result: makeResult(), verdict: passVerdict })
 
@@ -240,7 +240,7 @@ describe("phaseRunner", () => {
 
     it("creates completion tag on success", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
@@ -251,7 +251,7 @@ describe("phaseRunner", () => {
 
     it("updates phase status to complete on success", async () => {
       vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeEvaluator).mockResolvedValue({
+      vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
