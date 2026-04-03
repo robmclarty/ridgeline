@@ -45,10 +45,15 @@ vi.mock("../../state/stateManager", () => ({
     })),
   })),
   getNextIncompletePhase: vi.fn(),
+  resetRetries: vi.fn(),
 }))
 
 vi.mock("../../state/budget", () => ({
-  getTotalCost: vi.fn(() => 0),
+  loadBudget: vi.fn(() => ({ entries: [], totalCostUsd: 0 })),
+}))
+
+vi.mock("../../git", () => ({
+  deleteTagsByPrefix: vi.fn(),
 }))
 
 vi.mock("../plan", () => ({
@@ -80,7 +85,8 @@ describe("commands/run", () => {
       phasesDir: path.join(tmpDir, "phases"),
       model: "opus",
       maxRetries: 2,
-      timeoutMinutes: 30,
+      timeoutMinutes: 120,
+      checkTimeoutSeconds: 1200,
       verbose: false,
       checkCommand: null,
       maxBudgetUsd: null,

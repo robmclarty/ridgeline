@@ -3,6 +3,7 @@ import * as path from "node:path"
 import * as readline from "node:readline"
 import { logInfo, logError } from "../logging"
 import { invokeClaude } from "../runner/claudeInvoker"
+import { resolveAgentPrompt } from "../runner/agentPrompt"
 import { generateSnapshot } from "../state/snapshot"
 
 const MAX_CLARIFICATION_ROUNDS = 3
@@ -19,14 +20,6 @@ const QA_JSON_SCHEMA = JSON.stringify({
   },
   required: ["ready"],
 })
-
-const resolveAgentPrompt = (filename: string): string => {
-  const distPath = path.join(__dirname, "agents", filename)
-  if (fs.existsSync(distPath)) return fs.readFileSync(distPath, "utf-8")
-  const srcPath = path.join(__dirname, "..", "agents", filename)
-  if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, "utf-8")
-  throw new Error(`Agent prompt not found: ${filename}`)
-}
 
 const askQuestion = (rl: readline.Interface, prompt: string): Promise<string> => {
   return new Promise((resolve) => {

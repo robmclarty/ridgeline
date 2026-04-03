@@ -22,7 +22,6 @@ vi.mock("../commands/init", () => ({ runInit: vi.fn() }))
 vi.mock("../commands/plan", () => ({ runPlan: vi.fn() }))
 vi.mock("../commands/dryRun", () => ({ runDryRun: vi.fn() }))
 vi.mock("../commands/run", () => ({ runBuild: vi.fn() }))
-vi.mock("../commands/resume", () => ({ runResume: vi.fn() }))
 
 import { resolveFile, parseCheckCommand } from "../cli"
 

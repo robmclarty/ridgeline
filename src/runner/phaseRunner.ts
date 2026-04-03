@@ -10,14 +10,15 @@ import { invokeBuilder } from "./buildInvoker"
 import { invokeReviewer, formatIssue, generateFeedback } from "./reviewerInvoker"
 
 const runCheckCommand = (
-  checkCommand: string | null
+  checkCommand: string | null,
+  timeoutMs: number
 ): { command: string; output: string; exitCode: number } | null => {
   if (!checkCommand) return null
   try {
     const output = execSync(checkCommand, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
-      timeout: 120_000,
+      timeout: timeoutMs,
     })
     return { command: checkCommand, output, exitCode: 0 }
   } catch (err: unknown) {
@@ -96,7 +97,7 @@ export const runPhase = async (
     }
 
     // Run check command
-    const checkOutput = runCheckCommand(config.checkCommand)
+    const checkOutput = runCheckCommand(config.checkCommand, config.checkTimeoutSeconds * 1000)
 
     // Evaluate
     logPhase(phase.id, "Reviewing...")
@@ -150,6 +151,11 @@ export const runPhase = async (
       logPhase(phase.id, `  - ${formatIssue(issue)}`)
     }
 
+    // Keep numbered feedback files for post-build analysis
+    const feedbackArchivePath = phase.filepath.replace(/\.md$/, `.feedback.${attempt}.md`)
+    fs.writeFileSync(feedbackArchivePath, generateFeedback(phase.id, verdict), "utf-8")
+
+    // Write the latest feedback for the builder to read on retry
     const feedbackFilePath = phase.filepath.replace(/\.md$/, ".feedback.md")
     fs.writeFileSync(feedbackFilePath, generateFeedback(phase.id, verdict), "utf-8")
 
@@ -177,7 +183,7 @@ export const runPhase = async (
   console.log("Options:")
   console.log("  1. Edit spec.md and re-run: ridgeline plan <build> && ridgeline run <build>")
   console.log(`  2. Edit the phase spec directly: ${phase.filepath}`)
-  console.log(`  3. Resume after manual fixes: ridgeline resume ${config.buildName}`)
+  console.log(`  3. Resume after manual fixes: ridgeline run ${config.buildName}`)
 
   return "failed"
 }

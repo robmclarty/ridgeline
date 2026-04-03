@@ -1,17 +1,8 @@
 import * as fs from "node:fs"
-import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict, ReviewIssue } from "../types"
 import { invokeClaude } from "./claudeInvoker"
-import { getDiff, getChangedFileContents } from "../git"
-
-const resolveAgentPrompt = (filename: string): string => {
-  const distPath = path.join(__dirname, "agents", filename)
-  if (fs.existsSync(distPath)) return fs.readFileSync(distPath, "utf-8")
-  const srcPath = path.join(__dirname, "..", "agents", filename)
-  if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, "utf-8")
-  const rootPath = path.join(__dirname, "..", "..", "src", "agents", filename)
-  return fs.readFileSync(rootPath, "utf-8")
-}
+import { resolveAgentPrompt } from "./agentPrompt"
+import { getDiff } from "../git"
 
 // Normalize an issue entry — accept both string and object forms
 const normalizeIssue = (item: unknown, severity: "blocking" | "suggestion"): ReviewIssue => {
@@ -199,18 +190,6 @@ const assembleUserPrompt = (
     sections.push("No changes detected.")
   }
   sections.push("")
-
-  const changedFiles = getChangedFileContents(checkpointTag)
-  if (changedFiles.size > 0) {
-    sections.push("## Full Contents of Changed Files\n")
-    for (const [filename, content] of changedFiles) {
-      sections.push(`### ${filename}\n`)
-      sections.push("```")
-      sections.push(content)
-      sections.push("```")
-      sections.push("")
-    }
-  }
 
   sections.push("## constraints.md\n")
   sections.push(fs.readFileSync(config.constraintsPath, "utf-8"))

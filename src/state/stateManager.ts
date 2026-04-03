@@ -46,6 +46,17 @@ export const updatePhaseStatus = (
   }
 }
 
+export const resetRetries = (buildDir: string, state: BuildState): void => {
+  for (const phase of state.phases) {
+    if (phase.status !== "complete") {
+      phase.retries = 0
+      phase.status = "pending"
+      phase.failedAt = null
+    }
+  }
+  saveState(buildDir, state)
+}
+
 export const getNextIncompletePhase = (
   state: BuildState,
   cwd?: string

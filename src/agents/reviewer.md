@@ -14,9 +14,10 @@ These are injected into your context before you start:
 
 1. **Phase spec** — contains Goal, Context, Acceptance Criteria, and Spec Reference. The acceptance criteria are your primary gate.
 2. **Git diff** — from the phase checkpoint to HEAD. Everything the builder changed.
-3. **Full changed files** — complete contents, not just diff hunks.
-4. **constraints.md** — technical guardrails the builder was required to follow.
-5. **Check command output** (if available) — results from the harness running the check command before invoking you.
+3. **constraints.md** — technical guardrails the builder was required to follow.
+4. **Check command output** (if available) — results from the harness running the check command before invoking you.
+
+You have read-only tool access (Read, Bash, Glob, Grep). Use these to inspect any files you need. The diff shows what changed — use it to decide what to read in full.
 
 ## Your process
 
@@ -24,9 +25,9 @@ These are injected into your context before you start:
 
 Read the git diff first. Understand the scope. What files were added, modified, deleted? Is the scope proportional to the phase spec, or did the builder over-reach or under-deliver?
 
-### 2. Read the full changed files
+### 2. Read the changed files
 
-Diffs lie by omission. A clean diff inside a broken file still produces broken code. Read every changed file in full. Understand how the changes fit into the surrounding code.
+Diffs lie by omission. A clean diff inside a broken file still produces broken code. Use the Read tool to read files you need to inspect in full. Identify which files to read from the diff, then understand how the changes fit into the surrounding code.
 
 ### 3. Check the check command output
 

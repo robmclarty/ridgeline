@@ -2,9 +2,77 @@ import { RidgelineConfig } from "../types"
 import { logInfo, logError } from "../logging"
 import { scanPhases } from "../runner/planInvoker"
 import { runPhase } from "../runner/phaseRunner"
-import { loadState, saveState, initState, getNextIncompletePhase } from "../state/stateManager"
-import { getTotalCost } from "../state/budget"
+import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../state/stateManager"
+import { loadBudget } from "../state/budget"
+import { deleteTagsByPrefix } from "../git"
 import { runPlan } from "./plan"
+
+const formatDuration = (ms: number): string => {
+  const seconds = Math.round(ms / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  const remaining = seconds % 60
+  return remaining > 0 ? `${minutes}m ${remaining}s` : `${minutes}m`
+}
+
+const printSummaryTable = (config: RidgelineConfig, completed: number, failed: number, totalPhases: number, durationMs: number): void => {
+  const budget = loadBudget(config.buildDir)
+
+  // Build per-phase stats from budget entries
+  const phaseStats = new Map<string, { cost: number; buildTime: number; reviewTime: number; attempts: number }>()
+  for (const entry of budget.entries) {
+    if (entry.phase === "plan") continue
+    let stats = phaseStats.get(entry.phase)
+    if (!stats) {
+      stats = { cost: 0, buildTime: 0, reviewTime: 0, attempts: 0 }
+      phaseStats.set(entry.phase, stats)
+    }
+    stats.cost += entry.costUsd
+    if (entry.role === "builder") {
+      stats.buildTime += entry.durationMs
+      stats.attempts++
+    } else if (entry.role === "reviewer") {
+      stats.reviewTime += entry.durationMs
+    }
+  }
+
+  // Planning cost
+  const planCost = budget.entries
+    .filter((e) => e.phase === "plan")
+    .reduce((sum, e) => sum + e.costUsd, 0)
+
+  console.log("")
+  logInfo("=" .repeat(60))
+  logInfo(`Build: ${config.buildName}`)
+  logInfo(`Phases: ${completed} passed, ${failed} failed, ${totalPhases} total`)
+  logInfo(`Duration: ${formatDuration(durationMs)}`)
+  logInfo(`Total cost: $${budget.totalCostUsd.toFixed(2)}`)
+  logInfo("=" .repeat(60))
+
+  if (phaseStats.size > 0) {
+    // Table header
+    console.log("")
+    const header = "  Phase                    Attempts   Build     Review    Cost"
+    const divider = "  " + "-".repeat(header.length - 2)
+    console.log(header)
+    console.log(divider)
+
+    for (const [phaseId, stats] of phaseStats) {
+      const name = phaseId.padEnd(24)
+      const attempts = String(stats.attempts).padStart(4)
+      const buildTime = formatDuration(stats.buildTime).padStart(8)
+      const reviewTime = formatDuration(stats.reviewTime).padStart(8)
+      const cost = `$${stats.cost.toFixed(2)}`.padStart(8)
+      console.log(`  ${name} ${attempts}   ${buildTime}  ${reviewTime}  ${cost}`)
+    }
+
+    if (planCost > 0) {
+      const divider2 = "  " + "-".repeat(header.length - 2)
+      console.log(divider2)
+      console.log(`  ${"Planning".padEnd(24)}            ${"".padStart(8)}  ${"".padStart(8)}  ${`$${planCost.toFixed(2)}`.padStart(8)}`)
+    }
+  }
+}
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   let phases = scanPhases(config.phasesDir)
@@ -22,9 +90,17 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   // Load or init state
   let state = loadState(config.buildDir)
+  const isResume = state !== null
   if (!state) {
     state = initState(config.buildName, phases)
     saveState(config.buildDir, state)
+  }
+
+  // On resume: reset retries for incomplete phases so they get full attempts
+  if (isResume) {
+    resetRetries(config.buildDir, state)
+    const completedCount = state.phases.filter((p) => p.status === "complete").length
+    logInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
   }
 
   const startTime = Date.now()
@@ -54,9 +130,9 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
     // Budget check after phase
     if (config.maxBudgetUsd) {
-      const totalCost = getTotalCost(config.buildDir)
-      if (totalCost > config.maxBudgetUsd) {
-        logInfo(`Budget limit reached: $${totalCost.toFixed(2)} > $${config.maxBudgetUsd}`)
+      const budget = loadBudget(config.buildDir)
+      if (budget.totalCostUsd > config.maxBudgetUsd) {
+        logInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
         break
       }
     }
@@ -66,24 +142,20 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   // Summary
   const duration = Date.now() - startTime
-  const totalCost = getTotalCost(config.buildDir)
-
-  console.log("")
-  logInfo("=" .repeat(40))
-  logInfo(`Build: ${config.buildName}`)
-  logInfo(`Phases completed: ${completed}/${phases.length}`)
-  if (failed > 0) logInfo(`Phases failed: ${failed}`)
-  logInfo(`Duration: ${(duration / 1000 / 60).toFixed(1)} minutes`)
-  logInfo(`Total cost: $${totalCost.toFixed(2)}`)
-  logInfo("=".repeat(40))
+  const totalCompleted = state.phases.filter((p) => p.status === "complete").length
+  printSummaryTable(config, totalCompleted, failed, phases.length, duration)
 
   if (failed > 0) {
-    logInfo("\nCleanup: git tag -l 'ridgeline/*' | xargs git tag -d")
     process.exit(1)
   }
 
-  if (completed === phases.length) {
-    logInfo("\nAll phases complete!")
-    logInfo("Cleanup: git tag -l 'ridgeline/*' | xargs git tag -d")
+  if (totalCompleted === phases.length) {
+    console.log("")
+    logInfo("All phases complete!")
+    logInfo("Cleaning up...")
+    deleteTagsByPrefix(`ridgeline/${config.buildName}/`)
+    // Also clean checkpoint and phase tags
+    deleteTagsByPrefix(`ridgeline/checkpoint/${config.buildName}/`)
+    deleteTagsByPrefix(`ridgeline/phase/${config.buildName}/`)
   }
 }

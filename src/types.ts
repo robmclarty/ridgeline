@@ -10,6 +10,7 @@ export type RidgelineConfig = {
   model: string
   maxRetries: number
   timeoutMinutes: number
+  checkTimeoutSeconds: number
   verbose: boolean
   checkCommand: string | null
   maxBudgetUsd: number | null

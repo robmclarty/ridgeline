@@ -71,3 +71,15 @@ export const deleteTag = (tagName: string, cwd?: string): void => {
     // Tag doesn't exist
   }
 }
+
+export const deleteTagsByPrefix = (prefix: string, cwd?: string): void => {
+  try {
+    const tags = run(`git tag -l '${prefix}*'`, cwd)
+    if (!tags) return
+    for (const tag of tags.split("\n").filter(Boolean)) {
+      deleteTag(tag, cwd)
+    }
+  } catch {
+    // No tags to delete
+  }
+}
