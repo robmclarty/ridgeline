@@ -7,6 +7,9 @@ import type { RidgelineConfig } from "../../types"
 vi.mock("../../logging", () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
+}))
+
+vi.mock("../../state/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -19,7 +22,7 @@ vi.mock("../../logging", () => ({
   })),
 }))
 
-vi.mock("../../runner/planInvoker", () => ({
+vi.mock("../../state/phases", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
@@ -61,7 +64,7 @@ vi.mock("../plan", () => ({
 }))
 
 import { runBuild } from "../build"
-import { scanPhases } from "../../runner/planInvoker"
+import { scanPhases } from "../../state/phases"
 import { runPhase } from "../../runner/phaseRunner"
 import { getNextIncompletePhase } from "../../state/stateManager"
 

@@ -3,6 +3,7 @@ import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
 import { invokeClaude } from "./claudeInvoker"
 import { createDisplayCallbacks } from "./streamParser"
+import { scanPhases } from "../state/phases"
 
 const resolveAgentPrompt = (filename: string): string => {
   // Try dist/agents/core/ first (installed package), then src/agents/core/ (development)
@@ -42,24 +43,6 @@ const assembleUserPrompt = (config: RidgelineConfig): string => {
   sections.push("Use the naming convention: 01-<slug>.md, 02-<slug>.md, etc.")
 
   return sections.join("\n")
-}
-
-export const scanPhases = (phasesDir: string): PhaseInfo[] => {
-  if (!fs.existsSync(phasesDir)) return []
-  const files = fs.readdirSync(phasesDir)
-    .filter((f) => /^\d{2}-.*\.md$/.test(f) && !f.includes(".feedback"))
-    .sort()
-
-  return files.map((filename) => {
-    const match = filename.match(/^(\d{2})-(.+)\.md$/)
-    return {
-      id: filename.replace(/\.md$/, ""),
-      index: match ? parseInt(match[1], 10) : 0,
-      slug: match ? match[2] : filename,
-      filename,
-      filepath: path.join(phasesDir, filename),
-    }
-  })
 }
 
 export const invokePlanner = async (

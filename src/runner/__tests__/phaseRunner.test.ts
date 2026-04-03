@@ -23,6 +23,9 @@ vi.mock("../../state/stateManager", () => ({
 
 vi.mock("../../logging", () => ({
   logPhase: vi.fn(),
+}))
+
+vi.mock("../../state/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -41,16 +44,15 @@ vi.mock("../buildInvoker", () => ({
 
 vi.mock("../reviewInvoker", () => ({
   invokeReviewer: vi.fn(),
+}))
+
+vi.mock("../../state/feedback", () => ({
   formatIssue: vi.fn((issue: { description: string; file?: string }) =>
     issue.file ? `${issue.file}: ${issue.description}` : issue.description
   ),
-  generateFeedback: vi.fn(() => "# Feedback"),
+  writeFeedback: vi.fn(),
+  archiveFeedback: vi.fn(),
 }))
-
-vi.mock("node:fs", async () => {
-  const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
-  return { ...actual, writeFileSync: vi.fn() }
-})
 
 import { runPhase } from "../phaseRunner"
 import { invokeBuilder } from "../buildInvoker"

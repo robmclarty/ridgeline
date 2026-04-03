@@ -1,12 +1,13 @@
-import * as fs from "node:fs"
 import { RidgelineConfig, PhaseInfo, BuildState } from "../types"
 import { createTag, isWorkingTreeDirty, commitAll } from "../git"
 import { recordCost } from "../state/budget"
 import { ensureHandoffExists } from "../state/handoff"
+import { formatIssue, writeFeedback, archiveFeedback } from "../state/feedback"
+import { logTrajectory, makeTrajectoryEntry } from "../state/trajectory"
 import { updatePhaseStatus } from "../state/stateManager"
-import { logPhase, logTrajectory, makeTrajectoryEntry } from "../logging"
+import { logPhase } from "../logging"
 import { invokeBuilder } from "./buildInvoker"
-import { invokeReviewer, formatIssue, generateFeedback } from "./reviewInvoker"
+import { invokeReviewer } from "./reviewInvoker"
 
 export const runPhase = async (
   phase: PhaseInfo,
@@ -32,7 +33,7 @@ export const runPhase = async (
 
   while (attempt < maxAttempts) {
     const isRetry = attempt > 0
-    const feedbackPath = isRetry
+    const feedbackFilePath = isRetry
       ? phase.filepath.replace(/\.md$/, ".feedback.md")
       : null
 
@@ -43,7 +44,7 @@ export const runPhase = async (
 
     let buildResult
     try {
-      buildResult = await invokeBuilder(config, phase, feedbackPath)
+      buildResult = await invokeBuilder(config, phase, feedbackFilePath)
     } catch (err) {
       logPhase(phase.id, `Build failed: ${err}`)
       logTrajectory(config.buildDir, makeTrajectoryEntry("build_complete", phase.id, `Build error: ${err}`))
@@ -126,12 +127,10 @@ export const runPhase = async (
     }
 
     // Keep numbered feedback files for post-build analysis
-    const feedbackArchivePath = phase.filepath.replace(/\.md$/, `.feedback.${attempt}.md`)
-    fs.writeFileSync(feedbackArchivePath, generateFeedback(phase.id, verdict), "utf-8")
+    archiveFeedback(phase.filepath, phase.id, verdict, attempt)
 
     // Write the latest feedback for the builder to read on retry
-    const feedbackFilePath = phase.filepath.replace(/\.md$/, ".feedback.md")
-    fs.writeFileSync(feedbackFilePath, generateFeedback(phase.id, verdict), "utf-8")
+    writeFeedback(phase.filepath, phase.id, verdict)
 
     attempt++
 

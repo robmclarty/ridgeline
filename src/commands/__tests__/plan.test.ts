@@ -6,6 +6,9 @@ import type { RidgelineConfig, ClaudeResult, PhaseInfo } from "../../types"
 
 vi.mock("../../logging", () => ({
   logInfo: vi.fn(),
+}))
+
+vi.mock("../../state/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -24,7 +27,6 @@ vi.mock("../../state/budget", () => ({
 
 vi.mock("../../runner/planInvoker", () => ({
   invokePlanner: vi.fn(),
-  scanPhases: vi.fn(() => []),
 }))
 
 import { runPlan } from "../plan"

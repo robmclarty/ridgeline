@@ -2,9 +2,52 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { scanPhases } from "../planInvoker"
+import { scanPhases, isPhaseFile, parsePhaseFilename, PHASE_FILENAME_PATTERN } from "../phases"
 
-describe("planInvoker", () => {
+describe("phases", () => {
+  describe("PHASE_FILENAME_PATTERN", () => {
+    it("matches valid phase filenames", () => {
+      expect(PHASE_FILENAME_PATTERN.test("01-scaffold.md")).toBe(true)
+      expect(PHASE_FILENAME_PATTERN.test("02-setup-database.md")).toBe(true)
+      expect(PHASE_FILENAME_PATTERN.test("99-final.md")).toBe(true)
+    })
+
+    it("rejects invalid filenames", () => {
+      expect(PHASE_FILENAME_PATTERN.test("README.md")).toBe(false)
+      expect(PHASE_FILENAME_PATTERN.test("scaffold.md")).toBe(false)
+      expect(PHASE_FILENAME_PATTERN.test("notes.txt")).toBe(false)
+    })
+  })
+
+  describe("isPhaseFile", () => {
+    it("accepts valid phase filenames", () => {
+      expect(isPhaseFile("01-scaffold.md")).toBe(true)
+      expect(isPhaseFile("02-api.md")).toBe(true)
+    })
+
+    it("rejects feedback files", () => {
+      expect(isPhaseFile("01-scaffold.feedback.md")).toBe(false)
+      expect(isPhaseFile("01-scaffold.feedback.0.md")).toBe(false)
+    })
+
+    it("rejects non-phase files", () => {
+      expect(isPhaseFile("README.md")).toBe(false)
+      expect(isPhaseFile("notes.txt")).toBe(false)
+    })
+  })
+
+  describe("parsePhaseFilename", () => {
+    it("extracts id, index, and slug", () => {
+      const result = parsePhaseFilename("01-scaffold.md")
+      expect(result).toEqual({ id: "01-scaffold", index: 1, slug: "scaffold" })
+    })
+
+    it("handles multi-word slugs", () => {
+      const result = parsePhaseFilename("02-setup-database.md")
+      expect(result).toEqual({ id: "02-setup-database", index: 2, slug: "setup-database" })
+    })
+  })
+
   describe("scanPhases", () => {
     let phasesDir: string
 

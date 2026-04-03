@@ -1,7 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../types"
-import { logInfo, logTrajectory, makeTrajectoryEntry } from "../logging"
+import { logInfo } from "../logging"
+import { logTrajectory, makeTrajectoryEntry } from "../state/trajectory"
 import { recordCost } from "../state/budget"
 import { invokePlanner } from "../runner/planInvoker"
 

@@ -1,6 +1,6 @@
 import { RidgelineConfig } from "../types"
 import { logInfo, logError } from "../logging"
-import { scanPhases } from "../runner/planInvoker"
+import { scanPhases } from "../state/phases"
 import { runPhase } from "../runner/phaseRunner"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../state/stateManager"
 import { loadBudget } from "../state/budget"
