@@ -82,6 +82,25 @@ Failed phases are retried up to `--max-retries` times (default: 2). Combined
 with budget limits and timeouts, this bounds the total cost and duration of any
 single build, even when the builder repeatedly fails review.
 
+## Sandbox mode (Linux)
+
+When `--sandbox` is passed to `ridgeline build`, each Claude CLI invocation
+(builder and reviewer) runs inside a [bubblewrap](https://github.com/containers/bubblewrap)
+sandbox. This enforces kernel-level restrictions:
+
+- **Filesystem:** The entire filesystem is mounted read-only. Only the
+  repository root and `/tmp` are writable. Writes anywhere else fail with
+  `EROFS`.
+- **Network:** Outbound network access is blocked by default via Linux network
+  namespaces. Pass `--allow-network` to permit it for builds that need
+  dependency installation or API access.
+- **Process isolation:** `--die-with-parent` ensures the sandbox is torn down
+  if Ridgeline exits unexpectedly.
+
+Sandboxing requires `bwrap` to be installed. If it is not found, the harness
+errors immediately — there is no silent fallback. This feature is Linux-only;
+macOS lacks equivalent unprivileged namespace support.
+
 ## Verdict parsing
 
 The reviewer outputs a structured JSON verdict. The harness parses this
@@ -128,24 +147,24 @@ marker).
 ### Container isolation (Docker/VM sandboxing)
 
 The builder agent has access to `Bash`, `Write`, and `Edit` — it can execute
-arbitrary commands and modify any file in the repository. We considered running
-each phase inside a Docker container or VM to fully sandbox its filesystem and
-network access.
+arbitrary commands and modify any file in the repository. Full container
+isolation (Docker/VM) would sandbox the filesystem and network completely, but
+adds substantial setup complexity. Instead, Ridgeline offers opt-in `--sandbox`
+mode using bubblewrap (`bwrap`) on Linux, which provides kernel-level
+filesystem and network restrictions without containerization overhead. See
+[Sandbox mode](#sandbox-mode-linux) above.
 
-**Why we didn't:** Ridgeline is designed for local development workflows where
-the builder needs to interact with the project's real toolchain — running tests,
-installing dependencies, invoking build systems. Container isolation would
-require mirroring the host's language runtimes, package caches, and environment
+**Why not full Docker:** Ridgeline is designed for local development workflows
+where the builder needs to interact with the project's real toolchain — running
+tests, installing dependencies, invoking build systems. Docker would require
+mirroring the host's language runtimes, package caches, and environment
 configuration, adding substantial setup complexity for marginal benefit in the
-intended use case (your own repo, on your own machine). The git checkpoint
-system provides rollback capability that covers most "the builder broke
-something" scenarios without the overhead.
+intended use case (your own repo, on your own machine).
 
-**Tradeoff:** A malicious or confused builder can modify files outside the
-repository, access the network, or run destructive commands. The Claude CLI's
-permission system (tool allowlists) provides a first layer of defense, and git
-checkpoints provide recovery, but neither is equivalent to true process
-isolation.
+**Tradeoff:** `bwrap` sandboxing is Linux-only. On macOS, there is no
+equivalent unprivileged namespace API, so builds run without filesystem
+isolation. The Claude CLI's permission system (tool allowlists) and git
+checkpoints remain the primary safety mechanisms on all platforms.
 
 ### Network access restrictions
 

@@ -100,6 +100,8 @@ and advance on success.
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
+| `--sandbox` | off | Enable bwrap sandboxing (Linux only) |
+| `--allow-network` | off | Permit network access inside sandbox |
 
 The build command automatically resumes from the last successful phase if
 previous state exists.
