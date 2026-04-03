@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.2
+
+- Extract feedback (verdict parsing, formatting, persistence), trajectory (event logging, querying), and phases (discovery, validation) into dedicated state modules
+- Extract git tag naming conventions and lifecycle operations (checkpoint, completion, cleanup) into state/tags.ts
+- Move build input resolution (resolveFile, parseCheckCommand) from cli.ts into state/inputs.ts
+- Add parsePhaseContent to state/phases.ts for structured title/goal/criteria extraction from phase markdown
+- Runner modules now focus purely on Claude invocation; state concerns live in src/state/
+
 ## 0.2.1
 
 - Add 4 specialist sub-agents: navigator (codebase exploration), checker (intelligent verification), tester (acceptance-level test writing), depender (module graph integrity)
