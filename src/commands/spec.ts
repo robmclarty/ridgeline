@@ -5,7 +5,6 @@ import { logInfo, logError } from "../logging"
 import { invokeClaude } from "../runner/claudeInvoker"
 import { resolveAgentPrompt } from "../runner/agentPrompt"
 import { createDisplayCallbacks } from "../runner/streamParser"
-import { generateSnapshot } from "../state/snapshot"
 
 const MAX_CLARIFICATION_ROUNDS = 3
 
@@ -87,16 +86,6 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
   fs.mkdirSync(phasesDir, { recursive: true })
   logInfo(`Created build directory: ${buildDir}`)
 
-  // Generate codebase snapshot if project has existing code
-  let snapshot = ""
-  const hasExistingCode = fs.readdirSync(process.cwd()).some(
-    (f) => !f.startsWith(".") && f !== "node_modules" && f !== ".ridgeline"
-  )
-  if (hasExistingCode) {
-    snapshot = generateSnapshot(process.cwd(), buildDir)
-    logInfo("Generated codebase snapshot")
-  }
-
   // Check for existing project-level files
   const projectConstraints = path.join(ridgelineDir, "constraints.md")
   const projectTaste = path.join(ridgelineDir, "taste.md")
@@ -143,9 +132,6 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     // Step 2: Intake turn — send input to Claude
     console.log("\nAnalyzing your input...")
     let userPrompt = `The user wants to create a new build called "${buildName}".\n\nUser-provided input:\n${inputContext}\n\nIf this input is detailed enough to answer all your questions, signal ready immediately and include a summary of what you understood. If you still have questions, include them — but for any question that the input already answers, include the question along with your best answer derived from the input so the user can confirm or correct.`
-    if (snapshot) {
-      userPrompt += `\n\n## Existing Codebase Snapshot\n${snapshot}`
-    }
     if (existingFileHints) {
       userPrompt += `\n\n## Existing Project Files\n${existingFileHints}`
     }
