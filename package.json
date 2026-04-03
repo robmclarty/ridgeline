@@ -15,7 +15,8 @@
     "lint:agents": "agnix",
     "typecheck": "tsc --noEmit --pretty",
     "prepublishOnly": "npm run build",
-    "test": "vitest run",
+    "test": "npm run typecheck && npm run lint && npm run test:unit",
+    "test:unit": "vitest run",
     "test:watch": "vitest"
   },
   "files": [
