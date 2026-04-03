@@ -6,7 +6,7 @@ import { createDisplayCallbacks } from "./streamParser"
 import { getDiff } from "../git"
 import { discoverBuiltinAgents, buildAgentsFlag } from "./agentDiscovery"
 import { discoverPluginDirs, cleanupPluginDirs } from "./pluginDiscovery"
-import { parseVerdict } from "../state/feedback"
+import { parseVerdict } from "../store/feedback"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,

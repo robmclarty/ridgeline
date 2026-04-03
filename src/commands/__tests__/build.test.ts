@@ -9,7 +9,7 @@ vi.mock("../../logging", () => ({
   logError: vi.fn(),
 }))
 
-vi.mock("../../state/trajectory", () => ({
+vi.mock("../../store/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -22,7 +22,7 @@ vi.mock("../../state/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../state/phases", () => ({
+vi.mock("../../store/phases", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
@@ -30,7 +30,7 @@ vi.mock("../../runner/phaseRunner", () => ({
   runPhase: vi.fn(),
 }))
 
-vi.mock("../../state/state", () => ({
+vi.mock("../../store/state", () => ({
   loadState: vi.fn(() => null),
   saveState: vi.fn(),
   initState: vi.fn((name, phases) => ({
@@ -51,11 +51,11 @@ vi.mock("../../state/state", () => ({
   resetRetries: vi.fn(),
 }))
 
-vi.mock("../../state/budget", () => ({
+vi.mock("../../store/budget", () => ({
   loadBudget: vi.fn(() => ({ entries: [], totalCostUsd: 0 })),
 }))
 
-vi.mock("../../state/tags", () => ({
+vi.mock("../../store/tags", () => ({
   cleanupBuildTags: vi.fn(),
 }))
 
@@ -64,9 +64,9 @@ vi.mock("../plan", () => ({
 }))
 
 import { runBuild } from "../build"
-import { scanPhases } from "../../state/phases"
+import { scanPhases } from "../../store/phases"
 import { runPhase } from "../../runner/phaseRunner"
-import { getNextIncompletePhase } from "../../state/state"
+import { getNextIncompletePhase } from "../../store/state"
 
 describe("commands/run", () => {
   let tmpDir: string

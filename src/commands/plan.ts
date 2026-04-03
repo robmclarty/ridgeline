@@ -2,8 +2,8 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../types"
 import { logInfo } from "../logging"
-import { logTrajectory, makeTrajectoryEntry } from "../state/trajectory"
-import { recordCost } from "../state/budget"
+import { logTrajectory, makeTrajectoryEntry } from "../store/trajectory"
+import { recordCost } from "../store/budget"
 import { invokePlanner } from "../runner/planInvoker"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {

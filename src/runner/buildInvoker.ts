@@ -4,7 +4,7 @@ import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
 import { invokeClaude } from "./claudeInvoker"
 import { resolveAgentPrompt } from "./agentPrompt"
 import { createDisplayCallbacks } from "./streamParser"
-import { readHandoff } from "../state/handoff"
+import { readHandoff } from "../store/handoff"
 import { discoverBuiltinAgents, buildAgentsFlag } from "./agentDiscovery"
 import { discoverPluginDirs, cleanupPluginDirs } from "./pluginDiscovery"
 

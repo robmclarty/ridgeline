@@ -8,7 +8,7 @@ vi.mock("../../logging", () => ({
   logInfo: vi.fn(),
 }))
 
-vi.mock("../../state/trajectory", () => ({
+vi.mock("../../store/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -21,8 +21,8 @@ vi.mock("../../state/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../state/phases", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../state/phases")>()
+vi.mock("../../store/phases", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../store/phases")>()
   return {
     ...actual,
     scanPhases: vi.fn(() => []),
@@ -34,7 +34,7 @@ vi.mock("../plan", () => ({
 }))
 
 import { runDryRun } from "../dryRun"
-import { scanPhases } from "../../state/phases"
+import { scanPhases } from "../../store/phases"
 
 describe("commands/dryRun", () => {
   let tmpDir: string

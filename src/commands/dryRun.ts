@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import { RidgelineConfig } from "../types"
 import { logInfo } from "../logging"
-import { scanPhases, parsePhaseContent } from "../state/phases"
+import { scanPhases, parsePhaseContent } from "../store/phases"
 import { runPlan } from "./plan"
 
 export const runDryRun = async (config: RidgelineConfig): Promise<void> => {

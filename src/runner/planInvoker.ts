@@ -3,7 +3,7 @@ import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
 import { invokeClaude } from "./claudeInvoker"
 import { createDisplayCallbacks } from "./streamParser"
-import { scanPhases } from "../state/phases"
+import { scanPhases } from "../store/phases"
 
 const resolveAgentPrompt = (filename: string): string => {
   // Try dist/agents/core/ first (installed package), then src/agents/core/ (development)

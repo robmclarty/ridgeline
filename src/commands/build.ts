@@ -1,10 +1,10 @@
 import { RidgelineConfig } from "../types"
 import { logInfo, logError } from "../logging"
-import { scanPhases } from "../state/phases"
+import { scanPhases } from "../store/phases"
 import { runPhase } from "../runner/phaseRunner"
-import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../state/state"
-import { loadBudget } from "../state/budget"
-import { cleanupBuildTags } from "../state/tags"
+import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
+import { loadBudget } from "../store/budget"
+import { cleanupBuildTags } from "../store/tags"
 import { runPlan } from "./plan"
 
 const formatDuration = (ms: number): string => {
