@@ -115,7 +115,6 @@ previous state exists.
 ├── state.json         # Phase statuses, retries, timestamps, git tags
 ├── budget.json        # Per-invocation cost tracking
 ├── trajectory.jsonl   # Event log (plan/build/eval start/complete)
-├── snapshot.md        # Summary of latest phase output
 └── handoff.md         # Context passed to the next phase
 ```
 

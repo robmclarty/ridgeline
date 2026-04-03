@@ -37,7 +37,6 @@ rm -f .ridgeline/builds/helloworld/state.json
 rm -f .ridgeline/builds/helloworld/budget.json
 rm -f .ridgeline/builds/helloworld/trajectory.jsonl
 rm -f .ridgeline/builds/helloworld/handoff.md
-rm -f .ridgeline/builds/helloworld/snapshot.md
 rm -rf .ridgeline/builds/helloworld/phases
 rm -f hello.js
 
