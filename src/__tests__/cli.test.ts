@@ -18,10 +18,10 @@ vi.mock("commander", () => {
 })
 
 // Mock command modules to avoid side effects
-vi.mock("../commands/init", () => ({ runInit: vi.fn() }))
+vi.mock("../commands/spec", () => ({ runSpec: vi.fn() }))
 vi.mock("../commands/plan", () => ({ runPlan: vi.fn() }))
 vi.mock("../commands/dryRun", () => ({ runDryRun: vi.fn() }))
-vi.mock("../commands/run", () => ({ runBuild: vi.fn() }))
+vi.mock("../commands/build", () => ({ runBuild: vi.fn() }))
 
 import { resolveFile, parseCheckCommand } from "../cli"
 

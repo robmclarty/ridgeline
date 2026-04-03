@@ -4,10 +4,10 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { Command } from "commander"
 import { RidgelineConfig } from "./types"
-import { runInit } from "./commands/init"
+import { runSpec } from "./commands/spec"
 import { runPlan } from "./commands/plan"
 import { runDryRun } from "./commands/dryRun"
-import { runBuild } from "./commands/run"
+import { runBuild } from "./commands/build"
 
 // Load version from package.json at runtime
 const loadVersion = (): string => {
@@ -66,7 +66,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
       `constraints.md not found. Checked:\n` +
       `  - ${buildDir}/constraints.md\n` +
       `  - ${ridgelineDir}/constraints.md\n` +
-      `Create one with 'ridgeline init ${buildName}' or pass --constraints <path>`
+      `Create one with 'ridgeline spec ${buildName}' or pass --constraints <path>`
     )
   }
 
@@ -116,20 +116,21 @@ program
   .version(loadVersion())
 
 program
-  .command("init [build-name]")
-  .description("Interactive helper to scaffold build input files")
-  .option("--model <name>", "Model for init assistant", "opus")
+  .command("spec [build-name] [input]")
+  .description("Scaffold build input files from a description or existing spec")
+  .option("--model <name>", "Model for spec assistant", "opus")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
+  .action(async (buildName: string | undefined, input: string | undefined, opts: Record<string, string | boolean | undefined>) => {
     if (!buildName) buildName = await askBuildName()
     if (!buildName) {
       console.error("Build name is required")
       process.exit(1)
     }
     try {
-      await runInit(buildName, {
+      await runSpec(buildName, {
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
+        input,
       })
     } catch (err) {
       console.error(`Error: ${err}`)
@@ -174,7 +175,7 @@ program
   })
 
 program
-  .command("run [build-name]")
+  .command("build [build-name]")
   .description("Execute the build pipeline (automatically resumes from last successful phase)")
   .option("--timeout <minutes>", "Max duration per phase in minutes", "120")
   .option("--check-timeout <seconds>", "Max duration for check command in seconds", "1200")

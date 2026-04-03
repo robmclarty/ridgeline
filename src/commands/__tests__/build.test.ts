@@ -60,7 +60,7 @@ vi.mock("../plan", () => ({
   runPlan: vi.fn(),
 }))
 
-import { runBuild } from "../run"
+import { runBuild } from "../build"
 import { scanPhases } from "../../runner/planInvoker"
 import { runPhase } from "../../runner/phaseRunner"
 import { getNextIncompletePhase } from "../../state/stateManager"

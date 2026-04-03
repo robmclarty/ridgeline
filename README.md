@@ -34,7 +34,11 @@ to be installed and authenticated.
 
 ```sh
 # Scaffold a new build (interactive wizard)
-ridgeline init my-feature
+ridgeline spec my-feature
+
+# Or provide a description or existing spec document
+ridgeline spec my-feature "Build a REST API for task management"
+ridgeline spec my-feature ./my-spec.md
 
 # Generate the phase plan
 ridgeline plan my-feature
@@ -43,19 +47,21 @@ ridgeline plan my-feature
 ridgeline dry-run my-feature
 
 # Execute the full build
-ridgeline run my-feature
+ridgeline build my-feature
 
-# Resume after a failure
-ridgeline resume my-feature
+# Resume after a failure (re-run build)
+ridgeline build my-feature
 ```
 
 ## Commands
 
-### `ridgeline init [build-name]`
+### `ridgeline spec [build-name]`
 
-Interactive wizard that creates the build directory under
-`.ridgeline/builds/<build-name>/` and collects your spec, constraints, and
-optional taste file.
+Creates the build directory under `.ridgeline/builds/<build-name>/` and collects
+your spec, constraints, and optional taste file. Accepts an optional input
+argument — a file path to an existing spec document or a natural language
+description. If the input is detailed enough, the assistant skips or
+pre-populates its clarification questions.
 
 ### `ridgeline plan [build-name]`
 
@@ -75,7 +81,7 @@ Invokes the planner agent to decompose the spec into numbered phase files
 Displays the execution plan without invoking builders or reviewers. Accepts
 the same flags as `plan`.
 
-### `ridgeline run [build-name]`
+### `ridgeline build [build-name]`
 
 Executes the full build pipeline: build each phase, evaluate, retry on failure,
 and advance on success.
@@ -91,10 +97,8 @@ and advance on success.
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
 
-### `ridgeline resume [build-name]`
-
-Loads existing state and resumes from the next incomplete phase. Accepts the
-same flags as `run`.
+The build command automatically resumes from the last successful phase if
+previous state exists.
 
 ## Build directory structure
 

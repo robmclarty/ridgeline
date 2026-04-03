@@ -7,7 +7,7 @@ import { ensureHandoffExists } from "../state/handoff"
 import { updatePhaseStatus } from "../state/stateManager"
 import { logPhase, logTrajectory, makeTrajectoryEntry } from "../logging"
 import { invokeBuilder } from "./buildInvoker"
-import { invokeReviewer, formatIssue, generateFeedback } from "./reviewerInvoker"
+import { invokeReviewer, formatIssue, generateFeedback } from "./reviewInvoker"
 
 const runCheckCommand = (
   checkCommand: string | null,

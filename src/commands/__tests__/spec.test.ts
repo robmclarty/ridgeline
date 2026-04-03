@@ -26,7 +26,7 @@ vi.mock("node:readline", () => ({
 }))
 
 import { invokeClaude } from "../../runner/claudeInvoker"
-import { runInit } from "../init"
+import { runSpec } from "../spec"
 
 const makeClaudeResult = (result: string, sessionId = "sess-1") => ({
   success: true,
@@ -39,7 +39,7 @@ const makeClaudeResult = (result: string, sessionId = "sess-1") => ({
 
 const defaultOpts = { model: "opus", timeout: 10 }
 
-describe("commands/init", () => {
+describe("commands/spec", () => {
   let origCwd: string
   let tmpDir: string
 
@@ -64,7 +64,7 @@ describe("commands/init", () => {
 
     // Create spec.md so verification passes
     const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
-    // runInit creates the directory, but we need to pre-create the file after the dir exists
+    // runSpec creates the directory, but we need to pre-create the file after the dir exists
     // Use a side-effect on the second invokeClaude call to simulate file creation
     vi.mocked(invokeClaude).mockImplementation(async (opts) => {
       if (opts.allowedTools?.includes("Write")) {
@@ -74,7 +74,7 @@ describe("commands/init", () => {
       return makeClaudeResult(JSON.stringify({ ready: true, summary: "A CLI tool" }))
     })
 
-    await runInit("my-build", defaultOpts)
+    await runSpec("my-build", defaultOpts)
 
     const phasesDir = path.join(tmpDir, ".ridgeline", "builds", "my-build", "phases")
     expect(fs.existsSync(phasesDir)).toBe(true)
@@ -92,7 +92,7 @@ describe("commands/init", () => {
       return makeClaudeResult(JSON.stringify({ ready: true, summary: "A CLI tool" }))
     })
 
-    await runInit("my-build", defaultOpts)
+    await runSpec("my-build", defaultOpts)
 
     // First call: intake with jsonSchema
     expect(invokeClaude).toHaveBeenCalledTimes(2)
@@ -127,7 +127,7 @@ describe("commands/init", () => {
         return makeClaudeResult("done", "sess-1")
       })
 
-    await runInit("my-build", defaultOpts)
+    await runSpec("my-build", defaultOpts)
 
     // 3 calls: intake, clarification, generation
     expect(invokeClaude).toHaveBeenCalledTimes(3)

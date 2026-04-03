@@ -15,7 +15,14 @@ const QA_JSON_SCHEMA = JSON.stringify({
     ready: { type: "boolean" },
     questions: {
       type: "array",
-      items: { type: "string" },
+      items: {
+        type: "object",
+        properties: {
+          question: { type: "string" },
+          suggestedAnswer: { type: "string" },
+        },
+        required: ["question"],
+      },
     },
     summary: { type: "string" },
   },
@@ -30,11 +37,19 @@ const askQuestion = (rl: readline.Interface, prompt: string): Promise<string> =>
   })
 }
 
+type QAQuestion = {
+  question: string
+  suggestedAnswer?: string
+}
+
 type QAResponse = {
   ready: boolean
-  questions?: string[]
+  questions?: (string | QAQuestion)[]
   summary?: string
 }
+
+const normalizeQuestion = (q: string | QAQuestion): QAQuestion =>
+  typeof q === "string" ? { question: q } : q
 
 const parseQAResponse = (resultText: string): QAResponse => {
   try {
@@ -45,12 +60,25 @@ const parseQAResponse = (resultText: string): QAResponse => {
   }
 }
 
-export type InitOptions = {
+export type SpecOptions = {
   model: string
   timeout: number
+  input?: string
 }
 
-export const runInit = async (buildName: string, opts: InitOptions): Promise<void> => {
+const resolveInput = (input: string): { type: "file"; path: string; content: string } | { type: "text"; content: string } => {
+  // Check if it looks like a file path (has extension, starts with ./ or /, or contains path separators)
+  const looksLikeFile = /\.\w+$/.test(input) || input.startsWith("/") || input.startsWith("./") || input.startsWith("../") || input.includes(path.sep)
+  if (looksLikeFile) {
+    const resolved = path.resolve(input)
+    if (fs.existsSync(resolved)) {
+      return { type: "file", path: resolved, content: fs.readFileSync(resolved, "utf-8") }
+    }
+  }
+  return { type: "text", content: input }
+}
+
+export const runSpec = async (buildName: string, opts: SpecOptions): Promise<void> => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const buildDir = path.join(ridgelineDir, "builds", buildName)
   const phasesDir = path.join(buildDir, "phases")
@@ -80,7 +108,7 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
     existingFileHints += `\nNote: Project-level taste.md exists at ${projectTaste}. The user may want to reuse it rather than creating a new one.\n`
   }
 
-  const systemPrompt = resolveAgentPrompt("init.md")
+  const systemPrompt = resolveAgentPrompt("specifier.md")
   const timeoutMs = opts.timeout * 60 * 1000
 
   // Set up readline for user interaction
@@ -90,17 +118,31 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
   })
 
   try {
-    // Step 1: Get initial description from user
-    console.log("")
-    const description = await askQuestion(rl, "Describe what you want to build:\n> ")
-    if (!description) {
-      logError("A description is required")
-      return
+    // Step 1: Resolve input — file, natural language, or interactive prompt
+    let inputContext = ""
+    if (opts.input) {
+      const resolved = resolveInput(opts.input)
+      if (resolved.type === "file") {
+        logInfo(`Using existing spec from: ${resolved.path}`)
+        inputContext = resolved.content
+      } else {
+        inputContext = resolved.content
+      }
     }
 
-    // Step 2: Intake turn — send description to Claude
-    console.log("\nAnalyzing your description...")
-    let userPrompt = `The user wants to create a new build called "${buildName}".\n\nUser description:\n${description}`
+    // If no input provided, fall back to interactive prompt
+    if (!inputContext) {
+      console.log("")
+      inputContext = await askQuestion(rl, "Describe what you want to build:\n> ")
+      if (!inputContext) {
+        logError("A description is required")
+        return
+      }
+    }
+
+    // Step 2: Intake turn — send input to Claude
+    console.log("\nAnalyzing your input...")
+    let userPrompt = `The user wants to create a new build called "${buildName}".\n\nUser-provided input:\n${inputContext}\n\nIf this input is detailed enough to answer all your questions, signal ready immediately and include a summary of what you understood. If you still have questions, include them — but for any question that the input already answers, include the question along with your best answer derived from the input so the user can confirm or correct.`
     if (snapshot) {
       userPrompt += `\n\n## Existing Codebase Snapshot\n${snapshot}`
     }
@@ -132,17 +174,26 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
 
       // Display and collect answers to questions
       if (qa.questions && qa.questions.length > 0) {
+        const normalized = qa.questions.map(normalizeQuestion)
         console.log("\nI have a few questions:\n")
         const answers: string[] = []
-        for (let i = 0; i < qa.questions.length; i++) {
-          const answer = await askQuestion(rl, `  ${i + 1}. ${qa.questions[i]}\n  > `)
-          answers.push(answer)
+        for (let i = 0; i < normalized.length; i++) {
+          const q = normalized[i]
+          if (q.suggestedAnswer) {
+            console.log(`  ${i + 1}. ${q.question}`)
+            console.log(`     (suggested: ${q.suggestedAnswer})`)
+            const answer = await askQuestion(rl, `  > `)
+            answers.push(answer || q.suggestedAnswer)
+          } else {
+            const answer = await askQuestion(rl, `  ${i + 1}. ${q.question}\n  > `)
+            answers.push(answer)
+          }
         }
 
         // Send answers back to Claude
         console.log("\nProcessing your answers...")
-        const answersPrompt = qa.questions
-          .map((q, i) => `Q: ${q}\nA: ${answers[i]}`)
+        const answersPrompt = normalized
+          .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
           .join("\n\n")
 
         display = createDisplayCallbacks()
@@ -195,7 +246,7 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
     }
 
     if (createdFiles.length === 0) {
-      logError("No build files were created. Try running init again.")
+      logError("No build files were created. Try running spec again.")
       return
     }
 

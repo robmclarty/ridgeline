@@ -30,7 +30,7 @@ Four modules with distinct responsibilities:
 streamParser.ts    — parse NDJSON, extract results (pure functions, no I/O)
 claudeInvoker.ts   — spawn claude subprocess, collect output, call callbacks
 buildInvoker.ts    — assemble prompts, wire up display, call invoker
-  (and reviewerInvoker, planInvoker, init)
+  (and reviewInvoker, planInvoker, spec)
 phaseRunner.ts     — orchestrate phases, own the [ridgeline] log lines
 ```
 
@@ -52,7 +52,7 @@ Generic subprocess runner. No display logic.
 - Calls `opts.onStdout?.(chunk)` for each raw stdout chunk — callers decide what to do with it.
 - On close, calls `extractResult()` to parse the final result.
 
-### Invokers (buildInvoker, reviewerInvoker, planInvoker, init)
+### Invokers (buildInvoker, reviewInvoker, planInvoker, spec)
 
 Each invoker:
 1. Calls `createDisplayCallbacks()` to get an `onStdout` handler and a `flush` function.

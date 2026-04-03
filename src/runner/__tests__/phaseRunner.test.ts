@@ -43,7 +43,7 @@ vi.mock("../buildInvoker", () => ({
   invokeBuilder: vi.fn(),
 }))
 
-vi.mock("../reviewerInvoker", () => ({
+vi.mock("../reviewInvoker", () => ({
   invokeReviewer: vi.fn(),
   formatIssue: vi.fn((issue: { description: string; file?: string }) =>
     issue.file ? `${issue.file}: ${issue.description}` : issue.description
@@ -58,7 +58,7 @@ vi.mock("node:fs", async () => {
 
 import { runPhase } from "../phaseRunner"
 import { invokeBuilder } from "../buildInvoker"
-import { invokeReviewer } from "../reviewerInvoker"
+import { invokeReviewer } from "../reviewInvoker"
 import { isWorkingTreeDirty, commitAll, createTag } from "../../git"
 import { recordCost } from "../../state/budget"
 import { updatePhaseStatus } from "../../state/stateManager"
