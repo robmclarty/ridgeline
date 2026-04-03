@@ -99,7 +99,7 @@ opt out. If no provider is found, Ridgeline prints a warning and proceeds
 without a sandbox.
 
 The network allowlist for Greywall is configured in
-`.ridgeline/settings.json` under a `networkAllowlist` key. Sensible defaults
+`.ridgeline/settings.json` under `network.allowlist`. Sensible defaults
 (npm, PyPI, GitHub, etc.) are included; extend or restrict them per project.
 
 bwrap additionally mounts the filesystem read-only, with only the worktree
