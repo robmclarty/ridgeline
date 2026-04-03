@@ -4,6 +4,8 @@ import { invokeClaude } from "./claudeInvoker"
 import { resolveAgentPrompt } from "./agentPrompt"
 import { createDisplayCallbacks } from "./streamParser"
 import { getDiff } from "../git"
+import { discoverBuiltinAgents, buildAgentsFlag } from "./agentDiscovery"
+import { discoverPluginDirs, cleanupPluginDirs } from "./pluginDiscovery"
 
 // Normalize an issue entry — accept both string and object forms
 const normalizeIssue = (item: unknown, severity: "blocking" | "suggestion"): ReviewIssue => {
@@ -207,17 +209,27 @@ export const invokeReviewer = async (
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
   const { onStdout, flush } = createDisplayCallbacks()
 
-  const result = await invokeClaude({
-    systemPrompt,
-    userPrompt,
-    model: config.model,
-    allowedTools: ["Read", "Bash", "Glob", "Grep"],
-    cwd: process.cwd(),
-    timeoutMs: config.timeoutMinutes * 60 * 1000,
-    onStdout,
-  })
+  const builtinAgents = discoverBuiltinAgents()
+  const agents = buildAgentsFlag(builtinAgents)
+  const pluginDirs = discoverPluginDirs(config)
 
-  flush()
-  const verdict = parseVerdict(result.result)
-  return { result, verdict }
+  try {
+    const result = await invokeClaude({
+      systemPrompt,
+      userPrompt,
+      model: config.model,
+      allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent"],
+      agents: Object.keys(agents).length > 0 ? agents : undefined,
+      pluginDirs: pluginDirs.length > 0 ? pluginDirs.map((p) => p.dir) : undefined,
+      cwd: process.cwd(),
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      onStdout,
+    })
+
+    flush()
+    const verdict = parseVerdict(result.result)
+    return { result, verdict }
+  } finally {
+    cleanupPluginDirs(pluginDirs)
+  }
 }
