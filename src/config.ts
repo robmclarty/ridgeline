@@ -61,5 +61,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),
     checkCommand,
     maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,
+    sandbox: opts.sandbox === true,
+    allowNetwork: opts.allowNetwork === true,
   }
 }

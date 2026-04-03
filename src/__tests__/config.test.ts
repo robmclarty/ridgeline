@@ -113,5 +113,31 @@ describe("config", () => {
       const config = resolveConfig("test", { check: "npm run lint" })
       expect(config.checkCommand).toBe("npm run lint")
     })
+
+    it("defaults sandbox and allowNetwork to false", () => {
+      mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
+        if (filename === "constraints.md") return "/fake/constraints.md"
+        return null
+      })
+      mockParseCheckCommand.mockReturnValue(null)
+
+      const config = resolveConfig("test", {})
+
+      expect(config.sandbox).toBe(false)
+      expect(config.allowNetwork).toBe(false)
+    })
+
+    it("sets sandbox and allowNetwork from CLI opts", () => {
+      mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
+        if (filename === "constraints.md") return "/fake/constraints.md"
+        return null
+      })
+      mockParseCheckCommand.mockReturnValue(null)
+
+      const config = resolveConfig("test", { sandbox: true, allowNetwork: true })
+
+      expect(config.sandbox).toBe(true)
+      expect(config.allowNetwork).toBe(true)
+    })
   })
 })

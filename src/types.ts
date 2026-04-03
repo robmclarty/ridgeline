@@ -13,6 +13,8 @@ export type RidgelineConfig = {
   checkTimeoutSeconds: number
   checkCommand: string | null
   maxBudgetUsd: number | null
+  sandbox: boolean
+  allowNetwork: boolean
 }
 
 // Phase metadata parsed from filesystem
