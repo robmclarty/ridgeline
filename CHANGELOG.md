@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+
+- Add 4 specialist sub-agents: navigator (codebase exploration), checker (intelligent verification), tester (acceptance-level test writing), depender (module graph integrity)
+- Restructure agents/ into core/ and specialists/ subdirectories, replacing the .core exclude manifest with directory-based discovery
+- Remove harness-level check command from phaseRunner — the builder now uses the checker sub-agent as its internal feedback loop
+- Pass specialist sub-agents and plugin directories to the reviewer, giving it the Agent tool for delegated verification
+- Remove the snapshot feature entirely — models explore dynamically rather than consuming tokens resolving stale codebase snapshots
+- Fix build script to clean dist/agents before copying to prevent nesting on rebuild
+
 ## 0.2.0
 
 - Discover built-in specialist agents from `src/agents/` (excluding core pipeline agents via `.core` list) and pass them to the builder via `--agents` CLI flag as native subagent types
