@@ -3,7 +3,6 @@ import * as path from "node:path"
 import { RidgelineConfig } from "../types"
 import { logInfo, logTrajectory, makeTrajectoryEntry } from "../logging"
 import { recordCost } from "../state/budget"
-import { generateSnapshot } from "../state/snapshot"
 import { invokePlanner } from "../runner/planInvoker"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
@@ -17,10 +16,6 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
 
   // Create phases directory
   fs.mkdirSync(config.phasesDir, { recursive: true })
-
-  // Generate snapshot
-  logInfo("Generating codebase snapshot...")
-  generateSnapshot(process.cwd(), config.buildDir)
 
   // Run planner
   logInfo("Running planner...")
