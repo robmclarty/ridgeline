@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.9
+
+- Merge `resume` command into `run` (auto-detects and resumes from last successful phase)
+- Reset retries on resume so incomplete phases get full fresh attempts
+- Add per-phase summary table showing attempts, build/review time, and cost
+- Preserve numbered feedback files per retry for post-build analysis
+- Auto-cleanup git tags on successful build completion
+- Increase default timeouts: builder/reviewer 2h, check command 20m
+- Add `--check-timeout` flag for configurable check command timeout
+- Load CLI version from package.json at runtime instead of hardcoding
+- Extract shared `resolveAgentPrompt` module to eliminate duplication
+- Reviewer receives only diffs; reads files on demand via tools
+- Exclude `examples/` from linters
+
 ## 0.1.8
 
 - Fix crash when re-running or resuming builds with pre-existing checkpoint/completion git tags
