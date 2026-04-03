@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.7
+
+- Extract config resolution and interactive prompts from `cli.ts` into `config.ts` and `ui/prompt.ts`
+
 ## 0.2.6
 
 - Move `logging.ts` to `ui/output.ts` and rename `logInfo`/`logError`/`logPhase` to `printInfo`/`printError`/`printPhase` — user-facing status output is a UI concern
