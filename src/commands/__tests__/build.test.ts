@@ -67,6 +67,15 @@ vi.mock("../../engine/claude/sandbox", () => ({
   detectSandbox: vi.fn(() => null),
 }))
 
+vi.mock("../../engine/worktree", () => ({
+  createWorktree: vi.fn(() => "/tmp/worktree"),
+  validateWorktree: vi.fn(() => false),
+  reflectCommits: vi.fn(),
+  removeWorktree: vi.fn(),
+  worktreePath: vi.fn(() => "/tmp/worktree"),
+  cleanAllWorktrees: vi.fn(),
+}))
+
 import { runBuild } from "../build"
 import { scanPhases } from "../../store/phases"
 import { runPhase } from "../../engine/pipeline/phase.sequence"

@@ -7,6 +7,14 @@ import { loadState, saveState, initState, getNextIncompletePhase, resetRetries }
 import { loadBudget } from "../store/budget"
 import { cleanupBuildTags } from "../store/tags"
 import { runPlan } from "./plan"
+import {
+  createWorktree,
+  validateWorktree,
+  reflectCommits,
+  removeWorktree,
+  worktreePath as getWorktreePath,
+} from "../engine/worktree"
+import * as fs from "node:fs"
 
 const formatDuration = (ms: number): string => {
   const seconds = Math.round(ms / 1000)
@@ -121,6 +129,21 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
 
+  // Set up worktree
+  const repoRoot = process.cwd()
+  if (validateWorktree(repoRoot, config.buildName)) {
+    config.worktreePath = getWorktreePath(repoRoot, config.buildName)
+    printInfo(`Resuming in worktree: ${config.worktreePath}`)
+  } else {
+    // Clean up broken worktree if it exists
+    const existingPath = getWorktreePath(repoRoot, config.buildName)
+    if (fs.existsSync(existingPath)) {
+      removeWorktree(repoRoot, config.buildName)
+    }
+    config.worktreePath = createWorktree(repoRoot, config.buildName)
+    printInfo(`Worktree: ${config.worktreePath}`)
+  }
+
   // Run phases
   let nextPhaseState = getNextIncompletePhase(state)
   while (nextPhaseState) {
@@ -135,6 +158,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
     if (result === "passed") {
       completed++
+      reflectCommits(repoRoot, config.buildName)
     } else {
       failed++
       break // Halt on failure
@@ -166,5 +190,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     printInfo("All phases complete!")
     printInfo("Cleaning up...")
     cleanupBuildTags(config.buildName)
+    removeWorktree(repoRoot, config.buildName)
   }
 }

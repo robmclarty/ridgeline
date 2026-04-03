@@ -97,4 +97,17 @@ program
     }
   })
 
+program
+  .command("clean")
+  .description("Remove all build worktrees and WIP branches")
+  .action(() => {
+    try {
+      const { runClean } = require("./commands/clean")
+      runClean(process.cwd())
+    } catch (err) {
+      console.error(`Error: ${err}`)
+      process.exit(1)
+    }
+  })
+
 program.parse()
