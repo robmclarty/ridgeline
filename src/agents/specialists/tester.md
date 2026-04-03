@@ -64,7 +64,7 @@ Execute the test suite. If tests fail because implementation is incomplete, note
 
 Plain text. List what was created.
 
-```
+```text
 [test] Created/modified:
 - tests/api/users.test.ts — criteria 1, 2, 3
 - tests/api/auth.test.ts — criteria 4, 5

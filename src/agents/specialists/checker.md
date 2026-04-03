@@ -55,7 +55,7 @@ Produce a structured summary.
 
 ## Output format
 
-```
+```text
 [check] Tools run: <list>
 [check] Check command: PASS | FAIL | not provided
 [check] Lint: PASS | <N> fixed, <M> remaining
@@ -67,7 +67,7 @@ Produce a structured summary.
 
 Or if non-mechanical issues remain:
 
-```
+```text
 [check] ISSUES: <count> require caller attention
 - <file>:<line> — <description> (type error / test failure / logic issue)
 ```

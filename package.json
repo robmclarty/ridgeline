@@ -7,7 +7,7 @@
     "ridgeline": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && cp -r src/agents dist/agents",
+    "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents",
     "dev": "tsc --watch",
     "lint": "npm run lint:code && npm run lint:markdown && npm run lint:agents",
     "lint:code": "oxlint --ignore-pattern examples",

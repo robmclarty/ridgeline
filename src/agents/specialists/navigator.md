@@ -40,7 +40,7 @@ Produce a structured briefing.
 
 ## Output format
 
-```
+```text
 ## Briefing: <target>
 
 ### Key Files

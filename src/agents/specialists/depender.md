@@ -54,7 +54,7 @@ Produce a structured summary.
 
 ## Output format
 
-```
+```text
 [deps] Scope: <what was checked>
 [deps] Imports: <N> checked, <M> issues
 [deps] Circular: none | <list>
@@ -69,7 +69,7 @@ Issues:
 
 Or:
 
-```
+```text
 [deps] ISSUES FOUND: <count>
 ```
 
