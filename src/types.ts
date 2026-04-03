@@ -5,7 +5,6 @@ export type RidgelineConfig = {
   buildDir: string
   constraintsPath: string
   tastePath: string | null
-  snapshotPath: string
   handoffPath: string
   phasesDir: string
   model: string

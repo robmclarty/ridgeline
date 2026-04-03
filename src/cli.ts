@@ -85,7 +85,6 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     buildDir,
     constraintsPath,
     tastePath,
-    snapshotPath: path.join(buildDir, "snapshot.md"),
     handoffPath: path.join(buildDir, "handoff.md"),
     phasesDir,
     model: (opts.model as string) ?? "opus",
