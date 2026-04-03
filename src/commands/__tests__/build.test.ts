@@ -30,7 +30,7 @@ vi.mock("../../runner/phaseRunner", () => ({
   runPhase: vi.fn(),
 }))
 
-vi.mock("../../state/stateManager", () => ({
+vi.mock("../../state/state", () => ({
   loadState: vi.fn(() => null),
   saveState: vi.fn(),
   initState: vi.fn((name, phases) => ({
@@ -66,7 +66,7 @@ vi.mock("../plan", () => ({
 import { runBuild } from "../build"
 import { scanPhases } from "../../state/phases"
 import { runPhase } from "../../runner/phaseRunner"
-import { getNextIncompletePhase } from "../../state/stateManager"
+import { getNextIncompletePhase } from "../../state/state"
 
 describe("commands/run", () => {
   let tmpDir: string

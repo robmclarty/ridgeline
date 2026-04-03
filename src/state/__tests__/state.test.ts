@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase } from "../stateManager"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase } from "../state"
 import type { PhaseInfo, BuildState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase
@@ -19,7 +19,7 @@ const samplePhases: PhaseInfo[] = [
   { id: "03-ui", index: 3, slug: "ui", filename: "03-ui.md", filepath: "/phases/03-ui.md" },
 ]
 
-describe("stateManager", () => {
+describe("state", () => {
   let tmpDir: string
 
   beforeEach(() => {

@@ -16,7 +16,7 @@ vi.mock("../../state/handoff", () => ({
   ensureHandoffExists: vi.fn(),
 }))
 
-vi.mock("../../state/stateManager", () => ({
+vi.mock("../../state/state", () => ({
   updatePhaseStatus: vi.fn(),
 }))
 
@@ -58,7 +58,7 @@ import { invokeBuilder } from "../buildInvoker"
 import { invokeReviewer } from "../reviewInvoker"
 import { createCheckpoint, createCompletionTag } from "../../state/tags"
 import { recordCost } from "../../state/budget"
-import { updatePhaseStatus } from "../../state/stateManager"
+import { updatePhaseStatus } from "../../state/state"
 
 const makeResult = (cost = 0.05): ClaudeResult => ({
   success: true,
