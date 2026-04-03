@@ -33,11 +33,11 @@ export const parseFrontmatter = (content: string): Frontmatter | null => {
   }
 }
 
-export const resolveBuiltinAgentsDir = (): string | null => {
+export const resolveSpecialistsDir = (): string | null => {
   const candidates = [
-    path.join(__dirname, "agents"),
-    path.join(__dirname, "..", "agents"),
-    path.join(__dirname, "..", "..", "src", "agents"),
+    path.join(__dirname, "agents", "specialists"),
+    path.join(__dirname, "..", "agents", "specialists"),
+    path.join(__dirname, "..", "..", "src", "agents", "specialists"),
   ]
   for (const dir of candidates) {
     if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
@@ -45,32 +45,15 @@ export const resolveBuiltinAgentsDir = (): string | null => {
   return null
 }
 
-export const loadExcludeList = (): Set<string> => {
-  const dir = resolveBuiltinAgentsDir()
-  if (!dir) return new Set()
-
-  const corePath = path.join(dir, ".core")
-  if (!fs.existsSync(corePath)) return new Set()
-
-  const content = fs.readFileSync(corePath, "utf-8")
-  const filenames = content
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line && !line.startsWith("#"))
-
-  return new Set(filenames)
-}
-
 export const discoverAgentsInDir = (
-  dir: string,
-  excludeSet: Set<string>
+  dir: string
 ): DiscoveredAgent[] => {
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return []
 
   const agents: DiscoveredAgent[] = []
 
   for (const entry of fs.readdirSync(dir)) {
-    if (!entry.endsWith(".md") || excludeSet.has(entry)) continue
+    if (!entry.endsWith(".md")) continue
 
     const filepath = path.join(dir, entry)
     try {
@@ -94,10 +77,9 @@ export const discoverAgentsInDir = (
 }
 
 export const discoverBuiltinAgents = (): DiscoveredAgent[] => {
-  const excludeSet = loadExcludeList()
-  const builtinDir = resolveBuiltinAgentsDir()
-  if (!builtinDir) return []
-  return discoverAgentsInDir(builtinDir, excludeSet)
+  const specialistsDir = resolveSpecialistsDir()
+  if (!specialistsDir) return []
+  return discoverAgentsInDir(specialistsDir)
 }
 
 export const buildAgentsFlag = (

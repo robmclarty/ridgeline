@@ -53,19 +53,19 @@ describe("parseFrontmatter", () => {
 
 describe("discoverAgentsInDir", () => {
   it("returns empty array for nonexistent directory", () => {
-    expect(discoverAgentsInDir("/nonexistent/path", new Set())).toEqual([])
+    expect(discoverAgentsInDir("/nonexistent/path")).toEqual([])
   })
 
   it("returns empty array for empty directory", () => {
     const dir = trackTempDir(makeTempDir())
-    expect(discoverAgentsInDir(dir, new Set())).toEqual([])
+    expect(discoverAgentsInDir(dir)).toEqual([])
   })
 
   it("discovers .md files with valid frontmatter", () => {
     const dir = trackTempDir(makeTempDir())
     writeAgent(dir, "db-expert.md", validAgent("db-expert", "Database specialist", "sonnet"))
 
-    const agents = discoverAgentsInDir(dir, new Set())
+    const agents = discoverAgentsInDir(dir)
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("db-expert")
     expect(agents[0].description).toBe("Database specialist")
@@ -74,23 +74,12 @@ describe("discoverAgentsInDir", () => {
     expect(agents[0].prompt).toContain("You are db-expert.")
   })
 
-  it("skips files in the exclude set", () => {
-    const dir = trackTempDir(makeTempDir())
-    writeAgent(dir, "builder.md", validAgent("builder", "Core builder"))
-    writeAgent(dir, "specialist.md", validAgent("specialist", "A specialist"))
-
-    const agents = discoverAgentsInDir(dir, new Set(["builder.md"]))
-    expect(agents).toHaveLength(1)
-    expect(agents[0].name).toBe("specialist")
-  })
-
   it("skips non-.md files", () => {
     const dir = trackTempDir(makeTempDir())
     writeAgent(dir, "specialist.md", validAgent("specialist", "A specialist"))
-    fs.writeFileSync(path.join(dir, ".core"), "builder.md\n")
     fs.writeFileSync(path.join(dir, "notes.txt"), "some notes")
 
-    const agents = discoverAgentsInDir(dir, new Set())
+    const agents = discoverAgentsInDir(dir)
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("specialist")
   })
@@ -100,7 +89,7 @@ describe("discoverAgentsInDir", () => {
     writeAgent(dir, "good.md", validAgent("good", "Good agent"))
     writeAgent(dir, "bad.md", "No frontmatter here")
 
-    const agents = discoverAgentsInDir(dir, new Set())
+    const agents = discoverAgentsInDir(dir)
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("good")
   })
