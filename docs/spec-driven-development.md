@@ -224,7 +224,7 @@ the planner from over-scoping. "Authentication is in scope. Authorization
 
 **Include codebase context for brownfield projects.** If the project already has
 conventions, describe them in constraints. "Existing routes are in
-src/routes/<resource>.ts. Follow the same pattern." The builder will explore
+src/routes/\<resource>.ts. Follow the same pattern." The builder will explore
 anyway, but explicit guidance prevents unnecessary divergence.
 
 **Let the specifier help.** The interactive Q&A surfaces gaps you might not

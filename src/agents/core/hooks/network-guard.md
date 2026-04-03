@@ -9,6 +9,7 @@ rsync (with remote paths), python -m http.server, node -e with http/https
 modules, telnet, ftp.
 
 Allow these exceptions:
+
 - npm install, npm ci, npm update
 - npx (any arguments)
 - pip install, pip3 install

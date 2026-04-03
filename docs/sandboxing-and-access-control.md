@@ -56,6 +56,7 @@ allowed. Network traffic routes through `greyproxy`, a transparent proxy with a
 live allow/deny dashboard.
 
 **Key features:**
+
 - Deny-by-default filesystem -- only the working directory is accessible
 - Network isolation via transparent proxy with domain allowlists
 - Command blocking (`rm -rf /`, `git push --force`, etc.)
@@ -179,6 +180,7 @@ git worktree remove .worktrees/build-phase-3
 ```
 
 **Benefits for Ridgeline:**
+
 - Each build phase operates in isolation -- changes do not affect the main tree
   until explicitly merged
 - Parallel agents cannot step on each other's files
@@ -187,6 +189,7 @@ git worktree remove .worktrees/build-phase-3
   its worktree directory
 
 **Practical details:**
+
 - State files (`.env`, config) must be copied into each worktree
 - `node_modules` and other large dependency directories should be symlinked or
   shared to avoid duplication
@@ -207,6 +210,7 @@ different model (GPT/Codex) independently reviews. Nothing merges without
 auditor sign-off -- the author model cannot approve its own work.
 
 **Notable ideas:**
+
 - **Fitness score engine** -- measures type safety, test coverage, build health,
   complexity, security, and dependencies as a 0.0-1.0 score. Gates expensive LLM
   review with auto-reject/self-correct/proceed thresholds. "What is measurable
@@ -235,6 +239,7 @@ CLI. Provides task delegation, template scaffolding, git worktree isolation,
 native PTY sessions, and a TUI dashboard.
 
 **Notable ideas:**
+
 - Type-state pattern for compile-time state validation
 - Channel-based orchestration without shared mutable state
 - OpenTelemetry export for observability (Jaeger/Zipkin/Langfuse)
@@ -254,6 +259,7 @@ lifecycle. Parallel agent "quests" in isolated worktrees, coordinated by a lead
 agent. Hard gate enforcement via compiled Go binary hooks.
 
 **Notable ideas:**
+
 - **Structural gate enforcement** -- after submission, work tools (Edit, Write,
   Bash) are blocked by hooks until the lead approves. Self-approval is
   structurally impossible. Compliance went from ~33% (prompt-only) to ~95%+.
@@ -282,6 +288,7 @@ Plugin that spins off autonomous Claude agents into isolated git worktrees with
 sandbox mode and dedicated terminal workspaces.
 
 **Notable ideas:**
+
 - **N-Plan Competition** -- spawn N plan-mode subagents in parallel, compare
   proposals, synthesize the best approach, then implement. Plan mode is read-only
   so this is cheap.
@@ -303,6 +310,7 @@ layers: tool stripping (pre-request), hallucination interception (post-response)
 context shaping (system prompt says capability does not exist).
 
 **Notable ideas:**
+
 - Capability removal over restriction -- provably absent capabilities are easier
   to audit than behavioral guardrails.
 - Token savings from removing unused tool definitions (~100-300 tokens per tool
@@ -322,6 +330,7 @@ evaluation against whitelist/blacklist rules with optional AI-powered risk
 scoring. Returns allow/deny/ask decisions.
 
 **Notable ideas:**
+
 - Server-side rule evaluation for centralized team policy management.
 - Three outcomes: allow, deny, or ask (prompt user).
 - Fail-open/fail-closed policy configuration.
@@ -339,6 +348,7 @@ gives visibility into MCP servers, extensions, plugins, permissions, runtime
 state, and cookies. Outputs to terminal, HTML, or JSON (SIEM-ready).
 
 **Notable ideas:**
+
 - Maps the entire attack surface of Claude installations.
 - Sensitive data redaction in all output formats.
 - Multi-user audit when run as root.
@@ -357,6 +367,7 @@ streaming, task pipelines, session resume, git worktree isolation, and remote
 access via relay server. Notifications via Email/WhatsApp/Slack/Feishu.
 
 **Notable ideas:**
+
 - External agent discovery -- auto-detects Claude Code processes started outside
   the dashboard.
 - Cloneable templates for agent provisioning.

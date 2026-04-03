@@ -1,17 +1,21 @@
+import { writeFileSync } from "node:fs"
+import { join } from "node:path"
+import { tmpdir } from "node:os"
 import { SandboxProvider } from "./sandbox"
 
 export const greywallProvider: SandboxProvider = {
   name: "greywall",
   command: "greywall",
-  buildArgs(repoRoot: string, networkAllowlist: string[]): string[] {
-    const args: string[] = [
-      "--allow-dir", repoRoot,
-      "--allow-dir", "/tmp",
-    ]
-    for (const domain of networkAllowlist) {
-      args.push("--allow-network", domain)
+  buildArgs(repoRoot: string, _networkAllowlist: string[]): string[] {
+    const settings = {
+      filesystem: {
+        allowWrite: [repoRoot, "/tmp"],
+      },
     }
-    args.push("--")
-    return args
+
+    const settingsPath = join(tmpdir(), `ridgeline-greywall-${process.pid}.json`)
+    writeFileSync(settingsPath, JSON.stringify(settings))
+
+    return ["--settings", settingsPath, "--"]
   },
 }

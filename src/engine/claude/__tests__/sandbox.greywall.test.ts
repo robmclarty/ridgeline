@@ -1,5 +1,13 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi, afterEach } from "vitest"
 import { greywallProvider } from "../sandbox.greywall"
+import * as fs from "node:fs"
+
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
+  return { ...actual, writeFileSync: vi.fn() }
+})
+
+afterEach(() => vi.restoreAllMocks())
 
 describe("greywallProvider", () => {
   it("has name 'greywall' and command 'greywall'", () => {
@@ -7,41 +15,27 @@ describe("greywallProvider", () => {
     expect(greywallProvider.command).toBe("greywall")
   })
 
-  it("allows the repo directory and /tmp", () => {
-    const args = greywallProvider.buildArgs("/my/repo", [])
+  it("writes a settings file with allowWrite for repo and /tmp", () => {
+    greywallProvider.buildArgs("/my/repo", [])
 
-    expect(args).toContain("--allow-dir")
-    const dirIndices = args.reduce<number[]>((acc, val, idx) => {
-      if (val === "--allow-dir") acc.push(idx)
-      return acc
-    }, [])
-    const dirs = dirIndices.map((i) => args[i + 1])
-    expect(dirs).toContain("/my/repo")
-    expect(dirs).toContain("/tmp")
+    expect(fs.writeFileSync).toHaveBeenCalledOnce()
+    const [path, content] = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock
+      .calls[0]
+    expect(path).toMatch(/ridgeline-greywall-/)
+    const settings = JSON.parse(content as string)
+    expect(settings.filesystem.allowWrite).toContain("/my/repo")
+    expect(settings.filesystem.allowWrite).toContain("/tmp")
   })
 
-  it("passes each domain in the allowlist as --allow-network", () => {
-    const args = greywallProvider.buildArgs("/repo", [
-      "registry.npmjs.org",
-      "github.com",
-    ])
-
-    const netIndices = args.reduce<number[]>((acc, val, idx) => {
-      if (val === "--allow-network") acc.push(idx)
-      return acc
-    }, [])
-    const domains = netIndices.map((i) => args[i + 1])
-    expect(domains).toContain("registry.npmjs.org")
-    expect(domains).toContain("github.com")
-  })
-
-  it("ends with -- separator", () => {
+  it("passes --settings and ends with -- separator", () => {
     const args = greywallProvider.buildArgs("/repo", [])
+    expect(args[0]).toBe("--settings")
     expect(args[args.length - 1]).toBe("--")
   })
 
-  it("produces no --allow-network flags when allowlist is empty", () => {
-    const args = greywallProvider.buildArgs("/repo", [])
+  it("does not pass --allow-dir or --allow-network flags", () => {
+    const args = greywallProvider.buildArgs("/repo", ["registry.npmjs.org"])
+    expect(args).not.toContain("--allow-dir")
     expect(args).not.toContain("--allow-network")
   })
 })
