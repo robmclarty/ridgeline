@@ -5,13 +5,13 @@ import { invokeClaude } from "./claudeInvoker"
 import { createDisplayCallbacks } from "./streamParser"
 
 const resolveAgentPrompt = (filename: string): string => {
-  // Try dist/agents/ first (installed package), then src/agents/ (development)
-  const distPath = path.join(__dirname, "agents", filename)
+  // Try dist/agents/core/ first (installed package), then src/agents/core/ (development)
+  const distPath = path.join(__dirname, "agents", "core", filename)
   if (fs.existsSync(distPath)) return fs.readFileSync(distPath, "utf-8")
-  const srcPath = path.join(__dirname, "..", "agents", filename)
+  const srcPath = path.join(__dirname, "..", "agents", "core", filename)
   if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, "utf-8")
   // Fallback: relative to project root
-  const rootPath = path.join(__dirname, "..", "..", "src", "agents", filename)
+  const rootPath = path.join(__dirname, "..", "..", "src", "agents", "core", filename)
   return fs.readFileSync(rootPath, "utf-8")
 }
 
