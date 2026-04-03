@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Discover built-in specialist agents from `src/agents/` (excluding core pipeline agents via `.core` list) and pass them to the builder via `--agents` CLI flag as native subagent types
+- Support user-provided plugin directories at `.ridgeline/plugin/` (project-level) and `.ridgeline/builds/<name>/plugin/` (build-level) for skills, agents, commands, hooks, and MCP servers
+- Auto-generate `plugin.json` in plugin directories when missing; clean up after build
+- Add `--agents` and `--plugin-dir` support to `claudeInvoker`
+- Add `ridgelineDir` to `RidgelineConfig`
+
 ## 0.1.12
 
 - Add bouncing-bar spinner during LLM invocations with 50 whacky random verbs
