@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.8
+
+- Add colocated tests for `ui/` modules (output, spinner, prompt) and `config.ts`
+- Add `deleteTagsByPrefix` coverage to git tests
+
 ## 0.2.7
 
 - Extract config resolution and interactive prompts from `cli.ts` into `config.ts` and `ui/prompt.ts`
