@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- Rename stateManager module to state for single-noun naming consistency with sibling modules
+
 ## 0.2.2
 
 - Extract feedback (verdict parsing, formatting, persistence), trajectory (event logging, querying), and phases (discovery, validation) into dedicated state modules
