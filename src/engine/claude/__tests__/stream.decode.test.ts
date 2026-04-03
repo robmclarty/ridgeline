@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { parseStreamLine, createStreamHandler, extractResult, createDisplayCallbacks } from "../streamParser"
+import { parseStreamLine, createStreamHandler, extractResult, createDisplayCallbacks } from "../stream.decode"
 
 const sampleResult = {
   type: "result",

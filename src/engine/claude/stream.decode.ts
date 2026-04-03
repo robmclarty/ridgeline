@@ -1,5 +1,5 @@
-import { ClaudeResult } from "../types"
-import { startSpinner } from "../ui/spinner"
+import { ClaudeResult } from "../../types"
+import { startSpinner } from "../../ui/spinner"
 
 export type StreamEvent =
   | { type: "text"; text: string }

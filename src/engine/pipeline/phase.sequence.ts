@@ -1,13 +1,13 @@
-import { RidgelineConfig, PhaseInfo, BuildState } from "../types"
-import { createCheckpoint, createCompletionTag } from "../store/tags"
-import { recordCost } from "../store/budget"
-import { ensureHandoffExists } from "../store/handoff"
-import { formatIssue, writeFeedback, archiveFeedback } from "../store/feedback"
-import { logTrajectory, makeTrajectoryEntry } from "../store/trajectory"
-import { updatePhaseStatus } from "../store/state"
-import { logPhase } from "../logging"
-import { invokeBuilder } from "./buildInvoker"
-import { invokeReviewer } from "./reviewInvoker"
+import { RidgelineConfig, PhaseInfo, BuildState } from "../../types"
+import { createCheckpoint, createCompletionTag } from "../../store/tags"
+import { recordCost } from "../../store/budget"
+import { ensureHandoffExists } from "../../store/handoff"
+import { formatIssue, writeFeedback, archiveFeedback } from "../../store/feedback"
+import { logTrajectory, makeTrajectoryEntry } from "../../store/trajectory"
+import { updatePhaseStatus } from "../../store/state"
+import { logPhase } from "../../logging"
+import { invokeBuilder } from "./build.exec"
+import { invokeReviewer } from "./review.exec"
 
 export const runPhase = async (
   phase: PhaseInfo,

@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "node:child_process"
-import { ClaudeResult } from "../types"
-import { extractResult } from "./streamParser"
+import { ClaudeResult } from "../../types"
+import { extractResult } from "./stream.decode"
 
 export type InvokeOptions = {
   systemPrompt: string

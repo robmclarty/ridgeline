@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig } from "../types"
+import { RidgelineConfig } from "../../types"
 
 const PLUGIN_JSON_MARKER = "ridgeline-auto-generated"
 

@@ -19,7 +19,7 @@ vi.mock("node:child_process", () => {
 })
 
 import { spawn } from "node:child_process"
-import { invokeClaude, InvokeOptions } from "../claudeInvoker"
+import { invokeClaude, InvokeOptions } from "../claude.exec"
 
 const baseOpts: InvokeOptions = {
   systemPrompt: "You are a test assistant",

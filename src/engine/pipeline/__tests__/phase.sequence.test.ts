@@ -1,30 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
+import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types"
 
 // Mock all external dependencies
-vi.mock("../../store/tags", () => ({
+vi.mock("../../../store/tags", () => ({
   createCheckpoint: vi.fn(),
   createCompletionTag: vi.fn((buildName: string, phaseId: string) => `ridgeline/phase/${buildName}/${phaseId}`),
 }))
 
-vi.mock("../../store/budget", () => ({
+vi.mock("../../../store/budget", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.10 })),
   getTotalCost: vi.fn(() => 0.10),
 }))
 
-vi.mock("../../store/handoff", () => ({
+vi.mock("../../../store/handoff", () => ({
   ensureHandoffExists: vi.fn(),
 }))
 
-vi.mock("../../store/state", () => ({
+vi.mock("../../../store/state", () => ({
   updatePhaseStatus: vi.fn(),
 }))
 
-vi.mock("../../logging", () => ({
+vi.mock("../../../logging", () => ({
   logPhase: vi.fn(),
 }))
 
-vi.mock("../../store/trajectory", () => ({
+vi.mock("../../../store/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -37,15 +37,15 @@ vi.mock("../../store/trajectory", () => ({
   })),
 }))
 
-vi.mock("../buildInvoker", () => ({
+vi.mock("../build.exec", () => ({
   invokeBuilder: vi.fn(),
 }))
 
-vi.mock("../reviewInvoker", () => ({
+vi.mock("../review.exec", () => ({
   invokeReviewer: vi.fn(),
 }))
 
-vi.mock("../../store/feedback", () => ({
+vi.mock("../../../store/feedback", () => ({
   formatIssue: vi.fn((issue: { description: string; file?: string }) =>
     issue.file ? `${issue.file}: ${issue.description}` : issue.description
   ),
@@ -53,12 +53,12 @@ vi.mock("../../store/feedback", () => ({
   archiveFeedback: vi.fn(),
 }))
 
-import { runPhase } from "../phaseRunner"
-import { invokeBuilder } from "../buildInvoker"
-import { invokeReviewer } from "../reviewInvoker"
-import { createCheckpoint, createCompletionTag } from "../../store/tags"
-import { recordCost } from "../../store/budget"
-import { updatePhaseStatus } from "../../store/state"
+import { runPhase } from "../phase.sequence"
+import { invokeBuilder } from "../build.exec"
+import { invokeReviewer } from "../review.exec"
+import { createCheckpoint, createCompletionTag } from "../../../store/tags"
+import { recordCost } from "../../../store/budget"
+import { updatePhaseStatus } from "../../../store/state"
 
 const makeResult = (cost = 0.05): ClaudeResult => ({
   success: true,

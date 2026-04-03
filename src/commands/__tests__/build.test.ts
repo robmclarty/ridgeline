@@ -26,7 +26,7 @@ vi.mock("../../store/phases", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
-vi.mock("../../engine/phaseRunner", () => ({
+vi.mock("../../engine/pipeline/phase.sequence", () => ({
   runPhase: vi.fn(),
 }))
 
@@ -65,7 +65,7 @@ vi.mock("../plan", () => ({
 
 import { runBuild } from "../build"
 import { scanPhases } from "../../store/phases"
-import { runPhase } from "../../engine/phaseRunner"
+import { runPhase } from "../../engine/pipeline/phase.sequence"
 import { getNextIncompletePhase } from "../../store/state"
 
 describe("commands/run", () => {

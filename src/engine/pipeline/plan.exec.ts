@@ -1,18 +1,18 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
-import { invokeClaude } from "./claudeInvoker"
-import { createDisplayCallbacks } from "./streamParser"
-import { scanPhases } from "../store/phases"
+import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
+import { invokeClaude } from "../claude/claude.exec"
+import { createDisplayCallbacks } from "../claude/stream.decode"
+import { scanPhases } from "../../store/phases"
 
 const resolveAgentPrompt = (filename: string): string => {
   // Try dist/agents/core/ first (installed package), then src/agents/core/ (development)
-  const distPath = path.join(__dirname, "agents", "core", filename)
+  const distPath = path.join(__dirname, "..", "agents", "core", filename)
   if (fs.existsSync(distPath)) return fs.readFileSync(distPath, "utf-8")
-  const srcPath = path.join(__dirname, "..", "agents", "core", filename)
+  const srcPath = path.join(__dirname, "..", "..", "agents", "core", filename)
   if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, "utf-8")
   // Fallback: relative to project root
-  const rootPath = path.join(__dirname, "..", "..", "src", "agents", "core", filename)
+  const rootPath = path.join(__dirname, "..", "..", "..", "src", "agents", "core", filename)
   return fs.readFileSync(rootPath, "utf-8")
 }
 

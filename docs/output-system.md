@@ -4,7 +4,7 @@ Ridgeline streams LLM assistant text to stdout in real time, visually separated 
 
 ## What it looks like
 
-```
+```text
 [ridgeline] [04-tests] Building...
 
 Now let me read the actual file contents I need for implementation.
@@ -26,7 +26,7 @@ Harness lines use the `[ridgeline] [phase] action` format. LLM output appears be
 
 Four modules with distinct responsibilities:
 
-```
+```text
 streamParser.ts    — parse NDJSON, extract results (pure functions, no I/O)
 claudeInvoker.ts   — spawn claude subprocess, collect output, call callbacks
 buildInvoker.ts    — assemble prompts, wire up display, call invoker
@@ -55,6 +55,7 @@ Generic subprocess runner. No display logic.
 ### Invokers (buildInvoker, reviewInvoker, planInvoker, spec)
 
 Each invoker:
+
 1. Calls `createDisplayCallbacks()` to get an `onStdout` handler and a `flush` function.
 2. Passes `onStdout` to `invokeClaude()`.
 3. After the invocation resolves, calls `flush()` to emit the trailing blank line.
@@ -89,6 +90,7 @@ We only display `assistant` events with `subtype: "text"`. Tool use, system mess
 ### Spinner
 
 Replace `createDisplayCallbacks()` with a spinner-aware version in each invoker. The spinner would:
+
 - Show an animated indicator while waiting for text events.
 - Pause on first text event, let text stream through, resume on silence.
 - The stream parser and subprocess runner don't need to change.

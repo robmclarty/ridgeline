@@ -1,12 +1,12 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
-import { invokeClaude } from "./claudeInvoker"
-import { resolveAgentPrompt } from "./agentPrompt"
-import { createDisplayCallbacks } from "./streamParser"
-import { readHandoff } from "../store/handoff"
-import { discoverBuiltinAgents, buildAgentsFlag } from "./agentDiscovery"
-import { discoverPluginDirs, cleanupPluginDirs } from "./pluginDiscovery"
+import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
+import { invokeClaude } from "../claude/claude.exec"
+import { resolveAgentPrompt } from "../claude/agent.prompt"
+import { createDisplayCallbacks } from "../claude/stream.decode"
+import { readHandoff } from "../../store/handoff"
+import { discoverBuiltinAgents, buildAgentsFlag } from "../discovery/agent.scan"
+import { discoverPluginDirs, cleanupPluginDirs } from "../discovery/plugin.scan"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,

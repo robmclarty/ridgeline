@@ -1,7 +1,7 @@
 import { RidgelineConfig } from "../types"
 import { logInfo, logError } from "../logging"
 import { scanPhases } from "../store/phases"
-import { runPhase } from "../engine/phaseRunner"
+import { runPhase } from "../engine/pipeline/phase.sequence"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
 import { loadBudget } from "../store/budget"
 import { cleanupBuildTags } from "../store/tags"

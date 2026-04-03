@@ -1,4 +1,4 @@
-export { resolveAgentPrompt } from './agentPrompt'
+export { resolveAgentPrompt } from './claude/agent.prompt'
 export {
   type DiscoveredAgent,
   parseFrontmatter,
@@ -6,21 +6,21 @@ export {
   discoverAgentsInDir,
   discoverBuiltinAgents,
   buildAgentsFlag,
-} from './agentDiscovery'
-export { invokeBuilder } from './buildInvoker'
-export { type InvokeOptions, invokeClaude } from './claudeInvoker'
-export { runPhase } from './phaseRunner'
-export { invokePlanner } from './planInvoker'
+} from './discovery/agent.scan'
+export { invokeBuilder } from './pipeline/build.exec'
+export { type InvokeOptions, invokeClaude } from './claude/claude.exec'
+export { runPhase } from './pipeline/phase.sequence'
+export { invokePlanner } from './pipeline/plan.exec'
 export {
   type PluginDir,
   discoverPluginDirs,
   cleanupPluginDirs,
-} from './pluginDiscovery'
-export { invokeReviewer } from './reviewInvoker'
+} from './discovery/plugin.scan'
+export { invokeReviewer } from './pipeline/review.exec'
 export {
   type StreamEvent,
   parseStreamLine,
   createStreamHandler,
   extractResult,
   createDisplayCallbacks,
-} from './streamParser'
+} from './claude/stream.decode'
