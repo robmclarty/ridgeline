@@ -25,12 +25,12 @@ vi.mock("../../store/budget", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../runner/planInvoker", () => ({
+vi.mock("../../engine/planInvoker", () => ({
   invokePlanner: vi.fn(),
 }))
 
 import { runPlan } from "../plan"
-import { invokePlanner } from "../../runner/planInvoker"
+import { invokePlanner } from "../../engine/planInvoker"
 
 const makeResult = (): ClaudeResult => ({
   success: true,

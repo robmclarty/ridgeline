@@ -2,9 +2,9 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
 import { logInfo, logError } from "../logging"
-import { invokeClaude } from "../runner/claudeInvoker"
-import { resolveAgentPrompt } from "../runner/agentPrompt"
-import { createDisplayCallbacks } from "../runner/streamParser"
+import { invokeClaude } from "../engine/claudeInvoker"
+import { resolveAgentPrompt } from "../engine/agentPrompt"
+import { createDisplayCallbacks } from "../engine/streamParser"
 
 const MAX_CLARIFICATION_ROUNDS = 3
 

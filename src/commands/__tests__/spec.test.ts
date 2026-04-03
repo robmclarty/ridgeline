@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 
-vi.mock("../../runner/claudeInvoker", () => ({
+vi.mock("../../engine/claudeInvoker", () => ({
   invokeClaude: vi.fn(),
 }))
 
@@ -21,7 +21,7 @@ vi.mock("node:readline", () => ({
   })),
 }))
 
-import { invokeClaude } from "../../runner/claudeInvoker"
+import { invokeClaude } from "../../engine/claudeInvoker"
 import { runSpec } from "../spec"
 
 const makeClaudeResult = (result: string, sessionId = "sess-1") => ({
