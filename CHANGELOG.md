@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.10
+
+- Replace opt-in `--sandbox`/`--allow-network` with auto-detected sandbox-by-default (`--unsafe` to opt out)
+- Add Greywall sandbox provider for macOS/Linux with domain-level network allowlisting
+- Extract bwrap into a sandbox provider behind a common `SandboxProvider` interface
+- Add `.ridgeline/settings.json` for project-level configuration (network allowlist with sensible defaults)
+- Add git worktree isolation — each build runs in `.ridgeline/worktrees/<build-name>`, completed phases reflected back via fast-forward merge
+- Add `ridgeline clean` command to remove stale worktrees and WIP branches
+- Add PreToolUse network guard hook (blocks curl/wget/ssh in `--unsafe` mode only)
+- Add sandboxing and access control research doc with community project survey
+- Update SECURITY.md, README, and help docs for new security model
+
 ## 0.2.9
 
 - Add opt-in bwrap sandbox for builder and reviewer agents (`--sandbox`, `--allow-network`) — Linux-only kernel-level filesystem and network isolation
