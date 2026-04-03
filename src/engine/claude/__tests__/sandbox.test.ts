@@ -1,81 +1,74 @@
-// src/engine/claude/__tests__/sandbox.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
 vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
+  execFileSync: vi.fn(),
 }))
 
-import { execSync } from "node:child_process"
-import { buildBwrapArgs, assertBwrapAvailable } from "../sandbox"
+// Mock the provider modules so detectSandbox can require them
+vi.mock("../sandbox.bwrap", () => ({
+  bwrapProvider: { name: "bwrap", command: "bwrap", buildArgs: vi.fn(() => []) },
+}))
 
-describe("sandbox", () => {
+vi.mock("../sandbox.greywall", () => ({
+  greywallProvider: { name: "greywall", command: "greywall", buildArgs: vi.fn(() => []) },
+}))
+
+import { execFileSync } from "node:child_process"
+import { detectSandbox } from "../sandbox"
+
+const withPlatform = (platform: string, fn: () => void) => {
+  const orig = Object.getOwnPropertyDescriptor(process, "platform")
+  Object.defineProperty(process, "platform", { value: platform, configurable: true })
+  try {
+    fn()
+  } finally {
+    if (orig) Object.defineProperty(process, "platform", orig)
+  }
+}
+
+describe("detectSandbox", () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
 
-  describe("buildBwrapArgs", () => {
-    it("returns args with network blocked by default", () => {
-      const args = buildBwrapArgs("/home/user/project", false)
+  it("returns greywall provider when greywall is available", () => {
+    vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
 
-      expect(args).toContain("--ro-bind")
-      expect(args).toContain("--bind")
-      expect(args).toContain("--unshare-net")
-      expect(args).toContain("--die-with-parent")
+    const provider = detectSandbox()
+    expect(provider).not.toBeNull()
+    expect(provider!.name).toBe("greywall")
+  })
 
-      const bindIdx = args.indexOf("--bind")
-      expect(args[bindIdx + 1]).toBe("/home/user/project")
-      expect(args[bindIdx + 2]).toBe("/home/user/project")
+  it("returns bwrap provider on linux when greywall is absent", () => {
+    vi.mocked(execFileSync).mockImplementation((_cmd: unknown, args: unknown) => {
+      if (Array.isArray(args) && args.includes("greywall")) throw new Error("not found")
+      return "/usr/bin/bwrap"
     })
 
-    it("omits --unshare-net when allowNetwork is true", () => {
-      const args = buildBwrapArgs("/home/user/project", true)
-      expect(args).not.toContain("--unshare-net")
-    })
-
-    it("mounts /tmp as writable", () => {
-      const args = buildBwrapArgs("/repo", false)
-
-      const bindIndices = args.reduce<number[]>((acc, val, idx) => {
-        if (val === "--bind") acc.push(idx)
-        return acc
-      }, [])
-
-      const tmpBind = bindIndices.find((idx) => args[idx + 1] === "/tmp")
-      expect(tmpBind).toBeDefined()
-      expect(args[tmpBind! + 2]).toBe("/tmp")
-    })
-
-    it("mounts / as read-only", () => {
-      const args = buildBwrapArgs("/repo", false)
-
-      const roIdx = args.indexOf("--ro-bind")
-      expect(args[roIdx + 1]).toBe("/")
-      expect(args[roIdx + 2]).toBe("/")
-    })
-
-    it("includes --dev /dev and --proc /proc", () => {
-      const args = buildBwrapArgs("/repo", false)
-
-      const devIdx = args.indexOf("--dev")
-      expect(args[devIdx + 1]).toBe("/dev")
-
-      const procIdx = args.indexOf("--proc")
-      expect(args[procIdx + 1]).toBe("/proc")
+    withPlatform("linux", () => {
+      const provider = detectSandbox()
+      expect(provider).not.toBeNull()
+      expect(provider!.name).toBe("bwrap")
     })
   })
 
-  describe("assertBwrapAvailable", () => {
-    it("does not throw when bwrap is found", () => {
-      vi.mocked(execSync).mockReturnValue("/usr/bin/bwrap")
-      expect(() => assertBwrapAvailable()).not.toThrow()
+  it("returns null on macOS when greywall is absent", () => {
+    vi.mocked(execFileSync).mockImplementation(() => {
+      throw new Error("not found")
     })
 
-    it("throws with install hint when bwrap is not found", () => {
-      vi.mocked(execSync).mockImplementation(() => {
-        throw new Error("not found")
-      })
-      expect(() => assertBwrapAvailable()).toThrow("--sandbox requires bubblewrap")
-      expect(() => assertBwrapAvailable()).toThrow("apt install bubblewrap")
+    withPlatform("darwin", () => {
+      const provider = detectSandbox()
+      expect(provider).toBeNull()
     })
+  })
+
+  it("returns null when neither tool is available", () => {
+    vi.mocked(execFileSync).mockImplementation(() => {
+      throw new Error("not found")
+    })
+
+    const provider = detectSandbox()
+    expect(provider).toBeNull()
   })
 })

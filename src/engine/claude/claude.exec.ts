@@ -1,7 +1,7 @@
 import { spawn, ChildProcess } from "node:child_process"
 import { ClaudeResult } from "../../types"
 import { extractResult } from "./stream.decode"
-import { buildBwrapArgs } from "./sandbox"
+import { detectSandbox } from "./sandbox"
 
 export type InvokeOptions = {
   systemPrompt: string
@@ -53,9 +53,15 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     // System prompt passed via --system-prompt flag
     args.push("--system-prompt", opts.systemPrompt)
 
-    const spawnCmd = opts.sandbox ? "bwrap" : "claude"
-    const spawnArgs = opts.sandbox
-      ? [...buildBwrapArgs(opts.cwd, opts.allowNetwork ?? false), "claude", ...args]
+    const provider = opts.sandbox ? detectSandbox() : null
+    if (opts.sandbox && !provider) {
+      throw new Error(
+        "--sandbox requires a sandbox tool. Install greywall (cross-platform) or bubblewrap (bwrap, Linux only)."
+      )
+    }
+    const spawnCmd = provider ? provider.command : "claude"
+    const spawnArgs = provider
+      ? [...provider.buildArgs(opts.cwd, []), "claude", ...args]
       : args
 
     const proc: ChildProcess = spawn(spawnCmd, spawnArgs, {

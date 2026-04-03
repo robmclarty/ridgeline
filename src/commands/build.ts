@@ -1,6 +1,6 @@
 import { RidgelineConfig } from "../types"
 import { printInfo, printError } from "../ui/output"
-import { assertBwrapAvailable } from "../engine/claude/sandbox"
+import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../store/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
@@ -106,8 +106,13 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   // Validate sandbox availability before starting phases
   if (config.sandbox) {
-    assertBwrapAvailable()
-    printInfo(`Sandbox: bwrap (network: ${config.allowNetwork ? "allowed" : "blocked"})`)
+    const provider = detectSandbox()
+    if (!provider) {
+      throw new Error(
+        "--sandbox requires a sandbox tool. Install greywall (cross-platform) or bubblewrap (bwrap, Linux only)."
+      )
+    }
+    printInfo(`Sandbox: ${provider.name} (network: blocked)`)
   }
 
   const startTime = Date.now()

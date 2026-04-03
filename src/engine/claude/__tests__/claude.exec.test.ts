@@ -18,7 +18,12 @@ vi.mock("node:child_process", () => {
   }
 })
 
+vi.mock("../sandbox", () => ({
+  detectSandbox: vi.fn(),
+}))
+
 import { spawn } from "node:child_process"
+import { detectSandbox } from "../sandbox"
 import { invokeClaude, InvokeOptions } from "../claude.exec"
 
 const baseOpts: InvokeOptions = {
@@ -185,7 +190,16 @@ describe("claudeInvoker", () => {
       expect(result.success).toBe(false)
     })
 
-    it("spawns bwrap wrapping claude when sandbox is enabled", () => {
+    it("spawns sandbox provider wrapping claude when sandbox is enabled", () => {
+      const mockProvider = {
+        name: "bwrap" as const,
+        command: "bwrap",
+        buildArgs: vi.fn((_cwd: string, _allowlist: string[]) => [
+          "--ro-bind", "/", "/", "--unshare-net", "--die-with-parent",
+        ]),
+      }
+      vi.mocked(detectSandbox).mockReturnValue(mockProvider)
+
       const promise = invokeClaude({ ...baseOpts, sandbox: true, allowNetwork: false })
 
       expect(spawn).toHaveBeenCalledWith(
@@ -201,19 +215,12 @@ describe("claudeInvoker", () => {
       return promise
     })
 
-    it("spawns bwrap without --unshare-net when allowNetwork is true", () => {
-      const promise = invokeClaude({ ...baseOpts, sandbox: true, allowNetwork: true })
+    it("throws when sandbox is requested but no provider is available", async () => {
+      vi.mocked(detectSandbox).mockReturnValue(null)
 
-      const calledArgs = vi.mocked(spawn).mock.calls[0][1] as string[]
-      expect(calledArgs).not.toContain("--unshare-net")
-      expect(calledArgs).toContain("--ro-bind")
-      expect(calledArgs).toContain("claude")
-
-      const proc = vi.mocked(spawn).mock.results[0].value
-      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
-      proc.emit("close", 0)
-
-      return promise
+      await expect(
+        invokeClaude({ ...baseOpts, sandbox: true })
+      ).rejects.toThrow("--sandbox requires a sandbox tool. Install greywall (cross-platform) or bubblewrap (bwrap, Linux only).")
     })
 
     it("spawns claude directly when sandbox is not enabled", () => {

@@ -1,30 +1,32 @@
-// src/engine/claude/sandbox.ts
-import { execSync } from "node:child_process"
+import { execFileSync } from "node:child_process"
+import { bwrapProvider } from "./sandbox.bwrap"
+import { greywallProvider } from "./sandbox.greywall"
 
-export const buildBwrapArgs = (repoRoot: string, allowNetwork: boolean): string[] => {
-  const args: string[] = [
-    "--ro-bind", "/", "/",
-    "--bind", repoRoot, repoRoot,
-    "--bind", "/tmp", "/tmp",
-    "--dev", "/dev",
-    "--proc", "/proc",
-    "--die-with-parent",
-  ]
-
-  if (!allowNetwork) {
-    args.push("--unshare-net")
-  }
-
-  return args
+export type SandboxProvider = {
+  name: "bwrap" | "greywall"
+  command: string
+  buildArgs: (repoRoot: string, networkAllowlist: string[]) => string[]
 }
 
-export const assertBwrapAvailable = (): void => {
+const isAvailable = (cmd: string): boolean => {
   try {
-    execSync("which bwrap", { stdio: ["pipe", "pipe", "pipe"] })
+    execFileSync("which", [cmd], { stdio: ["pipe", "pipe", "pipe"] })
+    return true
   } catch {
-    throw new Error(
-      "--sandbox requires bubblewrap (bwrap). Install it with your package manager " +
-      "(e.g., apt install bubblewrap)."
-    )
+    return false
   }
+}
+
+export const detectSandbox = (): SandboxProvider | null => {
+  // Prefer greywall (cross-platform, supports domain allowlisting)
+  if (isAvailable("greywall")) {
+    return greywallProvider
+  }
+
+  // Fall back to bwrap (Linux only, binary network toggle)
+  if (process.platform === "linux" && isAvailable("bwrap")) {
+    return bwrapProvider
+  }
+
+  return null
 }
