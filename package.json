@@ -10,7 +10,7 @@
     "build": "tsc && cp -r src/agents dist/agents",
     "dev": "tsc --watch",
     "lint": "npm run lint:code && npm run lint:markdown && npm run lint:agents",
-    "lint:code": "oxlint",
+    "lint:code": "oxlint --ignore-pattern examples",
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
     "lint:agents": "agnix",
     "prepublishOnly": "npm run build",
