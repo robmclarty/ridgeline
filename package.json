@@ -13,6 +13,7 @@
     "lint:code": "oxlint --ignore-pattern examples",
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
     "lint:agents": "agnix",
+    "typecheck": "tsc --noEmit --pretty",
     "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest"
