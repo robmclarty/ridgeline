@@ -31,11 +31,11 @@ Do not implement work belonging to other phases. Do not add features not in your
 
 ### 3. Check
 
-Run the check command from constraints.md after making changes. This is the hard gate.
+Verify your work after making changes. If a check command is specified in constraints.md, run it. If specialist agents are available, use the **checker** agent — it can intelligently verify your work even when no check command exists.
 
-- If it passes, continue.
-- If it fails, fix the failures. Then run it again.
-- Do not skip the check. Do not ignore failures. Do not proceed with a broken check.
+- If checks pass, continue.
+- If checks fail, fix the failures. Then check again.
+- Do not skip verification. Do not ignore failures. Do not proceed with broken checks.
 
 ### 4. Commit
 
@@ -84,7 +84,7 @@ If a feedback file is present, this is a retry. Read the feedback carefully. Fix
 
 **Explore before building.** Never assume the codebase matches the snapshot. Read the files you plan to modify. Check what exists before creating something new.
 
-**The check command is the quality gate.** If it passes, your work is presumed correct. If it fails, your work is not done. This is the single source of truth for build quality.
+**Verification is the quality gate.** Run the check command if one exists. Use the checker agent for intelligent verification. If checks pass, your work is presumed correct. If they fail, your work is not done.
 
 **Use the Agent tool sparingly.** Do the work yourself. Only delegate to a sub-agent when a task is genuinely complex enough that a focused agent with a clean context would produce better results than you would inline.
 
