@@ -55,7 +55,7 @@ New file: `src/engine/claude/sandbox.ts` with three responsibilities.
 `assertBwrapAvailable()` runs `which bwrap` when `--sandbox` is set. If not
 found, throws:
 
-```
+```text
 --sandbox requires bubblewrap (bwrap). Install it with your package manager
 (e.g., apt install bubblewrap).
 ```
@@ -66,7 +66,7 @@ Called once before the first phase, not per-invocation.
 
 `buildBwrapArgs(repoRoot: string, allowNetwork: boolean): string[]` returns:
 
-```
+```text
 bwrap
   --ro-bind / /                      # everything read-only
   --bind <repoRoot> <repoRoot>       # repo writable
@@ -134,6 +134,7 @@ network namespace with no interfaces (not even loopback). When
 inherits the host's network stack.
 
 Blocked network means:
+
 - `npm install`, `pip install`, `curl`, etc. will fail
 - Builds must be fully offline-capable
 - Users who need network pass `--allow-network` explicitly
@@ -161,13 +162,13 @@ behavior — the agent sees a command error and can react or report it.
 
 On startup (before the first phase), print a one-line status:
 
-```
+```text
 Sandbox: bwrap (network: blocked)
 ```
 
 or:
 
-```
+```text
 Sandbox: bwrap (network: allowed)
 ```
 

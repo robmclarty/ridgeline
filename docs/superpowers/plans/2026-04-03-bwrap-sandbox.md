@@ -33,6 +33,7 @@
 ### Task 1: Create the sandbox module
 
 **Files:**
+
 - Create: `src/engine/claude/sandbox.ts`
 - Test: `src/engine/claude/__tests__/sandbox.test.ts`
 
@@ -241,6 +242,7 @@ git commit -m "feat: add sandbox module for bwrap detection and arg building"
 ### Task 2: Add sandbox fields to config
 
 **Files:**
+
 - Modify: `src/types.ts:1-16`
 - Modify: `src/config.ts:50-64`
 - Modify: `src/__tests__/config.test.ts`
@@ -317,6 +319,7 @@ git commit -m "feat: add sandbox and allowNetwork to RidgelineConfig"
 ### Task 3: Add CLI flags
 
 **Files:**
+
 - Modify: `src/cli.ts:77-97`
 
 - [ ] **Step 1: Add `--sandbox` and `--allow-network` options to the `build` command**
@@ -350,6 +353,7 @@ git commit -m "feat: add --sandbox and --allow-network CLI flags to build comman
 ### Task 4: Wire sandbox into `claude.exec.ts`
 
 **Files:**
+
 - Modify: `src/engine/claude/claude.exec.ts:5-17,19-56`
 - Modify: `src/engine/claude/__tests__/claude.exec.test.ts`
 
@@ -469,6 +473,7 @@ git commit -m "feat: wrap claude spawn with bwrap when sandbox is enabled"
 ### Task 5: Thread sandbox opts through the pipeline
 
 **Files:**
+
 - Modify: `src/engine/pipeline/build.exec.ts:78-88`
 - Modify: `src/engine/pipeline/review.exec.ts:54-64`
 - Modify: `src/commands/build.ts:77-110`
@@ -514,11 +519,13 @@ Add the availability check after the state init block (after line 104, before `c
 In `src/engine/pipeline/phase.sequence.ts`, update the `build_start` trajectory call (line 40) to include sandbox info in the summary:
 
 Change:
+
 ```typescript
     logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}`))
 ```
 
 to:
+
 ```typescript
     const sandboxNote = config.sandbox ? ` [sandbox: network=${config.allowNetwork ? "allowed" : "blocked"}]` : ""
     logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`))
@@ -527,11 +534,13 @@ to:
 Similarly, update the `review_start` trajectory call (line 77):
 
 Change:
+
 ```typescript
     logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}`))
 ```
 
 to:
+
 ```typescript
     logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`))
 ```
@@ -560,6 +569,7 @@ git commit -m "feat: thread sandbox config through build pipeline"
 ### Task 6: Update docs
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `SECURITY.md`
 
