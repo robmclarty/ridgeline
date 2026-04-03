@@ -82,11 +82,11 @@ export const invokeBuilder = async (
       allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
       agents: Object.keys(agents).length > 0 ? agents : undefined,
       pluginDirs: pluginDirs.length > 0 ? pluginDirs.map((p) => p.dir) : undefined,
-      cwd: process.cwd(),
+      cwd: config.worktreePath ?? process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
-      sandbox: config.sandbox,
-      allowNetwork: config.allowNetwork,
+      sandboxProvider: config.sandboxProvider,
+      networkAllowlist: config.networkAllowlist,
     })
 
     flush()

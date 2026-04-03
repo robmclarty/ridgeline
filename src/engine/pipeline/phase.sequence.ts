@@ -27,7 +27,7 @@ export const runPhase = async (
 
   let attempt = phaseState.retries
   const maxAttempts = config.maxRetries + 1 // retries + initial attempt
-  const sandboxNote = config.sandbox ? ` [sandbox: network=${config.allowNetwork ? "allowed" : "blocked"}]` : ""
+  const sandboxNote = config.sandboxProvider ? ` [sandbox: ${config.sandboxProvider.name}]` : ""
 
   while (attempt < maxAttempts) {
     const isRetry = attempt > 0

@@ -63,6 +63,10 @@ vi.mock("../plan", () => ({
   runPlan: vi.fn(),
 }))
 
+vi.mock("../../engine/claude/sandbox", () => ({
+  detectSandbox: vi.fn(() => null),
+}))
+
 import { runBuild } from "../build"
 import { scanPhases } from "../../store/phases"
 import { runPhase } from "../../engine/pipeline/phase.sequence"
@@ -80,10 +84,10 @@ describe("commands/run", () => {
 
     config = {
       buildName: "test",
+      ridgelineDir: tmpDir,
       buildDir: tmpDir,
       constraintsPath: path.join(tmpDir, "constraints.md"),
       tastePath: null,
-
       handoffPath: path.join(tmpDir, "handoff.md"),
       phasesDir: path.join(tmpDir, "phases"),
       model: "opus",
@@ -92,6 +96,9 @@ describe("commands/run", () => {
       checkTimeoutSeconds: 1200,
       checkCommand: null,
       maxBudgetUsd: null,
+      unsafe: false,
+      networkAllowlist: [],
+      worktreePath: null,
     }
 
     // Mock process.exit to throw instead of exiting
