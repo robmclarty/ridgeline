@@ -23,20 +23,24 @@ The goal is to close this gap with layered controls that:
 
 ---
 
-## Current Ridgeline Controls
+## Current Ridgeline Controls (Post-Implementation)
+
+As of v0.3.0, the sandbox and access control system has been implemented. The
+controls below reflect the current state.
 
 | Layer | Mechanism | Enforcement |
 |-------|-----------|-------------|
 | Tool allowlist | `--allowedTools` per role | Hard -- Claude CLI strips disallowed tools |
 | Prompt instructions | Agent system prompts | Soft -- model compliance only |
-| bwrap sandbox (Linux) | `--sandbox` flag in `claude.exec.ts` | Hard -- kernel namespaces |
-| Network toggle (Linux) | `--allow-network` in sandbox mode | Hard -- namespace isolation |
+| Sandbox auto-detection | Greywall (macOS/Linux) or bwrap (Linux) | Hard -- OS-level isolation |
+| Network allowlist | `.ridgeline/settings.json` via sandbox | Hard -- sandbox enforces domain list |
+| Worktree isolation | Git worktrees per build | Hard -- filesystem isolation |
 | Budget cap | `--max-budget-usd` | Hard -- CLI enforces |
 | Timeout | `--timeout`, `--check-timeout` | Hard -- SIGTERM/SIGKILL |
-| Hook interception | PreToolUse hooks in plugin layer | Soft -- prompt-based judgment |
+| Network guard hook | PreToolUse hook in `--unsafe` mode only | Soft -- prompt-based judgment |
 
-The "hard" controls are structurally enforced. The "soft" controls depend on
-model compliance and can be bypassed by creative tool use.
+Sandboxing is **on by default** when a provider (Greywall or bwrap) is detected
+in the environment. Use `--unsafe` to opt out. Worktrees are always used.
 
 ---
 
@@ -468,12 +472,33 @@ exactly what OS-level sandboxing provides.
 
 ---
 
-## Recommended Approach
+## Implementation Status
 
-See the implementation plan for sandboxing and access control improvements.
-The recommended strategy is a layered defense:
+The layered defense strategy has been implemented:
 
-1. **OS-level sandbox** (Greywall) for hard network and filesystem enforcement
-2. **Git worktrees** for per-phase filesystem isolation
-3. **PreToolUse hooks** for catching obvious escape hatches
-4. **MCP filtering** for controlled external access (docs, packages)
+1. **OS-level sandbox** (Greywall/bwrap) -- auto-detected, on by default,
+   `--unsafe` to opt out. Greywall provides domain-level network allowlisting;
+   bwrap provides binary network blocking. Provider interface in
+   `src/engine/claude/sandbox.ts` with implementations in `sandbox.bwrap.ts`
+   and `sandbox.greywall.ts`.
+
+2. **Network allowlist** -- sensible defaults (npm, pypi, crates.io, github,
+   etc.) with user overrides via `.ridgeline/settings.json`. User list replaces
+   defaults entirely. Loaded by `src/store/settings.ts`.
+
+3. **Git worktrees** -- each build runs in `.ridgeline/worktrees/<build-name>`
+   on a `ridgeline/wip/<build-name>` branch. Completed phases are fast-forward
+   merged back to the user's branch. Failed worktrees left for inspection.
+   `ridgeline clean` removes stale worktrees. Module at
+   `src/engine/worktree.ts`.
+
+4. **PreToolUse network guard hook** -- blocks `curl`, `wget`, `ssh`, etc.
+   while allowing package managers. Only active in `--unsafe` mode (no
+   sandbox). Shipped at `src/agents/core/hooks/network-guard.md`.
+
+5. **MCP filtering** -- not yet implemented. Could be a future addition for
+   controlled external access (docs, packages) via a filtered MCP server.
+
+See `docs/superpowers/specs/2026-04-03-sandbox-worktree-design.md` for the
+full design spec and `docs/superpowers/plans/2026-04-03-sandbox-worktree-plan.md`
+for the implementation plan.
