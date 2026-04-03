@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.11
+
+- Rename `run` command to `build` and `init` command to `spec`
+- `spec` command accepts a positional input arg (file path or natural language description)
+- Specifier agent pre-fills clarification answers from user-provided input context
+- Rename agent `init.md` to `specifier.md` and `reviewerInvoker` to `reviewInvoker`
+
 ## 0.1.10
 
 - Always stream LLM assistant text to stdout with blank line separators between harness log lines
