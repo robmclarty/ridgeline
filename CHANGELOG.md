@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6
+
+- Move `logging.ts` to `ui/output.ts` and rename `logInfo`/`logError`/`logPhase` to `printInfo`/`printError`/`printPhase` — user-facing status output is a UI concern
+- Add end-to-end tests for the full plan → build → review pipeline using real Claude CLI calls
+
 ## 0.2.5
 
 - Reorganize engine/ into subdirectories (discovery/, pipeline/, claude/) with `[domain].[type].ts` naming convention and colocated tests
