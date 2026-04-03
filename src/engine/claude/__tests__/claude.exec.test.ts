@@ -184,5 +184,52 @@ describe("claudeInvoker", () => {
       const result = await promise
       expect(result.success).toBe(false)
     })
+
+    it("spawns bwrap wrapping claude when sandbox is enabled", () => {
+      const promise = invokeClaude({ ...baseOpts, sandbox: true, allowNetwork: false })
+
+      expect(spawn).toHaveBeenCalledWith(
+        "bwrap",
+        expect.arrayContaining(["--ro-bind", "/", "/", "--unshare-net", "--die-with-parent", "claude"]),
+        expect.objectContaining({ cwd: "/tmp" })
+      )
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+      proc.emit("close", 0)
+
+      return promise
+    })
+
+    it("spawns bwrap without --unshare-net when allowNetwork is true", () => {
+      const promise = invokeClaude({ ...baseOpts, sandbox: true, allowNetwork: true })
+
+      const calledArgs = vi.mocked(spawn).mock.calls[0][1] as string[]
+      expect(calledArgs).not.toContain("--unshare-net")
+      expect(calledArgs).toContain("--ro-bind")
+      expect(calledArgs).toContain("claude")
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+      proc.emit("close", 0)
+
+      return promise
+    })
+
+    it("spawns claude directly when sandbox is not enabled", () => {
+      const promise = invokeClaude({ ...baseOpts, sandbox: false })
+
+      expect(spawn).toHaveBeenCalledWith(
+        "claude",
+        expect.any(Array),
+        expect.any(Object)
+      )
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+      proc.emit("close", 0)
+
+      return promise
+    })
   })
 })

@@ -1,6 +1,7 @@
 import { spawn, ChildProcess } from "node:child_process"
 import { ClaudeResult } from "../../types"
 import { extractResult } from "./stream.decode"
+import { buildBwrapArgs } from "./sandbox"
 
 export type InvokeOptions = {
   systemPrompt: string
@@ -14,6 +15,8 @@ export type InvokeOptions = {
   sessionId?: string
   jsonSchema?: string
   onStdout?: (chunk: string) => void
+  sandbox?: boolean
+  allowNetwork?: boolean
 }
 
 export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
@@ -50,7 +53,12 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     // System prompt passed via --system-prompt flag
     args.push("--system-prompt", opts.systemPrompt)
 
-    const proc: ChildProcess = spawn("claude", args, {
+    const spawnCmd = opts.sandbox ? "bwrap" : "claude"
+    const spawnArgs = opts.sandbox
+      ? [...buildBwrapArgs(opts.cwd, opts.allowNetwork ?? false), "claude", ...args]
+      : args
+
+    const proc: ChildProcess = spawn(spawnCmd, spawnArgs, {
       cwd: opts.cwd,
       stdio: ["pipe", "pipe", "pipe"],
     })
