@@ -25,12 +25,6 @@ const assembleUserPrompt = (
     sections.push("")
   }
 
-  if (fs.existsSync(config.snapshotPath)) {
-    sections.push("## snapshot.md\n")
-    sections.push(fs.readFileSync(config.snapshotPath, "utf-8"))
-    sections.push("")
-  }
-
   const handoff = readHandoff(config.buildDir)
   if (handoff) {
     sections.push("## handoff.md\n")

@@ -33,12 +33,6 @@ const assembleUserPrompt = (config: RidgelineConfig): string => {
     sections.push("")
   }
 
-  if (fs.existsSync(config.snapshotPath)) {
-    sections.push("## snapshot.md\n")
-    sections.push(fs.readFileSync(config.snapshotPath, "utf-8"))
-    sections.push("")
-  }
-
   sections.push("## Target Model\n")
   sections.push(`The builder will use the \`${config.model}\` model.`)
   sections.push("")
