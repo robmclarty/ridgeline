@@ -55,13 +55,18 @@ ridgeline build my-feature
 
 ## Commands
 
-### `ridgeline spec [build-name]`
+### `ridgeline spec [build-name] [input]`
 
 Creates the build directory under `.ridgeline/builds/<build-name>/` and collects
 your spec, constraints, and optional taste file. Accepts an optional input
 argument — a file path to an existing spec document or a natural language
 description. If the input is detailed enough, the assistant skips or
 pre-populates its clarification questions.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for spec assistant |
+| `--timeout <minutes>` | `10` | Max duration per turn |
 
 ### `ridgeline plan [build-name]`
 
@@ -71,8 +76,7 @@ Invokes the planner agent to decompose the spec into numbered phase files
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for the planner |
-| `--verbose` | off | Stream planner output to the terminal |
-| `--timeout <minutes>` | `30` | Max planning duration |
+| `--timeout <minutes>` | `120` | Max planning duration |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
 
@@ -89,8 +93,8 @@ and advance on success.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for builder and reviewer |
-| `--verbose` | off | Stream output to the terminal |
-| `--timeout <minutes>` | `30` | Max duration per phase |
+| `--timeout <minutes>` | `120` | Max duration per phase |
+| `--check-timeout <seconds>` | `1200` | Max duration for check command |
 | `--max-retries <n>` | `2` | Max reviewer retry loops per phase |
 | `--check <command>` | from constraints | Baseline check command |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
@@ -130,11 +134,14 @@ Constraint and taste files are resolved in order:
 
 ```sh
 npm install
-npm run build       # Compile TypeScript and copy agent prompts
-npm run dev         # Watch mode
-npm test            # Run the test suite (vitest)
-npm run test:watch  # Watch mode
-npm run lint        # Run all linters (oxlint, markdownlint, agnix)
+npm run build        # Compile TypeScript and copy agent prompts
+npm run dev          # Watch mode
+npm test             # Typecheck, lint, and run unit tests
+npm run test:unit    # Unit tests only (vitest)
+npm run test:e2e     # End-to-end tests
+npm run test:watch   # Watch mode
+npm run lint         # Run all linters (oxlint, markdownlint, agnix)
+npm run typecheck    # Type-check without emitting
 ```
 
 ## License

@@ -150,9 +150,9 @@ export const runPhase = async (
   console.log("")
   console.log(`Recovery: git reset --hard ${checkpointTag}`)
   console.log("Options:")
-  console.log("  1. Edit spec.md and re-run: ridgeline plan <build> && ridgeline run <build>")
+  console.log("  1. Edit spec.md and re-run: ridgeline plan <build> && ridgeline build <build>")
   console.log(`  2. Edit the phase spec directly: ${phase.filepath}`)
-  console.log(`  3. Resume after manual fixes: ridgeline run ${config.buildName}`)
+  console.log(`  3. Resume after manual fixes: ridgeline build ${config.buildName}`)
 
   return "failed"
 }

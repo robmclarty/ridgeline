@@ -41,5 +41,5 @@ export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
     console.log("")
   }
 
-  printInfo(`Review the phases above. To execute: ridgeline run ${config.buildName}`)
+  printInfo(`Review the phases above. To execute: ridgeline build ${config.buildName}`)
 }
