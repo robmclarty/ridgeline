@@ -5,8 +5,8 @@ import { invokeClaude } from "./claudeInvoker"
 import { resolveAgentPrompt } from "./agentPrompt"
 import { createDisplayCallbacks } from "./streamParser"
 import { readHandoff } from "../state/handoff"
-import { discoverSpecialistAgents, buildAgentsFlag } from "./agentDiscovery"
-import { discoverSkillDirs, cleanupSkillDirs } from "./skillDiscovery"
+import { discoverBuiltinAgents, buildAgentsFlag } from "./agentDiscovery"
+import { discoverPluginDirs, cleanupPluginDirs } from "./pluginDiscovery"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -76,9 +76,9 @@ export const invokeBuilder = async (
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
   const { onStdout, flush } = createDisplayCallbacks()
 
-  const specialists = discoverSpecialistAgents(config)
-  const agents = buildAgentsFlag(specialists)
-  const skillDirs = discoverSkillDirs(config)
+  const builtinAgents = discoverBuiltinAgents()
+  const agents = buildAgentsFlag(builtinAgents)
+  const pluginDirs = discoverPluginDirs(config)
 
   try {
     const result = await invokeClaude({
@@ -87,7 +87,7 @@ export const invokeBuilder = async (
       model: config.model,
       allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
       agents: Object.keys(agents).length > 0 ? agents : undefined,
-      pluginDirs: skillDirs.length > 0 ? skillDirs.map((s) => s.dir) : undefined,
+      pluginDirs: pluginDirs.length > 0 ? pluginDirs.map((p) => p.dir) : undefined,
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
@@ -96,6 +96,6 @@ export const invokeBuilder = async (
     flush()
     return result
   } finally {
-    cleanupSkillDirs(skillDirs)
+    cleanupPluginDirs(pluginDirs)
   }
 }

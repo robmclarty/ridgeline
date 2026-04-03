@@ -1,15 +1,11 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig } from "../types"
-
-export type AgentTier = "build" | "project" | "builtin"
 
 export type DiscoveredAgent = {
   name: string
   description: string
   prompt: string
   model: string | null
-  tier: AgentTier
   filename: string
 }
 
@@ -67,7 +63,6 @@ export const loadExcludeList = (): Set<string> => {
 
 export const discoverAgentsInDir = (
   dir: string,
-  tier: AgentTier,
   excludeSet: Set<string>
 ): DiscoveredAgent[] => {
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return []
@@ -88,7 +83,6 @@ export const discoverAgentsInDir = (
         description: fm.description,
         prompt: content,
         model: fm.model,
-        tier,
         filename: entry,
       })
     } catch {
@@ -99,35 +93,11 @@ export const discoverAgentsInDir = (
   return agents
 }
 
-export const discoverSpecialistAgents = (
-  config: RidgelineConfig
-): DiscoveredAgent[] => {
+export const discoverBuiltinAgents = (): DiscoveredAgent[] => {
   const excludeSet = loadExcludeList()
-
-  const buildAgentsDir = path.join(config.buildDir, "agents")
-  const projectAgentsDir = path.join(config.ridgelineDir, "agents")
   const builtinDir = resolveBuiltinAgentsDir()
-
-  // Scan tiers in priority order: build > project > builtin
-  const buildAgents = discoverAgentsInDir(buildAgentsDir, "build", new Set())
-  const projectAgents = discoverAgentsInDir(projectAgentsDir, "project", new Set())
-  const builtinAgents = builtinDir
-    ? discoverAgentsInDir(builtinDir, "builtin", excludeSet)
-    : []
-
-  // Deduplicate by name: higher-priority tier wins
-  const seen = new Map<string, DiscoveredAgent>()
-  for (const agent of [...builtinAgents, ...projectAgents, ...buildAgents]) {
-    seen.set(agent.name, agent)
-  }
-
-  return Array.from(seen.values())
-}
-
-const TIER_PREFIXES: Record<AgentTier, string | null> = {
-  build: "[build specialist]",
-  project: "[project specialist]",
-  builtin: null,
+  if (!builtinDir) return []
+  return discoverAgentsInDir(builtinDir, excludeSet)
 }
 
 export const buildAgentsFlag = (
@@ -136,13 +106,8 @@ export const buildAgentsFlag = (
   const result: Record<string, { description: string; prompt: string; model?: string }> = {}
 
   for (const agent of agents) {
-    const prefix = TIER_PREFIXES[agent.tier]
-    const description = prefix
-      ? `${prefix} ${agent.description}`
-      : agent.description
-
     const entry: { description: string; prompt: string; model?: string } = {
-      description,
+      description: agent.description,
       prompt: agent.prompt,
     }
     if (agent.model) entry.model = agent.model

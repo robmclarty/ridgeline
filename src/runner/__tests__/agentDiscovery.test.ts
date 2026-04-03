@@ -5,7 +5,6 @@ import { makeTempDir, trackTempDir } from "../../../test/setup"
 import {
   parseFrontmatter,
   discoverAgentsInDir,
-  discoverSpecialistAgents,
   buildAgentsFlag,
   DiscoveredAgent,
 } from "../agentDiscovery"
@@ -54,24 +53,23 @@ describe("parseFrontmatter", () => {
 
 describe("discoverAgentsInDir", () => {
   it("returns empty array for nonexistent directory", () => {
-    expect(discoverAgentsInDir("/nonexistent/path", "build", new Set())).toEqual([])
+    expect(discoverAgentsInDir("/nonexistent/path", new Set())).toEqual([])
   })
 
   it("returns empty array for empty directory", () => {
     const dir = trackTempDir(makeTempDir())
-    expect(discoverAgentsInDir(dir, "build", new Set())).toEqual([])
+    expect(discoverAgentsInDir(dir, new Set())).toEqual([])
   })
 
   it("discovers .md files with valid frontmatter", () => {
     const dir = trackTempDir(makeTempDir())
     writeAgent(dir, "db-expert.md", validAgent("db-expert", "Database specialist", "sonnet"))
 
-    const agents = discoverAgentsInDir(dir, "project", new Set())
+    const agents = discoverAgentsInDir(dir, new Set())
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("db-expert")
     expect(agents[0].description).toBe("Database specialist")
     expect(agents[0].model).toBe("sonnet")
-    expect(agents[0].tier).toBe("project")
     expect(agents[0].filename).toBe("db-expert.md")
     expect(agents[0].prompt).toContain("You are db-expert.")
   })
@@ -81,7 +79,7 @@ describe("discoverAgentsInDir", () => {
     writeAgent(dir, "builder.md", validAgent("builder", "Core builder"))
     writeAgent(dir, "specialist.md", validAgent("specialist", "A specialist"))
 
-    const agents = discoverAgentsInDir(dir, "builtin", new Set(["builder.md"]))
+    const agents = discoverAgentsInDir(dir, new Set(["builder.md"]))
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("specialist")
   })
@@ -92,7 +90,7 @@ describe("discoverAgentsInDir", () => {
     fs.writeFileSync(path.join(dir, ".core"), "builder.md\n")
     fs.writeFileSync(path.join(dir, "notes.txt"), "some notes")
 
-    const agents = discoverAgentsInDir(dir, "builtin", new Set())
+    const agents = discoverAgentsInDir(dir, new Set())
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("specialist")
   })
@@ -102,76 +100,21 @@ describe("discoverAgentsInDir", () => {
     writeAgent(dir, "good.md", validAgent("good", "Good agent"))
     writeAgent(dir, "bad.md", "No frontmatter here")
 
-    const agents = discoverAgentsInDir(dir, "build", new Set())
+    const agents = discoverAgentsInDir(dir, new Set())
     expect(agents).toHaveLength(1)
     expect(agents[0].name).toBe("good")
-  })
-})
-
-describe("discoverSpecialistAgents", () => {
-  it("returns empty array when no agent directories exist", () => {
-    const dir = trackTempDir(makeTempDir())
-    const config = {
-      buildDir: path.join(dir, "builds", "test"),
-      ridgelineDir: dir,
-    }
-    // @ts-expect-error — partial config for testing
-    const agents = discoverSpecialistAgents(config)
-    expect(agents).toEqual([])
-  })
-
-  it("discovers build-level agents", () => {
-    const dir = trackTempDir(makeTempDir())
-    const buildDir = path.join(dir, "builds", "test")
-    writeAgent(path.join(buildDir, "agents"), "auth.md", validAgent("auth", "Auth specialist"))
-
-    const config = { buildDir, ridgelineDir: dir }
-    // @ts-expect-error — partial config for testing
-    const agents = discoverSpecialistAgents(config)
-    expect(agents).toHaveLength(1)
-    expect(agents[0].name).toBe("auth")
-    expect(agents[0].tier).toBe("build")
-  })
-
-  it("discovers project-level agents", () => {
-    const dir = trackTempDir(makeTempDir())
-    const buildDir = path.join(dir, "builds", "test")
-    writeAgent(path.join(dir, "agents"), "db.md", validAgent("db", "Database expert"))
-
-    const config = { buildDir, ridgelineDir: dir }
-    // @ts-expect-error — partial config for testing
-    const agents = discoverSpecialistAgents(config)
-    expect(agents).toHaveLength(1)
-    expect(agents[0].name).toBe("db")
-    expect(agents[0].tier).toBe("project")
-  })
-
-  it("deduplicates: build-level wins over project-level", () => {
-    const dir = trackTempDir(makeTempDir())
-    const buildDir = path.join(dir, "builds", "test")
-    writeAgent(path.join(buildDir, "agents"), "auth.md", validAgent("auth", "Build auth"))
-    writeAgent(path.join(dir, "agents"), "auth.md", validAgent("auth", "Project auth"))
-
-    const config = { buildDir, ridgelineDir: dir }
-    // @ts-expect-error — partial config for testing
-    const agents = discoverSpecialistAgents(config)
-    expect(agents).toHaveLength(1)
-    expect(agents[0].tier).toBe("build")
-    expect(agents[0].description).toBe("Build auth")
   })
 })
 
 describe("buildAgentsFlag", () => {
   const makeAgent = (
     name: string,
-    tier: AgentTier,
     model: string | null = null
   ): DiscoveredAgent => ({
     name,
     description: `${name} description`,
     prompt: `You are ${name}.`,
     model,
-    tier,
     filename: `${name}.md`,
   })
 
@@ -180,27 +123,17 @@ describe("buildAgentsFlag", () => {
   })
 
   it("includes model when present", () => {
-    const result = buildAgentsFlag([makeAgent("test", "builtin", "sonnet")])
+    const result = buildAgentsFlag([makeAgent("test", "sonnet")])
     expect(result.test.model).toBe("sonnet")
   })
 
   it("omits model when null", () => {
-    const result = buildAgentsFlag([makeAgent("test", "builtin")])
+    const result = buildAgentsFlag([makeAgent("test")])
     expect(result.test).not.toHaveProperty("model")
   })
 
-  it("prefixes description for build-tier agents", () => {
-    const result = buildAgentsFlag([makeAgent("auth", "build")])
-    expect(result.auth.description).toBe("[build specialist] auth description")
-  })
-
-  it("prefixes description for project-tier agents", () => {
-    const result = buildAgentsFlag([makeAgent("db", "project")])
-    expect(result.db.description).toBe("[project specialist] db description")
-  })
-
-  it("does not prefix description for builtin-tier agents", () => {
-    const result = buildAgentsFlag([makeAgent("test", "builtin")])
+  it("uses description as-is", () => {
+    const result = buildAgentsFlag([makeAgent("test")])
     expect(result.test.description).toBe("test description")
   })
 })
