@@ -53,6 +53,20 @@ export const discoverPluginDirs = (config: RidgelineConfig): PluginDir[] => {
   return dirs
 }
 
+export const getCorePluginDir = (): string | null => {
+  const candidates = [
+    path.join(__dirname, "..", "..", "agents", "core"),  // dist
+    path.join(__dirname, "..", "..", "..", "agents", "core"),  // src
+    path.join(__dirname, "..", "..", "..", "..", "src", "agents", "core"),  // dev fallback
+  ]
+  for (const dir of candidates) {
+    if (fs.existsSync(path.join(dir, "hooks")) && fs.existsSync(path.join(dir, "plugin.json"))) {
+      return dir
+    }
+  }
+  return null
+}
+
 export const cleanupPluginDirs = (dirs: PluginDir[]): void => {
   for (const { dir, createdPluginJson } of dirs) {
     if (!createdPluginJson) continue

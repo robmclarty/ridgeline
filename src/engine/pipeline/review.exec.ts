@@ -5,7 +5,7 @@ import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { getDiff } from "../../git"
 import { discoverBuiltinAgents, buildAgentsFlag } from "../discovery/agent.scan"
-import { discoverPluginDirs, cleanupPluginDirs } from "../discovery/plugin.scan"
+import { discoverPluginDirs, cleanupPluginDirs, getCorePluginDir } from "../discovery/plugin.scan"
 import { parseVerdict } from "../../store/feedback"
 
 const assembleUserPrompt = (
@@ -49,6 +49,14 @@ export const invokeReviewer = async (
   const builtinAgents = discoverBuiltinAgents()
   const agents = buildAgentsFlag(builtinAgents)
   const pluginDirs = discoverPluginDirs(config)
+
+  // Include core hooks plugin when running in unsafe mode (no sandbox)
+  if (config.unsafe && !config.sandboxProvider) {
+    const coreDir = getCorePluginDir()
+    if (coreDir) {
+      pluginDirs.push({ dir: coreDir, createdPluginJson: false })
+    }
+  }
 
   try {
     const result = await invokeClaude({
