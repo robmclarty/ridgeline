@@ -24,10 +24,27 @@ export const parseStreamLine = (line: string): StreamEvent => {
     return { type: "other" }
   }
 
+  // Legacy format: {"type":"assistant","subtype":"text","text":"..."}
   if (parsed.type === "assistant" && parsed.subtype === "text") {
     const text = parsed.text
     if (typeof text === "string" && text.length > 0) {
       return { type: "text", text }
+    }
+    return { type: "other" }
+  }
+
+  // Current format: {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
+  if (parsed.type === "assistant" && parsed.message) {
+    const message = parsed.message as Record<string, unknown>
+    const content = message.content as Array<Record<string, unknown>> | undefined
+    if (Array.isArray(content)) {
+      const textParts = content
+        .filter((c) => c.type === "text" && typeof c.text === "string")
+        .map((c) => c.text as string)
+        .join("")
+      if (textParts.length > 0) {
+        return { type: "text", text: textParts }
+      }
     }
     return { type: "other" }
   }

@@ -18,10 +18,46 @@ const sampleResult = {
 
 describe("streamParser", () => {
   describe("parseStreamLine", () => {
-    it("parses assistant text events", () => {
+    it("parses legacy assistant text events", () => {
       const line = JSON.stringify({ type: "assistant", subtype: "text", text: "hello" })
       const event = parseStreamLine(line)
       expect(event).toEqual({ type: "text", text: "hello" })
+    })
+
+    it("parses current message-format assistant text events", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "text", text: "hello from message" }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "text", text: "hello from message" })
+    })
+
+    it("concatenates multiple text content blocks", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [
+            { type: "text", text: "part one" },
+            { type: "tool_use", id: "t1" },
+            { type: "text", text: "part two" },
+          ],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "text", text: "part onepart two" })
+    })
+
+    it("returns other for message events with no text content", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1" }],
+        },
+      })
+      expect(parseStreamLine(line)).toEqual({ type: "other" })
     })
 
     it("parses result events", () => {

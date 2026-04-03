@@ -5,3 +5,7 @@ Prefer to optimize for the happy path while staying as flexible as possible -- b
 - When designing interfaces, expose the full capability set (stop/pause/resume, not just stop).
 - When integrating, use the simplest path that works, but don't strip flexibility from the underlying module.
 - Fold universal features into defaults, not flags/commands.
+
+## Workflow
+
+- Always run `npm run lint` after finishing a task.
