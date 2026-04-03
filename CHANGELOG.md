@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.12
+
+- Fix LLM output not displaying during builds by supporting the current Claude CLI stream-json message format
+- Exclude `src/agents/core/` from agnix linter (loaded via `--plugin-dir`, not auto-discovery)
+- Add lint workflow note to CLAUDE.md
+
 ## 0.2.11
 
 - Fix Greywall sandbox provider to use `--settings` flag with a temporary settings JSON file instead of invalid `--allow-dir` CLI flag
