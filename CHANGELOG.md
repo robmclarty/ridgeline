@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+
+- Rename `runner/` directory to `engine/` and `state/` directory to `store/` for clearer module roles
+- Add barrel `index.ts` modules for engine, store, commands, and ui to simplify imports
+
 ## 0.2.3
 
 - Rename stateManager module to state for single-noun naming consistency with sibling modules
