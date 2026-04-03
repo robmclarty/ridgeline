@@ -1,10 +1,17 @@
 import { SandboxProvider } from "./sandbox"
 
-// Placeholder: greywall provider will be implemented in a future task.
 export const greywallProvider: SandboxProvider = {
   name: "greywall",
   command: "greywall",
-  buildArgs(_repoRoot: string, _networkAllowlist: string[]): string[] {
-    throw new Error("greywall provider not yet implemented")
+  buildArgs(repoRoot: string, networkAllowlist: string[]): string[] {
+    const args: string[] = [
+      "--allow-dir", repoRoot,
+      "--allow-dir", "/tmp",
+    ]
+    for (const domain of networkAllowlist) {
+      args.push("--allow-network", domain)
+    }
+    args.push("--")
+    return args
   },
 }
