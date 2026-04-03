@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../types"
-import { logInfo } from "../logging"
+import { printInfo } from "../ui/output"
 import { logTrajectory, makeTrajectoryEntry } from "../store/trajectory"
 import { recordCost } from "../store/budget"
 import { invokePlanner } from "../engine/pipeline/plan.exec"
@@ -19,7 +19,7 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   fs.mkdirSync(config.phasesDir, { recursive: true })
 
   // Run planner
-  logInfo("Running planner...")
+  printInfo("Running planner...")
   logTrajectory(config.buildDir, makeTrajectoryEntry("plan_start", null, "Planning started"))
 
   const { result, phases } = await invokePlanner(config)
@@ -36,13 +36,13 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   recordCost(config.buildDir, "plan", "planner", 0, result)
 
   // Print summary
-  logInfo(`\nPlan complete: ${phases.length} phases generated\n`)
+  printInfo(`\nPlan complete: ${phases.length} phases generated\n`)
   for (const phase of phases) {
     const content = fs.readFileSync(phase.filepath, "utf-8")
     const titleMatch = content.match(/^#\s+(.+)/m)
     const title = titleMatch ? titleMatch[1] : phase.id
-    logInfo(`  ${phase.id}: ${title}`)
+    printInfo(`  ${phase.id}: ${title}`)
   }
-  logInfo(`\nCost: $${result.costUsd.toFixed(2)}`)
-  logInfo(`\nNext: ridgeline dry-run ${config.buildName}`)
+  printInfo(`\nCost: $${result.costUsd.toFixed(2)}`)
+  printInfo(`\nNext: ridgeline dry-run ${config.buildName}`)
 }

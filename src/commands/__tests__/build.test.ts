@@ -4,9 +4,9 @@ import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 import type { RidgelineConfig } from "../../types"
 
-vi.mock("../../logging", () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
+vi.mock("../../ui/output", () => ({
+  printInfo: vi.fn(),
+  printError: vi.fn(),
 }))
 
 vi.mock("../../store/trajectory", () => ({

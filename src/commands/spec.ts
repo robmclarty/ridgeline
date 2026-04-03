@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
-import { logInfo, logError } from "../logging"
+import { printInfo, printError } from "../ui/output"
 import { invokeClaude } from "../engine/claude/claude.exec"
 import { resolveAgentPrompt } from "../engine/claude/agent.prompt"
 import { createDisplayCallbacks } from "../engine/claude/stream.decode"
@@ -84,7 +84,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
 
   // Create directory structure
   fs.mkdirSync(phasesDir, { recursive: true })
-  logInfo(`Created build directory: ${buildDir}`)
+  printInfo(`Created build directory: ${buildDir}`)
 
   // Check for existing project-level files
   const projectConstraints = path.join(ridgelineDir, "constraints.md")
@@ -112,7 +112,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     if (opts.input) {
       const resolved = resolveInput(opts.input)
       if (resolved.type === "file") {
-        logInfo(`Using existing spec from: ${resolved.path}`)
+        printInfo(`Using existing spec from: ${resolved.path}`)
         inputContext = resolved.content
       } else {
         inputContext = resolved.content
@@ -124,7 +124,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
       console.log("")
       inputContext = await askQuestion(rl, "Describe what you want to build:\n> ")
       if (!inputContext) {
-        logError("A description is required")
+        printError("A description is required")
         return
       }
     }
@@ -232,24 +232,24 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     }
 
     if (createdFiles.length === 0) {
-      logError("No build files were created. Try running spec again.")
+      printError("No build files were created. Try running spec again.")
       return
     }
 
-    logInfo("Created:")
+    printInfo("Created:")
     for (const f of createdFiles) {
       console.log(`  ${path.join(buildDir, f)}`)
     }
 
     if (!createdFiles.includes("spec.md")) {
-      logError("Warning: spec.md was not created — this is required for planning")
+      printError("Warning: spec.md was not created — this is required for planning")
     }
     if (!createdFiles.includes("constraints.md")) {
-      logError("Warning: constraints.md was not created — this is required for planning")
+      printError("Warning: constraints.md was not created — this is required for planning")
     }
 
     console.log("")
-    logInfo(`Next: ridgeline plan ${buildName}`)
+    printInfo(`Next: ridgeline plan ${buildName}`)
   } finally {
     rl.close()
   }

@@ -5,7 +5,7 @@ import { ensureHandoffExists } from "../../store/handoff"
 import { formatIssue, writeFeedback, archiveFeedback } from "../../store/feedback"
 import { logTrajectory, makeTrajectoryEntry } from "../../store/trajectory"
 import { updatePhaseStatus } from "../../store/state"
-import { logPhase } from "../../logging"
+import { printPhase } from "../../ui/output"
 import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
 
@@ -35,7 +35,7 @@ export const runPhase = async (
       : null
 
     // Build
-    logPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
+    printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "building", retries: attempt })
     logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}`))
 
@@ -43,7 +43,7 @@ export const runPhase = async (
     try {
       buildResult = await invokeBuilder(config, phase, feedbackFilePath)
     } catch (err) {
-      logPhase(phase.id, `Build failed: ${err}`)
+      printPhase(phase.id, `Build failed: ${err}`)
       logTrajectory(config.buildDir, makeTrajectoryEntry("build_complete", phase.id, `Build error: ${err}`))
       attempt++
       continue
@@ -62,7 +62,7 @@ export const runPhase = async (
 
     // Budget check
     if (config.maxBudgetUsd && budget.totalCostUsd > config.maxBudgetUsd) {
-      logPhase(phase.id, `Budget exceeded: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+      printPhase(phase.id, `Budget exceeded: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
       logTrajectory(config.buildDir, makeTrajectoryEntry(
         "budget_exceeded", phase.id,
         `Total cost $${budget.totalCostUsd.toFixed(2)} exceeds budget $${config.maxBudgetUsd}`
@@ -72,7 +72,7 @@ export const runPhase = async (
     }
 
     // Review
-    logPhase(phase.id, "Reviewing...")
+    printPhase(phase.id, "Reviewing...")
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
     logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}`))
 
@@ -80,7 +80,7 @@ export const runPhase = async (
     try {
       reviewResult = await invokeReviewer(config, phase, checkpointTag)
     } catch (err) {
-      logPhase(phase.id, `Review failed: ${err}`)
+      printPhase(phase.id, `Review failed: ${err}`)
       logTrajectory(config.buildDir, makeTrajectoryEntry("review_complete", phase.id, `Review error: ${err}`))
       attempt++
       continue
@@ -111,15 +111,15 @@ export const runPhase = async (
         completedAt: new Date().toISOString(),
       })
 
-      logPhase(phase.id, `PASSED (${(duration / 1000).toFixed(0)}s)`)
+      printPhase(phase.id, `PASSED (${(duration / 1000).toFixed(0)}s)`)
       logTrajectory(config.buildDir, makeTrajectoryEntry("phase_advance", phase.id, "Phase passed"))
       return "passed"
     }
 
     // Failed — write feedback for builder retry
-    logPhase(phase.id, `FAILED: ${verdict.summary}`)
+    printPhase(phase.id, `FAILED: ${verdict.summary}`)
     for (const issue of verdict.issues) {
-      logPhase(phase.id, `  - ${formatIssue(issue)}`)
+      printPhase(phase.id, `  - ${formatIssue(issue)}`)
     }
 
     // Keep numbered feedback files for post-build analysis
@@ -131,7 +131,7 @@ export const runPhase = async (
     attempt++
 
     if (attempt < maxAttempts) {
-      logPhase(phase.id, `Retrying (${attempt}/${config.maxRetries})...`)
+      printPhase(phase.id, `Retrying (${attempt}/${config.maxRetries})...`)
     }
   }
 
@@ -144,7 +144,7 @@ export const runPhase = async (
     failedAt: new Date().toISOString(),
   })
 
-  logPhase(phase.id, "FAILED: retries exhausted")
+  printPhase(phase.id, "FAILED: retries exhausted")
   logTrajectory(config.buildDir, makeTrajectoryEntry("phase_fail", phase.id, "Retries exhausted"))
 
   console.log("")

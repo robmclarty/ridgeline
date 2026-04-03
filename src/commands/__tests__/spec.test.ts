@@ -7,9 +7,9 @@ vi.mock("../../engine/claude/claude.exec", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../logging", () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
+vi.mock("../../ui/output", () => ({
+  printInfo: vi.fn(),
+  printError: vi.fn(),
 }))
 
 vi.mock("node:readline", () => ({

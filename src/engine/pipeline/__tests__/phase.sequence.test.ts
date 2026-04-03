@@ -20,8 +20,8 @@ vi.mock("../../../store/state", () => ({
   updatePhaseStatus: vi.fn(),
 }))
 
-vi.mock("../../../logging", () => ({
-  logPhase: vi.fn(),
+vi.mock("../../../ui/output", () => ({
+  printPhase: vi.fn(),
 }))
 
 vi.mock("../../../store/trajectory", () => ({

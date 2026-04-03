@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import { RidgelineConfig } from "../types"
-import { logInfo } from "../logging"
+import { printInfo } from "../ui/output"
 import { scanPhases, parsePhaseContent } from "../store/phases"
 import { runPlan } from "./plan"
 
@@ -8,7 +8,7 @@ export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
   let phases = scanPhases(config.phasesDir)
 
   if (phases.length === 0) {
-    logInfo("No phases found. Running planner first...\n")
+    printInfo("No phases found. Running planner first...\n")
     await runPlan(config)
     phases = scanPhases(config.phasesDir)
   }
@@ -41,5 +41,5 @@ export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
     console.log("")
   }
 
-  logInfo(`Review the phases above. To execute: ridgeline run ${config.buildName}`)
+  printInfo(`Review the phases above. To execute: ridgeline run ${config.buildName}`)
 }

@@ -1,5 +1,5 @@
 import { RidgelineConfig } from "../types"
-import { logInfo, logError } from "../logging"
+import { printInfo, printError } from "../ui/output"
 import { scanPhases } from "../store/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
@@ -42,12 +42,12 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
     .reduce((sum, e) => sum + e.costUsd, 0)
 
   console.log("")
-  logInfo("=" .repeat(60))
-  logInfo(`Build: ${config.buildName}`)
-  logInfo(`Phases: ${completed} passed, ${failed} failed, ${totalPhases} total`)
-  logInfo(`Duration: ${formatDuration(durationMs)}`)
-  logInfo(`Total cost: $${budget.totalCostUsd.toFixed(2)}`)
-  logInfo("=" .repeat(60))
+  printInfo("=" .repeat(60))
+  printInfo(`Build: ${config.buildName}`)
+  printInfo(`Phases: ${completed} passed, ${failed} failed, ${totalPhases} total`)
+  printInfo(`Duration: ${formatDuration(durationMs)}`)
+  printInfo(`Total cost: $${budget.totalCostUsd.toFixed(2)}`)
+  printInfo("=" .repeat(60))
 
   if (phaseStats.size > 0) {
     // Table header
@@ -79,7 +79,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   // Plan if no phases exist
   if (phases.length === 0) {
-    logInfo("No phases found. Running planner first...\n")
+    printInfo("No phases found. Running planner first...\n")
     await runPlan(config)
     phases = scanPhases(config.phasesDir)
   }
@@ -100,21 +100,21 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   if (isResume) {
     resetRetries(config.buildDir, state)
     const completedCount = state.phases.filter((p) => p.status === "complete").length
-    logInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
+    printInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
   }
 
   const startTime = Date.now()
   let completed = 0
   let failed = 0
 
-  logInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
+  printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
 
   // Run phases
   let nextPhaseState = getNextIncompletePhase(state)
   while (nextPhaseState) {
     const phase = phases.find((p) => p.id === nextPhaseState!.id)
     if (!phase) {
-      logError(`Phase ${nextPhaseState.id} not found in filesystem`)
+      printError(`Phase ${nextPhaseState.id} not found in filesystem`)
       failed++
       break
     }
@@ -132,7 +132,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     if (config.maxBudgetUsd) {
       const budget = loadBudget(config.buildDir)
       if (budget.totalCostUsd > config.maxBudgetUsd) {
-        logInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+        printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
         break
       }
     }
@@ -151,8 +151,8 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   if (totalCompleted === phases.length) {
     console.log("")
-    logInfo("All phases complete!")
-    logInfo("Cleaning up...")
+    printInfo("All phases complete!")
+    printInfo("Cleaning up...")
     cleanupBuildTags(config.buildName)
   }
 }
