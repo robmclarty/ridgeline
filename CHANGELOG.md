@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.9
+
+- Add opt-in bwrap sandbox for builder and reviewer agents (`--sandbox`, `--allow-network`) — Linux-only kernel-level filesystem and network isolation
+- Create SECURITY.md documenting permission scoping, git checkpoints, budget controls, prompt architecture, and tradeoff decisions
+- Update README with accurate CLI flags and defaults (fix timeouts, remove non-existent `--verbose`, add `--check-timeout`)
+- Fix `ridgeline run` references to `ridgeline build` in dryRun.ts and phase.sequence.ts
+
 ## 0.2.8
 
 - Add colocated tests for `ui/` modules (output, spinner, prompt) and `config.ts`
