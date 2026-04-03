@@ -27,6 +27,7 @@ export const runPhase = async (
 
   let attempt = phaseState.retries
   const maxAttempts = config.maxRetries + 1 // retries + initial attempt
+  const sandboxNote = config.sandbox ? ` [sandbox: network=${config.allowNetwork ? "allowed" : "blocked"}]` : ""
 
   while (attempt < maxAttempts) {
     const isRetry = attempt > 0
@@ -36,8 +37,6 @@ export const runPhase = async (
 
     // Build
     printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
-    updatePhaseStatus(config.buildDir, state, phase.id, { status: "building", retries: attempt })
-    const sandboxNote = config.sandbox ? ` [sandbox: network=${config.allowNetwork ? "allowed" : "blocked"}]` : ""
     logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`))
 
     let buildResult

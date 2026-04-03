@@ -166,21 +166,22 @@ equivalent unprivileged namespace API, so builds run without filesystem
 isolation. The Claude CLI's permission system (tool allowlists) and git
 checkpoints remain the primary safety mechanisms on all platforms.
 
-### Network access restrictions
+### Network access restrictions by default
 
 The builder can make network requests (e.g., `curl`, `npm install`,
-`git clone`) through its `Bash` tool access. We considered restricting outbound
-network access.
+`git clone`) through its `Bash` tool access. On Linux, `--sandbox` blocks
+network by default — users must opt in with `--allow-network`. On macOS and
+when running without `--sandbox`, network access is unrestricted.
 
-**Why we didn't:** Most real build steps require network access — installing
-dependencies, fetching remote resources, running integration tests against
-external services. Restricting this would break the majority of practical use
-cases.
+**Why not restrict by default everywhere:** Most real build steps require
+network access — installing dependencies, fetching remote resources, running
+integration tests against external services. Network namespaces are a
+Linux-only kernel feature with no macOS equivalent.
 
-**Tradeoff:** There is no mechanism to prevent the builder from exfiltrating
-repository contents or downloading untrusted code. Users should review phase
-specs before building and use budget limits to bound the scope of any single
-invocation.
+**Tradeoff:** Without `--sandbox`, there is no mechanism to prevent the builder
+from exfiltrating repository contents or downloading untrusted code. Users
+should review phase specs before building and use budget limits to bound the
+scope of any single invocation.
 
 ### Git commit signing
 
