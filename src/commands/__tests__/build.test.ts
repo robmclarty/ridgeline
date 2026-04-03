@@ -80,7 +80,7 @@ describe("commands/run", () => {
       buildDir: tmpDir,
       constraintsPath: path.join(tmpDir, "constraints.md"),
       tastePath: null,
-      snapshotPath: path.join(tmpDir, "snapshot.md"),
+
       handoffPath: path.join(tmpDir, "handoff.md"),
       phasesDir: path.join(tmpDir, "phases"),
       model: "opus",

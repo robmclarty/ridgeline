@@ -22,10 +22,6 @@ vi.mock("../../state/budget", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../state/snapshot", () => ({
-  generateSnapshot: vi.fn(),
-}))
-
 vi.mock("../../runner/planInvoker", () => ({
   invokePlanner: vi.fn(),
   scanPhases: vi.fn(() => []),
@@ -60,7 +56,6 @@ describe("commands/plan", () => {
       buildDir,
       constraintsPath: path.join(tmpDir, "constraints.md"),
       tastePath: null,
-      snapshotPath: path.join(buildDir, "snapshot.md"),
       handoffPath: path.join(buildDir, "handoff.md"),
       phasesDir,
       model: "opus",

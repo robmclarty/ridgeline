@@ -7,10 +7,6 @@ vi.mock("../../runner/claudeInvoker", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../state/snapshot", () => ({
-  generateSnapshot: vi.fn(() => "snapshot content"),
-}))
-
 vi.mock("../../logging", () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),

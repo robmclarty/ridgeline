@@ -89,7 +89,6 @@ const config: RidgelineConfig = {
   buildDir: "/tmp/build",
   constraintsPath: "/tmp/constraints.md",
   tastePath: null,
-  snapshotPath: "/tmp/build/snapshot.md",
   handoffPath: "/tmp/build/handoff.md",
   phasesDir: "/tmp/build/phases",
   model: "opus",
