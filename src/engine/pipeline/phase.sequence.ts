@@ -37,7 +37,8 @@ export const runPhase = async (
     // Build
     printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "building", retries: attempt })
-    logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}`))
+    const sandboxNote = config.sandbox ? ` [sandbox: network=${config.allowNetwork ? "allowed" : "blocked"}]` : ""
+    logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`))
 
     let buildResult
     try {
@@ -74,7 +75,7 @@ export const runPhase = async (
     // Review
     printPhase(phase.id, "Reviewing...")
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
-    logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}`))
+    logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`))
 
     let reviewResult
     try {

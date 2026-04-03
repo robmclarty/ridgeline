@@ -61,6 +61,8 @@ export const invokeReviewer = async (
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
+      sandbox: config.sandbox,
+      allowNetwork: config.allowNetwork,
     })
 
     flush()

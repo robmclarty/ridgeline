@@ -1,5 +1,6 @@
 import { RidgelineConfig } from "../types"
 import { printInfo, printError } from "../ui/output"
+import { assertBwrapAvailable } from "../engine/claude/sandbox"
 import { scanPhases } from "../store/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
@@ -101,6 +102,12 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     resetRetries(config.buildDir, state)
     const completedCount = state.phases.filter((p) => p.status === "complete").length
     printInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
+  }
+
+  // Validate sandbox availability before starting phases
+  if (config.sandbox) {
+    assertBwrapAvailable()
+    printInfo(`Sandbox: bwrap (network: ${config.allowNetwork ? "allowed" : "blocked"})`)
   }
 
   const startTime = Date.now()
