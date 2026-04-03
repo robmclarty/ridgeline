@@ -1,4 +1,5 @@
 import { ClaudeResult } from "../types"
+import { startSpinner } from "../ui/spinner"
 
 export type StreamEvent =
   | { type: "text"; text: string }
@@ -87,9 +88,12 @@ export const createDisplayCallbacks = (): {
   flush: () => void
 } => {
   let hasStreamedText = false
+  const spinner = startSpinner()
+
   const handler = createStreamHandler((event) => {
     if (event.type === "text") {
       if (!hasStreamedText) {
+        spinner.stop()
         process.stdout.write("\n")
         hasStreamedText = true
       }
@@ -99,6 +103,7 @@ export const createDisplayCallbacks = (): {
   return {
     onStdout: handler,
     flush: () => {
+      spinner.stop()
       if (hasStreamedText) {
         process.stdout.write("\n")
       }
