@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5
+
+- Reorganize engine/ into subdirectories (discovery/, pipeline/, claude/) with `[domain].[type].ts` naming convention and colocated tests
+- Add `typecheck` script and make `test` run typecheck, lint, and unit tests together
+
 ## 0.2.4
 
 - Rename `runner/` directory to `engine/` and `state/` directory to `store/` for clearer module roles
