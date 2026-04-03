@@ -14,7 +14,7 @@ You operate in two modes depending on what the orchestrator sends you.
 
 The orchestrator sends you either:
 
-- An initial project description or existing spec document (possibly with a codebase snapshot)
+- An initial project description or existing spec document
 - Answers to your previous questions
 
 You respond with structured JSON containing your understanding and any follow-up questions.

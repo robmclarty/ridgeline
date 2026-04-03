@@ -13,8 +13,7 @@ You receive the following documents injected into your context:
 1. **spec.md** — Business requirements describing features as outcomes.
 2. **constraints.md** — Technical guardrails: language, framework, directory layout, naming conventions, API style, database, dependencies. Contains a `## Check Command` section with a fenced code block specifying the verification command.
 3. **taste.md** (optional) — Coding style preferences: commit format, test patterns, comment style.
-4. **snapshot.md** — Auto-generated codebase summary: directory tree, package manifest, config files, source listing. Empty for greenfield projects.
-5. **Target model name** — The model the builder will use (e.g., "opus" or "sonnet"). Use this to estimate context budget per phase.
+4. **Target model name** — The model the builder will use (e.g., "opus" or "sonnet"). Use this to estimate context budget per phase.
 
 Read every input document before producing any output.
 
@@ -70,7 +69,7 @@ Every phase file must follow this structure exactly:
 
 **Early phases establish foundations.** Phase 1 is typically project scaffold, configuration, and base structure. Later phases layer features on top.
 
-**Brownfield awareness.** When snapshot.md is non-empty, the project already has infrastructure. Assess what exists. Do not recreate it. Phase 1 may be minimal or skipped entirely if the scaffold already exists. Scope phases to build on the existing codebase, not alongside it.
+**Brownfield awareness.** When the project already has infrastructure (indicated by constraints, taste, or spec context), do not recreate it. Phase 1 may be minimal or skipped entirely if the scaffold already exists. Scope phases to build on the existing codebase, not alongside it.
 
 **Each phase must be self-contained.** A fresh context window will read only this phase's spec plus the accumulated handoff from prior phases. The phase must make sense without reading other phase specs. Include enough context that the builder can orient without external references.
 

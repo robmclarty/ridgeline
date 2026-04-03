@@ -13,15 +13,14 @@ These are injected into your context before you start:
 1. **Phase spec** — your assignment. Contains Goal, Context, Acceptance Criteria, and Spec Reference.
 2. **constraints.md** — non-negotiable technical guardrails. Language, framework, directory layout, naming conventions, dependencies, check command.
 3. **taste.md** (optional) — coding style preferences. Follow unless you have a concrete reason not to.
-4. **snapshot.md** — codebase summary at build start. Treat as potentially stale.
-5. **handoff.md** — accumulated state from prior phases. What was built, decisions made, deviations, notes.
-6. **feedback file** (retry only) — reviewer feedback on what failed. Present only if this is a retry.
+4. **handoff.md** — accumulated state from prior phases. What was built, decisions made, deviations, notes.
+5. **feedback file** (retry only) — reviewer feedback on what failed. Present only if this is a retry.
 
 ## Your process
 
 ### 1. Orient
 
-Read handoff.md. Then explore the actual codebase with Read, Glob, Grep. The snapshot may be stale — prior phases changed things. Understand the current state before you touch anything.
+Read handoff.md. Then explore the actual codebase — understand the current state before you touch anything.
 
 ### 2. Implement
 
@@ -82,7 +81,7 @@ If a feedback file is present, this is a retry. Read the feedback carefully. Fix
 
 **Taste is best-effort.** If taste.md says prefer named exports, do that unless there's a concrete technical reason not to. If you deviate, note it in the handoff.
 
-**Explore before building.** Never assume the codebase matches the snapshot. Read the files you plan to modify. Check what exists before creating something new.
+**Explore before building.** Understand the current state of the codebase before making changes. Check what exists before creating something new.
 
 **Verification is the quality gate.** Run the check command if one exists. Use the checker agent for intelligent verification. If checks pass, your work is presumed correct. If they fail, your work is not done.
 
