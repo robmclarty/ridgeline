@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { scanPhases, isPhaseFile, parsePhaseFilename, PHASE_FILENAME_PATTERN } from "../phases"
+import { scanPhases, isPhaseFile, parsePhaseFilename, parsePhaseContent, PHASE_FILENAME_PATTERN } from "../phases"
 
 describe("phases", () => {
   describe("PHASE_FILENAME_PATTERN", () => {
@@ -45,6 +45,43 @@ describe("phases", () => {
     it("handles multi-word slugs", () => {
       const result = parsePhaseFilename("02-setup-database.md")
       expect(result).toEqual({ id: "02-setup-database", index: 2, slug: "setup-database" })
+    })
+  })
+
+  describe("parsePhaseContent", () => {
+    it("extracts title, goal, and acceptance criteria", () => {
+      const content = [
+        "# Phase 1: Scaffold",
+        "",
+        "## Goal",
+        "Set up the project structure.",
+        "",
+        "## Acceptance Criteria",
+        "1. Directory exists",
+        "2. Config files present",
+        "",
+        "## Spec Reference",
+        "Some reference.",
+      ].join("\n")
+
+      const result = parsePhaseContent(content)
+      expect(result.title).toBe("Phase 1: Scaffold")
+      expect(result.goal).toBe("Set up the project structure.")
+      expect(result.criteria).toBe("1. Directory exists\n2. Config files present")
+    })
+
+    it("returns empty strings for missing sections", () => {
+      const result = parsePhaseContent("Just some text without sections.")
+      expect(result.title).toBe("")
+      expect(result.goal).toBe("")
+      expect(result.criteria).toBe("")
+    })
+
+    it("extracts title only", () => {
+      const result = parsePhaseContent("# My Phase Title\n\nSome content.")
+      expect(result.title).toBe("My Phase Title")
+      expect(result.goal).toBe("")
+      expect(result.criteria).toBe("")
     })
   })
 

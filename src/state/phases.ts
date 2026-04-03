@@ -16,6 +16,25 @@ export const parsePhaseFilename = (filename: string): { id: string; index: numbe
   }
 }
 
+export type PhaseContent = {
+  title: string
+  goal: string
+  criteria: string
+}
+
+// Extract title, goal, and acceptance criteria from phase markdown content
+export const parsePhaseContent = (content: string): PhaseContent => {
+  const titleMatch = content.match(/^#\s+(.+)/m)
+  const goalMatch = content.match(/## Goal\s*\n([\s\S]*?)(?=\n## |\n$)/)
+  const criteriaMatch = content.match(/## Acceptance Criteria\s*\n([\s\S]*?)(?=\n## |\n$)/)
+
+  return {
+    title: titleMatch ? titleMatch[1] : "",
+    goal: goalMatch ? goalMatch[1].trim() : "",
+    criteria: criteriaMatch ? criteriaMatch[1].trim() : "",
+  }
+}
+
 export const scanPhases = (phasesDir: string): PhaseInfo[] => {
   if (!fs.existsSync(phasesDir)) return []
   const files = fs.readdirSync(phasesDir)

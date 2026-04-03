@@ -21,9 +21,13 @@ vi.mock("../../state/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../state/phases", () => ({
-  scanPhases: vi.fn(() => []),
-}))
+vi.mock("../../state/phases", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../state/phases")>()
+  return {
+    ...actual,
+    scanPhases: vi.fn(() => []),
+  }
+})
 
 vi.mock("../plan", () => ({
   runPlan: vi.fn(),

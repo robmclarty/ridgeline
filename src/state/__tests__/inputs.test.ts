@@ -1,31 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../test/setup"
+import { makeTempDir } from "../../../test/setup"
+import { resolveFile, parseCheckCommand } from "../inputs"
 
-// Mock commander to prevent program.parse() from running on import
-vi.mock("commander", () => {
-  class MockCommand {
-    name() { return this }
-    description() { return this }
-    version() { return this }
-    command() { return this }
-    option() { return this }
-    action() { return this }
-    parse() {}
-  }
-  return { Command: MockCommand }
-})
-
-// Mock command modules to avoid side effects
-vi.mock("../commands/spec", () => ({ runSpec: vi.fn() }))
-vi.mock("../commands/plan", () => ({ runPlan: vi.fn() }))
-vi.mock("../commands/dryRun", () => ({ runDryRun: vi.fn() }))
-vi.mock("../commands/build", () => ({ runBuild: vi.fn() }))
-
-import { resolveFile, parseCheckCommand } from "../cli"
-
-describe("cli", () => {
+describe("inputs", () => {
   describe("resolveFile", () => {
     let tmpDir: string
     let buildDir: string

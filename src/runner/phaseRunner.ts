@@ -1,5 +1,5 @@
 import { RidgelineConfig, PhaseInfo, BuildState } from "../types"
-import { createTag, isWorkingTreeDirty, commitAll } from "../git"
+import { createCheckpoint, createCompletionTag } from "../state/tags"
 import { recordCost } from "../state/budget"
 import { ensureHandoffExists } from "../state/handoff"
 import { formatIssue, writeFeedback, archiveFeedback } from "../state/feedback"
@@ -21,10 +21,7 @@ export const runPhase = async (
   const startTime = Date.now()
 
   // Pre-phase: create git checkpoint
-  if (isWorkingTreeDirty()) {
-    commitAll(`chore: pre-phase checkpoint for ${phase.id}`)
-  }
-  createTag(checkpointTag, undefined, true)
+  createCheckpoint(checkpointTag, phase.id)
 
   ensureHandoffExists(config.buildDir)
 
@@ -105,8 +102,7 @@ export const runPhase = async (
     // Verdict handling
     if (verdict.passed) {
       const duration = Date.now() - startTime
-      const completionTag = `ridgeline/phase/${config.buildName}/${phase.id}`
-      createTag(completionTag, undefined, true)
+      const completionTag = createCompletionTag(config.buildName, phase.id)
 
       updatePhaseStatus(config.buildDir, state, phase.id, {
         status: "complete",

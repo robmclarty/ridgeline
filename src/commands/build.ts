@@ -4,7 +4,7 @@ import { scanPhases } from "../state/phases"
 import { runPhase } from "../runner/phaseRunner"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../state/stateManager"
 import { loadBudget } from "../state/budget"
-import { deleteTagsByPrefix } from "../git"
+import { cleanupBuildTags } from "../state/tags"
 import { runPlan } from "./plan"
 
 const formatDuration = (ms: number): string => {
@@ -153,9 +153,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     console.log("")
     logInfo("All phases complete!")
     logInfo("Cleaning up...")
-    deleteTagsByPrefix(`ridgeline/${config.buildName}/`)
-    // Also clean checkpoint and phase tags
-    deleteTagsByPrefix(`ridgeline/checkpoint/${config.buildName}/`)
-    deleteTagsByPrefix(`ridgeline/phase/${config.buildName}/`)
+    cleanupBuildTags(config.buildName)
   }
 }

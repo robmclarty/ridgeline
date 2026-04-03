@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { BuildState, PhaseState, PhaseInfo } from "../types"
-import { tagExists } from "../git"
+import { checkpointTagName, verifyCompletionTag } from "./tags"
 
 const statePath = (buildDir: string): string =>
   path.join(buildDir, "state.json")
@@ -24,7 +24,7 @@ export const initState = (buildName: string, phases: PhaseInfo[]): BuildState =>
   phases: phases.map((p) => ({
     id: p.id,
     status: "pending",
-    checkpointTag: `ridgeline/checkpoint/${buildName}/${p.id}`,
+    checkpointTag: checkpointTagName(buildName, p.id),
     completionTag: null,
     retries: 0,
     duration: null,
@@ -64,8 +64,7 @@ export const getNextIncompletePhase = (
   for (const phase of state.phases) {
     if (phase.status === "complete") {
       // Verify the completion tag still exists
-      const completionTag = `ridgeline/phase/${state.buildName}/${phase.id}`
-      if (!tagExists(completionTag, cwd)) {
+      if (!verifyCompletionTag(state.buildName, phase.id, cwd)) {
         // Tag was deleted — treat as incomplete
         phase.status = "pending"
         phase.completionTag = null

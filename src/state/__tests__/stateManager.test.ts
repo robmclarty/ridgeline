@@ -5,12 +5,13 @@ import { makeTempDir } from "../../../test/setup"
 import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase } from "../stateManager"
 import type { PhaseInfo, BuildState } from "../../types"
 
-// Mock git module for getNextIncompletePhase
-vi.mock("../../git", () => ({
-  tagExists: vi.fn(() => true),
+// Mock tags module for getNextIncompletePhase
+vi.mock("../tags", () => ({
+  checkpointTagName: vi.fn((buildName: string, phaseId: string) => `ridgeline/checkpoint/${buildName}/${phaseId}`),
+  verifyCompletionTag: vi.fn(() => true),
 }))
 
-import { tagExists } from "../../git"
+import { verifyCompletionTag } from "../tags"
 
 const samplePhases: PhaseInfo[] = [
   { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/phases/01-scaffold.md" },
@@ -23,7 +24,7 @@ describe("stateManager", () => {
 
   beforeEach(() => {
     tmpDir = makeTempDir()
-    vi.mocked(tagExists).mockReturnValue(true)
+    vi.mocked(verifyCompletionTag).mockReturnValue(true)
   })
 
   afterEach(() => {
@@ -137,7 +138,7 @@ describe("stateManager", () => {
     })
 
     it("treats complete phase as incomplete if tag was deleted", () => {
-      vi.mocked(tagExists).mockReturnValue(false)
+      vi.mocked(verifyCompletionTag).mockReturnValue(false)
 
       const state = initState("build", samplePhases)
       state.phases[0].status = "complete"

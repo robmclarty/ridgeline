@@ -2,10 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
 
 // Mock all external dependencies
-vi.mock("../../git", () => ({
-  isWorkingTreeDirty: vi.fn(() => false),
-  commitAll: vi.fn(),
-  createTag: vi.fn(),
+vi.mock("../../state/tags", () => ({
+  createCheckpoint: vi.fn(),
+  createCompletionTag: vi.fn((buildName: string, phaseId: string) => `ridgeline/phase/${buildName}/${phaseId}`),
 }))
 
 vi.mock("../../state/budget", () => ({
@@ -57,7 +56,7 @@ vi.mock("../../state/feedback", () => ({
 import { runPhase } from "../phaseRunner"
 import { invokeBuilder } from "../buildInvoker"
 import { invokeReviewer } from "../reviewInvoker"
-import { isWorkingTreeDirty, commitAll, createTag } from "../../git"
+import { createCheckpoint, createCompletionTag } from "../../state/tags"
 import { recordCost } from "../../state/budget"
 import { updatePhaseStatus } from "../../state/stateManager"
 
@@ -152,19 +151,7 @@ describe("phaseRunner", () => {
       })
 
       await runPhase(phase, config, makeState())
-      expect(createTag).toHaveBeenCalledWith("ridgeline/checkpoint/test-build/01-scaffold", undefined, true)
-    })
-
-    it("commits dirty tree before checkpointing", async () => {
-      vi.mocked(isWorkingTreeDirty).mockReturnValue(true)
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(invokeReviewer).mockResolvedValue({
-        result: makeResult(),
-        verdict: passVerdict,
-      })
-
-      await runPhase(phase, config, makeState())
-      expect(commitAll).toHaveBeenCalledWith("chore: pre-phase checkpoint for 01-scaffold")
+      expect(createCheckpoint).toHaveBeenCalledWith("ridgeline/checkpoint/test-build/01-scaffold", "01-scaffold")
     })
 
     it("retries on reviewer failure up to maxRetries", async () => {
@@ -252,7 +239,7 @@ describe("phaseRunner", () => {
       })
 
       await runPhase(phase, config, makeState())
-      expect(createTag).toHaveBeenCalledWith("ridgeline/phase/test-build/01-scaffold", undefined, true)
+      expect(createCompletionTag).toHaveBeenCalledWith("test-build", "01-scaffold")
     })
 
     it("updates phase status to complete on success", async () => {

@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import { RidgelineConfig } from "../types"
 import { logInfo } from "../logging"
-import { scanPhases } from "../state/phases"
+import { scanPhases, parsePhaseContent } from "../state/phases"
 import { runPlan } from "./plan"
 
 export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
@@ -27,17 +27,8 @@ export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
   for (const phase of phases) {
     const content = fs.readFileSync(phase.filepath, "utf-8")
 
-    // Parse phase title
-    const titleMatch = content.match(/^#\s+(.+)/m)
-    const title = titleMatch ? titleMatch[1] : phase.id
-
-    // Parse goal section
-    const goalMatch = content.match(/## Goal\s*\n([\s\S]*?)(?=\n## |\n$)/)
-    const goal = goalMatch ? goalMatch[1].trim() : ""
-
-    // Parse acceptance criteria
-    const criteriaMatch = content.match(/## Acceptance Criteria\s*\n([\s\S]*?)(?=\n## |\n$)/)
-    const criteria = criteriaMatch ? criteriaMatch[1].trim() : ""
+    const { title: parsedTitle, goal, criteria } = parsePhaseContent(content)
+    const title = parsedTitle || phase.id
 
     console.log(`--- ${title} ---`)
     if (goal) {

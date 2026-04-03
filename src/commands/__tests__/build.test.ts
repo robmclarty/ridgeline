@@ -55,8 +55,8 @@ vi.mock("../../state/budget", () => ({
   loadBudget: vi.fn(() => ({ entries: [], totalCostUsd: 0 })),
 }))
 
-vi.mock("../../git", () => ({
-  deleteTagsByPrefix: vi.fn(),
+vi.mock("../../state/tags", () => ({
+  cleanupBuildTags: vi.fn(),
 }))
 
 vi.mock("../plan", () => ({
