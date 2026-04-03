@@ -2,10 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
 
 // Mock all external dependencies
-vi.mock("node:child_process", () => ({
-  execSync: vi.fn(() => "check output"),
-}))
-
 vi.mock("../../git", () => ({
   isWorkingTreeDirty: vi.fn(() => false),
   commitAll: vi.fn(),

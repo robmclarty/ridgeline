@@ -172,8 +172,7 @@ export const generateFeedback = (phaseId: string, verdict: ReviewVerdict): strin
 const assembleUserPrompt = (
   config: RidgelineConfig,
   phase: PhaseInfo,
-  checkpointTag: string,
-  checkOutput: { command: string; output: string; exitCode: number } | null
+  checkpointTag: string
 ): string => {
   const sections: string[] = []
 
@@ -196,27 +195,16 @@ const assembleUserPrompt = (
   sections.push(fs.readFileSync(config.constraintsPath, "utf-8"))
   sections.push("")
 
-  if (checkOutput) {
-    sections.push("## Check Command Results\n")
-    sections.push(`Command: \`${checkOutput.command}\``)
-    sections.push(`Exit code: ${checkOutput.exitCode}\n`)
-    sections.push("```")
-    sections.push(checkOutput.output)
-    sections.push("```")
-    sections.push("")
-  }
-
   return sections.join("\n")
 }
 
 export const invokeReviewer = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
-  checkpointTag: string,
-  checkOutput: { command: string; output: string; exitCode: number } | null
+  checkpointTag: string
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   const systemPrompt = resolveAgentPrompt("reviewer.md")
-  const userPrompt = assembleUserPrompt(config, phase, checkpointTag, checkOutput)
+  const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
   const { onStdout, flush } = createDisplayCallbacks()
 
   const result = await invokeClaude({

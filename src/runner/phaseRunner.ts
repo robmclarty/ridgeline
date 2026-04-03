@@ -1,5 +1,4 @@
 import * as fs from "node:fs"
-import { execSync } from "node:child_process"
 import { RidgelineConfig, PhaseInfo, BuildState } from "../types"
 import { createTag, isWorkingTreeDirty, commitAll } from "../git"
 import { recordCost } from "../state/budget"
@@ -8,28 +7,6 @@ import { updatePhaseStatus } from "../state/stateManager"
 import { logPhase, logTrajectory, makeTrajectoryEntry } from "../logging"
 import { invokeBuilder } from "./buildInvoker"
 import { invokeReviewer, formatIssue, generateFeedback } from "./reviewInvoker"
-
-const runCheckCommand = (
-  checkCommand: string | null,
-  timeoutMs: number
-): { command: string; output: string; exitCode: number } | null => {
-  if (!checkCommand) return null
-  try {
-    const output = execSync(checkCommand, {
-      encoding: "utf-8",
-      stdio: ["pipe", "pipe", "pipe"],
-      timeout: timeoutMs,
-    })
-    return { command: checkCommand, output, exitCode: 0 }
-  } catch (err: unknown) {
-    const e = err as { stdout?: string; stderr?: string; status?: number }
-    return {
-      command: checkCommand,
-      output: (e.stdout ?? "") + (e.stderr ?? ""),
-      exitCode: e.status ?? 1,
-    }
-  }
-}
 
 export const runPhase = async (
   phase: PhaseInfo,
@@ -96,17 +73,14 @@ export const runPhase = async (
       return "failed"
     }
 
-    // Run check command
-    const checkOutput = runCheckCommand(config.checkCommand, config.checkTimeoutSeconds * 1000)
-
-    // Evaluate
+    // Review
     logPhase(phase.id, "Reviewing...")
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
     logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}`))
 
     let reviewResult
     try {
-      reviewResult = await invokeReviewer(config, phase, checkpointTag, checkOutput)
+      reviewResult = await invokeReviewer(config, phase, checkpointTag)
     } catch (err) {
       logPhase(phase.id, `Review failed: ${err}`)
       logTrajectory(config.buildDir, makeTrajectoryEntry("review_complete", phase.id, `Review error: ${err}`))
