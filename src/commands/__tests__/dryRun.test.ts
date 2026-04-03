@@ -53,7 +53,6 @@ describe("commands/dryRun", () => {
       maxRetries: 2,
       timeoutMinutes: 120,
       checkTimeoutSeconds: 1200,
-      verbose: false,
       checkCommand: null,
       maxBudgetUsd: null,
     }

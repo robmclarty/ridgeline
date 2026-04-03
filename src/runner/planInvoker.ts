@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
 import { invokeClaude } from "./claudeInvoker"
+import { createDisplayCallbacks } from "./streamParser"
 
 const resolveAgentPrompt = (filename: string): string => {
   // Try dist/agents/ first (installed package), then src/agents/ (development)
@@ -72,6 +73,7 @@ export const invokePlanner = async (
 ): Promise<{ result: ClaudeResult; phases: PhaseInfo[] }> => {
   const systemPrompt = resolveAgentPrompt("planner.md")
   const userPrompt = assembleUserPrompt(config)
+  const { onStdout, flush } = createDisplayCallbacks()
 
   const result = await invokeClaude({
     systemPrompt,
@@ -79,9 +81,11 @@ export const invokePlanner = async (
     model: config.model,
     allowedTools: ["Write"],
     cwd: process.cwd(),
-    verbose: config.verbose,
     timeoutMs: config.timeoutMinutes * 60 * 1000,
+    onStdout,
   })
+
+  flush()
 
   // Scan for generated phase files
   const phases = scanPhases(config.phasesDir)

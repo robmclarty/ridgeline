@@ -4,6 +4,7 @@ import * as readline from "node:readline"
 import { logInfo, logError } from "../logging"
 import { invokeClaude } from "../runner/claudeInvoker"
 import { resolveAgentPrompt } from "../runner/agentPrompt"
+import { createDisplayCallbacks } from "../runner/streamParser"
 import { generateSnapshot } from "../state/snapshot"
 
 const MAX_CLARIFICATION_ROUNDS = 3
@@ -46,7 +47,6 @@ const parseQAResponse = (resultText: string): QAResponse => {
 
 export type InitOptions = {
   model: string
-  verbose: boolean
   timeout: number
 }
 
@@ -108,15 +108,17 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
       userPrompt += `\n\n## Existing Project Files\n${existingFileHints}`
     }
 
+    let display = createDisplayCallbacks()
     let result = await invokeClaude({
       systemPrompt,
       userPrompt,
       model: opts.model,
       cwd: process.cwd(),
-      verbose: opts.verbose,
       timeoutMs,
       jsonSchema: QA_JSON_SCHEMA,
+      onStdout: display.onStdout,
     })
+    display.flush()
 
     let sessionId = result.sessionId
     let qa = parseQAResponse(result.result)
@@ -143,16 +145,18 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
           .map((q, i) => `Q: ${q}\nA: ${answers[i]}`)
           .join("\n\n")
 
+        display = createDisplayCallbacks()
         result = await invokeClaude({
           systemPrompt,
           userPrompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
           model: opts.model,
           cwd: process.cwd(),
-          verbose: opts.verbose,
           timeoutMs,
           sessionId,
           jsonSchema: QA_JSON_SCHEMA,
+          onStdout: display.onStdout,
         })
+        display.flush()
 
         sessionId = result.sessionId
         qa = parseQAResponse(result.result)
@@ -168,16 +172,18 @@ export const runInit = async (buildName: string, opts: InitOptions): Promise<voi
     }
     console.log("\nGenerating build files...")
 
+    display = createDisplayCallbacks()
     await invokeClaude({
       systemPrompt,
       userPrompt: `Generate the build input files now. Write them to: ${buildDir}/\n\nUse the Write tool to create spec.md, constraints.md, and optionally taste.md in that directory.`,
       model: opts.model,
       allowedTools: ["Write", "Read", "Glob", "Grep"],
       cwd: process.cwd(),
-      verbose: opts.verbose,
       timeoutMs,
       sessionId,
+      onStdout: display.onStdout,
     })
+    display.flush()
 
     // Step 5: Verify and report
     console.log("")

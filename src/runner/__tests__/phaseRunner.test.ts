@@ -100,7 +100,6 @@ const config: RidgelineConfig = {
   maxRetries: 2,
   timeoutMinutes: 120,
   checkTimeoutSeconds: 1200,
-  verbose: false,
   checkCommand: "npm test",
   maxBudgetUsd: null,
 }

@@ -26,10 +26,9 @@ const baseOpts: InvokeOptions = {
   userPrompt: "Hello",
   model: "opus",
   cwd: "/tmp",
-  verbose: false,
 }
 
-const sampleJsonOutput = JSON.stringify({
+const sampleResultLine = JSON.stringify({
   type: "result",
   is_error: false,
   result: "All done",
@@ -50,18 +49,17 @@ describe("claudeInvoker", () => {
   })
 
   describe("invokeClaude", () => {
-    it("spawns claude with correct arguments", () => {
+    it("always uses stream-json format", () => {
       const promise = invokeClaude(baseOpts)
 
       expect(spawn).toHaveBeenCalledWith(
         "claude",
-        expect.arrayContaining(["-p", "--output-format", "json", "--model", "opus"]),
+        expect.arrayContaining(["-p", "--output-format", "stream-json", "--model", "opus"]),
         expect.objectContaining({ cwd: "/tmp" })
       )
 
-      // Resolve the promise to avoid unhandled rejection
       const proc = vi.mocked(spawn).mock.results[0].value
-      proc.stdout.emit("data", Buffer.from(sampleJsonOutput))
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
       proc.emit("close", 0)
 
       return promise
@@ -77,7 +75,7 @@ describe("claudeInvoker", () => {
       )
 
       const proc = vi.mocked(spawn).mock.results[0].value
-      proc.stdout.emit("data", Buffer.from(sampleJsonOutput))
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
       proc.emit("close", 0)
 
       return promise
@@ -90,17 +88,20 @@ describe("claudeInvoker", () => {
       expect(proc.stdin.write).toHaveBeenCalledWith("Do something")
       expect(proc.stdin.end).toHaveBeenCalled()
 
-      proc.stdout.emit("data", Buffer.from(sampleJsonOutput))
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
       proc.emit("close", 0)
 
       return promise
     })
 
-    it("parses JSON response correctly", async () => {
+    it("parses stream-json result correctly", async () => {
       const promise = invokeClaude(baseOpts)
 
       const proc = vi.mocked(spawn).mock.results[0].value
-      proc.stdout.emit("data", Buffer.from(sampleJsonOutput))
+      proc.stdout.emit("data", Buffer.from(
+        '{"type":"assistant","subtype":"text","text":"hello"}\n' +
+        sampleResultLine + "\n"
+      ))
       proc.emit("close", 0)
 
       const result = await promise
@@ -111,6 +112,19 @@ describe("claudeInvoker", () => {
       expect(result.usage.inputTokens).toBe(100)
       expect(result.usage.outputTokens).toBe(50)
       expect(result.sessionId).toBe("sess-123")
+    })
+
+    it("calls onStdout callback with raw chunks", async () => {
+      const onStdout = vi.fn()
+      const promise = invokeClaude({ ...baseOpts, onStdout })
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+      const chunk = sampleResultLine + "\n"
+      proc.stdout.emit("data", Buffer.from(chunk))
+      proc.emit("close", 0)
+
+      await promise
+      expect(onStdout).toHaveBeenCalledWith(chunk)
     })
 
     it("rejects on non-zero exit with no stdout", async () => {
@@ -127,7 +141,7 @@ describe("claudeInvoker", () => {
       const promise = invokeClaude(baseOpts)
 
       const proc = vi.mocked(spawn).mock.results[0].value
-      proc.stdout.emit("data", Buffer.from(sampleJsonOutput))
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
       proc.emit("close", 1)
 
       const result = await promise
@@ -153,6 +167,7 @@ describe("claudeInvoker", () => {
 
     it("handles is_error flag in response", async () => {
       const errorOutput = JSON.stringify({
+        type: "result",
         is_error: true,
         result: "Something went wrong",
         duration_ms: 1000,
@@ -163,30 +178,11 @@ describe("claudeInvoker", () => {
 
       const promise = invokeClaude(baseOpts)
       const proc = vi.mocked(spawn).mock.results[0].value
-      proc.stdout.emit("data", Buffer.from(errorOutput))
+      proc.stdout.emit("data", Buffer.from(errorOutput + "\n"))
       proc.emit("close", 0)
 
       const result = await promise
       expect(result.success).toBe(false)
-    })
-
-    it("uses stream-json format in verbose mode", () => {
-      const promise = invokeClaude({ ...baseOpts, verbose: true })
-
-      expect(spawn).toHaveBeenCalledWith(
-        "claude",
-        expect.arrayContaining(["--output-format", "stream-json"]),
-        expect.any(Object)
-      )
-
-      const proc = vi.mocked(spawn).mock.results[0].value
-      // In stream mode, last line is the result JSON
-      proc.stdout.emit("data", Buffer.from(
-        '{"type":"assistant","subtype":"text","text":"hello"}\n' + sampleJsonOutput + "\n"
-      ))
-      proc.emit("close", 0)
-
-      return promise
     })
   })
 })

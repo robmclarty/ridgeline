@@ -37,7 +37,7 @@ const makeClaudeResult = (result: string, sessionId = "sess-1") => ({
   sessionId,
 })
 
-const defaultOpts = { model: "opus", verbose: false, timeout: 10 }
+const defaultOpts = { model: "opus", timeout: 10 }
 
 describe("commands/init", () => {
   let origCwd: string

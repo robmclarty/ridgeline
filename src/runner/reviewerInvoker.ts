@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict, ReviewIssue } from "../types"
 import { invokeClaude } from "./claudeInvoker"
 import { resolveAgentPrompt } from "./agentPrompt"
+import { createDisplayCallbacks } from "./streamParser"
 import { getDiff } from "../git"
 
 // Normalize an issue entry — accept both string and object forms
@@ -216,6 +217,7 @@ export const invokeReviewer = async (
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   const systemPrompt = resolveAgentPrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag, checkOutput)
+  const { onStdout, flush } = createDisplayCallbacks()
 
   const result = await invokeClaude({
     systemPrompt,
@@ -223,10 +225,11 @@ export const invokeReviewer = async (
     model: config.model,
     allowedTools: ["Read", "Bash", "Glob", "Grep"],
     cwd: process.cwd(),
-    verbose: config.verbose,
     timeoutMs: config.timeoutMinutes * 60 * 1000,
+    onStdout,
   })
 
+  flush()
   const verdict = parseVerdict(result.result)
   return { result, verdict }
 }

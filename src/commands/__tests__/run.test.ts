@@ -87,7 +87,6 @@ describe("commands/run", () => {
       maxRetries: 2,
       timeoutMinutes: 120,
       checkTimeoutSeconds: 1200,
-      verbose: false,
       checkCommand: null,
       maxBudgetUsd: null,
     }

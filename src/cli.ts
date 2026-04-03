@@ -91,7 +91,6 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     maxRetries: parseInt(String(opts.maxRetries ?? "2"), 10),
     timeoutMinutes: parseInt(String(opts.timeout ?? "120"), 10),
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),
-    verbose: Boolean(opts.verbose),
     checkCommand,
     maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,
   }
@@ -120,7 +119,6 @@ program
   .command("init [build-name]")
   .description("Interactive helper to scaffold build input files")
   .option("--model <name>", "Model for init assistant", "opus")
-  .option("--verbose", "Stream assistant output to terminal", false)
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
     if (!buildName) buildName = await askBuildName()
@@ -131,7 +129,6 @@ program
     try {
       await runInit(buildName, {
         model: (opts.model as string) ?? "opus",
-        verbose: Boolean(opts.verbose),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
       })
     } catch (err) {
@@ -144,7 +141,6 @@ program
   .command("plan [build-name]")
   .description("Generate phase specs from spec.md and constraints.md")
   .option("--model <name>", "Model for planner", "opus")
-  .option("--verbose", "Stream planner output to terminal", false)
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
@@ -163,7 +159,6 @@ program
   .command("dry-run [build-name]")
   .description("Display the plan without executing")
   .option("--model <name>", "Model for planner", "opus")
-  .option("--verbose", "Stream planner output to terminal", false)
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
@@ -181,7 +176,6 @@ program
 program
   .command("run [build-name]")
   .description("Execute the build pipeline (automatically resumes from last successful phase)")
-  .option("--verbose", "Stream builder/reviewer output to terminal", false)
   .option("--timeout <minutes>", "Max duration per phase in minutes", "120")
   .option("--check-timeout <seconds>", "Max duration for check command in seconds", "1200")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")

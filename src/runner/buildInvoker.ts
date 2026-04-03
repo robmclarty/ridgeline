@@ -3,6 +3,7 @@ import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types"
 import { invokeClaude } from "./claudeInvoker"
 import { resolveAgentPrompt } from "./agentPrompt"
+import { createDisplayCallbacks } from "./streamParser"
 import { readHandoff } from "../state/handoff"
 
 const assembleUserPrompt = (
@@ -71,14 +72,18 @@ export const invokeBuilder = async (
 ): Promise<ClaudeResult> => {
   const systemPrompt = resolveAgentPrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
+  const { onStdout, flush } = createDisplayCallbacks()
 
-  return invokeClaude({
+  const result = await invokeClaude({
     systemPrompt,
     userPrompt,
     model: config.model,
     allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
     cwd: process.cwd(),
-    verbose: config.verbose,
     timeoutMs: config.timeoutMinutes * 60 * 1000,
+    onStdout,
   })
+
+  flush()
+  return result
 }
