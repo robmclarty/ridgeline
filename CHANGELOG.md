@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.10
+
+- Always stream LLM assistant text to stdout with blank line separators between harness log lines
+- Extract NDJSON parsing into modular `streamParser.ts` with pure functions (no I/O)
+- Simplify `claudeInvoker.ts` to a generic subprocess runner with `onStdout` callback
+- Remove `--verbose` flag — streaming is now the default behavior
+- Add `createDisplayCallbacks()` helper for wiring up display in invokers
+- Add `docs/output-system.md` documenting the output architecture and future work
+
 ## 0.1.9
 
 - Merge `resume` command into `run` (auto-detects and resumes from last successful phase)
