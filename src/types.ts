@@ -1,6 +1,7 @@
 // Resolved CLI flags + file paths for a build run
 export type RidgelineConfig = {
   buildName: string
+  ridgelineDir: string
   buildDir: string
   constraintsPath: string
   tastePath: string | null

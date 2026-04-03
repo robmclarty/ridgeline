@@ -7,6 +7,8 @@ export type InvokeOptions = {
   userPrompt: string
   model: string
   allowedTools?: string[]
+  agents?: Record<string, { description: string; prompt: string; model?: string }>
+  pluginDirs?: string[]
   cwd: string
   timeoutMs?: number
   sessionId?: string
@@ -29,6 +31,16 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
 
     if (opts.sessionId) {
       args.push("--resume", opts.sessionId)
+    }
+
+    if (opts.agents && Object.keys(opts.agents).length > 0) {
+      args.push("--agents", JSON.stringify(opts.agents))
+    }
+
+    if (opts.pluginDirs) {
+      for (const dir of opts.pluginDirs) {
+        args.push("--plugin-dir", dir)
+      }
     }
 
     if (opts.jsonSchema) {

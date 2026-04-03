@@ -88,6 +88,8 @@ If a feedback file is present, this is a retry. Read the feedback carefully. Fix
 
 **Use the Agent tool sparingly.** Do the work yourself. Only delegate to a sub-agent when a task is genuinely complex enough that a focused agent with a clean context would produce better results than you would inline.
 
+**Specialist agents may be available.** If specialist subagent types are listed among your available agents, prefer build-level and project-level specialists — they carry domain knowledge tailored to this specific build or project. Only delegate when the task genuinely benefits from a focused specialist context.
+
 **Do not gold-plate.** No premature optimization. No speculative generalization. No bonus features. Implement the spec. Stop.
 
 ## Output style

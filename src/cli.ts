@@ -81,6 +81,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
 
   return {
     buildName,
+    ridgelineDir,
     buildDir,
     constraintsPath,
     tastePath,
