@@ -82,24 +82,29 @@ Failed phases are retried up to `--max-retries` times (default: 2). Combined
 with budget limits and timeouts, this bounds the total cost and duration of any
 single build, even when the builder repeatedly fails review.
 
-## Sandbox mode (Linux)
+## Sandbox mode
 
-When `--sandbox` is passed to `ridgeline build`, each Claude CLI invocation
-(builder and reviewer) runs inside a [bubblewrap](https://github.com/containers/bubblewrap)
-sandbox. This enforces kernel-level restrictions:
+At build start, Ridgeline auto-detects an available sandbox provider:
 
-- **Filesystem:** The entire filesystem is mounted read-only. Only the
-  repository root and `/tmp` are writable. Writes anywhere else fail with
-  `EROFS`.
-- **Network:** Outbound network access is blocked by default via Linux network
-  namespaces. Pass `--allow-network` to permit it for builds that need
-  dependency installation or API access.
-- **Process isolation:** `--die-with-parent` ensures the sandbox is torn down
-  if Ridgeline exits unexpectedly.
+1. **Greywall** (macOS and Linux) — if `greywall` is found on PATH, it is used
+   as the sandbox provider. Greywall provides domain-level network allowlisting,
+   permitting outbound connections only to explicitly listed domains.
+2. **bwrap** (Linux) — if Greywall is not available but
+   [bubblewrap](https://github.com/containers/bubblewrap) is installed, it is
+   used instead. bwrap blocks all outbound network via Linux network namespaces
+   with no domain-level filtering.
 
-Sandboxing requires `bwrap` to be installed. If it is not found, the harness
-errors immediately — there is no silent fallback. This feature is Linux-only;
-macOS lacks equivalent unprivileged namespace support.
+When a provider is found, sandboxing is **on by default**. Pass `--unsafe` to
+opt out. If no provider is found, Ridgeline prints a warning and proceeds
+without a sandbox.
+
+The network allowlist for Greywall is configured in
+`.ridgeline/settings.json` under a `networkAllowlist` key. Sensible defaults
+(npm, PyPI, GitHub, etc.) are included; extend or restrict them per project.
+
+bwrap additionally mounts the filesystem read-only, with only the worktree
+and `/tmp` writable. `--die-with-parent` ensures the sandbox is torn down if
+Ridgeline exits unexpectedly.
 
 ## Verdict parsing
 
@@ -149,10 +154,10 @@ marker).
 The builder agent has access to `Bash`, `Write`, and `Edit` — it can execute
 arbitrary commands and modify any file in the repository. Full container
 isolation (Docker/VM) would sandbox the filesystem and network completely, but
-adds substantial setup complexity. Instead, Ridgeline offers opt-in `--sandbox`
-mode using bubblewrap (`bwrap`) on Linux, which provides kernel-level
-filesystem and network restrictions without containerization overhead. See
-[Sandbox mode](#sandbox-mode-linux) above.
+adds substantial setup complexity. Instead, Ridgeline uses auto-detected
+sandbox providers (Greywall or bwrap) that provide network and filesystem
+restrictions without containerization overhead. See [Sandbox mode](#sandbox-mode)
+above.
 
 **Why not full Docker:** Ridgeline is designed for local development workflows
 where the builder needs to interact with the project's real toolchain — running
@@ -161,27 +166,31 @@ mirroring the host's language runtimes, package caches, and environment
 configuration, adding substantial setup complexity for marginal benefit in the
 intended use case (your own repo, on your own machine).
 
-**Tradeoff:** `bwrap` sandboxing is Linux-only. On macOS, there is no
-equivalent unprivileged namespace API, so builds run without filesystem
-isolation. The Claude CLI's permission system (tool allowlists) and git
-checkpoints remain the primary safety mechanisms on all platforms.
+**Tradeoff:** bwrap filesystem sandboxing is Linux-only. On macOS, Greywall
+provides network-level restrictions but not filesystem isolation below the
+worktree layer. The Claude CLI's permission system (tool allowlists), worktree
+isolation, and git checkpoints remain the primary safety mechanisms on all
+platforms.
 
 ### Network access restrictions by default
 
-The builder can make network requests (e.g., `curl`, `npm install`,
-`git clone`) through its `Bash` tool access. On Linux, `--sandbox` blocks
-network by default — users must opt in with `--allow-network`. On macOS and
-when running without `--sandbox`, network access is unrestricted.
+The default posture is deny-all network access, enforced by the active sandbox
+provider:
 
-**Why not restrict by default everywhere:** Most real build steps require
-network access — installing dependencies, fetching remote resources, running
-integration tests against external services. Network namespaces are a
-Linux-only kernel feature with no macOS equivalent.
+- **Greywall** allows outbound connections only to domains in the
+  `.ridgeline/settings.json` allowlist. All other outbound traffic is blocked
+  at the network layer.
+- **bwrap** blocks all outbound network with no domain filtering — the builder
+  cannot reach the network at all unless the sandbox is bypassed.
+- In **`--unsafe` mode**, no sandbox network restriction applies. A PreToolUse
+  hook runs as a soft layer that intercepts and blocks obvious network commands
+  (`curl`, `wget`, `git clone` to remote URLs, etc.), but this is not a
+  kernel-level enforcement and can be circumvented by a determined builder.
 
-**Tradeoff:** Without `--sandbox`, there is no mechanism to prevent the builder
-from exfiltrating repository contents or downloading untrusted code. Users
-should review phase specs before building and use budget limits to bound the
-scope of any single invocation.
+**Tradeoff:** In `--unsafe` mode, there is no hard mechanism to prevent the
+builder from exfiltrating repository contents or downloading untrusted code.
+Users should review phase specs before building and use budget limits to bound
+the scope of any single invocation.
 
 ### Git commit signing
 
@@ -197,16 +206,26 @@ commits were created by Ridgeline rather than modified after the fact.
 
 ### Filesystem write restrictions
 
-The builder can write to any path accessible to the current user, not just
-files within the project directory.
+Each build runs inside a dedicated git worktree, providing a layer of
+filesystem isolation that protects the user's working tree from in-progress
+agent writes:
 
-**Why we didn't:** Many legitimate build operations write outside the project
-root — global tool installations, cache directories, temporary files. Path
-allowlisting would require maintaining per-project policy that is difficult to
-get right without breaking real workflows.
+- The builder operates within the worktree, not the main checkout. The user's
+  working tree remains clean for the duration of the build.
+- On successful phase completion, changes are reflected back to the user's
+  branch via fast-forward merge.
+- On failure, the worktree is left in place for inspection. Run
+  `ridgeline clean` to remove stale worktrees once you are done.
 
-**Tradeoff:** A confused builder could overwrite files outside the repository.
-Git checkpoints only protect tracked files within the repo.
+When running under bwrap, the sandbox additionally mounts the host filesystem
+read-only, restricting writes to the worktree and `/tmp` at the kernel level.
+Under Greywall (no bwrap), worktree isolation is the primary filesystem
+boundary.
+
+**Tradeoff:** Worktree isolation does not prevent the builder from writing
+outside the worktree on the host filesystem when running without bwrap (e.g.,
+macOS or `--unsafe`). Git checkpoints within the worktree protect tracked
+files; files outside the worktree are not covered.
 
 ### Encrypted state files
 
@@ -224,6 +243,13 @@ same visibility rules as the rest of the repo.
 
 ## Recommendations for users
 
+- **Install a sandbox provider** — on macOS, install Greywall
+  (`brew install greywall`) for domain-level network allowlisting. On Linux,
+  install `bwrap` if Greywall is not available. Sandbox mode is on by default
+  when a provider is detected.
+- **Use `--unsafe` only when necessary** — opting out of sandboxing removes
+  kernel-level network and filesystem protections. Understand the reduced
+  guarantees before using it.
 - **Set a budget limit** — use `--max-budget-usd` to cap spending, especially
   on first runs or large specs.
 - **Preview before building** — use `ridgeline dry-run` to inspect the plan
@@ -232,6 +258,8 @@ same visibility rules as the rest of the repo.
   will do. Read the phase files in `phases/` before running `build`.
 - **Use a clean branch** — run builds on a feature branch so `main` is never
   at risk.
+- **Clean up stale worktrees** — after inspecting a failed build, run
+  `ridgeline clean` to remove leftover worktrees.
 - **Check your constraints** — a good `## Check Command` in `constraints.md`
   is your strongest guardrail. It runs after every build step and determines
   whether the reviewer sees a passing baseline.

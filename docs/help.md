@@ -5,7 +5,8 @@
 - **Claude CLI** -- installed and authenticated (`claude` must be on PATH)
 - **Node.js** -- for running ridgeline itself
 - **Git** -- the project directory must be a git repository
-- **bwrap** (optional) -- for sandbox mode (Linux only)
+- **Greywall** (optional) -- for network allowlist sandboxing on macOS/Linux (`brew install greywall`)
+- **bwrap** (optional) -- for network and filesystem sandboxing on Linux
 
 ## Install
 
@@ -86,11 +87,21 @@ phase if previous state exists.
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
-| `--sandbox` | off | Enable bwrap sandboxing (Linux only) |
-| `--allow-network` | off | Permit network access inside sandbox |
+| `--unsafe` | off | Disable sandbox (skip auto-detected Greywall/bwrap) |
 
 ```sh
 ridgeline build my-feature
+```
+
+### `ridgeline clean`
+
+Remove stale git worktrees left behind by failed or interrupted builds.
+Ridgeline creates a dedicated worktree for each build phase; worktrees from
+successful builds are cleaned up automatically. Failed builds leave the
+worktree in place so you can inspect the state before discarding it.
+
+```sh
+ridgeline clean
 ```
 
 ## Common Workflows
@@ -132,9 +143,16 @@ ridgeline build my-feature
 ridgeline build my-feature --max-budget-usd 10
 ```
 
-**Sandboxed build (Linux):**
+**Unsafe build (sandbox disabled):**
 
 ```sh
-ridgeline build my-feature --sandbox
-ridgeline build my-feature --sandbox --allow-network
+# Sandbox is on by default when Greywall or bwrap is detected.
+# Use --unsafe to opt out.
+ridgeline build my-feature --unsafe
+```
+
+**Clean up stale worktrees:**
+
+```sh
+ridgeline clean
 ```
