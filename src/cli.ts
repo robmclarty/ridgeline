@@ -85,6 +85,8 @@ program
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
+  .option("--sandbox", "Enable bwrap sandboxing (Linux only)")
+  .option("--allow-network", "Permit network access inside sandbox")
   .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
     if (!buildName) buildName = await askBuildName()
     try {
