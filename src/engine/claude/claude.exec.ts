@@ -1,7 +1,7 @@
 import { spawn, ChildProcess } from "node:child_process"
 import { ClaudeResult } from "../../types"
 import { extractResult } from "./stream.decode"
-import { detectSandbox } from "./sandbox"
+import { SandboxProvider } from "./sandbox"
 
 export type InvokeOptions = {
   systemPrompt: string
@@ -15,8 +15,8 @@ export type InvokeOptions = {
   sessionId?: string
   jsonSchema?: string
   onStdout?: (chunk: string) => void
-  sandbox?: boolean
-  allowNetwork?: boolean
+  sandboxProvider?: SandboxProvider | null
+  networkAllowlist?: string[]
 }
 
 export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
@@ -53,15 +53,10 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     // System prompt passed via --system-prompt flag
     args.push("--system-prompt", opts.systemPrompt)
 
-    const provider = opts.sandbox ? detectSandbox() : null
-    if (opts.sandbox && !provider) {
-      throw new Error(
-        "--sandbox requires a sandbox tool. Install greywall (cross-platform) or bubblewrap (bwrap, Linux only)."
-      )
-    }
+    const provider = opts.sandboxProvider ?? null
     const spawnCmd = provider ? provider.command : "claude"
     const spawnArgs = provider
-      ? [...provider.buildArgs(opts.cwd, []), "claude", ...args]
+      ? [...provider.buildArgs(opts.cwd, opts.networkAllowlist ?? []), "claude", ...args]
       : args
 
     const proc: ChildProcess = spawn(spawnCmd, spawnArgs, {

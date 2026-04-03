@@ -13,8 +13,10 @@ export type RidgelineConfig = {
   checkTimeoutSeconds: number
   checkCommand: string | null
   maxBudgetUsd: number | null
-  sandbox: boolean
-  allowNetwork: boolean
+  unsafe: boolean
+  networkAllowlist: string[]
+  sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
+  worktreePath: string | null
 }
 
 // Phase metadata parsed from filesystem

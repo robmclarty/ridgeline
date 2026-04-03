@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "./types"
 import { resolveFile, parseCheckCommand } from "./store/inputs"
+import { resolveNetworkAllowlist } from "./store/settings"
 
 // Load version from package.json at runtime
 export const loadVersion = (): string => {
@@ -61,7 +62,8 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),
     checkCommand,
     maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,
-    sandbox: opts.sandbox === true,
-    allowNetwork: opts.allowNetwork === true,
+    unsafe: opts.unsafe === true,
+    networkAllowlist: resolveNetworkAllowlist(ridgelineDir),
+    worktreePath: null,
   }
 }

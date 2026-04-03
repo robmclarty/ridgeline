@@ -18,12 +18,7 @@ vi.mock("node:child_process", () => {
   }
 })
 
-vi.mock("../sandbox", () => ({
-  detectSandbox: vi.fn(),
-}))
-
 import { spawn } from "node:child_process"
-import { detectSandbox } from "../sandbox"
 import { invokeClaude, InvokeOptions } from "../claude.exec"
 
 const baseOpts: InvokeOptions = {
@@ -190,21 +185,23 @@ describe("claudeInvoker", () => {
       expect(result.success).toBe(false)
     })
 
-    it("spawns sandbox provider wrapping claude when sandbox is enabled", () => {
+    it("spawns via sandbox provider when one is given", () => {
       const mockProvider = {
         name: "bwrap" as const,
         command: "bwrap",
-        buildArgs: vi.fn((_cwd: string, _allowlist: string[]) => [
-          "--ro-bind", "/", "/", "--unshare-net", "--die-with-parent",
-        ]),
+        buildArgs: vi.fn(() => ["--ro-bind", "/", "/", "--unshare-net", "--die-with-parent"]),
       }
-      vi.mocked(detectSandbox).mockReturnValue(mockProvider)
 
-      const promise = invokeClaude({ ...baseOpts, sandbox: true, allowNetwork: false })
+      const promise = invokeClaude({
+        ...baseOpts,
+        sandboxProvider: mockProvider,
+        networkAllowlist: ["registry.npmjs.org"],
+      })
 
+      expect(mockProvider.buildArgs).toHaveBeenCalledWith("/tmp", ["registry.npmjs.org"])
       expect(spawn).toHaveBeenCalledWith(
         "bwrap",
-        expect.arrayContaining(["--ro-bind", "/", "/", "--unshare-net", "--die-with-parent", "claude"]),
+        expect.arrayContaining(["--ro-bind", "--unshare-net", "claude"]),
         expect.objectContaining({ cwd: "/tmp" })
       )
 
@@ -215,16 +212,24 @@ describe("claudeInvoker", () => {
       return promise
     })
 
-    it("throws when sandbox is requested but no provider is available", async () => {
-      vi.mocked(detectSandbox).mockReturnValue(null)
+    it("spawns claude directly when no sandbox provider", () => {
+      const promise = invokeClaude({ ...baseOpts, sandboxProvider: null })
 
-      await expect(
-        invokeClaude({ ...baseOpts, sandbox: true })
-      ).rejects.toThrow("--sandbox requires a sandbox tool. Install greywall (cross-platform) or bubblewrap (bwrap, Linux only).")
+      expect(spawn).toHaveBeenCalledWith(
+        "claude",
+        expect.any(Array),
+        expect.any(Object)
+      )
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+      proc.emit("close", 0)
+
+      return promise
     })
 
-    it("spawns claude directly when sandbox is not enabled", () => {
-      const promise = invokeClaude({ ...baseOpts, sandbox: false })
+    it("spawns claude directly when sandboxProvider is undefined", () => {
+      const promise = invokeClaude(baseOpts)
 
       expect(spawn).toHaveBeenCalledWith(
         "claude",

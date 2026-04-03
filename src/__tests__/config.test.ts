@@ -6,6 +6,10 @@ vi.mock("../store/inputs", () => ({
   parseCheckCommand: vi.fn(),
 }))
 
+vi.mock("../store/settings", () => ({
+  resolveNetworkAllowlist: vi.fn(() => ["registry.npmjs.org"]),
+}))
+
 import { resolveConfig, loadVersion } from "../config"
 import { resolveFile, parseCheckCommand } from "../store/inputs"
 
@@ -114,7 +118,7 @@ describe("config", () => {
       expect(config.checkCommand).toBe("npm run lint")
     })
 
-    it("defaults sandbox and allowNetwork to false", () => {
+    it("defaults unsafe to false", () => {
       mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
         if (filename === "constraints.md") return "/fake/constraints.md"
         return null
@@ -123,21 +127,20 @@ describe("config", () => {
 
       const config = resolveConfig("test", {})
 
-      expect(config.sandbox).toBe(false)
-      expect(config.allowNetwork).toBe(false)
+      expect(config.unsafe).toBe(false)
+      expect(config.networkAllowlist).toEqual(["registry.npmjs.org"])
     })
 
-    it("sets sandbox and allowNetwork from CLI opts", () => {
+    it("sets unsafe from CLI opts", () => {
       mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
         if (filename === "constraints.md") return "/fake/constraints.md"
         return null
       })
       mockParseCheckCommand.mockReturnValue(null)
 
-      const config = resolveConfig("test", { sandbox: true, allowNetwork: true })
+      const config = resolveConfig("test", { unsafe: true })
 
-      expect(config.sandbox).toBe(true)
-      expect(config.allowNetwork).toBe(true)
+      expect(config.unsafe).toBe(true)
     })
   })
 })
