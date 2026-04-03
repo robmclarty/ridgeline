@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.12
+
+- Add bouncing-bar spinner during LLM invocations with 50 whacky random verbs
+- Spinner integrates into `createDisplayCallbacks` so all invocation sites get it automatically
+
 ## 0.1.11
 
 - Rename `run` command to `build` and `init` command to `spec`
