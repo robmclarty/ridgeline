@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.11
+
+- Fix Greywall sandbox provider to use `--settings` flag with a temporary settings JSON file instead of invalid `--allow-dir` CLI flag
+
 ## 0.2.10
 
 - Replace opt-in `--sandbox`/`--allow-network` with auto-detected sandbox-by-default (`--unsafe` to opt out)
