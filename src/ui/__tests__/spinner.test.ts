@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { formatElapsed, pickVerb, startSpinner } from "../ui/spinner"
+import { formatElapsed, pickVerb, startSpinner } from "../spinner"
 
 describe("spinner", () => {
   describe("formatElapsed", () => {
@@ -101,7 +101,6 @@ describe("spinner", () => {
 
       const spinner = startSpinner("Testing")
       vi.advanceTimersByTime(120)
-      const callsAfterTick = writeSpy.mock.calls.length
 
       spinner.pause()
       writeSpy.mockClear()

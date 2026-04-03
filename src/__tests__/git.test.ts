@@ -13,6 +13,7 @@ import {
   getChangedFileNames,
   getChangedFileContents,
   deleteTag,
+  deleteTagsByPrefix,
 } from "../git"
 
 // Helper to create a temp git repo
@@ -122,6 +123,24 @@ describe("git", () => {
 
     it("returns empty array for nonexistent tag", () => {
       expect(getChangedFileNames("missing", repoDir)).toEqual([])
+    })
+  })
+
+  describe("deleteTagsByPrefix", () => {
+    it("deletes all tags matching the prefix", () => {
+      createTag("ridgeline/phase/build/01", repoDir)
+      createTag("ridgeline/phase/build/02", repoDir)
+      createTag("other-tag", repoDir)
+
+      deleteTagsByPrefix("ridgeline/phase/build/", repoDir)
+
+      expect(tagExists("ridgeline/phase/build/01", repoDir)).toBe(false)
+      expect(tagExists("ridgeline/phase/build/02", repoDir)).toBe(false)
+      expect(tagExists("other-tag", repoDir)).toBe(true)
+    })
+
+    it("does not throw when no tags match", () => {
+      expect(() => deleteTagsByPrefix("nonexistent/", repoDir)).not.toThrow()
     })
   })
 
