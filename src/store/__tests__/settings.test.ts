@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadSettings, resolveNetworkAllowlist, DEFAULT_NETWORK_ALLOWLIST } from "../settings"
+import { loadSettings, resolveNetworkAllowlist, DEFAULT_NETWORK_ALLOWLIST, CLAUDE_REQUIRED_DOMAINS } from "../settings"
 
 describe("settings", () => {
   let tmpDir: string
@@ -43,13 +43,16 @@ describe("settings", () => {
       expect(allowlist).toEqual(DEFAULT_NETWORK_ALLOWLIST)
     })
 
-    it("replaces defaults when user specifies allowlist", () => {
+    it("merges Claude domains with user-specified allowlist", () => {
       fs.writeFileSync(
         path.join(tmpDir, "settings.json"),
         JSON.stringify({ network: { allowlist: ["custom.registry.com"] } })
       )
       const allowlist = resolveNetworkAllowlist(tmpDir)
-      expect(allowlist).toEqual(["custom.registry.com"])
+      for (const domain of CLAUDE_REQUIRED_DOMAINS) {
+        expect(allowlist).toContain(domain)
+      }
+      expect(allowlist).toContain("custom.registry.com")
     })
 
     it("returns defaults when network key is present but allowlist is omitted", () => {
@@ -63,6 +66,12 @@ describe("settings", () => {
   })
 
   describe("DEFAULT_NETWORK_ALLOWLIST", () => {
+    it("contains Claude required domains", () => {
+      for (const domain of CLAUDE_REQUIRED_DOMAINS) {
+        expect(DEFAULT_NETWORK_ALLOWLIST).toContain(domain)
+      }
+    })
+
     it("contains common package registries", () => {
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("registry.npmjs.org")
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("pypi.org")

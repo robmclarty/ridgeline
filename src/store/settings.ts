@@ -1,7 +1,15 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 
+/** Domains Claude needs for authentication and API access — always allowlisted. */
+export const CLAUDE_REQUIRED_DOMAINS: string[] = [
+  "api.anthropic.com",
+  "downloads.claude.ai",
+  "http-intake.logs.us5.datadoghq.com",
+]
+
 export const DEFAULT_NETWORK_ALLOWLIST: string[] = [
+  ...CLAUDE_REQUIRED_DOMAINS,
   "registry.npmjs.org",
   "pypi.org",
   "files.pythonhosted.org",
@@ -32,8 +40,10 @@ export const loadSettings = (ridgelineDir: string): RidgelineSettings => {
 
 export const resolveNetworkAllowlist = (ridgelineDir: string): string[] => {
   const settings = loadSettings(ridgelineDir)
-  if (settings.network?.allowlist && settings.network.allowlist.length > 0) {
-    return settings.network.allowlist
-  }
-  return [...DEFAULT_NETWORK_ALLOWLIST]
+  const base = (settings.network?.allowlist && settings.network.allowlist.length > 0)
+    ? settings.network.allowlist
+    : [...DEFAULT_NETWORK_ALLOWLIST]
+  // Always include Claude's required domains even if the user overrides the list
+  const merged = new Set([...CLAUDE_REQUIRED_DOMAINS, ...base])
+  return [...merged]
 }
