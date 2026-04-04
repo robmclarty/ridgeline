@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.23
+
+- Fix greywall sandbox: pass network allowlist via `--settings` file so greyproxy permits Claude's required domains (API, downloads, telemetry)
+- Always merge `CLAUDE_REQUIRED_DOMAINS` into the network allowlist, even when users override it
+- Use `--auto-profile` for filesystem permissions and `--no-credential-protection` to preserve OAuth tokens
+
 ## 0.2.22
 
 - Disable greywall credential protection (`--no-credential-protection`) to fix OAuth 403 errors
