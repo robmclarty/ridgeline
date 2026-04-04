@@ -52,24 +52,26 @@ export const invokePlanner = async (
   const userPrompt = assembleUserPrompt(config)
   const { onStdout, flush } = createDisplayCallbacks()
 
-  const result = await invokeClaude({
-    systemPrompt,
-    userPrompt,
-    model: config.model,
-    allowedTools: ["Write"],
-    cwd: process.cwd(),
-    timeoutMs: config.timeoutMinutes * 60 * 1000,
-    onStdout,
-  })
+  try {
+    const result = await invokeClaude({
+      systemPrompt,
+      userPrompt,
+      model: config.model,
+      allowedTools: ["Write"],
+      cwd: process.cwd(),
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      onStdout,
+    })
 
-  flush()
+    // Scan for generated phase files
+    const phases = scanPhases(config.phasesDir)
 
-  // Scan for generated phase files
-  const phases = scanPhases(config.phasesDir)
+    if (phases.length === 0) {
+      throw new Error("Planner did not generate any phase files")
+    }
 
-  if (phases.length === 0) {
-    throw new Error("Planner did not generate any phase files")
+    return { result, phases }
+  } finally {
+    flush()
   }
-
-  return { result, phases }
 }

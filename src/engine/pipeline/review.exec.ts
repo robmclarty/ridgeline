@@ -73,10 +73,10 @@ export const invokeReviewer = async (
       networkAllowlist: config.networkAllowlist,
     })
 
-    flush()
     const verdict = parseVerdict(result.result)
     return { result, verdict }
   } finally {
+    flush()
     cleanupPluginDirs(pluginDirs)
   }
 }

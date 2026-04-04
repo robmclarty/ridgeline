@@ -97,9 +97,9 @@ export const invokeBuilder = async (
       networkAllowlist: config.networkAllowlist,
     })
 
-    flush()
     return result
   } finally {
+    flush()
     cleanupPluginDirs(pluginDirs)
   }
 }
