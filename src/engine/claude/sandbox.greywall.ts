@@ -10,12 +10,18 @@ export const greywallProvider: SandboxProvider = {
   checkReady(): string | null {
     try {
       const output = execSync("greywall check", { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] })
-      if (output.includes("greyproxy running")) {
+      if (/✓.*greyproxy running/i.test(output)) {
         return null
       }
       return "greyproxy is not running. Start it with: greywall setup"
-    } catch {
-      return "greywall check failed. Run 'greywall check' manually for details."
+    } catch (err: unknown) {
+      // greywall check exits non-zero when not ready — check stdout/stderr in the error
+      const output = (err as { stdout?: string; stderr?: string }).stdout ?? ""
+        + ((err as { stdout?: string; stderr?: string }).stderr ?? "")
+      if (/✓.*greyproxy running/i.test(output)) {
+        return null
+      }
+      return "greyproxy is not running. Start it with: greywall setup"
     }
   },
   buildArgs(repoRoot: string, _networkAllowlist: string[]): string[] {
