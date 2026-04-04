@@ -22,6 +22,6 @@ export const greywallProvider: SandboxProvider = {
     }
   },
   buildArgs(_repoRoot: string, _networkAllowlist: string[]): string[] {
-    return ["--auto-profile", "--no-credential-protection", "--"]
+    return ["--auto-profile", "--no-credential-protection", "--proxy", "", "--http-proxy", "", "--dns", "", "--"]
   },
 }

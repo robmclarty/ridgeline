@@ -9,6 +9,6 @@ describe("greywallProvider", () => {
 
   it("returns --auto-profile and -- separator", () => {
     const args = greywallProvider.buildArgs("/repo", [])
-    expect(args).toEqual(["--auto-profile", "--no-credential-protection", "--"])
+    expect(args).toEqual(["--auto-profile", "--no-credential-protection", "--proxy", "", "--http-proxy", "", "--dns", "", "--"])
   })
 })
