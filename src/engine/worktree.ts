@@ -18,7 +18,19 @@ export const createWorktree = (repoRoot: string, buildName: string): string => {
   // Ensure parent directory exists
   fs.mkdirSync(path.dirname(wtPath), { recursive: true })
 
-  run(`git worktree add ${wtPath} -b ${branch}`, repoRoot)
+  try {
+    // Happy path: create a fresh branch
+    run(`git worktree add ${wtPath} -b ${branch}`, repoRoot)
+  } catch {
+    // Branch already exists — reuse it
+    try {
+      run(`git worktree add ${wtPath} ${branch}`, repoRoot)
+    } catch {
+      // Corrupt state — force-delete the branch and retry
+      try { run(`git branch -D ${branch}`, repoRoot) } catch { /* best effort */ }
+      run(`git worktree add ${wtPath} -b ${branch}`, repoRoot)
+    }
+  }
 
   return wtPath
 }

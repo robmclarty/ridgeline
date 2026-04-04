@@ -59,6 +59,20 @@ describe("worktree", () => {
       const branches = execSync("git branch", { cwd: repoDir, encoding: "utf-8" })
       expect(branches).toContain("ridgeline/wip/test-build")
     })
+
+    it("reuses existing branch when branch already exists", () => {
+      // Create and then remove the worktree, leaving the branch behind
+      const wtPath = createWorktree(repoDir, "test-build")
+      fs.rmSync(wtPath, { recursive: true, force: true })
+      execSync("git worktree prune", { cwd: repoDir, stdio: "pipe" })
+
+      // Branch still exists but worktree is gone — should reuse the branch
+      const wtPath2 = createWorktree(repoDir, "test-build")
+      expect(fs.existsSync(wtPath2)).toBe(true)
+
+      const branches = execSync("git branch", { cwd: repoDir, encoding: "utf-8" })
+      expect(branches).toContain("ridgeline/wip/test-build")
+    })
   })
 
   describe("validateWorktree", () => {
