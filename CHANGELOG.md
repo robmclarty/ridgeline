@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.24
+
+- Fix sandbox merge failure: grant buildDir write access in greywall/bwrap so the builder writes handoff.md to the correct location instead of creating a duplicate inside the worktree
+- Fix missing final phase code: commit dirty worktree files before reflectCommits so every phase's work lands on the WIP branch before merging into main
+
 ## 0.2.23
 
 - Fix greywall sandbox: pass network allowlist via `--settings` file so greyproxy permits Claude's required domains (API, downloads, telemetry)
