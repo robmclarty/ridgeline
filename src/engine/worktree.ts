@@ -147,7 +147,7 @@ export const reflectCommits = (repoRoot: string, buildName: string): void => {
   const absBuildMetaDir = path.join(repoRoot, buildMetaDir)
   if (fs.existsSync(absBuildMetaDir)) {
     try {
-      run(`git add ${buildMetaDir}`, repoRoot)
+      run(`git add "${buildMetaDir}"`, repoRoot)
       run('git commit -m "ridgeline: stage build metadata"', repoRoot)
     } catch {
       // Nothing to commit or dir not found — safe to ignore

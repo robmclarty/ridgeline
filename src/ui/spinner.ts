@@ -165,7 +165,7 @@ export const startSpinner = (verb?: string): Spinner => {
       detail = text
     },
     printAbove(line: string) {
-      if (stopped) return
+      if (stopped || !timer) return
       clearLine()
       process.stderr.write(line + "\n")
       tick()
