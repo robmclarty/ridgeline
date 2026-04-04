@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.26
+
+- Display relative paths in tool call lines by stripping the project root, so truncated lines remain distinguishable
+- Fix summary table column alignment by using a shared row formatter for header, planning, phase, and total rows
+
 ## 0.2.25
 
 - Fix worktree merge failure when untracked build metadata files (handoff.md) conflict with WIP branch — now stages and commits them before merging
