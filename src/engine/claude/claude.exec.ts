@@ -111,8 +111,6 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
 
     proc.stderr?.on("data", (chunk: Buffer) => {
       stderrData += chunk.toString("utf-8")
-      // stderr activity also resets the stall timer — the process is alive
-      resetStallTimer()
     })
 
     // --- Global timeout ---

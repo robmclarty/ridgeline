@@ -241,7 +241,7 @@ describe("claudeInvoker", () => {
       vi.useRealTimers()
     })
 
-    it("stderr activity resets the stall timer", async () => {
+    it("stderr activity does not reset the stall timer", async () => {
       vi.useFakeTimers()
 
       const promise = invokeClaude({
@@ -252,22 +252,16 @@ describe("claudeInvoker", () => {
 
       const proc = vi.mocked(spawn).mock.results[0].value
 
-      // stderr at 500ms resets startup timer
+      // stderr at 500ms — should NOT reset the startup timer
       vi.advanceTimersByTime(500)
       proc.stderr.emit("data", Buffer.from("some log"))
 
-      // More stderr at 1500ms (1000ms after last activity) — within 2s stall threshold
-      vi.advanceTimersByTime(1000)
-      proc.stderr.emit("data", Buffer.from("more log"))
+      // Startup timer fires at 1000ms despite stderr activity
+      vi.advanceTimersByTime(501)
 
-      // stdout with result at 1000ms after last activity
-      vi.advanceTimersByTime(1000)
-      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+      proc.emit("close", null)
 
-      proc.emit("close", 0)
-
-      const result = await promise
-      expect(result.success).toBe(true)
+      await expect(promise).rejects.toThrow("startup timeout")
 
       vi.useRealTimers()
     })
