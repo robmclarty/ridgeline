@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.20
+
+- Auto-initialise git repo with environment-aware .gitignore and initial commit when target directory lacks one, fixing worktree creation failures
+- Pass network allowlist through to greywall sandbox settings so configured domains are actually reachable
+- Surface Claude stderr (auth errors, failures) immediately during builds instead of swallowing until timeout
+
 ## 0.2.19
 
 - Fix double blank lines and missing line breaks in streamed LLM output
