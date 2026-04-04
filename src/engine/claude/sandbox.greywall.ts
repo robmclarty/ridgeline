@@ -24,10 +24,11 @@ export const greywallProvider: SandboxProvider = {
       return "greyproxy is not running. Start it with: greywall setup"
     }
   },
-  buildArgs(repoRoot: string, networkAllowlist: string[]): string[] {
+  buildArgs(repoRoot: string, networkAllowlist: string[], additionalWritePaths?: string[]): string[] {
+    const writePaths = [repoRoot, "/tmp", ...(additionalWritePaths ?? [])]
     const settings: Record<string, unknown> = {
       filesystem: {
-        allowWrite: [repoRoot, "/tmp"],
+        allowWrite: writePaths,
       },
     }
 

@@ -103,6 +103,7 @@ export const invokeBuilder = async (
       },
       sandboxProvider: config.sandboxProvider,
       networkAllowlist: config.networkAllowlist,
+      additionalWritePaths: [config.buildDir],
     })
 
     return result

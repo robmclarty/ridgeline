@@ -3,10 +3,12 @@ import { SandboxProvider } from "./sandbox"
 export const bwrapProvider: SandboxProvider = {
   name: "bwrap",
   command: "bwrap",
-  buildArgs(repoRoot: string, _networkAllowlist: string[]): string[] {
+  buildArgs(repoRoot: string, _networkAllowlist: string[], additionalWritePaths?: string[]): string[] {
+    const extraBinds = (additionalWritePaths ?? []).flatMap((p) => ["--bind", p, p])
     return [
       "--ro-bind", "/", "/",
       "--bind", repoRoot, repoRoot,
+      ...extraBinds,
       "--bind", "/tmp", "/tmp",
       "--dev", "/dev",
       "--proc", "/proc",

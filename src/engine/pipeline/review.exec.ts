@@ -78,6 +78,7 @@ export const invokeReviewer = async (
       },
       sandboxProvider: config.sandboxProvider,
       networkAllowlist: config.networkAllowlist,
+      additionalWritePaths: [config.buildDir],
     })
 
     const verdict = parseVerdict(result.result)

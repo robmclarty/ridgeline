@@ -6,6 +6,7 @@ import { runPhase } from "../engine/pipeline/phase.sequence"
 import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
 import { loadBudget } from "../store/budget"
 import { cleanupBuildTags } from "../store/tags"
+import { commitAll, isWorkingTreeDirty } from "../git"
 import { runPlan } from "./plan"
 import {
   createWorktree,
@@ -194,6 +195,11 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
     if (result === "passed") {
       completed++
+      // Commit any uncommitted work in the worktree before merging
+      // (the sandbox prevents the builder from committing directly)
+      if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
+        commitAll(`ridgeline: ${phase.id}`, config.worktreePath)
+      }
       reflectCommits(repoRoot, config.buildName)
     } else {
       failed++

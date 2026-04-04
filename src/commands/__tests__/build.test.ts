@@ -67,6 +67,11 @@ vi.mock("../../engine/claude/sandbox", () => ({
   detectSandbox: vi.fn(() => ({ provider: null, warning: null })),
 }))
 
+vi.mock("../../git", () => ({
+  isWorkingTreeDirty: vi.fn(() => false),
+  commitAll: vi.fn(),
+}))
+
 vi.mock("../../engine/worktree", () => ({
   createWorktree: vi.fn(() => "/tmp/worktree"),
   validateWorktree: vi.fn(() => false),

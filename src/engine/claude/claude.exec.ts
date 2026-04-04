@@ -28,6 +28,7 @@ export type InvokeOptions = {
   onStderr?: (chunk: string) => void
   sandboxProvider?: SandboxProvider | null
   networkAllowlist?: string[]
+  additionalWritePaths?: string[]
 }
 
 export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
@@ -67,7 +68,7 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     const provider = opts.sandboxProvider ?? null
     const spawnCmd = provider ? provider.command : "claude"
     const spawnArgs = provider
-      ? [...provider.buildArgs(opts.cwd, opts.networkAllowlist ?? []), "claude", ...args]
+      ? [...provider.buildArgs(opts.cwd, opts.networkAllowlist ?? [], opts.additionalWritePaths), "claude", ...args]
       : args
 
     const proc: ChildProcess = spawn(spawnCmd, spawnArgs, {
