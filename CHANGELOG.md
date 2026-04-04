@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.21
+
+- Use greywall `--auto-profile` to apply the built-in Claude profile, fixing sandbox auth hangs on macOS
+
 ## 0.2.20
 
 - Auto-initialise git repo with environment-aware .gitignore and initial commit when target directory lacks one, fixing worktree creation failures
