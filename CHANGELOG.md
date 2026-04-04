@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.14
+
+- Fix worktree creation failing when a WIP branch already exists from a previous crashed or killed build
+
 ## 0.2.13
 
 - Add stall detection: kill Claude process if no output for 5 minutes during execution (configurable via `stallTimeoutMs`)
