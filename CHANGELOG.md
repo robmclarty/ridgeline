@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.16
+
+- Fail fast with actionable error when greyproxy is not running instead of silently hanging
+- Fix stall detector: only reset timer on stdout (real progress), not stderr (CLI keepalive)
+
 ## 0.2.15
 
 - Prune stale git worktree entries before creating new ones to fix branch-in-use errors after a crash or kill
