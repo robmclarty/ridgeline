@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.19
+
+- Fix double blank lines and missing line breaks in streamed LLM output
+- Suppress verbose JSON verdict blocks from reviewer terminal output
+- Rewrite build summary table: unified layout with planning/per-phase/total sections and spec description
+- Spinner now pauses during text streaming and resumes during tool-use pauses
+
 ## 0.2.18
 
 - Fix reviewer receiving empty diff by running git checkpoint/diff operations in the worktree instead of the main repo
