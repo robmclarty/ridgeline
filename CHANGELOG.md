@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.13
+
+- Add stall detection: kill Claude process if no output for 5 minutes during execution (configurable via `stallTimeoutMs`)
+- Add startup probe: kill Claude process if no output within 2 minutes of spawn (configurable via `startupTimeoutMs`)
+- Show active tool name on spinner line during builds (e.g., `[Read]`, `[Bash]`) by parsing tool_use stream events
+
 ## 0.2.12
 
 - Fix LLM output not displaying during builds by supporting the current Claude CLI stream-json message format
