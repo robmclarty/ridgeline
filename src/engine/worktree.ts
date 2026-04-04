@@ -141,6 +141,19 @@ export const validateWorktree = (repoRoot: string, buildName: string): boolean =
 export const reflectCommits = (repoRoot: string, buildName: string): void => {
   const branch = wipBranch(buildName)
 
+  // Stage any untracked build metadata so git merge doesn't conflict
+  // with files the WIP branch also committed (e.g. handoff.md).
+  const buildMetaDir = path.join(".ridgeline", "builds", buildName)
+  const absBuildMetaDir = path.join(repoRoot, buildMetaDir)
+  if (fs.existsSync(absBuildMetaDir)) {
+    try {
+      run(`git add ${buildMetaDir}`, repoRoot)
+      run('git commit -m "ridgeline: stage build metadata"', repoRoot)
+    } catch {
+      // Nothing to commit or dir not found — safe to ignore
+    }
+  }
+
   try {
     // Try fast-forward first
     run(`git merge --ff-only ${branch}`, repoRoot)

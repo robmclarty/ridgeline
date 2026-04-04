@@ -94,6 +94,35 @@ describe("worktree", () => {
   })
 
   describe("reflectCommits", () => {
+    it("merges successfully when main repo has untracked files that exist in WIP branch", () => {
+      const wtPath = createWorktree(repoDir, "test-build")
+
+      // Simulate ridgeline creating an untracked file in the main repo
+      // (like ensureHandoffExists does)
+      const buildDir = path.join(repoDir, ".ridgeline", "builds", "test-build")
+      fs.mkdirSync(buildDir, { recursive: true })
+      fs.writeFileSync(path.join(buildDir, "handoff.md"), "")
+
+      // Simulate the builder writing the same file in the worktree
+      const wtBuildDir = path.join(wtPath, ".ridgeline", "builds", "test-build")
+      fs.mkdirSync(wtBuildDir, { recursive: true })
+      fs.writeFileSync(path.join(wtBuildDir, "handoff.md"), "Phase 1 notes")
+
+      // Also add a source file in the worktree
+      fs.writeFileSync(path.join(wtPath, "new-file.ts"), "export const x = 1")
+
+      // Commit in the worktree (like commitAll does)
+      execSync("git add -A && git commit -m 'phase work'", { cwd: wtPath, stdio: "pipe" })
+
+      // This should NOT throw — currently it does
+      reflectCommits(repoDir, "test-build")
+
+      // Verify the source file arrived in main
+      expect(fs.existsSync(path.join(repoDir, "new-file.ts"))).toBe(true)
+      // Verify handoff content came from the worktree branch
+      expect(fs.readFileSync(path.join(repoDir, ".ridgeline", "builds", "test-build", "handoff.md"), "utf-8")).toBe("Phase 1 notes")
+    })
+
     it("fast-forwards the source branch with worktree commits", () => {
       const wtPath = createWorktree(repoDir, "test-build")
 
