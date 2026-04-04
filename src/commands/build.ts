@@ -114,9 +114,11 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   // Validate sandbox availability before starting phases
   if (!config.unsafe) {
-    const provider = detectSandbox()
+    const { provider, warning } = detectSandbox()
     config.sandboxProvider = provider
-    if (provider) {
+    if (warning) {
+      printInfo(`Warning: ${warning}`)
+    } else if (provider) {
       printInfo(`Sandbox: ${provider.name}`)
     } else {
       printInfo("Warning: no sandbox available (install greywall or bwrap)")

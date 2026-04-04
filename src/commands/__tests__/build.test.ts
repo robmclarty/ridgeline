@@ -64,7 +64,7 @@ vi.mock("../plan", () => ({
 }))
 
 vi.mock("../../engine/claude/sandbox", () => ({
-  detectSandbox: vi.fn(() => null),
+  detectSandbox: vi.fn(() => ({ provider: null, warning: null })),
 }))
 
 vi.mock("../../engine/worktree", () => ({

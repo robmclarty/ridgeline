@@ -19,20 +19,28 @@ const isAvailable = (cmd: string): boolean => {
   }
 }
 
-export const detectSandbox = (): SandboxProvider | null => {
+export type SandboxDetectionResult = {
+  provider: SandboxProvider | null
+  warning: string | null
+}
+
+export const detectSandbox = (): SandboxDetectionResult => {
   // Prefer greywall (cross-platform, supports domain allowlisting)
   if (isAvailable("greywall")) {
     const readyError = greywallProvider.checkReady?.() ?? null
     if (readyError) {
-      throw new Error(`Sandbox 'greywall' is installed but not ready: ${readyError}`)
+      return {
+        provider: null,
+        warning: `greywall is installed but not ready: ${readyError}\n         Running without sandbox.`,
+      }
     }
-    return greywallProvider
+    return { provider: greywallProvider, warning: null }
   }
 
   // Fall back to bwrap (Linux only, binary network toggle)
   if (process.platform === "linux" && isAvailable("bwrap")) {
-    return bwrapProvider
+    return { provider: bwrapProvider, warning: null }
   }
 
-  return null
+  return { provider: null, warning: null }
 }

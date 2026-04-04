@@ -35,16 +35,20 @@ describe("detectSandbox", () => {
   it("returns greywall provider when greywall is available and ready", () => {
     vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
 
-    const provider = detectSandbox()
+    const { provider, warning } = detectSandbox()
     expect(provider).not.toBeNull()
     expect(provider!.name).toBe("greywall")
+    expect(warning).toBeNull()
   })
 
-  it("throws when greywall is available but greyproxy is not running", () => {
+  it("returns null provider with warning when greyproxy is not running", () => {
     vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
     vi.mocked(greywallProvider.checkReady!).mockReturnValue("greyproxy is not running. Start it with: greywall setup")
 
-    expect(() => detectSandbox()).toThrow("greyproxy is not running")
+    const { provider, warning } = detectSandbox()
+    expect(provider).toBeNull()
+    expect(warning).toContain("greyproxy is not running")
+    expect(warning).toContain("Running without sandbox")
   })
 
   it("returns bwrap provider on linux when greywall is absent", () => {
@@ -54,7 +58,7 @@ describe("detectSandbox", () => {
     })
 
     withPlatform("linux", () => {
-      const provider = detectSandbox()
+      const { provider } = detectSandbox()
       expect(provider).not.toBeNull()
       expect(provider!.name).toBe("bwrap")
     })
@@ -66,7 +70,7 @@ describe("detectSandbox", () => {
     })
 
     withPlatform("darwin", () => {
-      const provider = detectSandbox()
+      const { provider } = detectSandbox()
       expect(provider).toBeNull()
     })
   })
@@ -76,7 +80,7 @@ describe("detectSandbox", () => {
       throw new Error("not found")
     })
 
-    const provider = detectSandbox()
+    const { provider } = detectSandbox()
     expect(provider).toBeNull()
   })
 })
