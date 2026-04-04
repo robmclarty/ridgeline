@@ -16,14 +16,13 @@ export type StreamEvent =
  */
 const MAX_SUMMARY_LEN = 80
 
-const summarizeToolInput = (toolName: string, input: Record<string, unknown>): string | undefined => {
+const summarizeToolInput = (input: Record<string, unknown>): string | undefined => {
   // Pick the most informative field per tool type
   const raw =
-    (input.command as string) ??        // Bash
-    (input.file_path as string) ??      // Read, Write, Edit
-    (input.pattern as string) ??        // Grep, Glob
-    (input.prompt as string) ??         // Agent
-    undefined
+    input.command ??        // Bash
+    input.file_path ??      // Read, Write, Edit
+    input.pattern ??        // Grep, Glob
+    input.prompt            // Agent
 
   if (typeof raw !== "string" || raw.length === 0) return undefined
 
@@ -79,7 +78,7 @@ export const parseStreamLine = (line: string): StreamEvent => {
       const toolBlock = content.find((c) => c.type === "tool_use" && typeof c.name === "string")
       if (toolBlock) {
         const summary = toolBlock.input
-          ? summarizeToolInput(toolBlock.name as string, toolBlock.input as Record<string, unknown>)
+          ? summarizeToolInput(toolBlock.input as Record<string, unknown>)
           : undefined
         return { type: "tool_use", tool: toolBlock.name as string, summary }
       }
