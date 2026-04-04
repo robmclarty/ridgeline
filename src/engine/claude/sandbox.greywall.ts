@@ -25,6 +25,8 @@ export const greywallProvider: SandboxProvider = {
     }
   },
   buildArgs(repoRoot: string, networkAllowlist: string[]): string[] {
+    const args: string[] = ["--auto-profile"]
+
     const settings: Record<string, unknown> = {
       filesystem: {
         allowWrite: [repoRoot, "/tmp"],
@@ -38,6 +40,7 @@ export const greywallProvider: SandboxProvider = {
     const settingsPath = join(tmpdir(), `ridgeline-greywall-${process.pid}.json`)
     writeFileSync(settingsPath, JSON.stringify(settings))
 
-    return ["--settings", settingsPath, "--"]
+    args.push("--settings", settingsPath, "--")
+    return args
   },
 }

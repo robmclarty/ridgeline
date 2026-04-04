@@ -27,9 +27,10 @@ describe("greywallProvider", () => {
     expect(settings.filesystem.allowWrite).toContain("/tmp")
   })
 
-  it("passes --settings and ends with -- separator", () => {
+  it("passes --auto-profile, --settings, and ends with -- separator", () => {
     const args = greywallProvider.buildArgs("/repo", [])
-    expect(args[0]).toBe("--settings")
+    expect(args[0]).toBe("--auto-profile")
+    expect(args).toContain("--settings")
     expect(args[args.length - 1]).toBe("--")
   })
 
