@@ -151,7 +151,11 @@ describe("claudeInvoker", () => {
     it("rejects on timeout", async () => {
       vi.useFakeTimers()
 
-      const promise = invokeClaude({ ...baseOpts, timeoutMs: 5000 })
+      const promise = invokeClaude({
+        ...baseOpts,
+        timeoutMs: 5000,
+        startupTimeoutMs: 60_000, // prevent startup stall from firing first
+      })
 
       const proc = vi.mocked(spawn).mock.results[0].value
 
@@ -161,6 +165,109 @@ describe("claudeInvoker", () => {
       proc.emit("close", null)
 
       await expect(promise).rejects.toThrow("timed out")
+
+      vi.useRealTimers()
+    })
+
+    it("rejects on startup stall when no output arrives", async () => {
+      vi.useFakeTimers()
+
+      const promise = invokeClaude({
+        ...baseOpts,
+        startupTimeoutMs: 3000,
+      })
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+
+      vi.advanceTimersByTime(3001)
+
+      // Stall handler kills proc, then close fires
+      proc.emit("close", null)
+
+      await expect(promise).rejects.toThrow("startup timeout")
+
+      vi.useRealTimers()
+    })
+
+    it("rejects on stall when output stops arriving", async () => {
+      vi.useFakeTimers()
+
+      const promise = invokeClaude({
+        ...baseOpts,
+        startupTimeoutMs: 1000,
+        stallTimeoutMs: 2000,
+      })
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+
+      // First output arrives at 500ms — resets from startup to stall timer
+      vi.advanceTimersByTime(500)
+      proc.stdout.emit("data", Buffer.from('{"type":"assistant","subtype":"text","text":"hi"}\n'))
+
+      // Now 2000ms of silence triggers stall
+      vi.advanceTimersByTime(2001)
+
+      proc.emit("close", null)
+
+      await expect(promise).rejects.toThrow("stall timeout")
+
+      vi.useRealTimers()
+    })
+
+    it("does not stall when output keeps arriving", async () => {
+      vi.useFakeTimers()
+
+      const promise = invokeClaude({
+        ...baseOpts,
+        startupTimeoutMs: 1000,
+        stallTimeoutMs: 2000,
+      })
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+
+      // Activity every 1.5s — never reaches 2s stall threshold
+      vi.advanceTimersByTime(500)
+      proc.stdout.emit("data", Buffer.from('{"type":"assistant","subtype":"text","text":"a"}\n'))
+      vi.advanceTimersByTime(1500)
+      proc.stdout.emit("data", Buffer.from('{"type":"assistant","subtype":"text","text":"b"}\n'))
+      vi.advanceTimersByTime(1500)
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+
+      proc.emit("close", 0)
+
+      const result = await promise
+      expect(result.success).toBe(true)
+
+      vi.useRealTimers()
+    })
+
+    it("stderr activity resets the stall timer", async () => {
+      vi.useFakeTimers()
+
+      const promise = invokeClaude({
+        ...baseOpts,
+        startupTimeoutMs: 1000,
+        stallTimeoutMs: 2000,
+      })
+
+      const proc = vi.mocked(spawn).mock.results[0].value
+
+      // stderr at 500ms resets startup timer
+      vi.advanceTimersByTime(500)
+      proc.stderr.emit("data", Buffer.from("some log"))
+
+      // More stderr at 1500ms (1000ms after last activity) — within 2s stall threshold
+      vi.advanceTimersByTime(1000)
+      proc.stderr.emit("data", Buffer.from("more log"))
+
+      // stdout with result at 1000ms after last activity
+      vi.advanceTimersByTime(1000)
+      proc.stdout.emit("data", Buffer.from(sampleResultLine + "\n"))
+
+      proc.emit("close", 0)
+
+      const result = await promise
+      expect(result.success).toBe(true)
 
       vi.useRealTimers()
     })

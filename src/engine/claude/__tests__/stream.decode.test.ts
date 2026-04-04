@@ -71,9 +71,32 @@ describe("streamParser", () => {
       }
     })
 
-    it("returns other for non-text assistant events", () => {
+    it("parses legacy tool_use events", () => {
       const line = JSON.stringify({ type: "assistant", subtype: "tool_use", tool: "Read" })
-      expect(parseStreamLine(line)).toEqual({ type: "other" })
+      expect(parseStreamLine(line)).toEqual({ type: "tool_use", tool: "Read" })
+    })
+
+    it("parses current message-format tool_use events", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Bash" }],
+        },
+      })
+      expect(parseStreamLine(line)).toEqual({ type: "tool_use", tool: "Bash" })
+    })
+
+    it("prefers text over tool_use when both present in content", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [
+            { type: "text", text: "Let me read that" },
+            { type: "tool_use", id: "t1", name: "Read" },
+          ],
+        },
+      })
+      expect(parseStreamLine(line)).toEqual({ type: "text", text: "Let me read that" })
     })
 
     it("returns other for empty lines", () => {

@@ -3,6 +3,7 @@ import { startSpinner } from "../../ui/spinner"
 
 export type StreamEvent =
   | { type: "text"; text: string }
+  | { type: "tool_use"; tool: string }
   | { type: "result"; result: ClaudeResult }
   | { type: "other" }
 
@@ -33,7 +34,16 @@ export const parseStreamLine = (line: string): StreamEvent => {
     return { type: "other" }
   }
 
-  // Current format: {"type":"assistant","message":{"content":[{"type":"text","text":"..."}]}}
+  // Legacy format: {"type":"assistant","subtype":"tool_use","tool":"Read"}
+  if (parsed.type === "assistant" && parsed.subtype === "tool_use") {
+    const tool = parsed.tool
+    if (typeof tool === "string" && tool.length > 0) {
+      return { type: "tool_use", tool }
+    }
+    return { type: "other" }
+  }
+
+  // Current format: {"type":"assistant","message":{"content":[...]}}
   if (parsed.type === "assistant" && parsed.message) {
     const message = parsed.message as Record<string, unknown>
     const content = message.content as Array<Record<string, unknown>> | undefined
@@ -44,6 +54,12 @@ export const parseStreamLine = (line: string): StreamEvent => {
         .join("")
       if (textParts.length > 0) {
         return { type: "text", text: textParts }
+      }
+
+      // No text found — check for tool_use blocks
+      const toolBlock = content.find((c) => c.type === "tool_use" && typeof c.name === "string")
+      if (toolBlock) {
+        return { type: "tool_use", tool: toolBlock.name as string }
       }
     }
     return { type: "other" }
@@ -115,6 +131,8 @@ export const createDisplayCallbacks = (): {
         hasStreamedText = true
       }
       process.stdout.write(event.text)
+    } else if (event.type === "tool_use") {
+      spinner.setDetail(event.tool)
     }
   })
   return {

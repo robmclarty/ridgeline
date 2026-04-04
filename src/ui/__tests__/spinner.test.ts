@@ -50,6 +50,7 @@ describe("spinner", () => {
       spinner.stop()
       spinner.pause()
       spinner.resume()
+      spinner.setDetail("Read")
     })
 
     it("returns spinner with stop/pause/resume methods", () => {
@@ -142,6 +143,25 @@ describe("spinner", () => {
 
       const output = writeSpy.mock.calls[0][0] as string
       expect(output).toContain("...")
+
+      spinner.stop()
+      writeSpy.mockRestore()
+      vi.useRealTimers()
+    })
+
+    it("shows detail text in spinner output after setDetail", () => {
+      vi.useFakeTimers()
+      Object.defineProperty(process.stderr, "isTTY", { value: true, writable: true })
+      const writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+
+      const spinner = startSpinner("Building")
+      spinner.setDetail("Read")
+      writeSpy.mockClear()
+      vi.advanceTimersByTime(120)
+
+      const output = writeSpy.mock.calls[0][0] as string
+      expect(output).toContain("[Read]")
+      expect(output).toContain("Building...")
 
       spinner.stop()
       writeSpy.mockRestore()

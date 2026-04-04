@@ -75,6 +75,8 @@ export interface Spinner {
   pause(): void
   /** Resume the spinner after a pause. */
   resume(): void
+  /** Show a tool name or detail next to the spinner (e.g. "Read", "Bash"). */
+  setDetail(detail: string): void
 }
 
 export const pickVerb = (): string =>
@@ -99,21 +101,24 @@ export const formatElapsed = (ms: number): string => {
 export const startSpinner = (verb?: string): Spinner => {
   // If stderr is not a TTY (e.g. piped to a file), skip animation entirely.
   if (!process.stderr.isTTY) {
-    return { stop() {}, pause() {}, resume() {} }
+    return { stop() {}, pause() {}, resume() {}, setDetail() {} }
   }
 
   let frameIndex = 0
   let direction = 1
   let pauseFrames = 0
   let stopped = false
+  let detail = ""
   const label = verb ?? pickVerb()
   const startTime = Date.now()
 
   const tick = () => {
     const frame = FRAMES[frameIndex]
     const elapsed = formatElapsed(Date.now() - startTime)
+    const suffix = detail ? ` [${detail}]` : ""
     // \r moves cursor to start of line; the frame overwrites previous output.
-    process.stderr.write(`\r${frame} ${label}... (${elapsed})`)
+    // \x1b[K clears to end of line to avoid artifacts from longer previous lines.
+    process.stderr.write(`\r\x1b[K${frame} ${label}... (${elapsed})${suffix}`)
     if (pauseFrames > 0) {
       pauseFrames--
       return
@@ -153,6 +158,9 @@ export const startSpinner = (verb?: string): Spinner => {
     resume() {
       if (stopped || timer) return
       timer = setInterval(tick, DEFAULT_INTERVAL_MS)
+    },
+    setDetail(text: string) {
+      detail = text
     },
   }
 }

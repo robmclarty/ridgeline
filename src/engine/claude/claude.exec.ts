@@ -3,6 +3,12 @@ import { ClaudeResult } from "../../types"
 import { extractResult } from "./stream.decode"
 import { SandboxProvider } from "./sandbox"
 
+/** Default: kill if no stdout arrives within 2 minutes of spawn. */
+const DEFAULT_STARTUP_TIMEOUT_MS = 2 * 60 * 1000
+
+/** Default: kill if no stdout arrives for 5 minutes during execution. */
+const DEFAULT_STALL_TIMEOUT_MS = 5 * 60 * 1000
+
 export type InvokeOptions = {
   systemPrompt: string
   userPrompt: string
@@ -12,6 +18,10 @@ export type InvokeOptions = {
   pluginDirs?: string[]
   cwd: string
   timeoutMs?: number
+  /** Kill if no stdout within this many ms of spawn (default: 2 min). */
+  startupTimeoutMs?: number
+  /** Kill if no stdout for this many ms during execution (default: 5 min). */
+  stallTimeoutMs?: number
   sessionId?: string
   jsonSchema?: string
   onStdout?: (chunk: string) => void
@@ -66,17 +76,46 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
 
     let stdoutData = ""
     let stderrData = ""
+    // --- Stall / startup detection ---
+    let stalled = false
+    let stallReason = ""
+    const startupMs = opts.startupTimeoutMs ?? DEFAULT_STARTUP_TIMEOUT_MS
+    const stallMs = opts.stallTimeoutMs ?? DEFAULT_STALL_TIMEOUT_MS
+
+    const killOnStall = (reason: string) => {
+      stalled = true
+      stallReason = reason
+      proc.kill("SIGTERM")
+      setTimeout(() => proc.kill("SIGKILL"), 5000)
+    }
+
+    // Startup probe: short fuse for the very first stdout event
+    let stallTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+      killOnStall(`No output received within ${Math.round(startupMs / 1000)}s of spawn (startup timeout)`)
+    }, startupMs)
+
+    const resetStallTimer = () => {
+      if (stalled) return
+      if (stallTimer) clearTimeout(stallTimer)
+      stallTimer = setTimeout(() => {
+        killOnStall(`No output received for ${Math.round(stallMs / 1000)}s (stall timeout)`)
+      }, stallMs)
+    }
 
     proc.stdout?.on("data", (chunk: Buffer) => {
       const text = chunk.toString("utf-8")
       stdoutData += text
+      resetStallTimer()
       opts.onStdout?.(text)
     })
 
     proc.stderr?.on("data", (chunk: Buffer) => {
       stderrData += chunk.toString("utf-8")
+      // stderr activity also resets the stall timer — the process is alive
+      resetStallTimer()
     })
 
+    // --- Global timeout ---
     let timedOut = false
     let timer: ReturnType<typeof setTimeout> | null = null
 
@@ -90,9 +129,15 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
 
     proc.on("close", (code) => {
       if (timer) clearTimeout(timer)
+      if (stallTimer) clearTimeout(stallTimer)
 
       if (timedOut) {
         reject(new Error("Claude invocation timed out"))
+        return
+      }
+
+      if (stalled) {
+        reject(new Error(`Claude invocation stalled: ${stallReason}`))
         return
       }
 
