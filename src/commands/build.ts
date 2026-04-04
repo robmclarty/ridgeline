@@ -13,6 +13,7 @@ import {
   reflectCommits,
   removeWorktree,
   worktreePath as getWorktreePath,
+  ensureGitRepo,
 } from "../engine/worktree"
 import * as fs from "node:fs"
 import * as path from "node:path"
@@ -159,8 +160,13 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
 
-  // Set up worktree
+  // Ensure we're in a git repo with at least one commit (needed for worktrees)
   const repoRoot = process.cwd()
+  if (ensureGitRepo(repoRoot)) {
+    printInfo("Initialised git repo with initial commit")
+  }
+
+  // Set up worktree
   if (validateWorktree(repoRoot, config.buildName)) {
     config.worktreePath = getWorktreePath(repoRoot, config.buildName)
     printInfo(`Resuming in worktree: ${config.worktreePath}`)

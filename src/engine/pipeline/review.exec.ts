@@ -7,6 +7,7 @@ import { getDiff } from "../../git"
 import { discoverBuiltinAgents, buildAgentsFlag } from "../discovery/agent.scan"
 import { discoverPluginDirs, cleanupPluginDirs, getCorePluginDir } from "../discovery/plugin.scan"
 import { parseVerdict } from "../../store/feedback"
+import { printError } from "../../ui/output"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -69,6 +70,12 @@ export const invokeReviewer = async (
       cwd: config.worktreePath ?? process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
+      onStderr: (text) => {
+        const lower = text.toLowerCase()
+        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
+          printError(`claude stderr: ${text.trim()}`)
+        }
+      },
       sandboxProvider: config.sandboxProvider,
       networkAllowlist: config.networkAllowlist,
     })

@@ -4,6 +4,7 @@ import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { scanPhases } from "../../store/phases"
+import { printError } from "../../ui/output"
 
 const resolveAgentPrompt = (filename: string): string => {
   // Try dist/agents/core/ first (installed package), then src/agents/core/ (development)
@@ -61,6 +62,12 @@ export const invokePlanner = async (
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
+      onStderr: (text) => {
+        const lower = text.toLowerCase()
+        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
+          printError(`claude stderr: ${text.trim()}`)
+        }
+      },
     })
 
     // Scan for generated phase files

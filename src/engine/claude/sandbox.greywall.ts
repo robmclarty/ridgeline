@@ -24,11 +24,15 @@ export const greywallProvider: SandboxProvider = {
       return "greyproxy is not running. Start it with: greywall setup"
     }
   },
-  buildArgs(repoRoot: string, _networkAllowlist: string[]): string[] {
-    const settings = {
+  buildArgs(repoRoot: string, networkAllowlist: string[]): string[] {
+    const settings: Record<string, unknown> = {
       filesystem: {
         allowWrite: [repoRoot, "/tmp"],
       },
+    }
+
+    if (networkAllowlist.length > 0) {
+      settings.network = { allowlist: networkAllowlist }
     }
 
     const settingsPath = join(tmpdir(), `ridgeline-greywall-${process.pid}.json`)

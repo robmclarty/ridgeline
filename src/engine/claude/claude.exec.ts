@@ -25,6 +25,7 @@ export type InvokeOptions = {
   sessionId?: string
   jsonSchema?: string
   onStdout?: (chunk: string) => void
+  onStderr?: (chunk: string) => void
   sandboxProvider?: SandboxProvider | null
   networkAllowlist?: string[]
 }
@@ -110,7 +111,9 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     })
 
     proc.stderr?.on("data", (chunk: Buffer) => {
-      stderrData += chunk.toString("utf-8")
+      const text = chunk.toString("utf-8")
+      stderrData += text
+      opts.onStderr?.(text)
     })
 
     // --- Global timeout ---

@@ -74,6 +74,7 @@ vi.mock("../../engine/worktree", () => ({
   removeWorktree: vi.fn(),
   worktreePath: vi.fn(() => "/tmp/worktree"),
   cleanAllWorktrees: vi.fn(),
+  ensureGitRepo: vi.fn(() => false),
 }))
 
 import { runBuild } from "../build"

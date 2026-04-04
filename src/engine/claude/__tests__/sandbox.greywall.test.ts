@@ -38,4 +38,22 @@ describe("greywallProvider", () => {
     expect(args).not.toContain("--allow-dir")
     expect(args).not.toContain("--allow-network")
   })
+
+  it("includes network allowlist in settings when provided", () => {
+    greywallProvider.buildArgs("/repo", ["registry.npmjs.org", "api.example.com"])
+
+    const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
+    const [, content] = calls[calls.length - 1]
+    const settings = JSON.parse(content as string)
+    expect(settings.network.allowlist).toEqual(["registry.npmjs.org", "api.example.com"])
+  })
+
+  it("omits network key when allowlist is empty", () => {
+    greywallProvider.buildArgs("/repo", [])
+
+    const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
+    const [, content] = calls[calls.length - 1]
+    const settings = JSON.parse(content as string)
+    expect(settings.network).toBeUndefined()
+  })
 })

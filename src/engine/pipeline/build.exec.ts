@@ -7,6 +7,7 @@ import { createDisplayCallbacks } from "../claude/stream.decode"
 import { readHandoff } from "../../store/handoff"
 import { discoverBuiltinAgents, buildAgentsFlag } from "../discovery/agent.scan"
 import { discoverPluginDirs, cleanupPluginDirs, getCorePluginDir } from "../discovery/plugin.scan"
+import { printError } from "../../ui/output"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -93,6 +94,13 @@ export const invokeBuilder = async (
       cwd: config.worktreePath ?? process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
+      onStderr: (text) => {
+        // Surface auth errors and other critical stderr messages immediately
+        const lower = text.toLowerCase()
+        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
+          printError(`claude stderr: ${text.trim()}`)
+        }
+      },
       sandboxProvider: config.sandboxProvider,
       networkAllowlist: config.networkAllowlist,
     })
