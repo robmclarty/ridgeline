@@ -32,6 +32,8 @@ export const recordCost = (
     costUsd: result.costUsd,
     inputTokens: result.usage.inputTokens,
     outputTokens: result.usage.outputTokens,
+    cacheReadInputTokens: result.usage.cacheReadInputTokens,
+    cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
     durationMs: result.durationMs,
     timestamp: new Date().toISOString(),
   }

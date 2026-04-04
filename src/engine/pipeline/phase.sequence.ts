@@ -21,7 +21,7 @@ export const runPhase = async (
   const startTime = Date.now()
 
   // Pre-phase: create git checkpoint
-  createCheckpoint(checkpointTag, phase.id)
+  createCheckpoint(checkpointTag, phase.id, config.worktreePath ?? undefined)
 
   ensureHandoffExists(config.buildDir)
 
@@ -102,7 +102,7 @@ export const runPhase = async (
     // Verdict handling
     if (verdict.passed) {
       const duration = Date.now() - startTime
-      const completionTag = createCompletionTag(config.buildName, phase.id)
+      const completionTag = createCompletionTag(config.buildName, phase.id, config.worktreePath ?? undefined)
 
       updatePhaseStatus(config.buildDir, state, phase.id, {
         status: "complete",

@@ -19,7 +19,7 @@ const assembleUserPrompt = (
   sections.push(fs.readFileSync(phase.filepath, "utf-8"))
   sections.push("")
 
-  const diff = getDiff(checkpointTag)
+  const diff = getDiff(checkpointTag, config.worktreePath ?? undefined)
   sections.push("## Git Diff (checkpoint to HEAD)\n")
   if (diff) {
     sections.push("```diff")

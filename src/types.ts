@@ -92,6 +92,8 @@ export type BudgetEntry = {
   costUsd: number
   inputTokens: number
   outputTokens: number
+  cacheReadInputTokens?: number
+  cacheCreationInputTokens?: number
   durationMs: number
   timestamp: string
 }

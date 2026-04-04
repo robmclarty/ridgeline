@@ -151,7 +151,7 @@ describe("phaseRunner", () => {
       })
 
       await runPhase(phase, config, makeState())
-      expect(createCheckpoint).toHaveBeenCalledWith("ridgeline/checkpoint/test-build/01-scaffold", "01-scaffold")
+      expect(createCheckpoint).toHaveBeenCalledWith("ridgeline/checkpoint/test-build/01-scaffold", "01-scaffold", undefined)
     })
 
     it("retries on reviewer failure up to maxRetries", async () => {
@@ -239,7 +239,7 @@ describe("phaseRunner", () => {
       })
 
       await runPhase(phase, config, makeState())
-      expect(createCompletionTag).toHaveBeenCalledWith("test-build", "01-scaffold")
+      expect(createCompletionTag).toHaveBeenCalledWith("test-build", "01-scaffold", undefined)
     })
 
     it("updates phase status to complete on success", async () => {
