@@ -15,6 +15,7 @@ import {
   worktreePath as getWorktreePath,
 } from "../engine/worktree"
 import * as fs from "node:fs"
+import * as path from "node:path"
 
 const formatDuration = (ms: number): string => {
   const seconds = Math.round(ms / 1000)
@@ -24,7 +25,18 @@ const formatDuration = (ms: number): string => {
   return remaining > 0 ? `${minutes}m ${remaining}s` : `${minutes}m`
 }
 
-const printSummaryTable = (config: RidgelineConfig, completed: number, failed: number, totalPhases: number, durationMs: number): void => {
+const readSpecDescription = (buildDir: string): string | null => {
+  const specPath = path.join(buildDir, "..", "spec.md")
+  try {
+    const content = fs.readFileSync(specPath, "utf-8")
+    const match = content.match(/^#\s+(.+)/m)
+    return match ? match[1].trim() : null
+  } catch {
+    return null
+  }
+}
+
+const printSummaryTable = (config: RidgelineConfig, completed: number, failed: number, totalPhases: number): void => {
   const budget = loadBudget(config.buildDir)
 
   // Build per-phase stats from budget entries
@@ -50,37 +62,54 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
     .filter((e) => e.phase === "plan")
     .reduce((sum, e) => sum + e.costUsd, 0)
 
-  console.log("")
-  printInfo("=" .repeat(60))
-  printInfo(`Build: ${config.buildName}`)
-  printInfo(`Phases: ${completed} passed, ${failed} failed, ${totalPhases} total`)
-  printInfo(`Duration: ${formatDuration(durationMs)}`)
-  printInfo(`Total cost: $${budget.totalCostUsd.toFixed(2)}`)
-  printInfo("=" .repeat(60))
-
-  if (phaseStats.size > 0) {
-    // Table header
-    console.log("")
-    const header = "  Phase                    Attempts   Build     Review    Cost"
-    const divider = "  " + "-".repeat(header.length - 2)
-    console.log(header)
-    console.log(divider)
-
-    for (const [phaseId, stats] of phaseStats) {
-      const name = phaseId.padEnd(24)
-      const attempts = String(stats.attempts).padStart(4)
-      const buildTime = formatDuration(stats.buildTime).padStart(8)
-      const reviewTime = formatDuration(stats.reviewTime).padStart(8)
-      const cost = `$${stats.cost.toFixed(2)}`.padStart(8)
-      console.log(`  ${name} ${attempts}   ${buildTime}  ${reviewTime}  ${cost}`)
-    }
-
-    if (planCost > 0) {
-      const divider2 = "  " + "-".repeat(header.length - 2)
-      console.log(divider2)
-      console.log(`  ${"Planning".padEnd(24)}            ${"".padStart(8)}  ${"".padStart(8)}  ${`$${planCost.toFixed(2)}`.padStart(8)}`)
-    }
+  // Totals
+  let totalAttempts = 0
+  let totalBuildTime = 0
+  let totalReviewTime = 0
+  let totalCost = planCost
+  for (const stats of phaseStats.values()) {
+    totalAttempts += stats.attempts
+    totalBuildTime += stats.buildTime
+    totalReviewTime += stats.reviewTime
+    totalCost += stats.cost
   }
+
+  const sep = "  " + "=".repeat(60)
+  const div = "  " + "-".repeat(60)
+
+  // Header
+  console.log("")
+  console.log(sep)
+  console.log(`  Build: ${config.buildName}`)
+  const description = readSpecDescription(config.buildDir)
+  if (description) {
+    console.log(`  ${description}`)
+  }
+  console.log(`  Phases: ${completed} passed, ${failed} failed, ${totalPhases} total`)
+  console.log(sep)
+
+  // Breakdown table
+  console.log("")
+  console.log("                           Attempts   Build     Review      Cost")
+  console.log(div)
+
+  // Planning row
+  console.log(`  ${"Planning".padEnd(24)}                                  ${`$${planCost.toFixed(2)}`.padStart(8)}`)
+  console.log(div)
+
+  // Per-phase rows
+  for (const [phaseId, stats] of phaseStats) {
+    const name = phaseId.padEnd(24)
+    const attempts = String(stats.attempts).padStart(4)
+    const buildTime = formatDuration(stats.buildTime).padStart(8)
+    const reviewTime = formatDuration(stats.reviewTime).padStart(8)
+    const cost = `$${stats.cost.toFixed(2)}`.padStart(8)
+    console.log(`  ${name}   ${attempts}  ${buildTime}  ${reviewTime}    ${cost}`)
+  }
+  console.log(div)
+
+  // Total row
+  console.log(`  ${"Total".padEnd(24)}   ${String(totalAttempts).padStart(4)}  ${formatDuration(totalBuildTime).padStart(8)}  ${formatDuration(totalReviewTime).padStart(8)}    ${`$${totalCost.toFixed(2)}`.padStart(8)}`)
 }
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
@@ -125,7 +154,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     }
   }
 
-  const startTime = Date.now()
   let completed = 0
   let failed = 0
 
@@ -179,9 +207,8 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   }
 
   // Summary
-  const duration = Date.now() - startTime
   const totalCompleted = state.phases.filter((p) => p.status === "complete").length
-  printSummaryTable(config, totalCompleted, failed, phases.length, duration)
+  printSummaryTable(config, totalCompleted, failed, phases.length)
 
   if (failed > 0) {
     process.exit(1)
@@ -189,8 +216,8 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   if (totalCompleted === phases.length) {
     console.log("")
-    printInfo("All phases complete!")
-    printInfo("Cleaning up...")
+    console.log("  All phases complete!")
+    console.log("  Cleaning up...")
     cleanupBuildTags(config.buildName)
     removeWorktree(repoRoot, config.buildName)
   }

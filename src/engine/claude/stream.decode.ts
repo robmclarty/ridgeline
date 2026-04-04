@@ -111,26 +111,74 @@ export const extractResult = (ndjsonStdout: string): ClaudeResult => {
   throw new Error("No result event found in stream-json output")
 }
 
+export interface DisplayCallbackOptions {
+  /** Suppress fenced JSON blocks (```json ... ```) from display output. */
+  suppressJsonBlock?: boolean
+}
+
+const RESUME_DEBOUNCE_MS = 200
+
 /**
- * Create an onStdout callback that streams assistant text to stdout
- * with blank line separators. Returns the callback and a flush function
- * to emit the trailing blank line after the invocation completes.
+ * Create an onStdout callback that streams assistant text to stdout.
+ * The spinner pauses while text is streaming and resumes after a
+ * debounce period of inactivity, keeping it visible during tool-use pauses.
+ * Returns the callback and a flush function to finalize output.
  */
-export const createDisplayCallbacks = (): {
+export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
   onStdout: (chunk: string) => void
   flush: () => void
 } => {
   let hasStreamedText = false
+  let lastCharWasNewline = true
+  let jsonSuppressed = false
+  let resumeTimer: ReturnType<typeof setTimeout> | null = null
   const spinner = startSpinner()
+
+  const scheduleResume = () => {
+    if (resumeTimer) clearTimeout(resumeTimer)
+    resumeTimer = setTimeout(() => {
+      resumeTimer = null
+      if (!lastCharWasNewline) {
+        process.stdout.write("\n")
+        lastCharWasNewline = true
+      }
+      spinner.resume()
+    }, RESUME_DEBOUNCE_MS)
+  }
+
+  const writeText = (text: string) => {
+    if (opts?.suppressJsonBlock) {
+      const lines = text.split("\n")
+      const output: string[] = []
+      for (const line of lines) {
+        if (!jsonSuppressed && /^\s*```json\s*$/.test(line)) {
+          jsonSuppressed = true
+          continue
+        }
+        if (jsonSuppressed) continue
+        output.push(line)
+      }
+      if (output.length === 0) return
+      text = output.join("\n")
+      if (text.length === 0) return
+    }
+
+    if (!lastCharWasNewline) {
+      process.stdout.write("\n")
+    }
+    process.stdout.write(text)
+    lastCharWasNewline = text.endsWith("\n")
+  }
 
   const handler = createStreamHandler((event) => {
     if (event.type === "text") {
       if (!hasStreamedText) {
-        spinner.stop()
-        process.stdout.write("\n")
         hasStreamedText = true
       }
-      process.stdout.write(event.text)
+      spinner.pause()
+      if (resumeTimer) clearTimeout(resumeTimer)
+      writeText(event.text)
+      scheduleResume()
     } else if (event.type === "tool_use") {
       spinner.setDetail(event.tool)
     }
@@ -138,8 +186,12 @@ export const createDisplayCallbacks = (): {
   return {
     onStdout: handler,
     flush: () => {
+      if (resumeTimer) {
+        clearTimeout(resumeTimer)
+        resumeTimer = null
+      }
       spinner.stop()
-      if (hasStreamedText) {
+      if (hasStreamedText && !lastCharWasNewline) {
         process.stdout.write("\n")
       }
     },

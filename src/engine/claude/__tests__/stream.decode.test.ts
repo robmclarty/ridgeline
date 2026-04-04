@@ -199,15 +199,17 @@ describe("streamParser", () => {
       writeSpy.mockRestore()
     })
 
-    it("emits leading blank line before first text", () => {
+    it("writes first text without leading blank line", () => {
       const { onStdout } = createDisplayCallbacks()
       onStdout('{"type":"assistant","subtype":"text","text":"hello"}\n')
 
-      expect(writeSpy).toHaveBeenCalledWith("\n")
       expect(writeSpy).toHaveBeenCalledWith("hello")
+      // No leading \n before first text
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls[0]).toBe("hello")
     })
 
-    it("emits trailing blank line on flush if text was streamed", () => {
+    it("emits trailing newline on flush if last text lacked one", () => {
       const { onStdout, flush } = createDisplayCallbacks()
       onStdout('{"type":"assistant","subtype":"text","text":"hello"}\n')
 
@@ -217,6 +219,16 @@ describe("streamParser", () => {
       expect(writeSpy).toHaveBeenCalledWith("\n")
     })
 
+    it("does not emit trailing newline on flush if last text ended with newline", () => {
+      const { onStdout, flush } = createDisplayCallbacks()
+      onStdout('{"type":"assistant","subtype":"text","text":"hello\\n"}\n')
+
+      writeSpy.mockClear()
+      flush()
+
+      expect(writeSpy).not.toHaveBeenCalled()
+    })
+
     it("does not emit blank lines if no text was streamed", () => {
       const { flush } = createDisplayCallbacks()
       flush()
@@ -224,14 +236,45 @@ describe("streamParser", () => {
       expect(writeSpy).not.toHaveBeenCalled()
     })
 
-    it("only emits leading blank line once", () => {
+    it("inserts newline between text events when prior text lacks trailing newline", () => {
       const { onStdout } = createDisplayCallbacks()
       onStdout('{"type":"assistant","subtype":"text","text":"one"}\n')
       onStdout('{"type":"assistant","subtype":"text","text":"two"}\n')
 
-      // \n (leading), "one", "two" — no second leading \n
-      const newlineCalls = writeSpy.mock.calls.filter((c) => c[0] === "\n")
-      expect(newlineCalls).toHaveLength(1)
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(["one", "\n", "two"])
+    })
+
+    it("does not insert extra newline between text events when prior text ends with newline", () => {
+      const { onStdout } = createDisplayCallbacks()
+      onStdout('{"type":"assistant","subtype":"text","text":"one\\n"}\n')
+      onStdout('{"type":"assistant","subtype":"text","text":"two"}\n')
+
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(["one\n", "two"])
+    })
+
+    it("suppresses fenced JSON blocks when suppressJsonBlock is set", () => {
+      const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true })
+      onStdout('{"type":"assistant","subtype":"text","text":"review notes\\n"}\n')
+      onStdout('{"type":"assistant","subtype":"text","text":"```json\\n"}\n')
+      onStdout('{"type":"assistant","subtype":"text","text":"{\\"passed\\": true}\\n"}\n')
+      onStdout('{"type":"assistant","subtype":"text","text":"```\\n"}\n')
+
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls).toEqual(["review notes\n"])
+
+      writeSpy.mockClear()
+      flush()
+    })
+
+    it("does not suppress JSON blocks when suppressJsonBlock is not set", () => {
+      const { onStdout } = createDisplayCallbacks()
+      onStdout('{"type":"assistant","subtype":"text","text":"```json\\n"}\n')
+      onStdout('{"type":"assistant","subtype":"text","text":"{\\"passed\\": true}\\n"}\n')
+
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls).toContainEqual("```json\n")
     })
   })
 })

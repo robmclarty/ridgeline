@@ -44,7 +44,7 @@ export const invokeReviewer = async (
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   const systemPrompt = resolveAgentPrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
-  const { onStdout, flush } = createDisplayCallbacks()
+  const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true })
 
   const builtinAgents = discoverBuiltinAgents()
   const agents = buildAgentsFlag(builtinAgents)
