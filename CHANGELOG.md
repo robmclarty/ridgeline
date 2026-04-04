@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.25
+
+- Fix worktree merge failure when untracked build metadata files (handoff.md) conflict with WIP branch — now stages and commits them before merging
+- Show each LLM tool call on its own line during builds (e.g. `[Bash] npm test`, `[Read] /src/index.ts`) with the spinner always at the bottom
+- Extract tool input summaries from Claude stream events (command, file_path, pattern, prompt) with 80-char truncation
+- Add `printAbove()` to spinner for printing permanent lines above the animation
+
 ## 0.2.24
 
 - Fix sandbox merge failure: grant buildDir write access in greywall/bwrap so the builder writes handoff.md to the correct location instead of creating a duplicate inside the worktree
