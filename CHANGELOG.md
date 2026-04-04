@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.17
+
+- Fall back to unsandboxed mode with warning when greyproxy is not running, instead of blocking builds
+- Fix spinner flickering on build errors by stopping spinner in finally blocks
+- Fix greyproxy readiness check to match `✓` symbol instead of bare substring
+
 ## 0.2.16
 
 - Fail fast with actionable error when greyproxy is not running instead of silently hanging
