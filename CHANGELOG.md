@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.18
+
+- Fix reviewer receiving empty diff by running git checkpoint/diff operations in the worktree instead of the main repo
+- Record cache token fields (cacheReadInputTokens, cacheCreationInputTokens) in budget.json for accurate token tracking
+- Add fallow linter to lint pipeline
+- Add ecosystem position and integration strategy docs
+
 ## 0.2.17
 
 - Fall back to unsandboxed mode with warning when greyproxy is not running, instead of blocking builds
