@@ -152,6 +152,28 @@ describe("streamParser", () => {
       expect(event).toEqual({ type: "tool_use", tool: "Agent", summary: "do stuff" })
     })
 
+    it("returns no summary when tool input has no recognizable field", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "CustomTool", input: { unknownField: "value" } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "CustomTool", summary: undefined })
+    })
+
+    it("takes only the first line of multi-line input", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Bash", input: { command: "echo hello\necho world" } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "Bash", summary: "echo hello" })
+    })
+
     it("prefers text over tool_use when both present in content", () => {
       const line = JSON.stringify({
         type: "assistant",
