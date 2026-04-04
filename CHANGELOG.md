@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.15
+
+- Prune stale git worktree entries before creating new ones to fix branch-in-use errors after a crash or kill
+
 ## 0.2.14
 
 - Fix worktree creation failing when a WIP branch already exists from a previous crashed or killed build
