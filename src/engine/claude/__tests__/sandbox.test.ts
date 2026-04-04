@@ -10,11 +10,12 @@ vi.mock("../sandbox.bwrap", () => ({
 }))
 
 vi.mock("../sandbox.greywall", () => ({
-  greywallProvider: { name: "greywall", command: "greywall", buildArgs: vi.fn(() => []) },
+  greywallProvider: { name: "greywall", command: "greywall", buildArgs: vi.fn(() => []), checkReady: vi.fn(() => null) },
 }))
 
 import { execFileSync } from "node:child_process"
 import { detectSandbox } from "../sandbox"
+import { greywallProvider } from "../sandbox.greywall"
 
 const withPlatform = (platform: string, fn: () => void) => {
   const orig = Object.getOwnPropertyDescriptor(process, "platform")
@@ -31,12 +32,19 @@ describe("detectSandbox", () => {
     vi.resetAllMocks()
   })
 
-  it("returns greywall provider when greywall is available", () => {
+  it("returns greywall provider when greywall is available and ready", () => {
     vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
 
     const provider = detectSandbox()
     expect(provider).not.toBeNull()
     expect(provider!.name).toBe("greywall")
+  })
+
+  it("throws when greywall is available but greyproxy is not running", () => {
+    vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
+    vi.mocked(greywallProvider.checkReady!).mockReturnValue("greyproxy is not running. Start it with: greywall setup")
+
+    expect(() => detectSandbox()).toThrow("greyproxy is not running")
   })
 
   it("returns bwrap provider on linux when greywall is absent", () => {

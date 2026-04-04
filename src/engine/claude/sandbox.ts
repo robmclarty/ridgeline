@@ -6,6 +6,8 @@ export type SandboxProvider = {
   name: "bwrap" | "greywall"
   command: string
   buildArgs: (repoRoot: string, networkAllowlist: string[]) => string[]
+  /** Check if the sandbox is ready to use. Returns null if ready, or an error message. */
+  checkReady?: () => string | null
 }
 
 const isAvailable = (cmd: string): boolean => {
@@ -20,6 +22,10 @@ const isAvailable = (cmd: string): boolean => {
 export const detectSandbox = (): SandboxProvider | null => {
   // Prefer greywall (cross-platform, supports domain allowlisting)
   if (isAvailable("greywall")) {
+    const readyError = greywallProvider.checkReady?.() ?? null
+    if (readyError) {
+      throw new Error(`Sandbox 'greywall' is installed but not ready: ${readyError}`)
+    }
     return greywallProvider
   }
 
