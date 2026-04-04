@@ -149,6 +149,54 @@ describe("spinner", () => {
       vi.useRealTimers()
     })
 
+    it("printAbove clears spinner, writes line, then resumes spinner", () => {
+      vi.useFakeTimers()
+      Object.defineProperty(process.stderr, "isTTY", { value: true, writable: true })
+      const writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+
+      const spinner = startSpinner("Testing")
+      vi.advanceTimersByTime(120) // get initial frame
+      writeSpy.mockClear()
+
+      spinner.printAbove("[Bash] ls -la")
+
+      const calls = writeSpy.mock.calls.map((c) => c[0] as string)
+      // Should: clear spinner line, write the text + newline, then redraw spinner
+      expect(calls[0]).toBe("\r\x1b[K")           // clear spinner line
+      expect(calls[1]).toBe("[Bash] ls -la\n")     // permanent line
+      expect(calls[2]).toContain("Testing...")      // spinner redrawn
+
+      spinner.stop()
+      writeSpy.mockRestore()
+      vi.useRealTimers()
+    })
+
+    it("printAbove is no-op when spinner is stopped", () => {
+      Object.defineProperty(process.stderr, "isTTY", { value: true, writable: true })
+      const writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+
+      const spinner = startSpinner("Testing")
+      spinner.stop()
+      writeSpy.mockClear()
+
+      spinner.printAbove("[Bash] ls")
+      expect(writeSpy).not.toHaveBeenCalled()
+
+      writeSpy.mockRestore()
+    })
+
+    it("printAbove is no-op when not a TTY", () => {
+      Object.defineProperty(process.stderr, "isTTY", { value: false, writable: true })
+      const writeSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+
+      const spinner = startSpinner("Testing")
+      spinner.printAbove("[Bash] ls")
+      expect(writeSpy).not.toHaveBeenCalled()
+
+      spinner.stop()
+      writeSpy.mockRestore()
+    })
+
     it("shows detail text in spinner output after setDetail", () => {
       vi.useFakeTimers()
       Object.defineProperty(process.stderr, "isTTY", { value: true, writable: true })

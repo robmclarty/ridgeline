@@ -77,6 +77,8 @@ export interface Spinner {
   resume(): void
   /** Show a tool name or detail next to the spinner (e.g. "Read", "Bash"). */
   setDetail(detail: string): void
+  /** Print a permanent line above the spinner, then redraw the spinner below it. */
+  printAbove(line: string): void
 }
 
 export const pickVerb = (): string =>
@@ -101,7 +103,7 @@ export const formatElapsed = (ms: number): string => {
 export const startSpinner = (verb?: string): Spinner => {
   // If stderr is not a TTY (e.g. piped to a file), skip animation entirely.
   if (!process.stderr.isTTY) {
-    return { stop() {}, pause() {}, resume() {}, setDetail() {} }
+    return { stop() {}, pause() {}, resume() {}, setDetail() {}, printAbove() {} }
   }
 
   let frameIndex = 0
@@ -161,6 +163,12 @@ export const startSpinner = (verb?: string): Spinner => {
     },
     setDetail(text: string) {
       detail = text
+    },
+    printAbove(line: string) {
+      if (stopped) return
+      clearLine()
+      process.stderr.write(line + "\n")
+      tick()
     },
   }
 }
