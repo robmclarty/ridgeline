@@ -83,7 +83,73 @@ describe("streamParser", () => {
           content: [{ type: "tool_use", id: "t1", name: "Bash" }],
         },
       })
-      expect(parseStreamLine(line)).toEqual({ type: "tool_use", tool: "Bash" })
+      expect(parseStreamLine(line)).toEqual({ type: "tool_use", tool: "Bash", summary: undefined })
+    })
+
+    it("extracts tool input summary from current message-format tool_use", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Bash", input: { command: "npm test" } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "Bash", summary: "npm test" })
+    })
+
+    it("extracts file_path for Read tool_use", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Read", input: { file_path: "/src/index.ts" } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "Read", summary: "/src/index.ts" })
+    })
+
+    it("extracts pattern for Grep tool_use", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Grep", input: { pattern: "TODO", path: "src/" } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "Grep", summary: "TODO" })
+    })
+
+    it("truncates long summaries to 80 characters", () => {
+      const longCommand = "a".repeat(100)
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Bash", input: { command: longCommand } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event.type).toBe("tool_use")
+      if (event.type === "tool_use") {
+        expect(event.summary!.length).toBeLessThanOrEqual(80)
+        expect(event.summary).toBe("a".repeat(79) + "…")
+      }
+    })
+
+    it("returns empty summary for legacy tool_use format", () => {
+      const line = JSON.stringify({ type: "assistant", subtype: "tool_use", tool: "Read" })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "Read" })
+    })
+
+    it("returns empty summary when tool input has no recognizable field", () => {
+      const line = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Agent", input: { prompt: "do stuff" } }],
+        },
+      })
+      const event = parseStreamLine(line)
+      expect(event).toEqual({ type: "tool_use", tool: "Agent", summary: "do stuff" })
     })
 
     it("prefers text over tool_use when both present in content", () => {

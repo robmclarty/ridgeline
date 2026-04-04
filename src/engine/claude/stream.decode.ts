@@ -3,7 +3,7 @@ import { startSpinner } from "../../ui/spinner"
 
 export type StreamEvent =
   | { type: "text"; text: string }
-  | { type: "tool_use"; tool: string }
+  | { type: "tool_use"; tool: string; summary?: string }
   | { type: "result"; result: ClaudeResult }
   | { type: "other" }
 
@@ -14,6 +14,25 @@ export type StreamEvent =
  * - `{"type":"assistant","subtype":"text","text":"..."}` — streamed model text
  * - `{"type":"result","result":"...","total_cost_usd":...}` — final result with usage
  */
+const MAX_SUMMARY_LEN = 80
+
+const summarizeToolInput = (toolName: string, input: Record<string, unknown>): string | undefined => {
+  // Pick the most informative field per tool type
+  const raw =
+    (input.command as string) ??        // Bash
+    (input.file_path as string) ??      // Read, Write, Edit
+    (input.pattern as string) ??        // Grep, Glob
+    (input.prompt as string) ??         // Agent
+    undefined
+
+  if (typeof raw !== "string" || raw.length === 0) return undefined
+
+  // Take first line only
+  const firstLine = raw.split("\n")[0]
+  if (firstLine.length <= MAX_SUMMARY_LEN) return firstLine
+  return firstLine.slice(0, MAX_SUMMARY_LEN - 1) + "…"
+}
+
 export const parseStreamLine = (line: string): StreamEvent => {
   const trimmed = line.trim()
   if (trimmed.length === 0) return { type: "other" }
@@ -59,7 +78,10 @@ export const parseStreamLine = (line: string): StreamEvent => {
       // No text found — check for tool_use blocks
       const toolBlock = content.find((c) => c.type === "tool_use" && typeof c.name === "string")
       if (toolBlock) {
-        return { type: "tool_use", tool: toolBlock.name as string }
+        const summary = toolBlock.input
+          ? summarizeToolInput(toolBlock.name as string, toolBlock.input as Record<string, unknown>)
+          : undefined
+        return { type: "tool_use", tool: toolBlock.name as string, summary }
       }
     }
     return { type: "other" }
