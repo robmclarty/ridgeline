@@ -201,6 +201,10 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
       writeText(event.text)
       scheduleResume()
     } else if (event.type === "tool_use") {
+      const line = event.summary
+        ? `[${event.tool}] ${event.summary}`
+        : `[${event.tool}]`
+      spinner.printAbove(line)
       spinner.setDetail(event.tool)
     }
   })

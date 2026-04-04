@@ -364,5 +364,49 @@ describe("streamParser", () => {
       const calls = writeSpy.mock.calls.map((c) => c[0])
       expect(calls).toContainEqual("```json\n")
     })
+
+    it("prints tool call line to stderr when tool_use event has summary", () => {
+      const origIsTTY = process.stderr.isTTY
+      process.stderr.isTTY = true as never
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+      const { onStdout, flush } = createDisplayCallbacks()
+
+      // Emit a tool_use event with summary
+      const toolEvent = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Bash", input: { command: "npm test" } }],
+        },
+      })
+      onStdout(toolEvent + "\n")
+
+      // The spinner's printAbove should have been called, which writes to stderr
+      const stderrCalls = stderrSpy.mock.calls.map((c) => c[0] as string)
+      const toolLine = stderrCalls.find((c) => c.includes("[Bash]") && c.includes("npm test"))
+      expect(toolLine).toBeDefined()
+
+      flush()
+      stderrSpy.mockRestore()
+      process.stderr.isTTY = origIsTTY as never
+    })
+
+    it("prints tool name only when no summary available", () => {
+      const origIsTTY = process.stderr.isTTY
+      process.stderr.isTTY = true as never
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+      const { onStdout, flush } = createDisplayCallbacks()
+
+      // Legacy format — no summary
+      const toolEvent = JSON.stringify({ type: "assistant", subtype: "tool_use", tool: "Read" })
+      onStdout(toolEvent + "\n")
+
+      const stderrCalls = stderrSpy.mock.calls.map((c) => c[0] as string)
+      const toolLine = stderrCalls.find((c) => c.includes("[Read]"))
+      expect(toolLine).toBeDefined()
+
+      flush()
+      stderrSpy.mockRestore()
+      process.stderr.isTTY = origIsTTY as never
+    })
   })
 })
