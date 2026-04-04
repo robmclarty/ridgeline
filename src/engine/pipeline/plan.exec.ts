@@ -51,7 +51,7 @@ export const invokePlanner = async (
 ): Promise<{ result: ClaudeResult; phases: PhaseInfo[] }> => {
   const systemPrompt = resolveAgentPrompt("planner.md")
   const userPrompt = assembleUserPrompt(config)
-  const { onStdout, flush } = createDisplayCallbacks()
+  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
 
   try {
     const result = await invokeClaude({

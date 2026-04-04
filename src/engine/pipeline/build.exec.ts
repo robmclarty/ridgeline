@@ -69,7 +69,7 @@ export const invokeBuilder = async (
 ): Promise<ClaudeResult> => {
   const systemPrompt = resolveAgentPrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
-  const { onStdout, flush } = createDisplayCallbacks()
+  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: config.worktreePath ?? process.cwd() })
 
   const builtinAgents = discoverBuiltinAgents()
   const agents = buildAgentsFlag(builtinAgents)

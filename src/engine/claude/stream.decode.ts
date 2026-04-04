@@ -135,6 +135,8 @@ export const extractResult = (ndjsonStdout: string): ClaudeResult => {
 export interface DisplayCallbackOptions {
   /** Suppress fenced JSON blocks (```json ... ```) from display output. */
   suppressJsonBlock?: boolean
+  /** When set, strip this prefix from tool-call file paths so the display shows relative paths. */
+  projectRoot?: string
 }
 
 const RESUME_DEBOUNCE_MS = 200
@@ -201,8 +203,13 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
       writeText(event.text)
       scheduleResume()
     } else if (event.type === "tool_use") {
-      const line = event.summary
-        ? `[${event.tool}] ${event.summary}`
+      let summary = event.summary
+      if (summary && opts?.projectRoot && summary.startsWith(opts.projectRoot)) {
+        summary = summary.slice(opts.projectRoot.length)
+        if (summary.startsWith("/")) summary = summary.slice(1)
+      }
+      const line = summary
+        ? `[${event.tool}] ${summary}`
         : `[${event.tool}]`
       spinner.printAbove(line)
       spinner.setDetail(event.tool)

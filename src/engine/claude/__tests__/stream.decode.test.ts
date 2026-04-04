@@ -390,6 +390,79 @@ describe("streamParser", () => {
       process.stderr.isTTY = origIsTTY as never
     })
 
+    it("strips projectRoot prefix from tool summary when set", () => {
+      const origIsTTY = process.stderr.isTTY
+      process.stderr.isTTY = true as never
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+      const { onStdout, flush } = createDisplayCallbacks({ projectRoot: "/home/user/project" })
+
+      const toolEvent = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Read", input: { file_path: "/home/user/project/src/index.ts" } }],
+        },
+      })
+      onStdout(toolEvent + "\n")
+
+      const stderrCalls = stderrSpy.mock.calls.map((c) => c[0] as string)
+      const toolLine = stderrCalls.find((c) => c.includes("[Read]"))
+      expect(toolLine).toBeDefined()
+      expect(toolLine).toContain("src/index.ts")
+      expect(toolLine).not.toContain("/home/user/project")
+
+      flush()
+      stderrSpy.mockRestore()
+      process.stderr.isTTY = origIsTTY as never
+    })
+
+    it("leaves tool summary unchanged when path is outside projectRoot", () => {
+      const origIsTTY = process.stderr.isTTY
+      process.stderr.isTTY = true as never
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+      const { onStdout, flush } = createDisplayCallbacks({ projectRoot: "/home/user/project" })
+
+      const toolEvent = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Read", input: { file_path: "/etc/config.json" } }],
+        },
+      })
+      onStdout(toolEvent + "\n")
+
+      const stderrCalls = stderrSpy.mock.calls.map((c) => c[0] as string)
+      const toolLine = stderrCalls.find((c) => c.includes("[Read]"))
+      expect(toolLine).toBeDefined()
+      expect(toolLine).toContain("/etc/config.json")
+
+      flush()
+      stderrSpy.mockRestore()
+      process.stderr.isTTY = origIsTTY as never
+    })
+
+    it("leaves tool summary unchanged when projectRoot is not set", () => {
+      const origIsTTY = process.stderr.isTTY
+      process.stderr.isTTY = true as never
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+      const { onStdout, flush } = createDisplayCallbacks()
+
+      const toolEvent = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Read", input: { file_path: "/home/user/project/src/index.ts" } }],
+        },
+      })
+      onStdout(toolEvent + "\n")
+
+      const stderrCalls = stderrSpy.mock.calls.map((c) => c[0] as string)
+      const toolLine = stderrCalls.find((c) => c.includes("[Read]"))
+      expect(toolLine).toBeDefined()
+      expect(toolLine).toContain("/home/user/project/src/index.ts")
+
+      flush()
+      stderrSpy.mockRestore()
+      process.stderr.isTTY = origIsTTY as never
+    })
+
     it("prints tool name only when no summary available", () => {
       const origIsTTY = process.stderr.isTTY
       process.stderr.isTTY = true as never

@@ -91,27 +91,37 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
   console.log(sep)
 
   // Breakdown table
+  const formatRow = (name: string, attempts: string, build: string, review: string, cost: string): string =>
+    `  ${name.padEnd(24)}   ${attempts.padStart(4)}  ${build.padStart(8)}  ${review.padStart(8)}    ${cost.padStart(8)}`
+
   console.log("")
-  console.log("                           Attempts   Build     Review      Cost")
+  console.log(formatRow("", "Attempts", "Build", "Review", "Cost"))
   console.log(div)
 
   // Planning row
-  console.log(`  ${"Planning".padEnd(24)}                                  ${`$${planCost.toFixed(2)}`.padStart(8)}`)
+  console.log(formatRow("Planning", "", "", "", `$${planCost.toFixed(2)}`))
   console.log(div)
 
   // Per-phase rows
   for (const [phaseId, stats] of phaseStats) {
-    const name = phaseId.padEnd(24)
-    const attempts = String(stats.attempts).padStart(4)
-    const buildTime = formatDuration(stats.buildTime).padStart(8)
-    const reviewTime = formatDuration(stats.reviewTime).padStart(8)
-    const cost = `$${stats.cost.toFixed(2)}`.padStart(8)
-    console.log(`  ${name}   ${attempts}  ${buildTime}  ${reviewTime}    ${cost}`)
+    console.log(formatRow(
+      phaseId,
+      String(stats.attempts),
+      formatDuration(stats.buildTime),
+      formatDuration(stats.reviewTime),
+      `$${stats.cost.toFixed(2)}`,
+    ))
   }
   console.log(div)
 
   // Total row
-  console.log(`  ${"Total".padEnd(24)}   ${String(totalAttempts).padStart(4)}  ${formatDuration(totalBuildTime).padStart(8)}  ${formatDuration(totalReviewTime).padStart(8)}    ${`$${totalCost.toFixed(2)}`.padStart(8)}`)
+  console.log(formatRow(
+    "Total",
+    String(totalAttempts),
+    formatDuration(totalBuildTime),
+    formatDuration(totalReviewTime),
+    `$${totalCost.toFixed(2)}`,
+  ))
 }
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {

@@ -136,7 +136,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
       userPrompt += `\n\n## Existing Project Files\n${existingFileHints}`
     }
 
-    let display = createDisplayCallbacks()
+    let display = createDisplayCallbacks({ projectRoot: process.cwd() })
     let result = await invokeClaude({
       systemPrompt,
       userPrompt,
@@ -182,7 +182,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
           .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
           .join("\n\n")
 
-        display = createDisplayCallbacks()
+        display = createDisplayCallbacks({ projectRoot: process.cwd() })
         result = await invokeClaude({
           systemPrompt,
           userPrompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
@@ -209,7 +209,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     }
     console.log("\nGenerating build files...")
 
-    display = createDisplayCallbacks()
+    display = createDisplayCallbacks({ projectRoot: process.cwd() })
     await invokeClaude({
       systemPrompt,
       userPrompt: `Generate the build input files now. Write them to: ${buildDir}/\n\nUse the Write tool to create spec.md, constraints.md, and optionally taste.md in that directory.`,
