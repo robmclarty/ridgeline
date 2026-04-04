@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.22
+
+- Disable greywall credential protection (`--no-credential-protection`) to fix OAuth 403 errors
+- Simplify greywall invocation to `--auto-profile` only, relying on the built-in Claude profile
+
 ## 0.2.21
 
 - Use greywall `--auto-profile` to apply the built-in Claude profile, fixing sandbox auth hangs on macOS
