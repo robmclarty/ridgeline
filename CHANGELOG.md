@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2
+
+- Rename `dryRun.ts` and `dryRun.test.ts` to kebab-case (`dry-run.ts`, `dry-run.test.ts`) for consistent file naming
+
 ## 0.3.1
 
 - Remove prompt-based network guard hook now that greywall handles sandboxing at the OS level
