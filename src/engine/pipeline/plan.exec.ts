@@ -1,23 +1,9 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
-import { invokeClaude } from "../claude/claude.exec"
-import { createDisplayCallbacks } from "../claude/stream.decode"
-import { scanPhases } from "../../store/phases"
-import { printError } from "../../ui/output"
+import { RidgelineConfig } from "../../types"
 
-const resolveAgentPrompt = (filename: string): string => {
-  // Try dist/agents/core/ first (installed package), then src/agents/core/ (development)
-  const distPath = path.join(__dirname, "..", "agents", "core", filename)
-  if (fs.existsSync(distPath)) return fs.readFileSync(distPath, "utf-8")
-  const srcPath = path.join(__dirname, "..", "..", "agents", "core", filename)
-  if (fs.existsSync(srcPath)) return fs.readFileSync(srcPath, "utf-8")
-  // Fallback: relative to project root
-  const rootPath = path.join(__dirname, "..", "..", "..", "src", "agents", "core", filename)
-  return fs.readFileSync(rootPath, "utf-8")
-}
-
-const assembleUserPrompt = (config: RidgelineConfig): string => {
+/** Assemble the shared portion of the user prompt: spec, constraints, taste, target model. */
+export const assembleBaseUserPrompt = (config: RidgelineConfig): string => {
   const sections: string[] = []
 
   const specPath = path.join(config.buildDir, "spec.md")
@@ -37,48 +23,6 @@ const assembleUserPrompt = (config: RidgelineConfig): string => {
 
   sections.push("## Target Model\n")
   sections.push(`The builder will use the \`${config.model}\` model.`)
-  sections.push("")
-
-  sections.push("## Output Directory\n")
-  sections.push(`Write phase spec files to: ${config.phasesDir}`)
-  sections.push("Use the naming convention: 01-<slug>.md, 02-<slug>.md, etc.")
 
   return sections.join("\n")
-}
-
-export const invokePlanner = async (
-  config: RidgelineConfig
-): Promise<{ result: ClaudeResult; phases: PhaseInfo[] }> => {
-  const systemPrompt = resolveAgentPrompt("planner.md")
-  const userPrompt = assembleUserPrompt(config)
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
-
-  try {
-    const result = await invokeClaude({
-      systemPrompt,
-      userPrompt,
-      model: config.model,
-      allowedTools: ["Write"],
-      cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      onStdout,
-      onStderr: (text) => {
-        const lower = text.toLowerCase()
-        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
-          printError(`claude stderr: ${text.trim()}`)
-        }
-      },
-    })
-
-    // Scan for generated phase files
-    const phases = scanPhases(config.phasesDir)
-
-    if (phases.length === 0) {
-      throw new Error("Planner did not generate any phase files")
-    }
-
-    return { result, phases }
-  } finally {
-    flush()
-  }
 }

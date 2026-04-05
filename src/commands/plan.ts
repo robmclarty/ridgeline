@@ -4,7 +4,7 @@ import { RidgelineConfig } from "../types"
 import { printInfo } from "../ui/output"
 import { logTrajectory, makeTrajectoryEntry } from "../store/trajectory"
 import { recordCost } from "../store/budget"
-import { invokePlanner } from "../engine/pipeline/plan.exec"
+import { invokePlanner } from "../engine/pipeline/ensemble.exec"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   const specPath = path.join(config.buildDir, "spec.md")
@@ -22,18 +22,25 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   printInfo("Running planner...")
   logTrajectory(config.buildDir, makeTrajectoryEntry("plan_start", null, "Planning started"))
 
-  const { result, phases } = await invokePlanner(config)
+  const { phases, ensemble } = await invokePlanner(config)
+
+  // Record costs for each specialist
+  for (let i = 0; i < ensemble.specialistResults.length; i++) {
+    recordCost(config.buildDir, "plan", "specialist", i, ensemble.specialistResults[i])
+  }
+  recordCost(config.buildDir, "plan", "synthesizer", 0, ensemble.synthesizerResult)
 
   logTrajectory(config.buildDir, makeTrajectoryEntry(
     "plan_complete", null, `Generated ${phases.length} phases`,
     {
-      duration: result.durationMs,
-      tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-      costUsd: result.costUsd,
+      duration: ensemble.totalDurationMs,
+      tokens: {
+        input: ensemble.specialistResults.reduce((sum, r) => sum + r.usage.inputTokens, 0) + ensemble.synthesizerResult.usage.inputTokens,
+        output: ensemble.specialistResults.reduce((sum, r) => sum + r.usage.outputTokens, 0) + ensemble.synthesizerResult.usage.outputTokens,
+      },
+      costUsd: ensemble.totalCostUsd,
     }
   ))
-
-  recordCost(config.buildDir, "plan", "planner", 0, result)
 
   // Print summary
   printInfo(`\nPlan complete: ${phases.length} phases generated\n`)
@@ -43,6 +50,6 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
     const title = titleMatch ? titleMatch[1] : phase.id
     printInfo(`  ${phase.id}: ${title}`)
   }
-  printInfo(`\nCost: $${result.costUsd.toFixed(2)}`)
+  printInfo(`\nCost: $${ensemble.totalCostUsd.toFixed(2)} (${ensemble.specialistResults.length} specialists + synthesizer)`)
   printInfo(`\nNext: ridgeline dry-run ${config.buildName}`)
 }

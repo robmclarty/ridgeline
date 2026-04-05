@@ -10,7 +10,7 @@ export {
 export { invokeBuilder } from './pipeline/build.exec'
 export { type InvokeOptions, invokeClaude } from './claude/claude.exec'
 export { runPhase } from './pipeline/phase.sequence'
-export { invokePlanner } from './pipeline/plan.exec'
+export { invokePlanner } from './pipeline/ensemble.exec'
 export {
   type PluginDir,
   discoverPluginDirs,

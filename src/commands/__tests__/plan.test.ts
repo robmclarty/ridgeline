@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import type { RidgelineConfig, ClaudeResult, PhaseInfo } from "../../types"
+import type { RidgelineConfig, ClaudeResult, PhaseInfo, EnsemblePlanResult } from "../../types"
 
 vi.mock("../../ui/output", () => ({
   printInfo: vi.fn(),
@@ -25,12 +25,12 @@ vi.mock("../../store/budget", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../engine/pipeline/plan.exec", () => ({
+vi.mock("../../engine/pipeline/ensemble.exec", () => ({
   invokePlanner: vi.fn(),
 }))
 
 import { runPlan } from "../plan"
-import { invokePlanner } from "../../engine/pipeline/plan.exec"
+import { invokePlanner } from "../../engine/pipeline/ensemble.exec"
 
 const makeResult = (): ClaudeResult => ({
   success: true,
@@ -96,9 +96,18 @@ describe("commands/plan", () => {
     // Create the phase file so readFileSync in the summary works
     fs.writeFileSync(phases[0].filepath, "# Scaffold\n\nSetup the project")
 
+    const synthResult = makeResult()
+    const ensemble: EnsemblePlanResult = {
+      specialistResults: [makeResult(), makeResult(), makeResult()],
+      synthesizerResult: synthResult,
+      totalCostUsd: 2.00,
+      totalDurationMs: 15000,
+    }
+
     vi.mocked(invokePlanner).mockResolvedValue({
-      result: makeResult(),
+      result: synthResult,
       phases,
+      ensemble,
     })
 
     await runPlan(config)

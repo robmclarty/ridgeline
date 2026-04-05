@@ -84,10 +84,36 @@ export type ReviewVerdict = {
   suggestions: ReviewIssue[]
 }
 
+// A single proposed phase from a specialist planner
+export type SpecialistPhaseProposal = {
+  title: string
+  slug: string
+  goal: string
+  acceptanceCriteria: string[]
+  specReference: string
+  rationale: string
+}
+
+// Full proposal from one specialist planner
+export type SpecialistProposal = {
+  perspective: string
+  summary: string
+  phases: SpecialistPhaseProposal[]
+  tradeoffs: string
+}
+
+// Aggregate result from ensemble planning
+export type EnsemblePlanResult = {
+  specialistResults: ClaudeResult[]
+  synthesizerResult: ClaudeResult
+  totalCostUsd: number
+  totalDurationMs: number
+}
+
 // Single entry in budget.json
 export type BudgetEntry = {
   phase: string
-  role: "planner" | "builder" | "reviewer"
+  role: "planner" | "builder" | "reviewer" | "specialist" | "synthesizer"
   attempt: number
   costUsd: number
   inputTokens: number
