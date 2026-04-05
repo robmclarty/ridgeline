@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.9
+
+- Increase tool summary truncation limit from 80 to 200 characters so file names are visible in build output
+- Strip project root from Bash command summaries, not just file-path tools
+- Add `nodejs.org`, `objects.githubusercontent.com`, `raw.githubusercontent.com` to default sandbox network allowlist
+- Support `"*"` wildcard in network allowlist for unrestricted internet access
+
 ## 0.3.8
 
 - Fix `--json-schema` result extraction: the Claude CLI uses a synthetic `StructuredOutput` tool, so JSON responses live in `tool_use.input`, not the result field
