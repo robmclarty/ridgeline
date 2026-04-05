@@ -164,26 +164,42 @@ const buildSpecialistSystemPrompt = (basePrompt: string, overlay: string): strin
   // Strip YAML frontmatter from the base prompt
   const withoutFrontmatter = basePrompt.replace(/^---\n[\s\S]*?\n---\n*/, "")
 
-  // Remove the output-related sections that reference the Write tool and file naming
-  const withoutOutput = withoutFrontmatter
+  // Remove sections that conflict with JSON output:
+  // - "Your Task" tells the model to write markdown files
+  // - "File Naming" describes filesystem output conventions
+  // - "Phase Spec Format" shows a markdown template
+  // - "Process" describes a file-writing workflow
+  const stripped = withoutFrontmatter
+    .replace(/## Your Task[\s\S]*?(?=## Phase Sizing)/, "")
     .replace(/## File Naming[\s\S]*?(?=## Phase Spec Format)/, "")
+    .replace(/## Phase Spec Format[\s\S]*?(?=## Rules)/, "")
     .replace(/## Process[\s\S]*$/, "")
 
   const jsonDirective = [
     "",
-    "## Output Format",
+    "## Your Task",
     "",
-    "Return your plan as a single JSON object matching the provided schema.",
-    "Do not use the Write tool. Do not produce markdown files.",
-    "Include your perspective label, a brief summary, your proposed phases, and the tradeoffs of your approach.",
+    "Decompose the spec into sequential phases. Return your plan as a single JSON object.",
+    "Do NOT use the Write tool. Do NOT produce markdown. Do NOT write prose or commentary.",
+    "Your entire response must be valid JSON matching the provided schema.",
+    "",
+    "Each phase in your JSON must include:",
+    "- `title`: Phase name",
+    "- `slug`: Kebab-case identifier for file naming",
+    "- `goal`: 1-3 paragraphs describing what this phase accomplishes (business/product terms, no implementation details)",
+    "- `acceptanceCriteria`: Array of concrete, verifiable outcomes",
+    "- `specReference`: Relevant spec sections",
+    "- `rationale`: Why this phase boundary exists",
+    "",
+    "Also include your `perspective` label, a `summary` of your approach, and the `tradeoffs` of your plan.",
   ].join("\n")
 
-  return `${overlay}\n\n${withoutOutput}${jsonDirective}`
+  return `${overlay}\n\n${stripped}${jsonDirective}`
 }
 
 /** Assemble the user prompt for a specialist (no output directory). */
 const assembleSpecialistUserPrompt = (config: RidgelineConfig): string => {
-  return assembleBaseUserPrompt(config) + "\n\nReturn your proposed plan as structured JSON."
+  return assembleBaseUserPrompt(config) + "\n\nIMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON."
 }
 
 /** Assemble the user prompt for the synthesizer, including all proposals. */

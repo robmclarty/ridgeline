@@ -47,11 +47,3 @@ export const passVerdict: ReviewVerdict = {
   issues: [],
   suggestions: [],
 }
-
-export const failVerdict: ReviewVerdict = {
-  passed: false,
-  summary: "Issues found",
-  criteriaResults: [{ criterion: 1, passed: false, notes: "bad" }],
-  issues: [{ description: "thing is broken", severity: "blocking" }],
-  suggestions: [{ description: "fix it", severity: "suggestion" }],
-}
