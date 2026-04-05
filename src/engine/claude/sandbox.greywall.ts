@@ -2,7 +2,7 @@ import { execSync } from "node:child_process"
 import { writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
-import { SandboxProvider } from "./sandbox"
+import { SandboxProvider } from "./sandbox.types"
 
 export const greywallProvider: SandboxProvider = {
   name: "greywall",

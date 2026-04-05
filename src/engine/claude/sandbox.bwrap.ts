@@ -1,4 +1,4 @@
-import { SandboxProvider } from "./sandbox"
+import { SandboxProvider } from "./sandbox.types"
 
 export const bwrapProvider: SandboxProvider = {
   name: "bwrap",

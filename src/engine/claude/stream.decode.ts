@@ -132,7 +132,7 @@ export const extractResult = (ndjsonStdout: string): ClaudeResult => {
   throw new Error("No result event found in stream-json output")
 }
 
-export interface DisplayCallbackOptions {
+interface DisplayCallbackOptions {
   /** Suppress fenced JSON blocks (```json ... ```) from display output. */
   suppressJsonBlock?: boolean
   /** When set, strip this prefix from tool-call file paths so the display shows relative paths. */

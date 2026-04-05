@@ -1,14 +1,8 @@
 import { execFileSync } from "node:child_process"
 import { bwrapProvider } from "./sandbox.bwrap"
 import { greywallProvider } from "./sandbox.greywall"
-
-export type SandboxProvider = {
-  name: "bwrap" | "greywall"
-  command: string
-  buildArgs: (repoRoot: string, networkAllowlist: string[], additionalWritePaths?: string[]) => string[]
-  /** Check if the sandbox is ready to use. Returns null if ready, or an error message. */
-  checkReady?: () => string | null
-}
+import type { SandboxProvider } from "./sandbox.types"
+export type { SandboxProvider } from "./sandbox.types"
 
 const isAvailable = (cmd: string): boolean => {
   try {
@@ -19,7 +13,7 @@ const isAvailable = (cmd: string): boolean => {
   }
 }
 
-export type SandboxDetectionResult = {
+type SandboxDetectionResult = {
   provider: SandboxProvider | null
   warning: string | null
 }

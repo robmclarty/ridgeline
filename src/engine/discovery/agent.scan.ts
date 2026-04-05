@@ -33,7 +33,7 @@ export const parseFrontmatter = (content: string): Frontmatter | null => {
   }
 }
 
-export const resolveSpecialistsDir = (): string | null => {
+const resolveSpecialistsDir = (): string | null => {
   const candidates = [
     path.join(__dirname, "agents", "specialists"),
     path.join(__dirname, "..", "agents", "specialists"),

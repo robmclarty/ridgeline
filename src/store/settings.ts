@@ -22,7 +22,7 @@ export const DEFAULT_NETWORK_ALLOWLIST: string[] = [
   "bitbucket.org",
 ]
 
-export type RidgelineSettings = {
+type RidgelineSettings = {
   network?: {
     allowlist?: string[]
   }

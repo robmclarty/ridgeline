@@ -85,7 +85,7 @@ export type ReviewVerdict = {
 }
 
 // A single proposed phase from a specialist planner
-export type SpecialistPhaseProposal = {
+type SpecialistPhaseProposal = {
   title: string
   slug: string
   goal: string

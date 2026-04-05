@@ -15,7 +15,6 @@ export {
   PHASE_FILENAME_PATTERN,
   isPhaseFile,
   parsePhaseFilename,
-  type PhaseContent,
   parsePhaseContent,
   scanPhases,
 } from './phases'
