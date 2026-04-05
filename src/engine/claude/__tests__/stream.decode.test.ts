@@ -119,8 +119,8 @@ describe("streamParser", () => {
       expect(event).toEqual({ type: "tool_use", tool: "Grep", summary: "TODO" })
     })
 
-    it("truncates long summaries to 80 characters", () => {
-      const longCommand = "a".repeat(100)
+    it("truncates long summaries to 200 characters", () => {
+      const longCommand = "a".repeat(250)
       const line = JSON.stringify({
         type: "assistant",
         message: {
@@ -130,8 +130,8 @@ describe("streamParser", () => {
       const event = parseStreamLine(line)
       expect(event.type).toBe("tool_use")
       if (event.type === "tool_use") {
-        expect(event.summary!.length).toBeLessThanOrEqual(80)
-        expect(event.summary).toBe("a".repeat(79) + "…")
+        expect(event.summary!.length).toBeLessThanOrEqual(200)
+        expect(event.summary).toBe("a".repeat(199) + "…")
       }
     })
 
@@ -522,6 +522,31 @@ describe("streamParser", () => {
       const toolLine = stderrCalls.find((c) => c.includes("[Read]"))
       expect(toolLine).toBeDefined()
       expect(toolLine).toContain("/home/user/project/src/index.ts")
+
+      flush()
+      stderrSpy.mockRestore()
+      process.stderr.isTTY = origIsTTY as never
+    })
+
+    it("strips projectRoot from Bash command summaries", () => {
+      const origIsTTY = process.stderr.isTTY
+      process.stderr.isTTY = true as never
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true)
+      const { onStdout, flush } = createDisplayCallbacks({ projectRoot: "/home/user/project" })
+
+      const toolEvent = JSON.stringify({
+        type: "assistant",
+        message: {
+          content: [{ type: "tool_use", id: "t1", name: "Bash", input: { command: "cat /home/user/project/src/index.ts" } }],
+        },
+      })
+      onStdout(toolEvent + "\n")
+
+      const stderrCalls = stderrSpy.mock.calls.map((c) => c[0] as string)
+      const toolLine = stderrCalls.find((c) => c.includes("[Bash]"))
+      expect(toolLine).toBeDefined()
+      expect(toolLine).toContain("src/index.ts")
+      expect(toolLine).not.toContain("/home/user/project/")
 
       flush()
       stderrSpy.mockRestore()

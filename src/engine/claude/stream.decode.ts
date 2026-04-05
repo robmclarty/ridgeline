@@ -14,7 +14,7 @@ export type StreamEvent =
  * - `{"type":"assistant","subtype":"text","text":"..."}` — streamed model text
  * - `{"type":"result","result":"...","total_cost_usd":...}` — final result with usage
  */
-const MAX_SUMMARY_LEN = 80
+const MAX_SUMMARY_LEN = 200
 
 const summarizeToolInput = (input: Record<string, unknown>): string | undefined => {
   // Pick the most informative field per tool type
@@ -245,9 +245,9 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
       scheduleResume()
     } else if (event.type === "tool_use") {
       let summary = event.summary
-      if (summary && opts?.projectRoot && summary.startsWith(opts.projectRoot)) {
-        summary = summary.slice(opts.projectRoot.length)
-        if (summary.startsWith("/")) summary = summary.slice(1)
+      if (summary && opts?.projectRoot) {
+        const root = opts.projectRoot.endsWith("/") ? opts.projectRoot : opts.projectRoot + "/"
+        summary = summary.replaceAll(root, "")
       }
       const line = summary
         ? `[${event.tool}] ${summary}`

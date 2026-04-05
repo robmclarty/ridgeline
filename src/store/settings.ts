@@ -11,6 +11,9 @@ export const CLAUDE_REQUIRED_DOMAINS: string[] = [
 export const DEFAULT_NETWORK_ALLOWLIST: string[] = [
   ...CLAUDE_REQUIRED_DOMAINS,
   "registry.npmjs.org",
+  "nodejs.org",
+  "objects.githubusercontent.com",
+  "raw.githubusercontent.com",
   "pypi.org",
   "files.pythonhosted.org",
   "crates.io",
@@ -43,6 +46,8 @@ export const resolveNetworkAllowlist = (ridgelineDir: string): string[] => {
   const base = (settings.network?.allowlist && settings.network.allowlist.length > 0)
     ? settings.network.allowlist
     : [...DEFAULT_NETWORK_ALLOWLIST]
+  // Wildcard means unrestricted — return empty so greywall omits network filtering
+  if (base.includes("*")) return []
   // Always include Claude's required domains even if the user overrides the list
   const merged = new Set([...CLAUDE_REQUIRED_DOMAINS, ...base])
   return [...merged]

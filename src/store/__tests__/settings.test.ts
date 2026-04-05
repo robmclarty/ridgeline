@@ -55,6 +55,15 @@ describe("settings", () => {
       expect(allowlist).toContain("custom.registry.com")
     })
 
+    it("returns empty array when allowlist contains wildcard", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ network: { allowlist: ["*"] } })
+      )
+      const allowlist = resolveNetworkAllowlist(tmpDir)
+      expect(allowlist).toEqual([])
+    })
+
     it("returns defaults when network key is present but allowlist is omitted", () => {
       fs.writeFileSync(
         path.join(tmpDir, "settings.json"),
@@ -74,8 +83,14 @@ describe("settings", () => {
 
     it("contains common package registries", () => {
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("registry.npmjs.org")
+      expect(DEFAULT_NETWORK_ALLOWLIST).toContain("nodejs.org")
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("pypi.org")
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("crates.io")
+    })
+
+    it("contains GitHub asset domains for binary downloads", () => {
+      expect(DEFAULT_NETWORK_ALLOWLIST).toContain("objects.githubusercontent.com")
+      expect(DEFAULT_NETWORK_ALLOWLIST).toContain("raw.githubusercontent.com")
     })
 
     it("contains common git hosts", () => {
