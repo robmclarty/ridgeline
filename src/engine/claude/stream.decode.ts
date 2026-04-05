@@ -119,17 +119,35 @@ export const createStreamHandler = (
  */
 export const extractResult = (ndjsonStdout: string): ClaudeResult => {
   const lines = ndjsonStdout.trim().split("\n")
-  for (let i = lines.length - 1; i >= 0; i--) {
+
+  // Collect assistant text content as fallback for when result field is empty
+  // (e.g., --json-schema puts structured output in assistant messages, not the result field)
+  const textParts: string[] = []
+
+  let resultEvent: ClaudeResult | null = null
+  for (const line of lines) {
     try {
-      const parsed = JSON.parse(lines[i])
-      if (parsed.type === "result") {
-        return parseClaudeResult(parsed)
+      const event = parseStreamLine(line)
+      if (event.type === "text") {
+        textParts.push(event.text)
+      } else if (event.type === "result") {
+        resultEvent = event.result
       }
     } catch {
       // Not valid JSON, skip
     }
   }
-  throw new Error("No result event found in stream-json output")
+
+  if (!resultEvent) {
+    throw new Error("No result event found in stream-json output")
+  }
+
+  // If result field is empty but we collected assistant text, use that
+  if (!resultEvent.result && textParts.length > 0) {
+    resultEvent.result = textParts.join("")
+  }
+
+  return resultEvent
 }
 
 interface DisplayCallbackOptions {

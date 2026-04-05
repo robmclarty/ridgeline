@@ -270,6 +270,26 @@ describe("streamParser", () => {
       expect(result.result).toBe("All done")
     })
 
+    it("uses assistant text as fallback when result field is empty", () => {
+      const emptyResult = { ...sampleResult, result: "" }
+      const stdout =
+        '{"type":"assistant","subtype":"text","text":"{\\"answer\\":\\"hello\\"}"}\n' +
+        JSON.stringify(emptyResult) + "\n"
+
+      const result = extractResult(stdout)
+      expect(result.result).toBe('{"answer":"hello"}')
+      expect(result.costUsd).toBe(0.05)
+    })
+
+    it("preserves result field when it has content", () => {
+      const stdout =
+        '{"type":"assistant","subtype":"text","text":"streamed text"}\n' +
+        JSON.stringify(sampleResult) + "\n"
+
+      const result = extractResult(stdout)
+      expect(result.result).toBe("All done")
+    })
+
     it("throws if no result event found", () => {
       const stdout = '{"type":"assistant","subtype":"text","text":"hi"}\n'
       expect(() => extractResult(stdout)).toThrow("No result event found")
