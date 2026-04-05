@@ -120,18 +120,41 @@ export const createStreamHandler = (
 export const extractResult = (ndjsonStdout: string): ClaudeResult => {
   const lines = ndjsonStdout.trim().split("\n")
 
-  // Collect assistant text content as fallback for when result field is empty
-  // (e.g., --json-schema puts structured output in assistant messages, not the result field)
+  // Collect fallback content for when result field is empty.
+  // --json-schema uses a synthetic StructuredOutput tool_use whose input IS the JSON.
+  // Text content is also collected as a secondary fallback.
   const textParts: string[] = []
+  let structuredOutput: string | null = null
 
   let resultEvent: ClaudeResult | null = null
   for (const line of lines) {
     try {
-      const event = parseStreamLine(line)
-      if (event.type === "text") {
-        textParts.push(event.text)
-      } else if (event.type === "result") {
-        resultEvent = event.result
+      const parsed = JSON.parse(line)
+      if (parsed.type === "result") {
+        resultEvent = parseClaudeResult(parsed)
+        continue
+      }
+
+      // Check for StructuredOutput tool_use in assistant messages
+      if (parsed.type === "assistant" && parsed.message) {
+        const content = (parsed.message as Record<string, unknown>).content as Array<Record<string, unknown>> | undefined
+        if (Array.isArray(content)) {
+          for (const block of content) {
+            if (block.type === "tool_use" && block.name === "StructuredOutput" && block.input != null) {
+              structuredOutput = typeof block.input === "string"
+                ? block.input
+                : JSON.stringify(block.input)
+            }
+            if (block.type === "text" && typeof block.text === "string") {
+              textParts.push(block.text as string)
+            }
+          }
+        }
+      }
+
+      // Legacy format text
+      if (parsed.type === "assistant" && parsed.subtype === "text" && typeof parsed.text === "string") {
+        textParts.push(parsed.text as string)
       }
     } catch {
       // Not valid JSON, skip
@@ -142,9 +165,9 @@ export const extractResult = (ndjsonStdout: string): ClaudeResult => {
     throw new Error("No result event found in stream-json output")
   }
 
-  // If result field is empty but we collected assistant text, use that
-  if (!resultEvent.result && textParts.length > 0) {
-    resultEvent.result = textParts.join("")
+  // Populate result from fallbacks: StructuredOutput first, then text content
+  if (!resultEvent.result) {
+    resultEvent.result = structuredOutput ?? (textParts.length > 0 ? textParts.join("") : "")
   }
 
   return resultEvent

@@ -281,6 +281,51 @@ describe("streamParser", () => {
       expect(result.costUsd).toBe(0.05)
     })
 
+    it("extracts StructuredOutput tool_use input when result is empty", () => {
+      const emptyResult = { ...sampleResult, result: "" }
+      const assistantMsg = {
+        type: "assistant",
+        message: {
+          content: [
+            { type: "thinking", thinking: "planning..." },
+            {
+              type: "tool_use",
+              name: "StructuredOutput",
+              input: { perspective: "simplicity", summary: "One phase", phases: [], tradeoffs: "none" },
+            },
+          ],
+        },
+      }
+      const stdout =
+        JSON.stringify(assistantMsg) + "\n" +
+        JSON.stringify(emptyResult) + "\n"
+
+      const result = extractResult(stdout)
+      const parsed = JSON.parse(result.result)
+      expect(parsed.perspective).toBe("simplicity")
+      expect(parsed.summary).toBe("One phase")
+    })
+
+    it("prefers StructuredOutput over text fallback", () => {
+      const emptyResult = { ...sampleResult, result: "" }
+      const assistantText = { type: "assistant", subtype: "text", text: "some prose" }
+      const assistantMsg = {
+        type: "assistant",
+        message: {
+          content: [
+            { type: "tool_use", name: "StructuredOutput", input: { answer: 42 } },
+          ],
+        },
+      }
+      const stdout =
+        JSON.stringify(assistantText) + "\n" +
+        JSON.stringify(assistantMsg) + "\n" +
+        JSON.stringify(emptyResult) + "\n"
+
+      const result = extractResult(stdout)
+      expect(JSON.parse(result.result)).toEqual({ answer: 42 })
+    })
+
     it("preserves result field when it has content", () => {
       const stdout =
         '{"type":"assistant","subtype":"text","text":"streamed text"}\n' +
