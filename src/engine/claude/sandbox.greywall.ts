@@ -1,8 +1,21 @@
 import { execSync } from "node:child_process"
 import { writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { tmpdir } from "node:os"
+import { tmpdir, homedir } from "node:os"
 import { SandboxProvider } from "./sandbox.types"
+
+/** Directories package managers need write access to for caching. */
+const packageManagerCachePaths = (): string[] => {
+  const home = homedir()
+  return [
+    join(home, ".npm"),           // npm
+    join(home, ".cache"),         // pip, yarn berry, pnpm, misc
+    join(home, ".yarn"),          // yarn classic
+    join(home, ".pnpm-store"),    // pnpm
+    join(home, ".cargo"),         // cargo
+    join(home, ".local", "share"), // pip user installs, various tools
+  ]
+}
 
 export const greywallProvider: SandboxProvider = {
   name: "greywall",
@@ -25,7 +38,7 @@ export const greywallProvider: SandboxProvider = {
     }
   },
   buildArgs(repoRoot: string, networkAllowlist: string[], additionalWritePaths?: string[]): string[] {
-    const writePaths = [repoRoot, "/tmp", ...(additionalWritePaths ?? [])]
+    const writePaths = [repoRoot, "/tmp", ...packageManagerCachePaths(), ...(additionalWritePaths ?? [])]
     const settings: Record<string, unknown> = {
       filesystem: {
         allowWrite: writePaths,

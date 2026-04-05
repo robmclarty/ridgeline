@@ -22,7 +22,7 @@ describe("greywallProvider", () => {
     expect(greywallProvider.command).toBe("greywall")
   })
 
-  it("writes a settings file with allowWrite for repo and /tmp", () => {
+  it("writes a settings file with allowWrite for repo, /tmp, and package manager caches", () => {
     greywallProvider.buildArgs("/my/repo", [])
 
     expect(fs.writeFileSync).toHaveBeenCalledOnce()
@@ -31,6 +31,15 @@ describe("greywallProvider", () => {
     const settings = JSON.parse(content as string)
     expect(settings.filesystem.allowWrite).toContain("/my/repo")
     expect(settings.filesystem.allowWrite).toContain("/tmp")
+    // Package manager cache directories
+    expect(settings.filesystem.allowWrite).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining(".npm"),
+        expect.stringContaining(".cache"),
+        expect.stringContaining(".yarn"),
+        expect.stringContaining(".cargo"),
+      ])
+    )
   })
 
   it("passes --auto-profile, --no-credential-protection, --settings, and -- separator", () => {
