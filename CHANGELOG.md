@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.4
+
+- Add `--context` flag to the `build` command for passing extra context to builder and planner prompts
+
 ## 0.3.3
 
 - Resolve all fallow duplication and complexity errors: extract shared pipeline boilerplate, reduce cognitive complexity in parseVerdict/runBuild/runSpec, and deduplicate CLI and worktree init logic
