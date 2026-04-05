@@ -6,5 +6,13 @@
     { "file": "src/engine/discovery/plugin.scan.ts", "exports": ["PluginDir"] },
     { "file": "src/store/phases.ts", "exports": ["PhaseContent"] },
     { "file": "src/ui/spinner.ts", "exports": ["Spinner"] }
-  ]
+  ],
+  "duplicates": {
+    "ignore": ["**/__tests__/**"],
+    "minLines": 10
+  },
+  "health": {
+    "maxCyclomatic": 25,
+    "maxCognitive": 30
+  }
 }

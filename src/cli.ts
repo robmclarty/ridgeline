@@ -2,11 +2,26 @@
 
 import { Command } from "commander"
 import { loadVersion, resolveConfig } from "./config"
+import { RidgelineConfig } from "./types"
 import { askBuildName } from "./ui/prompt"
 import { runSpec } from "./commands/spec"
 import { runPlan } from "./commands/plan"
 import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
+
+type Opts = Record<string, string | boolean | undefined>
+
+const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
+  async (buildName: string | undefined, opts: Opts) => {
+    if (!buildName) buildName = await askBuildName()
+    try {
+      const config = resolveConfig(buildName!, opts)
+      await fn(config)
+    } catch (err) {
+      console.error(`Error: ${err}`)
+      process.exit(1)
+    }
+  }
 
 const program = new Command()
 
@@ -20,7 +35,7 @@ program
   .description("Scaffold build input files from a description or existing spec")
   .option("--model <name>", "Model for spec assistant", "opus")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .action(async (buildName: string | undefined, input: string | undefined, opts: Record<string, string | boolean | undefined>) => {
+  .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     if (!buildName) buildName = await askBuildName()
     if (!buildName) {
       console.error("Build name is required")
@@ -45,16 +60,7 @@ program
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
-  .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
-    if (!buildName) buildName = await askBuildName()
-    try {
-      const config = resolveConfig(buildName!, opts)
-      await runPlan(config)
-    } catch (err) {
-      console.error(`Error: ${err}`)
-      process.exit(1)
-    }
-  })
+  .action(withConfig(runPlan))
 
 program
   .command("dry-run [build-name]")
@@ -63,16 +69,7 @@ program
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
-  .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
-    if (!buildName) buildName = await askBuildName()
-    try {
-      const config = resolveConfig(buildName!, opts)
-      await runDryRun(config)
-    } catch (err) {
-      console.error(`Error: ${err}`)
-      process.exit(1)
-    }
-  })
+  .action(withConfig(runDryRun))
 
 program
   .command("build [build-name]")
@@ -86,16 +83,7 @@ program
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--unsafe", "Disable sandbox auto-detection")
-  .action(async (buildName: string | undefined, opts: Record<string, string | boolean | undefined>) => {
-    if (!buildName) buildName = await askBuildName()
-    try {
-      const config = resolveConfig(buildName!, opts)
-      await runBuild(config)
-    } catch (err) {
-      console.error(`Error: ${err}`)
-      process.exit(1)
-    }
-  })
+  .action(withConfig(runBuild))
 
 program
   .command("clean")

@@ -1,21 +1,11 @@
 import * as fs from "node:fs"
 import { RidgelineConfig } from "../types"
 import { printInfo } from "../ui/output"
-import { scanPhases, parsePhaseContent } from "../store/phases"
-import { runPlan } from "./plan"
+import { parsePhaseContent } from "../store/phases"
+import { ensurePhases } from "./build"
 
 export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
-  let phases = scanPhases(config.phasesDir)
-
-  if (phases.length === 0) {
-    printInfo("No phases found. Running planner first...\n")
-    await runPlan(config)
-    phases = scanPhases(config.phasesDir)
-  }
-
-  if (phases.length === 0) {
-    throw new Error("No phases generated")
-  }
+  const phases = await ensurePhases(config)
 
   console.log(`\n${"=".repeat(60)}`)
   console.log(`  Build: ${config.buildName}`)

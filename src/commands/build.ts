@@ -124,19 +124,51 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
   ))
 }
 
-export const runBuild = async (config: RidgelineConfig): Promise<void> => {
+export const ensurePhases = async (config: RidgelineConfig) => {
   let phases = scanPhases(config.phasesDir)
-
-  // Plan if no phases exist
   if (phases.length === 0) {
     printInfo("No phases found. Running planner first...\n")
     await runPlan(config)
     phases = scanPhases(config.phasesDir)
   }
-
   if (phases.length === 0) {
     throw new Error("No phases generated")
   }
+  return phases
+}
+
+const configureSandbox = (config: RidgelineConfig): void => {
+  if (config.unsafe) return
+  const { provider, warning } = detectSandbox()
+  config.sandboxProvider = provider
+  if (warning) {
+    printInfo(`Warning: ${warning}`)
+  } else if (provider) {
+    printInfo(`Sandbox: ${provider.name}`)
+  } else {
+    printInfo("Warning: no sandbox available (install greywall or bwrap)")
+  }
+}
+
+const setupWorktree = (repoRoot: string, config: RidgelineConfig): void => {
+  if (ensureGitRepo(repoRoot)) {
+    printInfo("Initialised git repo with initial commit")
+  }
+  if (validateWorktree(repoRoot, config.buildName)) {
+    config.worktreePath = getWorktreePath(repoRoot, config.buildName)
+    printInfo(`Resuming in worktree: ${config.worktreePath}`)
+  } else {
+    const existingPath = getWorktreePath(repoRoot, config.buildName)
+    if (fs.existsSync(existingPath)) {
+      removeWorktree(repoRoot, config.buildName)
+    }
+    config.worktreePath = createWorktree(repoRoot, config.buildName)
+    printInfo(`Worktree: ${config.worktreePath}`)
+  }
+}
+
+export const runBuild = async (config: RidgelineConfig): Promise<void> => {
+  const phases = await ensurePhases(config)
 
   // Load or init state
   let state = loadState(config.buildDir)
@@ -146,50 +178,21 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     saveState(config.buildDir, state)
   }
 
-  // On resume: reset retries for incomplete phases so they get full attempts
   if (isResume) {
     resetRetries(config.buildDir, state)
     const completedCount = state.phases.filter((p) => p.status === "complete").length
     printInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
   }
 
-  // Validate sandbox availability before starting phases
-  if (!config.unsafe) {
-    const { provider, warning } = detectSandbox()
-    config.sandboxProvider = provider
-    if (warning) {
-      printInfo(`Warning: ${warning}`)
-    } else if (provider) {
-      printInfo(`Sandbox: ${provider.name}`)
-    } else {
-      printInfo("Warning: no sandbox available (install greywall or bwrap)")
-    }
-  }
-
-  let completed = 0
-  let failed = 0
+  configureSandbox(config)
 
   printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
 
-  // Ensure we're in a git repo with at least one commit (needed for worktrees)
   const repoRoot = process.cwd()
-  if (ensureGitRepo(repoRoot)) {
-    printInfo("Initialised git repo with initial commit")
-  }
+  setupWorktree(repoRoot, config)
 
-  // Set up worktree
-  if (validateWorktree(repoRoot, config.buildName)) {
-    config.worktreePath = getWorktreePath(repoRoot, config.buildName)
-    printInfo(`Resuming in worktree: ${config.worktreePath}`)
-  } else {
-    // Clean up broken worktree if it exists
-    const existingPath = getWorktreePath(repoRoot, config.buildName)
-    if (fs.existsSync(existingPath)) {
-      removeWorktree(repoRoot, config.buildName)
-    }
-    config.worktreePath = createWorktree(repoRoot, config.buildName)
-    printInfo(`Worktree: ${config.worktreePath}`)
-  }
+  let completed = 0
+  let failed = 0
 
   // Run phases
   let nextPhaseState = getNextIncompletePhase(state)
@@ -205,18 +208,15 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
     if (result === "passed") {
       completed++
-      // Commit any uncommitted work in the worktree before merging
-      // (the sandbox prevents the builder from committing directly)
       if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
         commitAll(`ridgeline: ${phase.id}`, config.worktreePath)
       }
       reflectCommits(repoRoot, config.buildName)
     } else {
       failed++
-      break // Halt on failure
+      break
     }
 
-    // Budget check after phase
     if (config.maxBudgetUsd) {
       const budget = loadBudget(config.buildDir)
       if (budget.totalCostUsd > config.maxBudgetUsd) {

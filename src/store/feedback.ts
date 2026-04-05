@@ -71,63 +71,67 @@ const tryParseVerdict = (raw: unknown): ReviewVerdict | null => {
   }
 }
 
+// Find the end index of a balanced JSON object starting at position 0 in `text`.
+// Returns the index of the closing brace, or -1 if no balanced pair is found.
+const findBalancedBrace = (text: string): number => {
+  let depth = 0
+  let inString = false
+  let escape = false
+  for (let j = 0; j < text.length; j++) {
+    const ch = text[j]
+    if (escape) { escape = false; continue }
+    if (ch === "\\") { escape = true; continue }
+    if (ch === '"') { inString = !inString; continue }
+    if (inString) continue
+    if (ch === "{") depth++
+    if (ch === "}") {
+      depth--
+      if (depth === 0) return j
+    }
+  }
+  return -1
+}
+
+// Try to parse a JSON object starting at `text` as a ReviewVerdict.
+// First tries the full slice, then tries balanced brace extraction.
+const tryExtractVerdictAt = (text: string): ReviewVerdict | null => {
+  try {
+    return tryParseVerdict(JSON.parse(text))
+  } catch {
+    const end = findBalancedBrace(text)
+    if (end === -1) return null
+    try {
+      return tryParseVerdict(JSON.parse(text.slice(0, end + 1)))
+    } catch {
+      return null
+    }
+  }
+}
+
+const UNPARSEABLE_VERDICT: ReviewVerdict = {
+  passed: false,
+  summary: "Could not parse reviewer verdict from output",
+  criteriaResults: [],
+  issues: [{ description: "Reviewer output did not contain a valid JSON verdict", severity: "blocking" }],
+  suggestions: [],
+}
+
 // Extract the JSON verdict block from reviewer's text output
 export const parseVerdict = (text: string): ReviewVerdict => {
   // Try extracting from fenced code block first
   const fencedMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
   if (fencedMatch) {
-    try {
-      const result = tryParseVerdict(JSON.parse(fencedMatch[1]))
-      if (result) return result
-    } catch {
-      // Fall through
-    }
+    const result = tryExtractVerdictAt(fencedMatch[1])
+    if (result) return result
   }
 
-  // Brute-force: scan every { and try JSON.parse from that position.
-  // For each {, first try the full slice, then try to find the matching }
-  // by scanning for } from the end of the string backwards.
+  // Scan every { and try to parse a verdict from that position
   for (let i = text.indexOf("{"); i !== -1; i = text.indexOf("{", i + 1)) {
-    const slice = text.slice(i)
-    try {
-      const result = tryParseVerdict(JSON.parse(slice))
-      if (result) return result
-    } catch {
-      // Full slice failed (likely trailing text) — try to find balanced closing brace
-      let depth = 0
-      let inString = false
-      let escape = false
-      for (let j = 0; j < slice.length; j++) {
-        const ch = slice[j]
-        if (escape) { escape = false; continue }
-        if (ch === "\\") { escape = true; continue }
-        if (ch === '"') { inString = !inString; continue }
-        if (inString) continue
-        if (ch === "{") depth++
-        if (ch === "}") {
-          depth--
-          if (depth === 0) {
-            try {
-              const result = tryParseVerdict(JSON.parse(slice.slice(0, j + 1)))
-              if (result) return result
-            } catch {
-              // Not valid JSON at this brace pair
-            }
-            break
-          }
-        }
-      }
-    }
+    const result = tryExtractVerdictAt(text.slice(i))
+    if (result) return result
   }
 
-  // Default: unparseable
-  return {
-    passed: false,
-    summary: "Could not parse reviewer verdict from output",
-    criteriaResults: [],
-    issues: [{ description: "Reviewer output did not contain a valid JSON verdict", severity: "blocking" }],
-    suggestions: [],
-  }
+  return UNPARSEABLE_VERDICT
 }
 
 // Format a ReviewIssue for display

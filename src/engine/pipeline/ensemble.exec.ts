@@ -9,6 +9,7 @@ import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
 import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { assembleBaseUserPrompt } from "./plan.exec"
+import { createStderrHandler } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
 // Planner discovery — reads personality overlays from agents/planners/
@@ -212,12 +213,7 @@ export const invokePlanner = async (
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       jsonSchema: SPECIALIST_PROPOSAL_SCHEMA,
-      onStderr: (text) => {
-        const lower = text.toLowerCase()
-        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
-          printError(`[${perspective}] claude stderr: ${text.trim()}`)
-        }
-      },
+      onStderr: createStderrHandler(perspective),
     }).then((result) => {
       const elapsed = formatElapsed(Date.now() - startTime)
       spinner.printAbove(`  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`)
@@ -288,12 +284,7 @@ export const invokePlanner = async (
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
-      onStderr: (text) => {
-        const lower = text.toLowerCase()
-        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
-          printError(`[synthesizer] claude stderr: ${text.trim()}`)
-        }
-      },
+      onStderr: createStderrHandler("synthesizer"),
     })
   } finally {
     flush()

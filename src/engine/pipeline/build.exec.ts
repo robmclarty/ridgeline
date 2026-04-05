@@ -5,9 +5,8 @@ import { invokeClaude } from "../claude/claude.exec"
 import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { readHandoff } from "../../store/handoff"
-import { discoverBuiltinAgents, buildAgentsFlag } from "../discovery/agent.scan"
-import { discoverPluginDirs, cleanupPluginDirs, getCorePluginDir } from "../discovery/plugin.scan"
-import { printError } from "../../ui/output"
+import { cleanupPluginDirs } from "../discovery/plugin.scan"
+import { prepareAgentsAndPlugins, appendConstraintsAndTaste, commonInvokeOptions } from "./pipeline.shared"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -16,15 +15,7 @@ const assembleUserPrompt = (
 ): string => {
   const sections: string[] = []
 
-  sections.push("## constraints.md\n")
-  sections.push(fs.readFileSync(config.constraintsPath, "utf-8"))
-  sections.push("")
-
-  if (config.tastePath) {
-    sections.push("## taste.md\n")
-    sections.push(fs.readFileSync(config.tastePath, "utf-8"))
-    sections.push("")
-  }
+  appendConstraintsAndTaste(sections, config)
 
   const handoff = readHandoff(config.buildDir)
   if (handoff) {
@@ -70,18 +61,7 @@ export const invokeBuilder = async (
   const systemPrompt = resolveAgentPrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: config.worktreePath ?? process.cwd() })
-
-  const builtinAgents = discoverBuiltinAgents()
-  const agents = buildAgentsFlag(builtinAgents)
-  const pluginDirs = discoverPluginDirs(config)
-
-  // Include core hooks plugin when running in unsafe mode (no sandbox)
-  if (config.unsafe && !config.sandboxProvider) {
-    const coreDir = getCorePluginDir()
-    if (coreDir) {
-      pluginDirs.push({ dir: coreDir, createdPluginJson: false })
-    }
-  }
+  const prepared = prepareAgentsAndPlugins(config)
 
   try {
     const result = await invokeClaude({
@@ -89,26 +69,12 @@ export const invokeBuilder = async (
       userPrompt,
       model: config.model,
       allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
-      agents: Object.keys(agents).length > 0 ? agents : undefined,
-      pluginDirs: pluginDirs.length > 0 ? pluginDirs.map((p) => p.dir) : undefined,
-      cwd: config.worktreePath ?? process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      onStdout,
-      onStderr: (text) => {
-        // Surface auth errors and other critical stderr messages immediately
-        const lower = text.toLowerCase()
-        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
-          printError(`claude stderr: ${text.trim()}`)
-        }
-      },
-      sandboxProvider: config.sandboxProvider,
-      networkAllowlist: config.networkAllowlist,
-      additionalWritePaths: [config.buildDir],
+      ...commonInvokeOptions(config, prepared, onStdout),
     })
 
     return result
   } finally {
     flush()
-    cleanupPluginDirs(pluginDirs)
+    cleanupPluginDirs(prepared.pluginDirs)
   }
 }

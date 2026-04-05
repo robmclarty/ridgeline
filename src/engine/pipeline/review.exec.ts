@@ -4,10 +4,9 @@ import { invokeClaude } from "../claude/claude.exec"
 import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { getDiff } from "../../git"
-import { discoverBuiltinAgents, buildAgentsFlag } from "../discovery/agent.scan"
-import { discoverPluginDirs, cleanupPluginDirs, getCorePluginDir } from "../discovery/plugin.scan"
 import { parseVerdict } from "../../store/feedback"
-import { printError } from "../../ui/output"
+import { cleanupPluginDirs } from "../discovery/plugin.scan"
+import { prepareAgentsAndPlugins, commonInvokeOptions } from "./pipeline.shared"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -46,18 +45,7 @@ export const invokeReviewer = async (
   const systemPrompt = resolveAgentPrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
   const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: config.worktreePath ?? process.cwd() })
-
-  const builtinAgents = discoverBuiltinAgents()
-  const agents = buildAgentsFlag(builtinAgents)
-  const pluginDirs = discoverPluginDirs(config)
-
-  // Include core hooks plugin when running in unsafe mode (no sandbox)
-  if (config.unsafe && !config.sandboxProvider) {
-    const coreDir = getCorePluginDir()
-    if (coreDir) {
-      pluginDirs.push({ dir: coreDir, createdPluginJson: false })
-    }
-  }
+  const prepared = prepareAgentsAndPlugins(config)
 
   try {
     const result = await invokeClaude({
@@ -65,26 +53,13 @@ export const invokeReviewer = async (
       userPrompt,
       model: config.model,
       allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent"],
-      agents: Object.keys(agents).length > 0 ? agents : undefined,
-      pluginDirs: pluginDirs.length > 0 ? pluginDirs.map((p) => p.dir) : undefined,
-      cwd: config.worktreePath ?? process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      onStdout,
-      onStderr: (text) => {
-        const lower = text.toLowerCase()
-        if (lower.includes("error") || lower.includes("auth") || lower.includes("unauthorized") || lower.includes("forbidden")) {
-          printError(`claude stderr: ${text.trim()}`)
-        }
-      },
-      sandboxProvider: config.sandboxProvider,
-      networkAllowlist: config.networkAllowlist,
-      additionalWritePaths: [config.buildDir],
+      ...commonInvokeOptions(config, prepared, onStdout),
     })
 
     const verdict = parseVerdict(result.result)
     return { result, verdict }
   } finally {
     flush()
-    cleanupPluginDirs(pluginDirs)
+    cleanupPluginDirs(prepared.pluginDirs)
   }
 }

@@ -62,32 +62,28 @@ const generateGitignore = (repoRoot: string): string => {
  * If not, initialise one with a generated .gitignore and root commit.
  * Returns true if a new repo was created, false if one already existed.
  */
+const seedInitialCommit = (repoRoot: string): void => {
+  const gitignorePath = path.join(repoRoot, ".gitignore")
+  if (!fs.existsSync(gitignorePath)) {
+    fs.writeFileSync(gitignorePath, generateGitignore(repoRoot))
+  }
+  run("git add -A", repoRoot)
+  run('git commit -m "initial commit"', repoRoot)
+}
+
 export const ensureGitRepo = (repoRoot: string): boolean => {
   try {
     run("git rev-parse --git-dir", repoRoot)
-    // Git repo exists — check for at least one commit (HEAD must be valid)
     try {
       run("git rev-parse HEAD", repoRoot)
       return false
     } catch {
-      // Repo exists but no commits — create initial commit
-      const gitignorePath = path.join(repoRoot, ".gitignore")
-      if (!fs.existsSync(gitignorePath)) {
-        fs.writeFileSync(gitignorePath, generateGitignore(repoRoot))
-      }
-      run("git add -A", repoRoot)
-      run('git commit -m "initial commit"', repoRoot)
+      seedInitialCommit(repoRoot)
       return true
     }
   } catch {
-    // Not a git repo — initialise
     run("git init", repoRoot)
-    const gitignorePath = path.join(repoRoot, ".gitignore")
-    if (!fs.existsSync(gitignorePath)) {
-      fs.writeFileSync(gitignorePath, generateGitignore(repoRoot))
-    }
-    run("git add -A", repoRoot)
-    run('git commit -m "initial commit"', repoRoot)
+    seedInitialCommit(repoRoot)
     return true
   }
 }

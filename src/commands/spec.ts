@@ -77,59 +77,113 @@ const resolveInput = (input: string): { type: "file"; path: string; content: str
   return { type: "text", content: input }
 }
 
+const collectExistingFileHints = (ridgelineDir: string): string => {
+  let hints = ""
+  const projectConstraints = path.join(ridgelineDir, "constraints.md")
+  const projectTaste = path.join(ridgelineDir, "taste.md")
+  if (fs.existsSync(projectConstraints)) {
+    hints += `\nNote: Project-level constraints.md exists at ${projectConstraints}. The user may want to reuse it rather than creating a new one.\n`
+  }
+  if (fs.existsSync(projectTaste)) {
+    hints += `\nNote: Project-level taste.md exists at ${projectTaste}. The user may want to reuse it rather than creating a new one.\n`
+  }
+  return hints
+}
+
+const resolveInputContext = async (
+  rl: readline.Interface,
+  input?: string
+): Promise<string | null> => {
+  if (input) {
+    const resolved = resolveInput(input)
+    if (resolved.type === "file") {
+      printInfo(`Using existing spec from: ${resolved.path}`)
+    }
+    return resolved.content
+  }
+  console.log("")
+  const answer = await askQuestion(rl, "Describe what you want to build:\n> ")
+  return answer || null
+}
+
+const runClarificationLoop = async (
+  rl: readline.Interface,
+  systemPrompt: string,
+  opts: SpecOptions,
+  timeoutMs: number,
+  initialResult: { sessionId: string; qa: QAResponse }
+): Promise<{ sessionId: string; qa: QAResponse }> => {
+  let { sessionId, qa } = initialResult
+
+  for (let round = 0; round < MAX_CLARIFICATION_ROUNDS && !qa.ready; round++) {
+    if (qa.summary) {
+      console.log(`\nHere's what I understand so far:\n  ${qa.summary}`)
+    }
+
+    if (!qa.questions || qa.questions.length === 0) break
+
+    const normalized = qa.questions.map(normalizeQuestion)
+    console.log("\nI have a few questions:\n")
+    const answers: string[] = []
+    for (let i = 0; i < normalized.length; i++) {
+      const q = normalized[i]
+      if (q.suggestedAnswer) {
+        console.log(`  ${i + 1}. ${q.question}`)
+        console.log(`     (suggested: ${q.suggestedAnswer})`)
+        const answer = await askQuestion(rl, `  > `)
+        answers.push(answer || q.suggestedAnswer)
+      } else {
+        const answer = await askQuestion(rl, `  ${i + 1}. ${q.question}\n  > `)
+        answers.push(answer)
+      }
+    }
+
+    console.log("\nProcessing your answers...")
+    const answersPrompt = normalized
+      .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
+      .join("\n\n")
+
+    const display = createDisplayCallbacks({ projectRoot: process.cwd() })
+    const result = await invokeClaude({
+      systemPrompt,
+      userPrompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
+      model: opts.model,
+      cwd: process.cwd(),
+      timeoutMs,
+      sessionId,
+      jsonSchema: QA_JSON_SCHEMA,
+      onStdout: display.onStdout,
+    })
+    display.flush()
+
+    sessionId = result.sessionId
+    qa = parseQAResponse(result.result)
+  }
+
+  return { sessionId, qa }
+}
+
 export const runSpec = async (buildName: string, opts: SpecOptions): Promise<void> => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const buildDir = path.join(ridgelineDir, "builds", buildName)
-  const phasesDir = path.join(buildDir, "phases")
 
-  // Create directory structure
-  fs.mkdirSync(phasesDir, { recursive: true })
+  fs.mkdirSync(path.join(buildDir, "phases"), { recursive: true })
   printInfo(`Created build directory: ${buildDir}`)
 
-  // Check for existing project-level files
-  const projectConstraints = path.join(ridgelineDir, "constraints.md")
-  const projectTaste = path.join(ridgelineDir, "taste.md")
-  let existingFileHints = ""
-  if (fs.existsSync(projectConstraints)) {
-    existingFileHints += `\nNote: Project-level constraints.md exists at ${projectConstraints}. The user may want to reuse it rather than creating a new one.\n`
-  }
-  if (fs.existsSync(projectTaste)) {
-    existingFileHints += `\nNote: Project-level taste.md exists at ${projectTaste}. The user may want to reuse it rather than creating a new one.\n`
-  }
-
+  const existingFileHints = collectExistingFileHints(ridgelineDir)
   const systemPrompt = resolveAgentPrompt("specifier.md")
   const timeoutMs = opts.timeout * 60 * 1000
 
-  // Set up readline for user interaction
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  })
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 
   try {
-    // Step 1: Resolve input — file, natural language, or interactive prompt
-    let inputContext = ""
-    if (opts.input) {
-      const resolved = resolveInput(opts.input)
-      if (resolved.type === "file") {
-        printInfo(`Using existing spec from: ${resolved.path}`)
-        inputContext = resolved.content
-      } else {
-        inputContext = resolved.content
-      }
-    }
-
-    // If no input provided, fall back to interactive prompt
+    const inputContext = await resolveInputContext(rl, opts.input)
     if (!inputContext) {
-      console.log("")
-      inputContext = await askQuestion(rl, "Describe what you want to build:\n> ")
-      if (!inputContext) {
-        printError("A description is required")
-        return
-      }
+      printError("A description is required")
+      return
     }
 
-    // Step 2: Intake turn — send input to Claude
+    // Intake turn
     console.log("\nAnalyzing your input...")
     let userPrompt = `The user wants to create a new build called "${buildName}".\n\nUser-provided input:\n${inputContext}\n\nIf this input is detailed enough to answer all your questions, signal ready immediately and include a summary of what you understood. If you still have questions, include them — but for any question that the input already answers, include the question along with your best answer derived from the input so the user can confirm or correct.`
     if (existingFileHints) {
@@ -137,7 +191,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     }
 
     let display = createDisplayCallbacks({ projectRoot: process.cwd() })
-    let result = await invokeClaude({
+    const intakeResult = await invokeClaude({
       systemPrompt,
       userPrompt,
       model: opts.model,
@@ -148,62 +202,13 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     })
     display.flush()
 
-    let sessionId = result.sessionId
-    let qa = parseQAResponse(result.result)
+    // Clarification loop
+    const { sessionId, qa } = await runClarificationLoop(rl, systemPrompt, opts, timeoutMs, {
+      sessionId: intakeResult.sessionId,
+      qa: parseQAResponse(intakeResult.result),
+    })
 
-    // Step 3: Clarification loop
-    for (let round = 0; round < MAX_CLARIFICATION_ROUNDS && !qa.ready; round++) {
-      // Display summary if present
-      if (qa.summary) {
-        console.log(`\nHere's what I understand so far:\n  ${qa.summary}`)
-      }
-
-      // Display and collect answers to questions
-      if (qa.questions && qa.questions.length > 0) {
-        const normalized = qa.questions.map(normalizeQuestion)
-        console.log("\nI have a few questions:\n")
-        const answers: string[] = []
-        for (let i = 0; i < normalized.length; i++) {
-          const q = normalized[i]
-          if (q.suggestedAnswer) {
-            console.log(`  ${i + 1}. ${q.question}`)
-            console.log(`     (suggested: ${q.suggestedAnswer})`)
-            const answer = await askQuestion(rl, `  > `)
-            answers.push(answer || q.suggestedAnswer)
-          } else {
-            const answer = await askQuestion(rl, `  ${i + 1}. ${q.question}\n  > `)
-            answers.push(answer)
-          }
-        }
-
-        // Send answers back to Claude
-        console.log("\nProcessing your answers...")
-        const answersPrompt = normalized
-          .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
-          .join("\n\n")
-
-        display = createDisplayCallbacks({ projectRoot: process.cwd() })
-        result = await invokeClaude({
-          systemPrompt,
-          userPrompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
-          model: opts.model,
-          cwd: process.cwd(),
-          timeoutMs,
-          sessionId,
-          jsonSchema: QA_JSON_SCHEMA,
-          onStdout: display.onStdout,
-        })
-        display.flush()
-
-        sessionId = result.sessionId
-        qa = parseQAResponse(result.result)
-      } else {
-        // No questions but not ready — shouldn't happen, but break to avoid infinite loop
-        break
-      }
-    }
-
-    // Step 4: Generation turn
+    // Generation turn
     if (qa.summary) {
       console.log(`\nFinal understanding:\n  ${qa.summary}`)
     }
@@ -222,14 +227,10 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     })
     display.flush()
 
-    // Step 5: Verify and report
+    // Verify and report
     console.log("")
-    const createdFiles: string[] = []
-    for (const filename of ["spec.md", "constraints.md", "taste.md"]) {
-      if (fs.existsSync(path.join(buildDir, filename))) {
-        createdFiles.push(filename)
-      }
-    }
+    const createdFiles = ["spec.md", "constraints.md", "taste.md"]
+      .filter((f) => fs.existsSync(path.join(buildDir, f)))
 
     if (createdFiles.length === 0) {
       printError("No build files were created. Try running spec again.")
