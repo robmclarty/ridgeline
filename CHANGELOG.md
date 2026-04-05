@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Remove prompt-based network guard hook now that greywall handles sandboxing at the OS level
+
 ## 0.3.0
 
 - Ensemble planning: the planner now spawns multiple specialist agents in parallel (simplicity, thoroughness, velocity), collects structured proposals, and synthesizes the best ideas into final phase files
