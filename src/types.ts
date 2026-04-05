@@ -17,6 +17,7 @@ export type RidgelineConfig = {
   networkAllowlist: string[]
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
   worktreePath: string | null
+  extraContext: string | null
 }
 
 // Phase metadata parsed from filesystem

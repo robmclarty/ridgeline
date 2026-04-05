@@ -114,6 +114,7 @@ describe("commands/run", () => {
       unsafe: false,
       networkAllowlist: [],
       worktreePath: null,
+      extraContext: null,
     }
 
     // Mock process.exit to throw instead of exiting

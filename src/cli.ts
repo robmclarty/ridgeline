@@ -82,6 +82,7 @@ program
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
+  .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
   .action(withConfig(runBuild))
 

@@ -60,6 +60,12 @@ export const appendConstraintsAndTaste = (sections: string[], config: RidgelineC
     sections.push(fs.readFileSync(config.tastePath, "utf-8"))
     sections.push("")
   }
+
+  if (config.extraContext) {
+    sections.push("## Additional Context\n")
+    sections.push(config.extraContext)
+    sections.push("")
+  }
 }
 
 /**
