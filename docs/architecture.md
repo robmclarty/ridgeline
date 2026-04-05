@@ -108,10 +108,10 @@ markdown files with valid frontmatter.
 
 | Specialist | Model | Purpose |
 |------------|-------|---------|
-| **checker** | sonnet | Runs check commands, lint, type-check, tests. Can auto-fix mechanical issues. |
-| **navigator** | sonnet | Read-only codebase exploration. Returns structured briefings on targeted areas. |
+| **verifier** | sonnet | Runs check commands, lint, type-check, tests. Can auto-fix mechanical issues. |
+| **scout** | sonnet | Read-only codebase exploration. Returns structured briefings on targeted areas. |
 | **tester** | sonnet | Writes acceptance-level tests from criteria. |
-| **depender** | sonnet | Checks module graph integrity -- circular deps, unresolved imports. Read-only. |
+| **auditor** | sonnet | Checks module graph integrity -- circular deps, unresolved imports. Read-only. |
 
 Specialists use sonnet by default for cost efficiency. They run in their own
 context window, keeping the builder's context clean.

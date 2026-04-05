@@ -30,7 +30,7 @@ Do not implement work belonging to other phases. Do not add features not in your
 
 ### 3. Check
 
-Verify your work after making changes. If a check command is specified in constraints.md, run it. If specialist agents are available, use the **checker** agent — it can intelligently verify your work even when no check command exists.
+Verify your work after making changes. If a check command is specified in constraints.md, run it. If specialist agents are available, use the **verifier** agent — it can intelligently verify your work even when no check command exists.
 
 - If checks pass, continue.
 - If checks fail, fix the failures. Then check again.
