@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.12
+
+- Fix worktree merge failure when untracked files (e.g. package-lock.json) in the main repo conflict with files committed in the WIP branch; detect and remove conflicting untracked files before merging since the WIP branch is authoritative
+
 ## 0.3.11
 
 - Fix npm install blocked by greyproxy: sync network allowlist domains as greyproxy rules via its REST API instead of writing an unsupported `network.allowlist` key to the greywall settings file
