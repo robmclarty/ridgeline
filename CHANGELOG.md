@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Ensemble planning: the planner now spawns multiple specialist agents in parallel (simplicity, thoroughness, velocity), collects structured proposals, and synthesizes the best ideas into final phase files
+- Planner personalities are defined as agent files in `agents/planners/` and discovered at runtime — adding a new perspective requires no code changes
+- Success threshold scales to the number of discovered specialists (requires at least half to succeed)
+
 ## 0.2.26
 
 - Display relative paths in tool call lines by stripping the project root, so truncated lines remain distinguishable
