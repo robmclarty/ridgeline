@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest"
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest"
 import * as fs from "node:fs"
 import * as cp from "node:child_process"
 
@@ -13,6 +13,13 @@ vi.mock("node:child_process", async () => {
 })
 
 import { greywallProvider } from "../sandbox.greywall"
+
+const mockFetch = vi.fn()
+
+beforeEach(() => {
+  mockFetch.mockReset()
+  globalThis.fetch = mockFetch
+})
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -50,17 +57,8 @@ describe("greywallProvider", () => {
     expect(args[args.length - 1]).toBe("--")
   })
 
-  it("includes network allowlist in settings when provided", () => {
+  it("does not include network key in settings file (rules managed via greyproxy API)", () => {
     greywallProvider.buildArgs("/repo", ["api.anthropic.com", "registry.npmjs.org"])
-
-    const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
-    const [, content] = calls[calls.length - 1]
-    const settings = JSON.parse(content as string)
-    expect(settings.network.allowlist).toEqual(["api.anthropic.com", "registry.npmjs.org"])
-  })
-
-  it("omits network key when allowlist is empty", () => {
-    greywallProvider.buildArgs("/repo", [])
 
     const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
     const [, content] = calls[calls.length - 1]
@@ -97,6 +95,49 @@ describe("greywallProvider", () => {
       vi.mocked(cp.execSync).mockImplementation(() => { throw err })
 
       expect(greywallProvider.checkReady()).toContain("greyproxy is not running")
+    })
+  })
+
+  describe("syncRules", () => {
+    it("creates rules for domains not already in greyproxy", async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [{ destination_pattern: "api.anthropic.com" }] }),
+        })
+        .mockResolvedValue({ ok: true, json: async () => ({}) })
+
+      await greywallProvider.syncRules!(["api.anthropic.com", "registry.npmjs.org"])
+
+      // First call fetches existing rules, second creates the missing one
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      const createCall = mockFetch.mock.calls[1]
+      expect(createCall[0]).toContain("/api/rules")
+      const body = JSON.parse(createCall[1].body)
+      expect(body.destination_pattern).toBe("registry.npmjs.org")
+      expect(body.container_pattern).toBe("claude*")
+    })
+
+    it("skips creation when all rules already exist", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          items: [
+            { destination_pattern: "api.anthropic.com" },
+            { destination_pattern: "registry.npmjs.org" },
+          ],
+        }),
+      })
+
+      await greywallProvider.syncRules!(["api.anthropic.com", "registry.npmjs.org"])
+
+      // Only the initial fetch, no POSTs
+      expect(mockFetch).toHaveBeenCalledTimes(1)
+    })
+
+    it("does nothing when allowlist is empty", async () => {
+      await greywallProvider.syncRules!([])
+      expect(mockFetch).not.toHaveBeenCalled()
     })
   })
 })

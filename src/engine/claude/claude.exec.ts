@@ -31,7 +31,12 @@ export type InvokeOptions = {
   additionalWritePaths?: string[]
 }
 
-export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
+export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> => {
+  const provider = opts.sandboxProvider ?? null
+  if (provider?.syncRules) {
+    await provider.syncRules(opts.networkAllowlist ?? [])
+  }
+
   return new Promise((resolve, reject) => {
     const args: string[] = [
       "-p",
@@ -65,7 +70,6 @@ export const invokeClaude = (opts: InvokeOptions): Promise<ClaudeResult> => {
     // System prompt passed via --system-prompt flag
     args.push("--system-prompt", opts.systemPrompt)
 
-    const provider = opts.sandboxProvider ?? null
     const spawnCmd = provider ? provider.command : "claude"
     const spawnArgs = provider
       ? [...provider.buildArgs(opts.cwd, opts.networkAllowlist ?? [], opts.additionalWritePaths), "claude", ...args]
