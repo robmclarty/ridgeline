@@ -510,6 +510,5 @@ The layered defense strategy has been implemented:
 5. **MCP filtering** -- not yet implemented. Could be a future addition for
    controlled external access (docs, packages) via a filtered MCP server.
 
-See `docs/superpowers/specs/2026-04-03-sandbox-worktree-design.md` for the
-full design spec and `docs/superpowers/plans/2026-04-03-sandbox-worktree-plan.md`
-for the implementation plan.
+See [SECURITY.md](../SECURITY.md) for the full threat model and security
+recommendations.

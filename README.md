@@ -168,7 +168,7 @@ npm test             # Typecheck, lint, and run unit tests
 npm run test:unit    # Unit tests only (vitest)
 npm run test:e2e     # End-to-end tests
 npm run test:watch   # Watch mode
-npm run lint         # Run all linters (oxlint, markdownlint, agnix)
+npm run lint         # Run all linters (oxlint, markdownlint, agnix, fallow)
 npm run typecheck    # Type-check without emitting
 ```
 

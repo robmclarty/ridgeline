@@ -137,8 +137,9 @@ graph TD
   successful phase.
 
 - **budget.json** -- records every Claude invocation: phase, role (planner,
-  builder, reviewer), attempt number, cost in USD, input/output tokens, and
-  duration. Running total enables `--max-budget-usd` enforcement.
+  specialist, synthesizer, builder, reviewer), attempt number, cost in USD,
+  input/output tokens, and duration. Running total enables `--max-budget-usd`
+  enforcement.
 
 - **trajectory.jsonl** -- append-only event log. Event types: `plan_start`,
   `plan_complete`, `build_start`, `build_complete`, `review_start`,
@@ -173,8 +174,7 @@ flags with hardcoded defaults:
 | `--check-timeout` | `1200` seconds |
 | `--max-retries` | `2` |
 | `--max-budget-usd` | none (unlimited) |
-| `--sandbox` | off |
-| `--allow-network` | off |
+| `--unsafe` | off (sandbox auto-detected) |
 
 ## Build Directory Structure
 
@@ -228,12 +228,14 @@ The user prompt is piped via stdin. Stdout emits newline-delimited JSON events,
 including streaming assistant text and a final result event containing the
 response, cost, token usage, duration, and session ID.
 
-In sandbox mode (`--sandbox`), the entire Claude invocation is wrapped in
-`bwrap` (bubblewrap) for kernel-level isolation:
+Sandboxing is on by default when a provider is detected. The harness
+auto-detects providers in preference order:
 
-- Entire filesystem mounted read-only
-- Repo root and `/tmp` mounted read-write
-- Network blocked by default (`--unshare-net`), allowed with `--allow-network`
-- Process dies with parent (`--die-with-parent`)
+1. **Greywall** (macOS/Linux) -- domain-level network allowlisting via
+   `greyproxy`, filesystem write restrictions to repo + `/tmp`.
+2. **bwrap** (Linux) -- entire filesystem mounted read-only except repo root
+   and `/tmp`, all network blocked via `--unshare-net`, process dies with
+   parent (`--die-with-parent`).
 
-Sandbox mode requires Linux with bwrap installed.
+Pass `--unsafe` to opt out of sandboxing. If no provider is found, the harness
+prints a warning and proceeds without a sandbox.

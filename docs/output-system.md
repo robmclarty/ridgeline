@@ -99,14 +99,11 @@ Look at trellis-exec's `src/ui/spinner.ts` for a reference implementation with p
 
 ### Specialist agents
 
-The builder already has `Agent` in its `allowedTools`, so it can dispatch Claude Code subagents. To enable domain-specific agents:
-
-1. Users define agent `.md` files in `.ridgeline/agents/` (or per-build in `.ridgeline/builds/<name>/agents/`).
-2. `buildInvoker` scans for these and injects a manifest into the user prompt describing what's available.
-3. The builder's system prompt gets instructions on when to delegate vs. do the work itself.
-4. The invoker and stream parser don't change — it's purely prompt content.
-
-See trellis-exec's `agents/` directory and `src/orchestrator/agentLauncher.ts` for a working implementation of convention-based agent discovery and dispatch.
+Specialist sub-agents (verifier, scout, tester, auditor) are now implemented.
+They are discovered at runtime from `src/agents/specialists/` via frontmatter
+scanning in `src/engine/discovery/agent.scan.ts` and passed to the builder and
+reviewer via Claude CLI's `--agents` flag. The stream parser and invoker require
+no changes — specialist output flows through the same NDJSON stream.
 
 ### Quiet mode
 
