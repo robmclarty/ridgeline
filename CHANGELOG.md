@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6
+
+- Fix planner specialist JSON parsing: extract JSON from markdown fences and text-wrapped output instead of failing silently
+- Add diagnostic preview to specialist parse errors for easier debugging
+- Remove unused imports flagged by oxlint
+
 ## 0.3.5
 
 - Add `@vitest/coverage-v8` and `npm run coverage` script for code coverage reporting
