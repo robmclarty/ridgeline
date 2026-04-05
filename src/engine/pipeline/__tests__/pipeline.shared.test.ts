@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import type { RidgelineConfig } from "../../../types"
 import { makeConfig } from "../../../../test/factories"
 
 vi.mock("../../discovery/agent.scan", () => ({

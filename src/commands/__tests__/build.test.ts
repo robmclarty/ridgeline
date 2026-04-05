@@ -89,7 +89,7 @@ import { getNextIncompletePhase, loadState, resetRetries } from "../../store/sta
 import { loadBudget } from "../../store/budget"
 import { detectSandbox } from "../../engine/claude/sandbox"
 import { printInfo } from "../../ui/output"
-import { ensureGitRepo, validateWorktree } from "../../engine/worktree"
+import { validateWorktree } from "../../engine/worktree"
 
 describe("commands/run", () => {
   let tmpDir: string
