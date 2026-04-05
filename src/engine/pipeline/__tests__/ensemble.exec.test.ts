@@ -51,7 +51,7 @@ vi.mock("node:fs", async () => {
   }
 })
 
-import { invokePlanner } from "../ensemble.exec"
+import { invokePlanner, extractJSON } from "../ensemble.exec"
 import { invokeClaude } from "../../claude/claude.exec"
 import { scanPhases } from "../../../store/phases"
 import { printError } from "../../../ui/output"
@@ -91,6 +91,35 @@ const setupPlannerDiscovery = (count: number) => {
 }
 
 beforeEach(() => vi.clearAllMocks())
+
+describe("extractJSON", () => {
+  const obj = { perspective: "speed", summary: "Go fast" }
+
+  it("parses plain JSON", () => {
+    expect(extractJSON(JSON.stringify(obj))).toEqual(obj)
+  })
+
+  it("strips markdown json fence", () => {
+    expect(extractJSON("```json\n" + JSON.stringify(obj) + "\n```")).toEqual(obj)
+  })
+
+  it("strips plain markdown fence", () => {
+    expect(extractJSON("```\n" + JSON.stringify(obj) + "\n```")).toEqual(obj)
+  })
+
+  it("extracts JSON embedded in surrounding text", () => {
+    const wrapped = "Here is the plan:\n" + JSON.stringify(obj) + "\nLet me know if you need changes."
+    expect(extractJSON(wrapped)).toEqual(obj)
+  })
+
+  it("handles whitespace around JSON", () => {
+    expect(extractJSON("  \n" + JSON.stringify(obj) + "\n  ")).toEqual(obj)
+  })
+
+  it("throws when no JSON found", () => {
+    expect(() => extractJSON("no json here")).toThrow("No valid JSON object found")
+  })
+})
 
 describe("invokePlanner", () => {
   it("throws when no planners are discovered", async () => {
@@ -169,6 +198,25 @@ describe("invokePlanner", () => {
     await expect(invokePlanner(makeConfig())).rejects.toThrow(
       /requires at least 2 of 3 specialist proposals/,
     )
+  })
+
+  it("parses specialist output wrapped in markdown fences", async () => {
+    setupPlannerDiscovery(1)
+
+    const fenced = "```json\n" + makeProposal("velocity") + "\n```"
+    const specialistResult = makeClaudeResult({ result: fenced })
+    const synthResult = makeClaudeResult({ result: "synthesized" })
+
+    vi.mocked(invokeClaude)
+      .mockResolvedValueOnce(specialistResult)
+      .mockResolvedValueOnce(synthResult)
+
+    vi.mocked(scanPhases).mockReturnValue([makePhase()])
+
+    const output = await invokePlanner(makeConfig())
+
+    expect(invokeClaude).toHaveBeenCalledTimes(2)
+    expect(output.phases).toHaveLength(1)
   })
 
   it("throws when specialist JSON is unparseable", async () => {

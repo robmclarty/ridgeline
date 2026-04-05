@@ -76,6 +76,49 @@ const resolveSynthesizerPrompt = (): string => {
 }
 
 // ---------------------------------------------------------------------------
+// Robust JSON extraction — handles markdown fences and surrounding text
+// ---------------------------------------------------------------------------
+
+/**
+ * Attempt to extract a JSON object from a string that may be wrapped in
+ * markdown fences (```json ... ```) or surrounded by explanatory text.
+ * Returns the parsed object on success, or throws on failure.
+ */
+export const extractJSON = (raw: string): unknown => {
+  const trimmed = raw.trim()
+
+  // 1. Try direct parse first (happy path)
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    // continue to extraction strategies
+  }
+
+  // 2. Strip markdown fences: ```json ... ``` or ``` ... ```
+  const fenceMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
+  if (fenceMatch) {
+    try {
+      return JSON.parse(fenceMatch[1].trim())
+    } catch {
+      // continue
+    }
+  }
+
+  // 3. Find the outermost { ... } in the string
+  const firstBrace = trimmed.indexOf("{")
+  const lastBrace = trimmed.lastIndexOf("}")
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(trimmed.slice(firstBrace, lastBrace + 1))
+    } catch {
+      // continue
+    }
+  }
+
+  throw new Error("No valid JSON object found in output")
+}
+
+// ---------------------------------------------------------------------------
 // JSON schema for structured specialist output
 // ---------------------------------------------------------------------------
 
@@ -230,10 +273,13 @@ export const invokePlanner = async (
     if (outcome.status === "fulfilled") {
       const { perspective, result } = outcome.value
       try {
-        const proposal = JSON.parse(result.result) as SpecialistProposal
+        const proposal = extractJSON(result.result) as SpecialistProposal
         successful.push({ perspective, result, proposal })
       } catch {
-        printError(`Failed to parse ${perspective} specialist output as JSON`)
+        const preview = result.result.length > 300
+          ? result.result.slice(0, 300) + "…"
+          : result.result
+        printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
       }
     } else {
       printError(`Specialist failed: ${outcome.reason}`)
