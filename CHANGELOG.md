@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.5
+
+- Add `@vitest/coverage-v8` and `npm run coverage` script for code coverage reporting
+- Fill test coverage gaps across the pipeline execution layer (build.exec, review.exec, plan.exec, pipeline.shared, ensemble.exec), raising overall coverage from ~78% to 92%
+- Add shared test factories (`test/factories.ts`) for configs, phases, results, and verdicts
+- Extend existing tests for worktree, sandbox greywall, agent prompt, build/spec commands, and state management
+- Enrich existing docs with deeper rationale and add new docs for review/feedback, build lifecycle, and constraints/taste
+
 ## 0.3.4
 
 - Add `--context` flag to the `build` command for passing extra context to builder and planner prompts
