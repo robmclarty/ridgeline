@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7
+
+- Fix specialist planner prompt: strip conflicting markdown file-writing instructions that caused models to return prose instead of JSON
+- Remove unused `failVerdict` export from test factories
+
 ## 0.3.6
 
 - Fix planner specialist JSON parsing: extract JSON from markdown fences and text-wrapped output instead of failing silently
