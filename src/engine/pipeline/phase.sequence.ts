@@ -6,6 +6,7 @@ import { formatIssue, writeFeedback, archiveFeedback } from "../../store/feedbac
 import { logTrajectory, makeTrajectoryEntry } from "../../store/trajectory"
 import { updatePhaseStatus } from "../../store/state"
 import { printPhase } from "../../ui/output"
+import { commitAll, isWorkingTreeDirty } from "../../git"
 import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
 
@@ -69,6 +70,12 @@ export const runPhase = async (
       ))
       updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
       return "failed"
+    }
+
+    // Commit builder work so the reviewer can see the diff
+    const worktreeCwd = config.worktreePath ?? undefined
+    if (isWorkingTreeDirty(worktreeCwd)) {
+      commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`, worktreeCwd)
     }
 
     // Review
