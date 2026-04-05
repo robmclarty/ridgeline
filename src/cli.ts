@@ -5,7 +5,7 @@ import { loadVersion, resolveConfig } from "./config"
 import { askBuildName } from "./ui/prompt"
 import { runSpec } from "./commands/spec"
 import { runPlan } from "./commands/plan"
-import { runDryRun } from "./commands/dryRun"
+import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
 
 const program = new Command()

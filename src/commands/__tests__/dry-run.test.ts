@@ -33,10 +33,10 @@ vi.mock("../plan", () => ({
   runPlan: vi.fn(),
 }))
 
-import { runDryRun } from "../dryRun"
+import { runDryRun } from "../dry-run"
 import { scanPhases } from "../../store/phases"
 
-describe("commands/dryRun", () => {
+describe("commands/dry-run", () => {
   let tmpDir: string
   let config: RidgelineConfig
 
