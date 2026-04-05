@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.10
+
+- Fix empty reviewer diff: commit builder work before review so `git diff checkpoint..HEAD` is populated
+- Fix npm install stalling in sandbox: add package manager cache directories (~/.npm, ~/.cache, ~/.yarn, ~/.pnpm-store, ~/.cargo, ~/.local/share) to greywall allowWrite list
+
 ## 0.3.9
 
 - Increase tool summary truncation limit from 80 to 200 characters so file names are visible in build output
