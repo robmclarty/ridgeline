@@ -137,17 +137,32 @@ export const validateWorktree = (repoRoot: string, buildName: string): boolean =
 export const reflectCommits = (repoRoot: string, buildName: string): void => {
   const branch = wipBranch(buildName)
 
-  // Stage any untracked build metadata so git merge doesn't conflict
-  // with files the WIP branch also committed (e.g. handoff.md).
-  const buildMetaDir = path.join(".ridgeline", "builds", buildName)
-  const absBuildMetaDir = path.join(repoRoot, buildMetaDir)
-  if (fs.existsSync(absBuildMetaDir)) {
-    try {
-      run(`git add "${buildMetaDir}"`, repoRoot)
-      run('git commit -m "ridgeline: stage build metadata"', repoRoot)
-    } catch {
-      // Nothing to commit or dir not found — safe to ignore
+  // Remove untracked files that would conflict with the merge.
+  // The WIP branch is authoritative, so its versions always win.
+  // This commonly happens with package-lock.json, build metadata, etc.
+  try {
+    const untrackedRaw = run("git ls-files --others --exclude-standard", repoRoot)
+    if (untrackedRaw) {
+      const wipFiles = new Set(
+        run(`git diff --name-only HEAD...${branch}`, repoRoot).split("\n").filter(Boolean),
+      )
+      for (const f of untrackedRaw.split("\n").filter(Boolean)) {
+        if (wipFiles.has(f)) {
+          fs.unlinkSync(path.join(repoRoot, f))
+        }
+      }
     }
+  } catch {
+    // best-effort — merge may still succeed without cleanup
+  }
+
+  // Stage and commit any remaining dirty files (e.g. modified tracked files)
+  // so the merge doesn't fail on uncommitted changes.
+  try {
+    run("git add -A", repoRoot)
+    run('git commit -m "ridgeline: stage pre-merge state"', repoRoot)
+  } catch {
+    // Nothing to commit — safe to ignore
   }
 
   try {

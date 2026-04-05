@@ -125,6 +125,25 @@ describe("worktree", () => {
       expect(fs.readFileSync(path.join(repoDir, ".ridgeline", "builds", "test-build", "handoff.md"), "utf-8")).toBe("Phase 1 notes")
     })
 
+    it("merges successfully when main repo has untracked files outside .ridgeline (e.g. package-lock.json)", () => {
+      const wtPath = createWorktree(repoDir, "test-build")
+
+      // Simulate an untracked package-lock.json in the main repo
+      // (e.g. from npm install during planner setup)
+      fs.writeFileSync(path.join(repoDir, "package-lock.json"), '{"lockfileVersion": 1}')
+
+      // Simulate the builder also creating and committing package-lock.json in the worktree
+      fs.writeFileSync(path.join(wtPath, "package-lock.json"), '{"lockfileVersion": 3}')
+      fs.writeFileSync(path.join(wtPath, "index.ts"), "export const main = () => {}")
+      execSync("git add -A && git commit -m 'phase work'", { cwd: wtPath, stdio: "pipe" })
+
+      // This should NOT throw
+      reflectCommits(repoDir, "test-build")
+
+      // Verify the source file arrived in main
+      expect(fs.existsSync(path.join(repoDir, "index.ts"))).toBe(true)
+    })
+
     it("fast-forwards the source branch with worktree commits", () => {
       const wtPath = createWorktree(repoDir, "test-build")
 
