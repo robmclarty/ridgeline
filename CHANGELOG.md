@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.11
+
+- Fix npm install blocked by greyproxy: sync network allowlist domains as greyproxy rules via its REST API instead of writing an unsupported `network.allowlist` key to the greywall settings file
+
 ## 0.3.10
 
 - Fix empty reviewer diff: commit builder work before review so `git diff checkpoint..HEAD` is populated
