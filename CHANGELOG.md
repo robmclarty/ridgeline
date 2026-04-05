@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8
+
+- Fix `--json-schema` result extraction: the Claude CLI uses a synthetic `StructuredOutput` tool, so JSON responses live in `tool_use.input`, not the result field
+- Add assistant text fallback in `extractResult` for when the result field is empty
+- Add e2e planner tests that invoke the real Claude CLI to verify structured output handling
+
 ## 0.3.7
 
 - Fix specialist planner prompt: strip conflicting markdown file-writing instructions that caused models to return prose instead of JSON
