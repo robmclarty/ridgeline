@@ -85,7 +85,11 @@ vi.mock("../../engine/worktree", () => ({
 import { runBuild } from "../build"
 import { scanPhases } from "../../store/phases"
 import { runPhase } from "../../engine/pipeline/phase.sequence"
-import { getNextIncompletePhase } from "../../store/state"
+import { getNextIncompletePhase, loadState, resetRetries } from "../../store/state"
+import { loadBudget } from "../../store/budget"
+import { detectSandbox } from "../../engine/claude/sandbox"
+import { printInfo } from "../../ui/output"
+import { ensureGitRepo, validateWorktree } from "../../engine/worktree"
 
 describe("commands/run", () => {
   let tmpDir: string
@@ -170,5 +174,87 @@ describe("commands/run", () => {
     }
 
     expect(runPhase).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls resetRetries and prints resume message when state exists", async () => {
+    const phases = [
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
+    ]
+
+    vi.mocked(scanPhases).mockReturnValue(phases)
+    vi.mocked(loadState).mockReturnValue({
+      buildName: "test",
+      startedAt: "2024-01-01T00:00:00.000Z",
+      phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
+    })
+    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(getNextIncompletePhase)
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce(null)
+
+    await runBuild(config)
+
+    expect(resetRetries).toHaveBeenCalled()
+    expect(printInfo).toHaveBeenCalledWith(expect.stringContaining("Resuming build"))
+  })
+
+  it("breaks when budget is exceeded", async () => {
+    const phases = [
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
+      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md" },
+    ]
+
+    vi.mocked(scanPhases).mockReturnValue(phases)
+    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(getNextIncompletePhase)
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce(null)
+
+    // After first phase, budget exceeds limit
+    vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 15.00 })
+
+    config.maxBudgetUsd = 10.00
+    await runBuild(config)
+
+    // Only ran first phase because budget exceeded after it
+    expect(runPhase).toHaveBeenCalledTimes(1)
+    expect(printInfo).toHaveBeenCalledWith(expect.stringContaining("Budget limit reached"))
+  })
+
+  it("skips sandbox detection when unsafe is true", async () => {
+    const phases = [
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
+    ]
+
+    vi.mocked(scanPhases).mockReturnValue(phases)
+    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(getNextIncompletePhase)
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce(null)
+    vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
+
+    config.unsafe = true
+    try { await runBuild(config) } catch { /* process.exit mock throws */ }
+
+    expect(detectSandbox).not.toHaveBeenCalled()
+  })
+
+  it("resumes existing valid worktree instead of creating new one", async () => {
+    const phases = [
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
+    ]
+
+    vi.mocked(scanPhases).mockReturnValue(phases)
+    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(validateWorktree).mockReturnValue(true)
+    vi.mocked(getNextIncompletePhase)
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce(null)
+    vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
+
+    try { await runBuild(config) } catch { /* process.exit mock throws */ }
+
+    expect(printInfo).toHaveBeenCalledWith(expect.stringContaining("Resuming in worktree"))
   })
 })

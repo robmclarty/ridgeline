@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase } from "../state"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries } from "../state"
 import type { PhaseInfo, BuildState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase
@@ -158,6 +158,60 @@ describe("state", () => {
       const next = getNextIncompletePhase(state)
       expect(next?.id).toBe("02-api")
       expect(next?.status).toBe("failed")
+    })
+
+    it("passes cwd to verifyCompletionTag when provided", () => {
+      const state = initState("build", samplePhases)
+      state.phases[0].status = "complete"
+      state.phases[0].completionTag = "ridgeline/phase/build/01-scaffold"
+
+      getNextIncompletePhase(state, "/my/cwd")
+
+      expect(verifyCompletionTag).toHaveBeenCalledWith("build", "01-scaffold", "/my/cwd")
+    })
+  })
+
+  describe("resetRetries", () => {
+    it("resets failed phases to pending with zero retries", () => {
+      const state = initState("build", samplePhases)
+      state.phases[0].status = "failed"
+      state.phases[0].retries = 3
+      state.phases[0].failedAt = "2024-01-01T00:00:00.000Z"
+      saveState(tmpDir, state)
+
+      resetRetries(tmpDir, state)
+
+      expect(state.phases[0].status).toBe("pending")
+      expect(state.phases[0].retries).toBe(0)
+      expect(state.phases[0].failedAt).toBeNull()
+    })
+
+    it("leaves complete phases untouched", () => {
+      const state = initState("build", samplePhases)
+      state.phases[0].status = "complete"
+      state.phases[0].completionTag = "ridgeline/phase/build/01-scaffold"
+      state.phases[1].status = "failed"
+      state.phases[1].retries = 2
+      saveState(tmpDir, state)
+
+      resetRetries(tmpDir, state)
+
+      expect(state.phases[0].status).toBe("complete")
+      expect(state.phases[1].status).toBe("pending")
+      expect(state.phases[1].retries).toBe(0)
+    })
+
+    it("persists changes to disk", () => {
+      const state = initState("build", samplePhases)
+      state.phases[0].status = "failed"
+      state.phases[0].retries = 2
+      saveState(tmpDir, state)
+
+      resetRetries(tmpDir, state)
+
+      const loaded = loadState(tmpDir)
+      expect(loaded!.phases[0].status).toBe("pending")
+      expect(loaded!.phases[0].retries).toBe(0)
     })
   })
 })

@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, afterEach } from "vitest"
-import { greywallProvider } from "../sandbox.greywall"
 import * as fs from "node:fs"
+import * as cp from "node:child_process"
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
   return { ...actual, writeFileSync: vi.fn() }
 })
+
+vi.mock("node:child_process", async () => {
+  const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process")
+  return { ...actual, execSync: vi.fn() }
+})
+
+import { greywallProvider } from "../sandbox.greywall"
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -50,5 +57,37 @@ describe("greywallProvider", () => {
     const [, content] = calls[calls.length - 1]
     const settings = JSON.parse(content as string)
     expect(settings.network).toBeUndefined()
+  })
+
+  describe("checkReady", () => {
+    it("returns null when greyproxy is running", () => {
+      vi.mocked(cp.execSync).mockReturnValue("✓ greyproxy running\n")
+
+      expect(greywallProvider.checkReady()).toBeNull()
+    })
+
+    it("returns error message when greyproxy is not running", () => {
+      vi.mocked(cp.execSync).mockReturnValue("greyproxy stopped\n")
+
+      expect(greywallProvider.checkReady()).toContain("greyproxy is not running")
+    })
+
+    it("returns null when execSync throws but output matches", () => {
+      const err = new Error("exit code 1")
+      ;(err as any).stdout = "✓ greyproxy running"
+      ;(err as any).stderr = ""
+      vi.mocked(cp.execSync).mockImplementation(() => { throw err })
+
+      expect(greywallProvider.checkReady()).toBeNull()
+    })
+
+    it("returns error message when execSync throws and output does not match", () => {
+      const err = new Error("command not found")
+      ;(err as any).stdout = ""
+      ;(err as any).stderr = "greywall: not found"
+      vi.mocked(cp.execSync).mockImplementation(() => { throw err })
+
+      expect(greywallProvider.checkReady()).toContain("greyproxy is not running")
+    })
   })
 })

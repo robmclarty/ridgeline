@@ -21,7 +21,16 @@ vi.mock("node:readline", () => ({
   })),
 }))
 
+vi.mock("../../engine/claude/agent.prompt", () => ({
+  resolveAgentPrompt: vi.fn(() => "specifier prompt"),
+}))
+
+vi.mock("../../engine/claude/stream.decode", () => ({
+  createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
+}))
+
 import { invokeClaude } from "../../engine/claude/claude.exec"
+import { printError } from "../../ui/output"
 import { runSpec } from "../spec"
 
 const makeClaudeResult = (result: string, sessionId = "sess-1") => ({
@@ -131,5 +140,87 @@ describe("commands/spec", () => {
     // Clarification call should resume the session
     const clarificationCall = vi.mocked(invokeClaude).mock.calls[1][0]
     expect(clarificationCall.sessionId).toBe("sess-1")
+  })
+
+  it("warns when spec.md is not created", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+
+    vi.mocked(invokeClaude).mockImplementation(async (opts) => {
+      if (opts.allowedTools?.includes("Write")) {
+        // Only create constraints.md, not spec.md
+        fs.mkdirSync(buildDir, { recursive: true })
+        fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      }
+      return makeClaudeResult(JSON.stringify({ ready: true, summary: "ok" }))
+    })
+
+    await runSpec("my-build", defaultOpts)
+
+    expect(printError).toHaveBeenCalledWith(expect.stringContaining("spec.md was not created"))
+  })
+
+  it("warns when constraints.md is not created", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+
+    vi.mocked(invokeClaude).mockImplementation(async (opts) => {
+      if (opts.allowedTools?.includes("Write")) {
+        // Only create spec.md, not constraints.md
+        fs.mkdirSync(buildDir, { recursive: true })
+        fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+      }
+      return makeClaudeResult(JSON.stringify({ ready: true, summary: "ok" }))
+    })
+
+    await runSpec("my-build", defaultOpts)
+
+    expect(printError).toHaveBeenCalledWith(expect.stringContaining("constraints.md was not created"))
+  })
+
+  it("reports error when no build files are created", async () => {
+    vi.mocked(invokeClaude).mockResolvedValue(
+      makeClaudeResult(JSON.stringify({ ready: true, summary: "ok" }))
+    )
+
+    await runSpec("my-build", defaultOpts)
+
+    expect(printError).toHaveBeenCalledWith(expect.stringContaining("No build files were created"))
+  })
+
+  it("uses input option as text when provided", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+
+    vi.mocked(invokeClaude).mockImplementation(async (opts) => {
+      if (opts.allowedTools?.includes("Write")) {
+        fs.mkdirSync(buildDir, { recursive: true })
+        fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+        fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      }
+      return makeClaudeResult(JSON.stringify({ ready: true, summary: "ok" }))
+    })
+
+    await runSpec("my-build", { ...defaultOpts, input: "Build a REST API" })
+
+    const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+    expect(firstCall.userPrompt).toContain("Build a REST API")
+  })
+
+  it("reads file content when input looks like a file path", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+    const specFile = path.join(tmpDir, "my-spec.md")
+    fs.writeFileSync(specFile, "# My detailed spec\nBuild something great")
+
+    vi.mocked(invokeClaude).mockImplementation(async (opts) => {
+      if (opts.allowedTools?.includes("Write")) {
+        fs.mkdirSync(buildDir, { recursive: true })
+        fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+        fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      }
+      return makeClaudeResult(JSON.stringify({ ready: true, summary: "ok" }))
+    })
+
+    await runSpec("my-build", { ...defaultOpts, input: specFile })
+
+    const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+    expect(firstCall.userPrompt).toContain("Build something great")
   })
 })
