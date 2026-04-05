@@ -43,6 +43,28 @@ ambitious phases. Sonnet (approximately 200K) gets smaller, more focused ones.
 Phases are ordered so dependencies flow forward -- phase N can assume everything
 from phases 1 through N-1 is complete.
 
+## Why Sequential, Not Parallel
+
+Phases run one at a time. This is a deliberate choice, not a limitation.
+
+Dependencies flow forward -- phase N assumes everything from phases 1 through N-1
+is complete. This ordering is inherent to the work: you cannot build an API on a
+database schema that does not exist yet. Parallelizing phases would require a
+dependency DAG, and the decomposition granularity that makes phases useful (roughly
+50% of context) means most phases have real dependencies on their predecessors.
+
+Sequential execution also makes debugging straightforward. When a phase fails, the
+cause is local: something in this phase or its inputs. There is no need to reason
+about race conditions, conflicting file edits, or ordering ambiguities between
+concurrent agents. The git history is linear, the state transitions are
+deterministic, and the trajectory log reads in order.
+
+The cost is wall-clock time. A five-phase build takes five sequential builder
+invocations plus their reviews. For projects where phases are genuinely independent
+(e.g., separate microservices from a shared spec), this is slower than necessary.
+But for most projects, the dependencies are real, and the simplicity of sequential
+execution is worth the time.
+
 ## The Handoff Mechanism
 
 Fresh context solves the noise problem, but creates a new one: how does the
@@ -145,6 +167,22 @@ risk exceeding the context window.
 builder got it right on the first pass. This is the cost of adversarial
 verification. It adds latency and spend, but catches problems that would
 compound in later phases.
+
+**Context isolation vs. shared state.** Fresh context windows are the core
+mechanism, but they create a tension. The builder for phase 4 cannot see the
+reasoning that shaped phase 2's implementation -- only the compressed summary in
+handoff.md and the code itself. Subtle context gets lost: why a particular pattern
+was chosen over alternatives, edge cases that were considered and rejected, implicit
+conventions that emerged during earlier phases.
+
+This is manageable when specs are well-written and handoff notes are thorough. It
+breaks down when the codebase has deep implicit conventions that no one thinks to
+document -- naming patterns that evolved organically, architectural decisions that
+are obvious to a human reading the full history but invisible in a summary. The
+mitigation is explicit: write constraints for conventions that matter, write
+detailed acceptance criteria, and trust that the builder will explore the codebase
+before making decisions. The handoff mechanism does not need to carry everything --
+it needs to carry enough for the builder to orient and discover the rest.
 
 ## Benefits
 

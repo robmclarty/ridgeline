@@ -137,6 +137,14 @@ The synthesizer's decision process:
    model's context window, leaving headroom for codebase exploration, tool use,
    and reasoning.
 
+The synthesis is judgment-based, not mechanical. There is no majority vote or
+weighted scoring. The synthesizer reads the rationale behind each proposal and
+makes decisions in context. A concern raised by only one specialist can override
+consensus from the other two if the rationale is compelling -- a security risk
+identified by the thoroughness planner, for example, should not be dismissed
+because simplicity and velocity did not mention it. The value of multiple
+perspectives is not in averaging them but in ensuring nothing important is missed.
+
 The synthesizer writes numbered phase files (`01-scaffold.md`, `02-core.md`,
 etc.) directly to the build's `phases/` directory. It produces nothing else --
 no summaries, no commentary, no index file.
@@ -163,6 +171,18 @@ the disagreement itself is informative. It highlights genuine tension in the
 spec -- places where the right decomposition depends on priorities that are not
 explicit. The synthesizer resolves these tensions deliberately rather than
 having them resolved implicitly by a single agent's biases.
+
+Consider a spec for a web application with user input forms. The simplicity
+planner might fold input validation into the same phase as form implementation --
+it is all one feature, and separating them creates an unnecessary context
+transition. The thoroughness planner might propose a dedicated validation phase
+covering edge cases, error messages, and security concerns like injection
+prevention. Neither is wrong. The disagreement reveals a real question: how
+complex is the validation? If it is straightforward field-level checks, simplicity
+is right. If it involves cross-field rules, async validation against external
+services, and security hardening, thoroughness is right. The synthesizer sees both
+rationales and makes the call based on the spec's actual complexity -- a judgment
+that a single planner would have made implicitly and possibly incorrectly.
 
 ## Extensibility
 

@@ -96,6 +96,19 @@ API style guide...
 Agents are discovered automatically. No registration needed -- if the file has
 valid frontmatter and lives in the right directory, it's available.
 
+Discovery works by scanning plugin directories for `.md` files with valid YAML
+frontmatter. The harness parses each file's frontmatter (`name`, `description`,
+and optionally `model`) and its markdown body (the system prompt), then passes
+them to the Claude CLI via the `--agents` flag as a JSON array. The builder and
+reviewer can then delegate to any discovered agent using Claude's Agent tool.
+
+This same mechanism powers the planner's specialist personalities. Each specialist
+in `agents/planners/` has frontmatter with a `perspective` field and a body
+describing its planning approach. During ensemble planning, the specialist's body
+is prepended to the base planner prompt as a personality overlay -- same core
+instructions, different priorities. Adding a new specialist perspective is just
+adding a new `.md` file with the right frontmatter.
+
 ### Skills
 
 Markdown files in a named subdirectory. Skills provide structured guidance that

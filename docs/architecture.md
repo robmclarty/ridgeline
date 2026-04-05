@@ -116,6 +116,32 @@ markdown files with valid frontmatter.
 Specialists use sonnet by default for cost efficiency. They run in their own
 context window, keeping the builder's context clean.
 
+## Git as Source of Truth
+
+Git is the backbone of Ridgeline's state model. Every meaningful operation is
+anchored in git:
+
+- **Worktrees** isolate each build in its own working directory. The builder
+  operates in `.ridgeline/worktrees/<build-name>/` on a dedicated WIP branch.
+  Changes never touch the user's working tree until explicitly merged.
+- **Tags** mark phase boundaries. Checkpoint tags
+  (`ridgeline/checkpoint/<build>/<phase>`) are the rollback points. Completion
+  tags (`ridgeline/phase/<build>/<phase>`) mark success. Together they define
+  the build's progress in a way that survives process crashes and restarts.
+- **Diffs** scope the reviewer's attention. The reviewer sees the diff from
+  checkpoint to HEAD -- exactly what the builder changed, nothing more. This
+  keeps review focused and prevents the reviewer from being distracted by
+  pre-existing code.
+- **Merges** integrate completed work. When all phases pass, the worktree's
+  branch is fast-forward merged back to the user's branch. Failed builds leave
+  the worktree intact for manual inspection.
+
+Why git rather than a database? Inspectability -- anyone can `git log`, `git
+diff`, or `git show` to understand what happened. Portability -- no external
+dependencies, no server to run. Composability -- the build's git history works
+with existing workflows (code review, CI, blame). And durability -- git's object
+store does not corrupt on process crashes the way a half-written JSON file might.
+
 ## State Management
 
 All build state lives under `.ridgeline/builds/<build-name>/`:
@@ -139,7 +165,12 @@ graph TD
 - **budget.json** -- records every Claude invocation: phase, role (planner,
   specialist, synthesizer, builder, reviewer), attempt number, cost in USD,
   input/output tokens, and duration. Running total enables `--max-budget-usd`
-  enforcement.
+  enforcement. The granularity is deliberate: per-phase, per-role, per-attempt
+  cost attribution lets users identify where budget is being spent. A phase
+  that takes three retries is visibly expensive. A reviewer that consistently
+  costs more than the builder may signal overly complex acceptance criteria.
+  This visibility helps users tune their specs, constraints, and retry limits
+  for cost efficiency -- not just correctness.
 
 - **trajectory.jsonl** -- append-only event log. Event types: `plan_start`,
   `plan_complete`, `build_start`, `build_complete`, `review_start`,

@@ -14,6 +14,15 @@ arbitrary code. The current security model has a gap:
   prompt instructions, neither of which prevents `Bash(curl ...)` or writing
   outside the repo.
 
+This creates a fundamental tension. Builders need broad tool access to be
+effective -- installing packages, running servers, executing tests, exploring the
+filesystem. But unconstrained access is a security risk: a builder could
+exfiltrate code, install malicious packages, or modify files outside the
+repository. Ridgeline's approach is layered defense with graceful degradation:
+use OS-level sandboxing when available, fall back to hook-based interception when
+not, and always isolate builds in git worktrees regardless. Each layer catches
+what the layers above it miss.
+
 The goal is to close this gap with layered controls that:
 
 1. Restrict network access to package registries and documentation only.

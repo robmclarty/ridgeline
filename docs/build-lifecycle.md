@@ -1,0 +1,194 @@
+# Build Lifecycle
+
+A Ridgeline build moves through a defined sequence: spec, plan, build, review,
+and completion. This document walks through each step -- what happens, what the
+user sees, and where the user can intervene.
+
+## Overview
+
+```text
+spec → plan → [build → review → retry/advance] × N phases → merge
+```
+
+The user authors a spec describing what to build. The planner decomposes it into
+phases. The builder implements each phase. The reviewer verifies it. Failed phases
+are retried with feedback. On success, the worktree merges back to the user's
+branch.
+
+## Step 1: Spec
+
+```sh
+ridgeline spec my-feature
+```
+
+The specifier agent launches an interactive Q&A session to scaffold the three
+input files:
+
+- **spec.md** -- what to build (features, behaviors, acceptance criteria)
+- **constraints.md** -- technical guardrails (language, framework, structure,
+  check command)
+- **taste.md** -- style preferences (optional)
+
+Files are written to `.ridgeline/builds/my-feature/`. The user can also author
+these files directly -- the specifier is a convenience, not a requirement.
+
+The user can provide input upfront to shortcut the Q&A:
+
+```sh
+ridgeline spec my-feature "REST API with JWT auth, Fastify, PostgreSQL"
+ridgeline spec my-feature ./existing-requirements.md
+```
+
+**What to review before proceeding:** Read the generated files. Tighten
+acceptance criteria -- vague criteria produce vague results. Ensure the check
+command in constraints actually works on your codebase.
+
+## Step 2: Plan
+
+```sh
+ridgeline plan my-feature
+```
+
+The planner decomposes the spec into sequential phases. Ridgeline uses ensemble
+planning: three specialist planners (simplicity, velocity, thoroughness) run in
+parallel, then a synthesizer merges their proposals into final phase files.
+
+Phase files land in `.ridgeline/builds/my-feature/phases/`:
+
+```text
+phases/
+├── 01-scaffold.md
+├── 02-core-api.md
+├── 03-auth.md
+└── 04-integration.md
+```
+
+Each phase file contains a goal, context, and numbered acceptance criteria. The
+planner sizes phases to roughly 50% of the builder model's context window,
+leaving headroom for codebase exploration and tool use.
+
+**What the user sees:** Specialist invocations (with cost), synthesis progress,
+and a listing of the generated phase files.
+
+**What to review before proceeding:** Read the phase files. Check that phases
+are ordered with dependencies flowing forward. Adjust scope, merge or split
+phases, or edit acceptance criteria as needed. Phase files are plain markdown --
+edit freely.
+
+To preview the plan without executing:
+
+```sh
+ridgeline dry-run my-feature
+```
+
+## Step 3: Build
+
+```sh
+ridgeline build my-feature
+```
+
+The harness creates a git worktree at `.ridgeline/worktrees/my-feature/` on a
+`ridgeline/wip/my-feature` branch, then iterates through phases sequentially.
+
+For each phase:
+
+1. **Checkpoint.** The harness commits any dirty state and creates a git tag
+   (`ridgeline/checkpoint/my-feature/01-scaffold`). This is the rollback point.
+
+2. **Builder invocation.** The builder agent receives the phase spec,
+   constraints, taste, accumulated handoff from prior phases, and (on retry)
+   feedback from the reviewer. It implements the phase using full tool access:
+   reading files, writing code, running commands, delegating to specialist
+   agents.
+
+3. **Check command.** If constraints specify a check command (e.g.,
+   `npm test && npm run typecheck`), the builder runs it before finishing.
+
+4. **Commit and handoff.** The builder commits its work and appends to
+   `handoff.md` -- a structured summary of what was built, decisions made,
+   deviations from the spec, and notes for the next phase.
+
+**What the user sees:** Streaming builder output in real-time, phase progress
+indicators, and per-phase cost summaries.
+
+## Step 4: Review
+
+After the builder completes each phase, the reviewer runs automatically.
+
+The reviewer receives the phase spec, the git diff from checkpoint to HEAD, and
+constraints. It walks each acceptance criterion, runs verification commands, and
+produces a structured JSON verdict with per-criterion pass/fail, blocking issues,
+and suggestions.
+
+- **PASS:** All criteria met, no blocking issues. The harness creates a
+  completion tag and advances to the next phase.
+- **FAIL:** The harness generates a feedback file and retries the builder.
+
+**What the user sees:** A verdict summary showing which criteria passed, which
+failed, and any blocking issues with evidence.
+
+## Step 5: Retry or Advance
+
+When a phase fails review, the harness writes a feedback file
+(`<phase>.feedback.md`) from the structured verdict. The builder retries with a
+fresh context window containing the same inputs plus this feedback. The feedback
+targets the builder's attention on what specifically needs fixing.
+
+Retries are capped (default: 2, configurable via `--max-retries`). If all
+retries are exhausted:
+
+- The phase is marked as `failed` in state.json.
+- The build halts.
+- The worktree is left intact for inspection.
+- The user receives recovery instructions.
+
+The user can then inspect the code, edit the phase spec or constraints, and
+re-run `ridgeline build my-feature`. The harness resumes from the failed phase.
+
+## Step 6: Completion
+
+When all phases pass:
+
+1. The worktree's WIP branch is fast-forward merged back to the user's branch.
+2. All ridgeline git tags for this build are cleaned up.
+3. A build summary is printed: total cost, total duration, per-phase breakdown
+   (cost, duration, retries).
+
+The build directory (`.ridgeline/builds/my-feature/`) is preserved with all
+state files -- state.json, budget.json, trajectory.jsonl, handoff.md, and phase
+files. This is the build's audit trail.
+
+To clean up worktrees from completed or abandoned builds:
+
+```sh
+ridgeline clean
+```
+
+## Intervention Points
+
+Ridgeline's pipeline is autonomous during execution, but the user has control
+at several points:
+
+**Between spec and plan.** Edit spec.md, constraints.md, and taste.md before
+planning. The planner works from these files, so changes here cascade through
+the entire build.
+
+**Between plan and build.** Edit phase files in `phases/`. Adjust scope, rewrite
+acceptance criteria, reorder phases, add or remove phases. Phase files are plain
+markdown.
+
+**Between build attempts.** When a build fails and halts, the worktree is
+intact. The user can:
+
+- Edit code in the worktree directly (fix what the builder could not).
+- Edit the phase spec or constraints.
+- Adjust `--max-retries` or `--max-budget-usd`.
+- Re-run `ridgeline build my-feature` to resume from the failed phase.
+
+**During build (budget control).** The `--max-budget-usd` flag halts the build
+if cumulative cost exceeds the threshold. This prevents runaway spending on
+phases that are not converging.
+
+**After completion.** Inspect the merged result on your branch. Review the git
+history (each phase's commits are preserved). Check budget.json for cost
+analysis. Read trajectory.jsonl for the full event log.
