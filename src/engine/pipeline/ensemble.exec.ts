@@ -244,10 +244,11 @@ export const invokePlanner = async (
     }
   }
 
-  if (successful.length < 2) {
+  const minRequired = Math.ceil(planners.length / 2)
+  if (successful.length < minRequired) {
     spinner.stop()
     throw new Error(
-      `Planning requires at least 2 successful specialist proposals, got ${successful.length}. ` +
+      `Planning requires at least ${minRequired} of ${planners.length} specialist proposals to succeed, got ${successful.length}. ` +
       "Check Claude authentication and try again."
     )
   }
