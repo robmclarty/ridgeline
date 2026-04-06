@@ -9,7 +9,14 @@ const statePath = (buildDir: string): string =>
 export const loadState = (buildDir: string): BuildState | null => {
   const fp = statePath(buildDir)
   if (fs.existsSync(fp)) {
-    return JSON.parse(fs.readFileSync(fp, "utf-8"))
+    const state: BuildState = JSON.parse(fs.readFileSync(fp, "utf-8"))
+    // Backfill isMerged for legacy state files
+    for (const phase of state.phases) {
+      if ((phase as any).isMerged === undefined) {
+        phase.isMerged = false
+      }
+    }
+    return state
   }
   return null
 }

@@ -47,6 +47,28 @@ describe("state", () => {
       const loaded = loadState(tmpDir)
       expect(loaded).toEqual(state)
     })
+
+    it("backfills isMerged=false for legacy state files missing the field", () => {
+      const legacyState = {
+        buildName: "test",
+        startedAt: "2024-01-01T00:00:00.000Z",
+        phases: [{
+          id: "01-scaffold",
+          status: "complete",
+          checkpointTag: "ridgeline/checkpoint/test/01-scaffold",
+          completionTag: "ridgeline/phase/test/01-scaffold",
+          retries: 0,
+          duration: 100,
+          completedAt: "2024-01-01T00:00:00.000Z",
+          failedAt: null,
+          // no isMerged field
+        }],
+      }
+      fs.writeFileSync(path.join(tmpDir, "state.json"), JSON.stringify(legacyState))
+
+      const loaded = loadState(tmpDir)
+      expect(loaded!.phases[0].isMerged).toBe(false)
+    })
   })
 
   describe("saveState", () => {
