@@ -35,6 +35,7 @@ export type PhaseState = {
   status: "pending" | "building" | "reviewing" | "complete" | "failed"
   checkpointTag: string
   completionTag: string | null
+  isMerged: boolean
   retries: number
   duration: number | null
   completedAt: string | null

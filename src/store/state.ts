@@ -26,6 +26,7 @@ export const initState = (buildName: string, phases: PhaseInfo[]): BuildState =>
     status: "pending",
     checkpointTag: checkpointTagName(buildName, p.id),
     completionTag: null,
+    isMerged: false,
     retries: 0,
     duration: null,
     completedAt: null,
