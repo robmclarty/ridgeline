@@ -134,8 +134,19 @@ export const validateWorktree = (repoRoot: string, buildName: string): boolean =
   }
 }
 
+export const abortStaleMerge = (repoRoot: string): void => {
+  try {
+    run("git merge --abort", repoRoot)
+  } catch {
+    // No merge in progress — nothing to abort
+  }
+}
+
 export const reflectCommits = (repoRoot: string, buildName: string): void => {
   const branch = wipBranch(buildName)
+
+  // Abort any stale merge left from a previous interrupted run
+  abortStaleMerge(repoRoot)
 
   // Remove untracked files that would conflict with the merge.
   // The WIP branch is authoritative, so its versions always win.

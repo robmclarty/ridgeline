@@ -12,6 +12,7 @@ import {
   wipBranch,
   ensureGitRepo,
   cleanAllWorktrees,
+  abortStaleMerge,
 } from "../worktree"
 
 const initGitRepo = (dir: string): void => {
@@ -176,6 +177,25 @@ describe("worktree", () => {
       expect(() => reflectCommits(repoDir, "test-build")).toThrow("Cannot auto-merge")
     })
 
+    it("recovers from a stale in-progress merge and succeeds on retry", () => {
+      const wtPath = createWorktree(repoDir, "test-build")
+
+      // Add a new file in the worktree (no conflict)
+      fs.writeFileSync(path.join(wtPath, "feature.ts"), "export const y = 2")
+      execSync("git add -A && git commit -m 'add feature'", { cwd: wtPath, stdio: "pipe" })
+
+      // Simulate a stale MERGE_HEAD to represent an interrupted merge
+      const mergeHeadPath = path.join(repoDir, ".git", "MERGE_HEAD")
+      const wipHead = execSync("git rev-parse HEAD", { cwd: wtPath, encoding: "utf-8" }).trim()
+      fs.writeFileSync(mergeHeadPath, wipHead + "\n")
+
+      // reflectCommits should abort the stale merge and succeed
+      reflectCommits(repoDir, "test-build")
+
+      expect(fs.existsSync(path.join(repoDir, "feature.ts"))).toBe(true)
+      expect(fs.existsSync(mergeHeadPath)).toBe(false)
+    })
+
     it("fast-forwards the source branch with worktree commits", () => {
       const wtPath = createWorktree(repoDir, "test-build")
 
@@ -188,6 +208,38 @@ describe("worktree", () => {
 
       // Verify the file appears in the main repo working tree
       expect(fs.existsSync(path.join(repoDir, "new-file.ts"))).toBe(true)
+    })
+  })
+
+  describe("abortStaleMerge", () => {
+    it("no-ops when there is no merge in progress", () => {
+      expect(() => abortStaleMerge(repoDir)).not.toThrow()
+    })
+
+    it("aborts an active merge", () => {
+      const wtPath = createWorktree(repoDir, "test-build")
+
+      // Create a merge conflict on main
+      fs.writeFileSync(path.join(repoDir, "README.md"), "# Changed on main")
+      execSync("git add -A && git commit -m 'main edit'", { cwd: repoDir, stdio: "pipe" })
+
+      fs.writeFileSync(path.join(wtPath, "README.md"), "# Changed in WIP")
+      execSync("git add -A && git commit -m 'wip edit'", { cwd: wtPath, stdio: "pipe" })
+
+      // Start a merge that will conflict
+      try {
+        execSync(`git merge ridgeline/wip/test-build`, { cwd: repoDir, stdio: "pipe" })
+      } catch {
+        // expected — conflict
+      }
+
+      // Verify merge is in progress
+      const mergeHead = path.join(repoDir, ".git", "MERGE_HEAD")
+      expect(fs.existsSync(mergeHead)).toBe(true)
+
+      abortStaleMerge(repoDir)
+
+      expect(fs.existsSync(mergeHead)).toBe(false)
     })
   })
 
