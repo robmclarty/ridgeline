@@ -25,7 +25,7 @@ const formatDuration = (ms: number): string => {
   if (seconds < 60) return `${seconds}s`
   const minutes = Math.floor(seconds / 60)
   const remaining = seconds % 60
-  return remaining > 0 ? `${minutes}m ${remaining}s` : `${minutes}m`
+  return remaining > 0 ? `${minutes}m ${remaining.toString().padStart(2, "0")}s` : `${minutes}m`
 }
 
 const readSpecDescription = (buildDir: string): string | null => {
@@ -93,7 +93,7 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
 
   // Breakdown table
   const formatRow = (name: string, attempts: string, build: string, review: string, cost: string): string =>
-    `  ${name.padEnd(24)}   ${attempts.padStart(4)}  ${build.padStart(8)}  ${review.padStart(8)}    ${cost.padStart(8)}`
+    `  ${name.padEnd(24)} ${attempts.padStart(8)}  ${build.padStart(8)}  ${review.padStart(8)}    ${cost.padStart(8)}`
 
   console.log("")
   console.log(formatRow("", "Attempts", "Build", "Review", "Cost"))

@@ -167,7 +167,7 @@ export const startSpinner = (verb?: string): Spinner => {
     printAbove(line: string) {
       if (stopped || !timer) return
       clearLine()
-      process.stderr.write(line + "\n")
+      process.stderr.write(`\x1b[90m${line}\x1b[0m\n`)
       tick()
     },
   }

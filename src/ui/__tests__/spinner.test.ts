@@ -163,7 +163,7 @@ describe("spinner", () => {
       const calls = writeSpy.mock.calls.map((c) => c[0] as string)
       // Should: clear spinner line, write the text + newline, then redraw spinner
       expect(calls[0]).toBe("\r\x1b[K")           // clear spinner line
-      expect(calls[1]).toBe("[Bash] ls -la\n")     // permanent line
+      expect(calls[1]).toBe("\x1b[90m[Bash] ls -la\x1b[0m\n")     // permanent line (dimmed)
       expect(calls[2]).toContain("Testing...")      // spinner redrawn
 
       spinner.stop()

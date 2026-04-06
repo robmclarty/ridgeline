@@ -195,6 +195,7 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
   let hasStreamedText = false
   let lastCharWasNewline = true
   let jsonSuppressed = false
+  let lastEventWasTool = false
   let resumeTimer: ReturnType<typeof setTimeout> | null = null
   const spinner = startSpinner()
 
@@ -241,6 +242,10 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
       }
       spinner.pause()
       if (resumeTimer) clearTimeout(resumeTimer)
+      if (lastEventWasTool) {
+        process.stdout.write("\n")
+        lastEventWasTool = false
+      }
       writeText(event.text)
       scheduleResume()
     } else if (event.type === "tool_use") {
@@ -254,6 +259,7 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
         : `[${event.tool}]`
       spinner.printAbove(line)
       spinner.setDetail(event.tool)
+      lastEventWasTool = true
     }
   })
   return {
