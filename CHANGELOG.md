@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.13
+
+- Replace fallback git merge with rebase-then-fast-forward so user changes on main (e.g. version bumps) are preserved while builder work layers on top
+- Add build output improvements: phase progress headers, merge visibility, retry reasons, and summary table on failure
+- Detect expired OAuth tokens and fail immediately instead of retrying or masking with misleading "could not parse verdict" errors
+- Kill orphaned Claude subprocesses on Ctrl+C or build failure using process group isolation (detached spawn + SIGKILL)
+- Fix phase.sequence test committing dirty files to the real repo due to missing git mock
+- Fix double "Error: Error:" prefix in CLI error handlers
+
 ## 0.3.12
 
 - Fix worktree merge failure when untracked files (e.g. package-lock.json) in the main repo conflict with files committed in the WIP branch; detect and remove conflicting untracked files before merging since the WIP branch is authoritative
