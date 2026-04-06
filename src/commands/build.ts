@@ -1,4 +1,4 @@
-import { RidgelineConfig } from "../types"
+import { RidgelineConfig, BuildState } from "../types"
 import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../store/phases"
@@ -168,6 +168,43 @@ const setupWorktree = (repoRoot: string, config: RidgelineConfig): void => {
   }
 }
 
+/** Merge a completed phase's worktree commits into main. Returns true on success. */
+const mergePhaseIntoMain = (
+  repoRoot: string, config: RidgelineConfig, state: BuildState, phaseId: string,
+): boolean => {
+  if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
+    commitAll(`ridgeline: ${phaseId}`, config.worktreePath)
+  }
+  printInfo("Merging phase into main...")
+  try {
+    reflectCommits(repoRoot, config.buildName)
+    updatePhaseStatus(config.buildDir, state, phaseId, { isMerged: true })
+    return true
+  } catch (err) {
+    printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
+    return false
+  }
+}
+
+/** Retry merges for complete-but-unmerged phases (from a previous interrupted run). Returns failure count. */
+const retryUnmergedPhases = (repoRoot: string, config: RidgelineConfig, state: BuildState): number => {
+  let failures = 0
+  let unmerged = getNextUnmergedPhase(state)
+  while (unmerged) {
+    printInfo(`Merging previously completed phase: ${unmerged.id}`)
+    try {
+      reflectCommits(repoRoot, config.buildName)
+      updatePhaseStatus(config.buildDir, state, unmerged.id, { isMerged: true })
+    } catch (err) {
+      printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
+      failures++
+      break
+    }
+    unmerged = getNextUnmergedPhase(state)
+  }
+  return failures
+}
+
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   const phases = await ensurePhases(config)
 
@@ -196,7 +233,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   let failed = 0
 
   try {
-    // Run phases
     let nextPhaseState = getNextIncompletePhase(state)
     while (nextPhaseState) {
       const phase = phases.find((p) => p.id === nextPhaseState!.id)
@@ -210,25 +246,10 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
       printPhaseHeader(phaseIndex, phases.length, phase.id)
 
       const result = await runPhase(phase, config, state)
+      if (result !== "passed") { failed++; break }
 
-      if (result === "passed") {
-        completed++
-        if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
-          commitAll(`ridgeline: ${phase.id}`, config.worktreePath)
-        }
-        printInfo("Merging phase into main...")
-        try {
-          reflectCommits(repoRoot, config.buildName)
-          updatePhaseStatus(config.buildDir, state, phase.id, { isMerged: true })
-        } catch (err) {
-          printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
-          failed++
-          break
-        }
-      } else {
-        failed++
-        break
-      }
+      completed++
+      if (!mergePhaseIntoMain(repoRoot, config, state, phase.id)) { failed++; break }
 
       if (config.maxBudgetUsd) {
         const budget = loadBudget(config.buildDir)
@@ -241,20 +262,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
       nextPhaseState = getNextIncompletePhase(state)
     }
 
-    // Retry merges for complete-but-unmerged phases (from a previous interrupted run)
-    let unmerged = getNextUnmergedPhase(state)
-    while (unmerged) {
-      printInfo(`Merging previously completed phase: ${unmerged.id}`)
-      try {
-        reflectCommits(repoRoot, config.buildName)
-        updatePhaseStatus(config.buildDir, state, unmerged.id, { isMerged: true })
-      } catch (err) {
-        printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
-        failed++
-        break
-      }
-      unmerged = getNextUnmergedPhase(state)
-    }
+    failed += retryUnmergedPhases(repoRoot, config, state)
   } catch (err) {
     printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
     failed++

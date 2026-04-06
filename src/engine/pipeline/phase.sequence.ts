@@ -10,6 +10,41 @@ import { commitAll, isWorkingTreeDirty } from "../../git"
 import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
 
+const handleInvokeError = (
+  err: unknown,
+  step: "build" | "review",
+  phase: PhaseInfo,
+  config: RidgelineConfig,
+  state: BuildState,
+): "fatal" | "retry" => {
+  const label = step === "build" ? "Build" : "Review"
+  const event = step === "build" ? "build_complete" : "review_complete"
+  const msg = String(err)
+  printPhase(phase.id, `${label} failed: ${msg}`)
+  logTrajectory(config.buildDir, makeTrajectoryEntry(event, phase.id, `${label} error: ${msg}`))
+  if (msg.includes("Authentication failed")) {
+    updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
+    return "fatal"
+  }
+  return "retry"
+}
+
+const isBudgetExceeded = (
+  totalCostUsd: number,
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+  state: BuildState,
+): boolean => {
+  if (!config.maxBudgetUsd || totalCostUsd <= config.maxBudgetUsd) return false
+  printPhase(phase.id, `Budget exceeded: $${totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+  logTrajectory(config.buildDir, makeTrajectoryEntry(
+    "budget_exceeded", phase.id,
+    `Total cost $${totalCostUsd.toFixed(2)} exceeds budget $${config.maxBudgetUsd}`
+  ))
+  updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
+  return true
+}
+
 export const runPhase = async (
   phase: PhaseInfo,
   config: RidgelineConfig,
@@ -44,13 +79,7 @@ export const runPhase = async (
     try {
       buildResult = await invokeBuilder(config, phase, feedbackFilePath)
     } catch (err) {
-      const msg = String(err)
-      printPhase(phase.id, `Build failed: ${msg}`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry("build_complete", phase.id, `Build error: ${msg}`))
-      if (msg.includes("Authentication failed")) {
-        updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
-        return "failed"
-      }
+      if (handleInvokeError(err, "build", phase, config, state) === "fatal") return "failed"
       attempt++
       continue
     }
@@ -66,16 +95,7 @@ export const runPhase = async (
 
     const budget = recordCost(config.buildDir, phase.id, "builder", attempt, buildResult)
 
-    // Budget check
-    if (config.maxBudgetUsd && budget.totalCostUsd > config.maxBudgetUsd) {
-      printPhase(phase.id, `Budget exceeded: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry(
-        "budget_exceeded", phase.id,
-        `Total cost $${budget.totalCostUsd.toFixed(2)} exceeds budget $${config.maxBudgetUsd}`
-      ))
-      updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
-      return "failed"
-    }
+    if (isBudgetExceeded(budget.totalCostUsd, config, phase, state)) return "failed"
 
     // Commit builder work so the reviewer can see the diff
     const worktreeCwd = config.worktreePath ?? undefined
@@ -92,13 +112,7 @@ export const runPhase = async (
     try {
       reviewResult = await invokeReviewer(config, phase, checkpointTag)
     } catch (err) {
-      const msg = String(err)
-      printPhase(phase.id, `Review failed: ${msg}`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry("review_complete", phase.id, `Review error: ${msg}`))
-      if (msg.includes("Authentication failed")) {
-        updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
-        return "failed"
-      }
+      if (handleInvokeError(err, "review", phase, config, state) === "fatal") return "failed"
       attempt++
       continue
     }
