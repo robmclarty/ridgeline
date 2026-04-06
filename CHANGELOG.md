@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.15
+
+- Dim tool call lines (dark grey) so conversational LLM output stands out during builds
+- Add blank line before tool→conversation transitions for visual breathing room
+- Zero-pad seconds in summary table durations and fix column alignment for the Attempts header
+- Reduce cognitive complexity in `runBuild`, `runPhase`, and `extractResult` to pass fallow thresholds
+- Eliminate duplicated build/review error handler in phase.sequence.ts
+
 ## 0.3.14
 
 - Track per-phase merge state (`isMerged`) so resume correctly retries failed merges instead of thinking the build is done
