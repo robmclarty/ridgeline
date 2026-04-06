@@ -3,7 +3,7 @@ import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../store/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
-import { loadState, saveState, initState, getNextIncompletePhase, resetRetries } from "../store/state"
+import { loadState, saveState, initState, getNextIncompletePhase, getNextUnmergedPhase, resetRetries, updatePhaseStatus } from "../store/state"
 import { loadBudget } from "../store/budget"
 import { cleanupBuildTags } from "../store/tags"
 import { commitAll, isWorkingTreeDirty } from "../git"
@@ -219,6 +219,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
         printInfo("Merging phase into main...")
         try {
           reflectCommits(repoRoot, config.buildName)
+          updatePhaseStatus(config.buildDir, state, phase.id, { isMerged: true })
         } catch (err) {
           printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
           failed++
@@ -239,6 +240,21 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
       nextPhaseState = getNextIncompletePhase(state)
     }
+
+    // Retry merges for complete-but-unmerged phases (from a previous interrupted run)
+    let unmerged = getNextUnmergedPhase(state)
+    while (unmerged) {
+      printInfo(`Merging previously completed phase: ${unmerged.id}`)
+      try {
+        reflectCommits(repoRoot, config.buildName)
+        updatePhaseStatus(config.buildDir, state, unmerged.id, { isMerged: true })
+      } catch (err) {
+        printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
+        failed++
+        break
+      }
+      unmerged = getNextUnmergedPhase(state)
+    }
   } catch (err) {
     printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
     failed++
@@ -253,7 +269,9 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     process.exit(1)
   }
 
-  if (totalCompleted === phases.length) {
+  const isFullyDone = state.phases.every((p) => p.status === "complete" && p.isMerged)
+
+  if (isFullyDone) {
     console.log("")
     console.log("  All phases complete!")
     console.log("  Cleaning up...")
