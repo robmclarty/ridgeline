@@ -7,6 +7,7 @@ import { loadState, saveState, initState, getNextIncompletePhase, resetRetries }
 import { loadBudget } from "../store/budget"
 import { cleanupBuildTags } from "../store/tags"
 import { commitAll, isWorkingTreeDirty } from "../git"
+import { killAllClaudeSync } from "../engine/claude/claude.exec"
 import { runPlan } from "./plan"
 import {
   createWorktree,
@@ -248,6 +249,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   printSummaryTable(config, totalCompleted, failed, phases.length)
 
   if (failed > 0) {
+    killAllClaudeSync()
     process.exit(1)
   }
 

@@ -8,6 +8,13 @@ import { runSpec } from "./commands/spec"
 import { runPlan } from "./commands/plan"
 import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
+import { killAllClaude } from "./engine/claude/claude.exec"
+
+// Kill all Claude subprocesses on Ctrl+C before exiting
+process.on("SIGINT", () => {
+  killAllClaude()
+  setTimeout(() => process.exit(130), 2500)
+})
 
 type Opts = Record<string, string | boolean | undefined>
 

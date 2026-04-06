@@ -9,6 +9,34 @@ const DEFAULT_STARTUP_TIMEOUT_MS = 2 * 60 * 1000
 /** Default: kill if no stdout arrives for 5 minutes during execution. */
 const DEFAULT_STALL_TIMEOUT_MS = 5 * 60 * 1000
 
+// --- Process registry: track all live Claude subprocesses ---
+const liveProcs = new Set<ChildProcess>()
+
+/** Graceful kill: SIGTERM all process groups, then SIGKILL after 2s. */
+export const killAllClaude = (): void => {
+  for (const proc of liveProcs) {
+    if (proc.pid) {
+      try { process.kill(-proc.pid, "SIGTERM") } catch { /* already dead */ }
+    }
+  }
+  setTimeout(() => {
+    for (const proc of liveProcs) {
+      if (proc.pid) {
+        try { process.kill(-proc.pid, "SIGKILL") } catch { /* already dead */ }
+      }
+    }
+  }, 2000)
+}
+
+/** Immediate kill: SIGKILL all process groups. Use before process.exit(). */
+export const killAllClaudeSync = (): void => {
+  for (const proc of liveProcs) {
+    if (proc.pid) {
+      try { process.kill(-proc.pid, "SIGKILL") } catch { /* already dead */ }
+    }
+  }
+}
+
 export type InvokeOptions = {
   systemPrompt: string
   userPrompt: string
@@ -78,7 +106,9 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
     const proc: ChildProcess = spawn(spawnCmd, spawnArgs, {
       cwd: opts.cwd,
       stdio: ["pipe", "pipe", "pipe"],
+      detached: true,
     })
+    liveProcs.add(proc)
 
     let stdoutData = ""
     let stderrData = ""
@@ -88,11 +118,17 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
     const startupMs = opts.startupTimeoutMs ?? DEFAULT_STARTUP_TIMEOUT_MS
     const stallMs = opts.stallTimeoutMs ?? DEFAULT_STALL_TIMEOUT_MS
 
+    const killProc = (signal: NodeJS.Signals) => {
+      if (proc.pid) {
+        try { process.kill(-proc.pid, signal) } catch { /* already dead */ }
+      }
+    }
+
     const killOnStall = (reason: string) => {
       stalled = true
       stallReason = reason
-      proc.kill("SIGTERM")
-      setTimeout(() => proc.kill("SIGKILL"), 5000)
+      killProc("SIGTERM")
+      setTimeout(() => killProc("SIGKILL"), 5000)
     }
 
     // Startup probe: short fuse for the very first stdout event
@@ -128,12 +164,13 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
     if (opts.timeoutMs) {
       timer = setTimeout(() => {
         timedOut = true
-        proc.kill("SIGTERM")
-        setTimeout(() => proc.kill("SIGKILL"), 5000)
+        killProc("SIGTERM")
+        setTimeout(() => killProc("SIGKILL"), 5000)
       }, opts.timeoutMs)
     }
 
     proc.on("close", (code) => {
+      liveProcs.delete(proc)
       if (timer) clearTimeout(timer)
       if (stallTimer) clearTimeout(stallTimer)
 

@@ -53,6 +53,11 @@ vi.mock("../../../store/feedback", () => ({
   archiveFeedback: vi.fn(),
 }))
 
+vi.mock("../../../git", () => ({
+  isWorkingTreeDirty: vi.fn(() => false),
+  commitAll: vi.fn(),
+}))
+
 import { runPhase } from "../phase.sequence"
 import { invokeBuilder } from "../build.exec"
 import { invokeReviewer } from "../review.exec"
