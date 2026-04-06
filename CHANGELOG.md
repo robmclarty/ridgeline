@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.14
+
+- Track per-phase merge state (`isMerged`) so resume correctly retries failed merges instead of thinking the build is done
+- Abort stale in-progress merges before retrying, recovering from interrupted runs that left the repo in a conflicted state
+- Backfill `isMerged` for legacy state.json files so existing builds can resume properly
+
 ## 0.3.13
 
 - Replace fallback git merge with rebase-then-fast-forward so user changes on main (e.g. version bumps) are preserved while builder work layers on top
