@@ -58,6 +58,15 @@ export const resetRetries = (buildDir: string, state: BuildState): void => {
   saveState(buildDir, state)
 }
 
+export const getNextUnmergedPhase = (state: BuildState): PhaseState | null => {
+  for (const phase of state.phases) {
+    if (phase.status === "complete" && !phase.isMerged) {
+      return phase
+    }
+  }
+  return null
+}
+
 export const getNextIncompletePhase = (
   state: BuildState,
   cwd?: string
