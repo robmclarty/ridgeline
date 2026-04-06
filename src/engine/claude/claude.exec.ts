@@ -148,6 +148,13 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
       }
 
       if (code !== 0 && !stdoutData.trim()) {
+        const lower = stderrData.toLowerCase()
+        if (lower.includes("authentication") || lower.includes("unauthorized") ||
+            lower.includes("forbidden") || lower.includes("oauth token has expired") ||
+            lower.includes("invalid_api_key")) {
+          reject(new Error("Authentication failed. Refresh your OAuth token or API key and resume."))
+          return
+        }
         reject(new Error(`claude exited with code ${code}: ${stderrData}`))
         return
       }

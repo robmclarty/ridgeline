@@ -1,5 +1,5 @@
 import { RidgelineConfig } from "../types"
-import { printInfo, printError } from "../ui/output"
+import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../store/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
@@ -194,41 +194,56 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   let completed = 0
   let failed = 0
 
-  // Run phases
-  let nextPhaseState = getNextIncompletePhase(state)
-  while (nextPhaseState) {
-    const phase = phases.find((p) => p.id === nextPhaseState!.id)
-    if (!phase) {
-      printError(`Phase ${nextPhaseState.id} not found in filesystem`)
-      failed++
-      break
-    }
-
-    const result = await runPhase(phase, config, state)
-
-    if (result === "passed") {
-      completed++
-      if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
-        commitAll(`ridgeline: ${phase.id}`, config.worktreePath)
-      }
-      reflectCommits(repoRoot, config.buildName)
-    } else {
-      failed++
-      break
-    }
-
-    if (config.maxBudgetUsd) {
-      const budget = loadBudget(config.buildDir)
-      if (budget.totalCostUsd > config.maxBudgetUsd) {
-        printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+  try {
+    // Run phases
+    let nextPhaseState = getNextIncompletePhase(state)
+    while (nextPhaseState) {
+      const phase = phases.find((p) => p.id === nextPhaseState!.id)
+      if (!phase) {
+        printError(`Phase ${nextPhaseState.id} not found in filesystem`)
+        failed++
         break
       }
-    }
 
-    nextPhaseState = getNextIncompletePhase(state)
+      const phaseIndex = phases.findIndex((p) => p.id === nextPhaseState!.id) + 1
+      printPhaseHeader(phaseIndex, phases.length, phase.id)
+
+      const result = await runPhase(phase, config, state)
+
+      if (result === "passed") {
+        completed++
+        if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
+          commitAll(`ridgeline: ${phase.id}`, config.worktreePath)
+        }
+        printInfo("Merging phase into main...")
+        try {
+          reflectCommits(repoRoot, config.buildName)
+        } catch (err) {
+          printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
+          failed++
+          break
+        }
+      } else {
+        failed++
+        break
+      }
+
+      if (config.maxBudgetUsd) {
+        const budget = loadBudget(config.buildDir)
+        if (budget.totalCostUsd > config.maxBudgetUsd) {
+          printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+          break
+        }
+      }
+
+      nextPhaseState = getNextIncompletePhase(state)
+    }
+  } catch (err) {
+    printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
+    failed++
   }
 
-  // Summary
+  // Summary — always printed, even on failure
   const totalCompleted = state.phases.filter((p) => p.status === "complete").length
   printSummaryTable(config, totalCompleted, failed, phases.length)
 

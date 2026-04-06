@@ -169,8 +169,20 @@ export const reflectCommits = (repoRoot: string, buildName: string): void => {
     // Try fast-forward first
     run(`git merge --ff-only ${branch}`, repoRoot)
   } catch {
-    // Fall back to regular merge if user's branch diverged
-    run(`git merge ${branch} -m "ridgeline: merge ${buildName} phase"`, repoRoot)
+    // Main diverged — rebase WIP onto main so builder work layers on top of user changes.
+    // This preserves user edits (e.g. version bumps) while applying builder additions on top.
+    const wtPath = worktreePath(repoRoot, buildName)
+    try {
+      run("git rebase main", wtPath)
+    } catch {
+      try { run("git rebase --abort", wtPath) } catch { /* best effort */ }
+      throw new Error(
+        `Cannot auto-merge: both main and the build modified the same lines.\n` +
+        `Resolve manually in ${wtPath} and re-run.`
+      )
+    }
+    // Rebase succeeded — now fast-forward main
+    run(`git merge --ff-only ${branch}`, repoRoot)
   }
 }
 

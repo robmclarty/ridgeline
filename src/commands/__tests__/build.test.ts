@@ -7,6 +7,7 @@ import type { RidgelineConfig } from "../../types"
 vi.mock("../../ui/output", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
+  printPhaseHeader: vi.fn(),
 }))
 
 vi.mock("../../store/trajectory", () => ({

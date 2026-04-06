@@ -18,7 +18,7 @@ const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
       const config = resolveConfig(buildName!, opts)
       await fn(config)
     } catch (err) {
-      console.error(`Error: ${err}`)
+      console.error(err instanceof Error ? err.message : String(err))
       process.exit(1)
     }
   }
@@ -48,7 +48,7 @@ program
         input,
       })
     } catch (err) {
-      console.error(`Error: ${err}`)
+      console.error(err instanceof Error ? err.message : String(err))
       process.exit(1)
     }
   })
@@ -94,7 +94,7 @@ program
       const { runClean } = require("./commands/clean")
       runClean(process.cwd())
     } catch (err) {
-      console.error(`Error: ${err}`)
+      console.error(err instanceof Error ? err.message : String(err))
       process.exit(1)
     }
   })

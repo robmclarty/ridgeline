@@ -44,8 +44,13 @@ export const runPhase = async (
     try {
       buildResult = await invokeBuilder(config, phase, feedbackFilePath)
     } catch (err) {
-      printPhase(phase.id, `Build failed: ${err}`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry("build_complete", phase.id, `Build error: ${err}`))
+      const msg = String(err)
+      printPhase(phase.id, `Build failed: ${msg}`)
+      logTrajectory(config.buildDir, makeTrajectoryEntry("build_complete", phase.id, `Build error: ${msg}`))
+      if (msg.includes("Authentication failed")) {
+        updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
+        return "failed"
+      }
       attempt++
       continue
     }
@@ -87,8 +92,13 @@ export const runPhase = async (
     try {
       reviewResult = await invokeReviewer(config, phase, checkpointTag)
     } catch (err) {
-      printPhase(phase.id, `Review failed: ${err}`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry("review_complete", phase.id, `Review error: ${err}`))
+      const msg = String(err)
+      printPhase(phase.id, `Review failed: ${msg}`)
+      logTrajectory(config.buildDir, makeTrajectoryEntry("review_complete", phase.id, `Review error: ${msg}`))
+      if (msg.includes("Authentication failed")) {
+        updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
+        return "failed"
+      }
       attempt++
       continue
     }
@@ -138,7 +148,7 @@ export const runPhase = async (
     attempt++
 
     if (attempt < maxAttempts) {
-      printPhase(phase.id, `Retrying (${attempt}/${config.maxRetries})...`)
+      printPhase(phase.id, `Retrying (${attempt}/${config.maxRetries}) — ${verdict.summary}`)
     }
   }
 

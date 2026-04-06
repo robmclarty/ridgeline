@@ -144,6 +144,38 @@ describe("worktree", () => {
       expect(fs.existsSync(path.join(repoDir, "index.ts"))).toBe(true)
     })
 
+    it("rebases WIP onto main when both sides made non-overlapping edits", () => {
+      const wtPath = createWorktree(repoDir, "test-build")
+
+      // Simulate user changing a version on main (non-overlapping with WIP work)
+      const pkgMain = path.join(repoDir, "README.md")
+      fs.writeFileSync(pkgMain, "# Test\n\nversion: 2.0")
+      execSync("git add -A && git commit -m 'bump version'", { cwd: repoDir, stdio: "pipe" })
+
+      // Simulate builder adding new content in the worktree
+      fs.writeFileSync(path.join(wtPath, "src.ts"), "export const x = 1")
+      execSync("git add -A && git commit -m 'add source'", { cwd: wtPath, stdio: "pipe" })
+
+      // Should succeed via rebase — main's version bump preserved, WIP's file added
+      reflectCommits(repoDir, "test-build")
+
+      expect(fs.existsSync(path.join(repoDir, "src.ts"))).toBe(true)
+      expect(fs.readFileSync(path.join(repoDir, "README.md"), "utf-8")).toBe("# Test\n\nversion: 2.0")
+    })
+
+    it("throws descriptive error when rebase has overlapping conflicts", () => {
+      const wtPath = createWorktree(repoDir, "test-build")
+
+      // Both sides modify the same line in README.md
+      fs.writeFileSync(path.join(repoDir, "README.md"), "# Changed on main")
+      execSync("git add -A && git commit -m 'main edit'", { cwd: repoDir, stdio: "pipe" })
+
+      fs.writeFileSync(path.join(wtPath, "README.md"), "# Changed in WIP")
+      execSync("git add -A && git commit -m 'wip edit'", { cwd: wtPath, stdio: "pipe" })
+
+      expect(() => reflectCommits(repoDir, "test-build")).toThrow("Cannot auto-merge")
+    })
+
     it("fast-forwards the source branch with worktree commits", () => {
       const wtPath = createWorktree(repoDir, "test-build")
 
