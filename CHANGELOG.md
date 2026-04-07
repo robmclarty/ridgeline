@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.4
+
+- Update helloworld example to match current pipeline artifacts (add shape.md, pipeline state, isMerged)
+- Update documentation to reflect shape/spec/plan/build pipeline, rewind command, and ensemble stages
+- Add ensemble flows guide covering specifier and planner pipelines
+- Consolidate redundant ensemble-planning doc into ensemble-flows
+
 ## 0.4.3
 
 - Fix fallow dead-code, duplication, and complexity lint errors
