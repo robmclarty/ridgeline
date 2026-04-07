@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Add four-stage pipeline: `shape → spec → plan → build` replacing the single `spec` command
+- New `ridgeline shape` command with shaper agent that conducts adaptive Q&A and codebase analysis, producing `shape.md` (Shape-Up inspired pitch format)
+- New spec ensemble: 3 specialists (completeness, clarity, pragmatism) propose drafts in parallel, specifier synthesizes into `spec.md`, `constraints.md`, `taste.md`
+- Default command (`ridgeline <name>`) walks users through the pipeline via state tracking, dispatching to the next incomplete stage
+- New `ridgeline rewind <name> --to <stage>` command to reset pipeline state and clean up downstream artifacts
+- Extend `state.json` with `pipeline` field tracking stage completion across shape, spec, plan, and build
+- Brownfield-aware: shaper pre-fills answers from existing code analysis while always letting users confirm
+
 ## 0.3.15
 
 - Dim tool call lines (dark grey) so conversational LLM output stands out during builds
