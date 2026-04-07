@@ -1,7 +1,6 @@
-import { describe, it, expect, afterAll, vi } from "vitest"
+import { describe, it, expect, afterAll } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { execSync } from "node:child_process"
 import { isClaudeAvailable } from "./helpers"
 import { invokeClaude } from "../../src/engine/claude/claude.exec"
 import { extractResult } from "../../src/engine/claude/stream.decode"

@@ -4,6 +4,7 @@ exclude = [
     ".git/**",
     "dist/**",
     "src/agents/core/**",
+    "src/agents/planners/context.md",
 ]
 target = "ClaudeCode"
 tools = ["claude-code"]
