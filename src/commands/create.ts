@@ -1,15 +1,13 @@
-import * as fs from "node:fs"
-import * as path from "node:path"
 import { printInfo } from "../ui/output"
 import { getPipelineStatus, getNextPipelineStage } from "../store/state"
 import { PipelineStage } from "../types"
 import { runShape, ShapeOptions } from "./shape"
 import { runSpec, SpecOptions } from "./spec"
-import { resolveConfig } from "../config"
+import { resolveBuildDir, resolveConfig } from "../config"
 import { runPlan } from "./plan"
 import { runBuild } from "./build"
 
-export type CreateOptions = {
+type CreateOptions = {
   model: string
   timeout: string
   maxBudgetUsd?: string
@@ -37,11 +35,7 @@ const STATUS_ICONS: Record<string, string> = {
 }
 
 export const runCreate = async (buildName: string, opts: CreateOptions): Promise<void> => {
-  const ridgelineDir = path.join(process.cwd(), ".ridgeline")
-  const buildDir = path.join(ridgelineDir, "builds", buildName)
-
-  // Ensure build directory exists
-  fs.mkdirSync(path.join(buildDir, "phases"), { recursive: true })
+  const buildDir = resolveBuildDir(buildName, { ensure: true })
 
   const status = getPipelineStatus(buildDir)
   const nextStage = getNextPipelineStage(buildDir)

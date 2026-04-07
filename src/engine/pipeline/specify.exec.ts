@@ -3,6 +3,7 @@ import * as path from "node:path"
 import { SpecifierDraft, EnsembleResult } from "../../types"
 import { invokeEnsemble } from "./ensemble.exec"
 import { resolveAgentPrompt } from "../claude/agent.prompt"
+import { formatProposalHeading } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
 // JSON schema for structured spec specialist output
@@ -120,8 +121,7 @@ const assembleSynthesizerUserPrompt = (
 
   sections.push("## Specialist Proposals\n")
   for (const { perspective, draft } of drafts) {
-    sections.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist\n`)
-    sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
+    formatProposalHeading(sections, perspective, draft.tradeoffs)
     sections.push(`**Concerns:** ${draft.concerns.join("; ")}\n`)
 
     sections.push("**Spec Proposal:**")

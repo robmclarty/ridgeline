@@ -35,9 +35,13 @@ vi.mock("../plan.exec", () => ({
   assembleBaseUserPrompt: vi.fn(() => "base user prompt"),
 }))
 
-vi.mock("../pipeline.shared", () => ({
-  createStderrHandler: vi.fn(() => vi.fn()),
-}))
+vi.mock("../pipeline.shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../pipeline.shared")>()
+  return {
+    ...actual,
+    createStderrHandler: vi.fn(() => vi.fn()),
+  }
+})
 
 // Mock fs to control specialist discovery
 vi.mock("node:fs", async () => {

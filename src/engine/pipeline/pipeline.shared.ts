@@ -42,6 +42,19 @@ export const createStderrHandler = (label?: string): ((text: string) => void) =>
 }
 
 /**
+ * Format a specialist perspective name as a markdown heading with tradeoffs.
+ * Shared by ensemble synthesizer prompt builders.
+ */
+export const formatProposalHeading = (
+  sections: string[],
+  perspective: string,
+  tradeoffs: string,
+): void => {
+  sections.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist\n`)
+  sections.push(`**Tradeoffs:** ${tradeoffs}\n`)
+}
+
+/**
  * Map PluginDir[] to string[] for invokeClaude, or undefined if empty.
  */
 const pluginDirPaths = (dirs: PluginDir[]): string[] | undefined =>

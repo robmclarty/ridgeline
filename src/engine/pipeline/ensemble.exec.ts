@@ -9,7 +9,7 @@ import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
 import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { assembleBaseUserPrompt } from "./plan.exec"
-import { createStderrHandler } from "./pipeline.shared"
+import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
 // Shared specialist discovery
@@ -21,7 +21,7 @@ type SpecialistDef = {
 }
 
 /** Resolve agents/{subdir}/ across candidate paths. */
-export const resolveAgentDir = (subdir: string): string | null => {
+const resolveAgentDir = (subdir: string): string | null => {
   const candidates = [
     path.join(__dirname, "..", "agents", subdir),
     path.join(__dirname, "..", "..", "agents", subdir),
@@ -34,7 +34,7 @@ export const resolveAgentDir = (subdir: string): string | null => {
 }
 
 /** Read .md files from agents/{subdir}/, extract perspective + overlay. */
-export const discoverSpecialists = (opts: {
+const discoverSpecialists = (opts: {
   agentDir: string
   excludeFiles?: string[]
 }): SpecialistDef[] => {
@@ -116,7 +116,7 @@ export const extractJSON = (raw: string): unknown => {
 // Generic ensemble runner
 // ---------------------------------------------------------------------------
 
-export type EnsembleConfig<TDraft> = {
+type EnsembleConfig<TDraft> = {
   /** Human label for spinner and error messages, e.g., "Planning" or "Specifying" */
   label: string
 
@@ -371,9 +371,8 @@ const assemblePlannerSynthesizerUserPrompt = (
   // Include each specialist proposal
   sections.push("## Specialist Proposals\n")
   for (const { perspective, draft } of drafts) {
-    sections.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist\n`)
+    formatProposalHeading(sections, perspective, draft.tradeoffs)
     sections.push(`**Summary:** ${draft.summary}\n`)
-    sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
     sections.push(`**Phases (${draft.phases.length}):**\n`)
     for (let i = 0; i < draft.phases.length; i++) {
       const phase = draft.phases[i]

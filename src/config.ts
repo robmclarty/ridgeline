@@ -18,6 +18,13 @@ export const loadVersion = (): string => {
   return "0.0.0"
 }
 
+/** Resolve (and optionally create) the build directory for a given build name. */
+export const resolveBuildDir = (buildName: string, { ensure = false } = {}): string => {
+  const buildDir = path.join(process.cwd(), ".ridgeline", "builds", buildName)
+  if (ensure) fs.mkdirSync(path.join(buildDir, "phases"), { recursive: true })
+  return buildDir
+}
+
 // Build RidgelineConfig from command options
 export const resolveConfig = (buildName: string, opts: Record<string, string | boolean | undefined>): RidgelineConfig => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")

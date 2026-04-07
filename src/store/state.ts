@@ -188,85 +188,81 @@ export const getNextPipelineStage = (buildDir: string): PipelineStage | null => 
   return null
 }
 
+/** Collect files to delete when resetting a single stage. */
+const collectStageFiles = (buildDir: string, stage: PipelineStage): string[] => {
+  const files: string[] = []
+  const phasesDir = path.join(buildDir, "phases")
+
+  switch (stage) {
+    case "spec":
+      for (const f of ["spec.md", "constraints.md", "taste.md"]) {
+        const fp = path.join(buildDir, f)
+        if (fs.existsSync(fp)) files.push(fp)
+      }
+      break
+    case "plan":
+      if (fs.existsSync(phasesDir)) {
+        for (const f of fs.readdirSync(phasesDir)) files.push(path.join(phasesDir, f))
+      }
+      break
+    case "build": {
+      const handoff = path.join(buildDir, "handoff.md")
+      if (fs.existsSync(handoff)) files.push(handoff)
+      if (fs.existsSync(phasesDir)) {
+        for (const f of fs.readdirSync(phasesDir)) {
+          if (f.includes("feedback")) files.push(path.join(phasesDir, f))
+        }
+      }
+      break
+    }
+  }
+
+  return files
+}
+
+/** Reset pipeline state for stages downstream of targetStage. */
+const resetPipelineState = (
+  buildDir: string,
+  buildName: string,
+  targetStage: PipelineStage,
+  resetStages: PipelineStage[],
+): void => {
+  const state = loadState(buildDir)
+  if (!state) return
+
+  const targetIndex = PIPELINE_STAGES.indexOf(targetStage)
+  for (const stage of PIPELINE_STAGES) {
+    if (PIPELINE_STAGES.indexOf(stage) > targetIndex) {
+      state.pipeline[stage] = "pending" as any
+    }
+  }
+
+  if (targetStage === "build") {
+    state.pipeline.build = "pending"
+  } else {
+    state.pipeline[targetStage] = "complete"
+  }
+
+  if (resetStages.includes("plan") || resetStages.includes("build")) {
+    state.phases = []
+  }
+
+  if (resetStages.includes("build")) {
+    cleanupBuildTags(buildName)
+  }
+
+  saveState(buildDir, state)
+}
+
 /**
  * Rewind to a given stage: mark downstream stages as pending,
  * return list of files/dirs to delete from disk.
  */
 export const rewindTo = (buildDir: string, buildName: string, targetStage: PipelineStage): string[] => {
-  const targetIndex = PIPELINE_STAGES.indexOf(targetStage)
-  const toDelete: string[] = []
+  const resetStages = PIPELINE_STAGES.slice(PIPELINE_STAGES.indexOf(targetStage) + 1)
+  const toDelete = resetStages.flatMap((stage) => collectStageFiles(buildDir, stage))
 
-  // Determine which files to remove based on what stages are being reset
-  const resetStages = PIPELINE_STAGES.slice(targetIndex + 1)
-
-  for (const stage of resetStages) {
-    switch (stage) {
-      case "spec":
-        for (const f of ["spec.md", "constraints.md", "taste.md"]) {
-          const fp = path.join(buildDir, f)
-          if (fs.existsSync(fp)) toDelete.push(fp)
-        }
-        break
-      case "plan": {
-        const phasesDir = path.join(buildDir, "phases")
-        if (fs.existsSync(phasesDir)) {
-          for (const f of fs.readdirSync(phasesDir)) {
-            toDelete.push(path.join(phasesDir, f))
-          }
-        }
-        break
-      }
-      case "build": {
-        const handoff = path.join(buildDir, "handoff.md")
-        if (fs.existsSync(handoff)) toDelete.push(handoff)
-        // Feedback files live in phases/
-        const pd = path.join(buildDir, "phases")
-        if (fs.existsSync(pd)) {
-          for (const f of fs.readdirSync(pd)) {
-            if (f.includes("feedback")) toDelete.push(path.join(pd, f))
-          }
-        }
-        break
-      }
-      // shape files are never downstream of anything
-    }
-  }
-
-  // Update state.json
-  let state = loadState(buildDir)
-  if (state) {
-    // Mark target stage as complete, downstream as pending
-    for (const stage of PIPELINE_STAGES) {
-      const idx = PIPELINE_STAGES.indexOf(stage)
-      if (idx <= targetIndex) {
-        if (stage === "build") {
-          state.pipeline.build = idx < targetIndex ? state.pipeline.build : "pending"
-        } else {
-          // Keep existing status for stages at or before target
-        }
-      } else {
-        state.pipeline[stage] = "pending" as any
-      }
-    }
-    // Ensure target stage itself is complete
-    if (targetStage === "build") {
-      state.pipeline.build = "pending"
-    } else {
-      state.pipeline[targetStage] = "complete"
-    }
-
-    // Reset phases if rewinding past plan
-    if (resetStages.includes("plan") || resetStages.includes("build")) {
-      state.phases = []
-    }
-
-    // Clean up git tags if rewinding past build
-    if (resetStages.includes("build")) {
-      cleanupBuildTags(buildName)
-    }
-
-    saveState(buildDir, state)
-  }
+  resetPipelineState(buildDir, buildName, targetStage, resetStages)
 
   return toDelete
 }

@@ -21,15 +21,27 @@ process.on("SIGINT", () => {
 
 type Opts = Record<string, string | boolean | undefined>
 
+const requireBuildName = async (buildName: string | undefined): Promise<string> => {
+  if (!buildName) buildName = await askBuildName()
+  if (!buildName) {
+    console.error("Build name is required")
+    process.exit(1)
+  }
+  return buildName
+}
+
+const handleCommandError = (err: unknown): never => {
+  console.error(err instanceof Error ? err.message : String(err))
+  process.exit(1)
+}
+
 const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
   async (buildName: string | undefined, opts: Opts) => {
-    if (!buildName) buildName = await askBuildName()
     try {
-      const config = resolveConfig(buildName!, opts)
+      const config = resolveConfig(await requireBuildName(buildName), opts)
       await fn(config)
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
+      handleCommandError(err)
     }
   }
 
@@ -56,15 +68,8 @@ program
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
-    // If the first arg looks like a known subcommand, skip default handling
-    // (Commander will route it to the subcommand instead)
-    if (!buildName) buildName = await askBuildName()
-    if (!buildName) {
-      console.error("Build name is required")
-      process.exit(1)
-    }
     try {
-      await runCreate(buildName, {
+      await runCreate(await requireBuildName(buildName), {
         model: (opts.model as string) ?? "opus",
         timeout: String(opts.timeout ?? "10"),
         maxBudgetUsd: opts.maxBudgetUsd as string | undefined,
@@ -78,8 +83,7 @@ program
         input,
       })
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
+      handleCommandError(err)
     }
   })
 
@@ -89,20 +93,14 @@ program
   .option("--model <name>", "Model for shaper agent", "opus")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
-    if (!buildName) buildName = await askBuildName()
-    if (!buildName) {
-      console.error("Build name is required")
-      process.exit(1)
-    }
     try {
-      await runShape(buildName, {
+      await runShape(await requireBuildName(buildName), {
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         input,
       })
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
+      handleCommandError(err)
     }
   })
 
@@ -113,20 +111,14 @@ program
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .action(async (buildName: string | undefined, opts: Opts) => {
-    if (!buildName) buildName = await askBuildName()
-    if (!buildName) {
-      console.error("Build name is required")
-      process.exit(1)
-    }
     try {
-      await runSpec(buildName, {
+      await runSpec(await requireBuildName(buildName), {
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
       })
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
+      handleCommandError(err)
     }
   })
 
@@ -171,8 +163,7 @@ program
     try {
       runRewind(buildName, opts.to as string)
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
+      handleCommandError(err)
     }
   })
 
@@ -184,8 +175,7 @@ program
       const { runClean } = require("./commands/clean")
       runClean(process.cwd())
     } catch (err) {
-      console.error(err instanceof Error ? err.message : String(err))
-      process.exit(1)
+      handleCommandError(err)
     }
   })
 

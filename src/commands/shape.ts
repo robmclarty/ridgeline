@@ -6,6 +6,7 @@ import { invokeClaude } from "../engine/claude/claude.exec"
 import { resolveAgentPrompt } from "../engine/claude/agent.prompt"
 import { createDisplayCallbacks } from "../engine/claude/stream.decode"
 import { advancePipeline } from "../store/state"
+import { resolveBuildDir } from "../config"
 
 const MAX_CLARIFICATION_ROUNDS = 4
 
@@ -288,10 +289,7 @@ const runClarificationLoop = async (
 }
 
 export const runShape = async (buildName: string, opts: ShapeOptions): Promise<void> => {
-  const ridgelineDir = path.join(process.cwd(), ".ridgeline")
-  const buildDir = path.join(ridgelineDir, "builds", buildName)
-
-  fs.mkdirSync(path.join(buildDir, "phases"), { recursive: true })
+  const buildDir = resolveBuildDir(buildName, { ensure: true })
   printInfo(`Build directory: ${buildDir}`)
 
   const systemPrompt = resolveAgentPrompt("shaper.md")
