@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0
+
+- Add `--flavour` flag to all CLI commands for pluggable agent sets
+- Add agent registry with per-folder flavour-to-default fallback resolution
+- Add flavour resolver supporting built-in names and filesystem paths
+- Refactor ensemble pipeline to accept pre-resolved specialists
+- Move software-engineering agents to `src/flavours/software-engineering/`
+- Write domain-agnostic generic default agents in `src/agents/`
+- Add novel-writing and data-analysis built-in flavours
+- Support flavour configuration via `.ridgeline/settings.json`
+
 ## 0.4.4
 
 - Update helloworld example to match current pipeline artifacts (add shape.md, pipeline state, isMerged)
