@@ -1,65 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { ClaudeResult, SpecifierDraft, EnsembleSpecResult } from "../../types"
-import { invokeClaude } from "../claude/claude.exec"
-import { createDisplayCallbacks } from "../claude/stream.decode"
-import { parseFrontmatter } from "../discovery/agent.scan"
-import { printInfo, printError } from "../../ui/output"
-import { startSpinner, formatElapsed } from "../../ui/spinner"
+import { SpecifierDraft, EnsembleResult } from "../../types"
+import { invokeEnsemble } from "./ensemble.exec"
 import { resolveAgentPrompt } from "../claude/agent.prompt"
-import { extractJSON } from "./ensemble.exec"
-import { createStderrHandler } from "./pipeline.shared"
-
-// ---------------------------------------------------------------------------
-// Specifier discovery — reads personality overlays from agents/specifiers/
-// ---------------------------------------------------------------------------
-
-type SpecifierDef = {
-  perspective: string
-  overlay: string
-}
-
-const resolveSpecifiersDir = (): string | null => {
-  const candidates = [
-    path.join(__dirname, "..", "agents", "specifiers"),
-    path.join(__dirname, "..", "..", "agents", "specifiers"),
-    path.join(__dirname, "..", "..", "..", "src", "agents", "specifiers"),
-  ]
-  for (const dir of candidates) {
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
-  }
-  return null
-}
-
-const discoverSpecifiers = (): SpecifierDef[] => {
-  const dir = resolveSpecifiersDir()
-  if (!dir) return []
-
-  const specifiers: SpecifierDef[] = []
-
-  for (const entry of fs.readdirSync(dir)) {
-    if (!entry.endsWith(".md")) continue
-
-    const filepath = path.join(dir, entry)
-    try {
-      const content = fs.readFileSync(filepath, "utf-8")
-      const fm = parseFrontmatter(content)
-      if (!fm) continue
-
-      const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
-      const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
-
-      const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
-      if (!body) continue
-
-      specifiers.push({ perspective, overlay: body })
-    } catch {
-      // Skip unreadable files
-    }
-  }
-
-  return specifiers
-}
 
 // ---------------------------------------------------------------------------
 // JSON schema for structured spec specialist output
@@ -135,7 +78,7 @@ const SPEC_SPECIALIST_SCHEMA = JSON.stringify({
 // Prompt construction
 // ---------------------------------------------------------------------------
 
-/** Build a spec specialist system prompt from the overlay + base instructions. */
+/** Build a spec specialist system prompt from the overlay + JSON directive. */
 const buildSpecSpecialistPrompt = (overlay: string): string => {
   const jsonDirective = [
     "",
@@ -167,7 +110,7 @@ const assembleSpecialistUserPrompt = (shapeMd: string): string => {
 const assembleSynthesizerUserPrompt = (
   shapeMd: string,
   buildDir: string,
-  proposals: { perspective: string; draft: SpecifierDraft }[],
+  drafts: { perspective: string; draft: SpecifierDraft }[],
 ): string => {
   const sections: string[] = []
 
@@ -176,7 +119,7 @@ const assembleSynthesizerUserPrompt = (
   sections.push("")
 
   sections.push("## Specialist Proposals\n")
-  for (const { perspective, draft } of proposals) {
+  for (const { perspective, draft } of drafts) {
     sections.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist\n`)
     sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
     sections.push(`**Concerns:** ${draft.concerns.join("; ")}\n`)
@@ -224,7 +167,7 @@ const assembleSynthesizerUserPrompt = (
 }
 
 // ---------------------------------------------------------------------------
-// Spec ensemble orchestration
+// Spec ensemble — thin wrapper over invokeEnsemble
 // ---------------------------------------------------------------------------
 
 export type SpecEnsembleConfig = {
@@ -234,122 +177,33 @@ export type SpecEnsembleConfig = {
   buildDir: string
 }
 
-export const invokeSpecEnsemble = async (
+export const invokeSpecifier = async (
   shapeMd: string,
   config: SpecEnsembleConfig,
-): Promise<EnsembleSpecResult> => {
-  const specifiers = discoverSpecifiers()
-  if (specifiers.length === 0) {
-    throw new Error("No spec specialist overlays found in agents/specifiers/")
-  }
+): Promise<EnsembleResult> => {
+  return invokeEnsemble<SpecifierDraft>({
+    label: "Specifying",
+    agentDir: "specifiers",
 
-  const specialistUserPrompt = assembleSpecialistUserPrompt(shapeMd)
+    buildSpecialistPrompt: buildSpecSpecialistPrompt,
+    specialistUserPrompt: assembleSpecialistUserPrompt(shapeMd),
+    specialistSchema: SPEC_SPECIALIST_SCHEMA,
 
-  // --- Phase 1: Spawn spec specialists in parallel ---
-  const spinner = startSpinner("Specifying")
+    synthesizerPrompt: resolveAgentPrompt("specifier.md"),
+    buildSynthesizerUserPrompt: (drafts) =>
+      assembleSynthesizerUserPrompt(shapeMd, config.buildDir, drafts),
+    synthesizerTools: ["Write"],
 
-  const specialistPromises = specifiers.map(({ perspective, overlay }) => {
-    const systemPrompt = buildSpecSpecialistPrompt(overlay)
-    const startTime = Date.now()
+    model: config.model,
+    timeoutMinutes: config.timeoutMinutes,
+    maxBudgetUsd: config.maxBudgetUsd,
 
-    return invokeClaude({
-      systemPrompt,
-      userPrompt: specialistUserPrompt,
-      model: config.model,
-      allowedTools: [],
-      cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      jsonSchema: SPEC_SPECIALIST_SCHEMA,
-      onStderr: createStderrHandler(perspective),
-    }).then((result) => {
-      const elapsed = formatElapsed(Date.now() - startTime)
-      spinner.printAbove(`  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`)
-      return { perspective, result }
-    })
-  })
-
-  const settled = await Promise.allSettled(specialistPromises)
-
-  // --- Phase 2: Collect successful proposals ---
-  const successful: { perspective: string; result: ClaudeResult; draft: SpecifierDraft }[] = []
-
-  for (const outcome of settled) {
-    if (outcome.status === "fulfilled") {
-      const { perspective, result } = outcome.value
-      try {
-        const draft = extractJSON(result.result) as SpecifierDraft
-        successful.push({ perspective, result, draft })
-      } catch {
-        const preview = result.result.length > 300
-          ? result.result.slice(0, 300) + "…"
-          : result.result
-        printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
+    verify: () => {
+      const missing = ["spec.md", "constraints.md"]
+        .filter(f => !fs.existsSync(path.join(config.buildDir, f)))
+      if (missing.length > 0) {
+        throw new Error(`Synthesizer did not create required files: ${missing.join(", ")}`)
       }
-    } else {
-      printError(`Specialist failed: ${outcome.reason}`)
-    }
-  }
-
-  const minRequired = Math.ceil(specifiers.length / 2)
-  if (successful.length < minRequired) {
-    spinner.stop()
-    throw new Error(
-      `Spec generation requires at least ${minRequired} of ${specifiers.length} specialist proposals to succeed, got ${successful.length}. ` +
-      "Check Claude authentication and try again."
-    )
-  }
-
-  if (successful.length < specifiers.length) {
-    printInfo(`Continuing with ${successful.length} of ${specifiers.length} proposals`)
-  }
-
-  // --- Budget guard ---
-  const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
-  if (config.maxBudgetUsd !== null && specialistCost >= config.maxBudgetUsd) {
-    spinner.stop()
-    throw new Error(
-      `Specialist cost ($${specialistCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
-      "Skipping synthesis to avoid further cost."
-    )
-  }
-
-  // --- Phase 3: Synthesize with the specifier ---
-  spinner.stop()
-  printInfo("Synthesizing spec from specialist proposals...")
-
-  const specifierPrompt = resolveAgentPrompt("specifier.md")
-  const synthesizerUserPrompt = assembleSynthesizerUserPrompt(
-    shapeMd,
-    config.buildDir,
-    successful.map(({ perspective, draft }) => ({ perspective, draft })),
-  )
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
-
-  let synthResult: ClaudeResult
-  try {
-    synthResult = await invokeClaude({
-      systemPrompt: specifierPrompt,
-      userPrompt: synthesizerUserPrompt,
-      model: config.model,
-      allowedTools: ["Write", "Read", "Glob", "Grep"],
-      cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      onStdout,
-      onStderr: createStderrHandler("specifier"),
-    })
-  } finally {
-    flush()
-  }
-
-  // --- Phase 4: Return results ---
-  const specialistResults = successful.map((s) => s.result)
-  const totalCostUsd = specialistCost + synthResult.costUsd
-  const totalDurationMs = Math.max(...specialistResults.map((r) => r.durationMs)) + synthResult.durationMs
-
-  return {
-    specialistResults,
-    synthesizerResult: synthResult,
-    totalCostUsd,
-    totalDurationMs,
-  }
+    },
+  })
 }

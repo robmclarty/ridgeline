@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
-import { invokeSpecEnsemble, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
+import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
 import { advancePipeline } from "../store/state"
 
 export type SpecOptions = {
@@ -31,31 +31,23 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     buildDir,
   }
 
-  const result = await invokeSpecEnsemble(shapeMd, config)
-
-  // Verify output files
-  console.log("")
-  const createdFiles = ["spec.md", "constraints.md", "taste.md"]
-    .filter((f) => fs.existsSync(path.join(buildDir, f)))
-
-  if (createdFiles.length === 0) {
-    printError("No spec files were created. Try running spec again.")
-    return
-  }
+  const result = await invokeSpecifier(shapeMd, config)
 
   // Update pipeline state
   advancePipeline(buildDir, buildName, "spec")
+
+  // Report created files
+  console.log("")
+  const createdFiles = ["spec.md", "constraints.md", "taste.md"]
+    .filter((f) => fs.existsSync(path.join(buildDir, f)))
 
   printInfo("Created:")
   for (const f of createdFiles) {
     console.log(`  ${path.join(buildDir, f)}`)
   }
 
-  if (!createdFiles.includes("spec.md")) {
-    printError("Warning: spec.md was not created — this is required for planning")
-  }
-  if (!createdFiles.includes("constraints.md")) {
-    printError("Warning: constraints.md was not created — this is required for planning")
+  if (!createdFiles.includes("taste.md")) {
+    printInfo("Note: taste.md was not created (no style preferences in shape)")
   }
 
   console.log("")

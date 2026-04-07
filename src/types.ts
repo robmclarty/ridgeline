@@ -115,8 +115,8 @@ export type SpecialistProposal = {
   tradeoffs: string
 }
 
-// Aggregate result from ensemble planning
-export type EnsemblePlanResult = {
+// Aggregate result from an ensemble stage (specifiers or planners)
+export type EnsembleResult = {
   specialistResults: ClaudeResult[]
   synthesizerResult: ClaudeResult
   totalCostUsd: number
@@ -153,13 +153,6 @@ export type SpecifierDraft = {
   concerns: string[]
 }
 
-// Aggregate result from spec ensemble (shape → spec)
-export type EnsembleSpecResult = {
-  specialistResults: ClaudeResult[]
-  synthesizerResult: ClaudeResult
-  totalCostUsd: number
-  totalDurationMs: number
-}
 
 // Single entry in budget.json
 export type BudgetEntry = {

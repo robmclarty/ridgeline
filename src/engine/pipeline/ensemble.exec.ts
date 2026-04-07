@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsemblePlanResult } from "../../types"
+import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { scanPhases } from "../../store/phases"
@@ -12,19 +12,20 @@ import { assembleBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
-// Planner discovery — reads personality overlays from agents/planners/
+// Shared specialist discovery
 // ---------------------------------------------------------------------------
 
-type PlannerDef = {
+type SpecialistDef = {
   perspective: string
   overlay: string
 }
 
-const resolvePlannersDir = (): string | null => {
+/** Resolve agents/{subdir}/ across candidate paths. */
+export const resolveAgentDir = (subdir: string): string | null => {
   const candidates = [
-    path.join(__dirname, "..", "agents", "planners"),
-    path.join(__dirname, "..", "..", "agents", "planners"),
-    path.join(__dirname, "..", "..", "..", "src", "agents", "planners"),
+    path.join(__dirname, "..", "agents", subdir),
+    path.join(__dirname, "..", "..", "agents", subdir),
+    path.join(__dirname, "..", "..", "..", "src", "agents", subdir),
   ]
   for (const dir of candidates) {
     if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
@@ -32,15 +33,20 @@ const resolvePlannersDir = (): string | null => {
   return null
 }
 
-const discoverPlanners = (): PlannerDef[] => {
-  const dir = resolvePlannersDir()
+/** Read .md files from agents/{subdir}/, extract perspective + overlay. */
+export const discoverSpecialists = (opts: {
+  agentDir: string
+  excludeFiles?: string[]
+}): SpecialistDef[] => {
+  const dir = resolveAgentDir(opts.agentDir)
   if (!dir) return []
 
-  const planners: PlannerDef[] = []
+  const exclude = new Set(opts.excludeFiles ?? [])
+  const specialists: SpecialistDef[] = []
 
   for (const entry of fs.readdirSync(dir)) {
     if (!entry.endsWith(".md")) continue
-    if (entry === "synthesizer.md") continue // synthesizer is not a specialist
+    if (exclude.has(entry)) continue
 
     const filepath = path.join(dir, entry)
     try {
@@ -48,31 +54,19 @@ const discoverPlanners = (): PlannerDef[] => {
       const fm = parseFrontmatter(content)
       if (!fm) continue
 
-      // Extract perspective from frontmatter or fall back to filename
       const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
       const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
 
-      // The overlay is the body after frontmatter
       const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
       if (!body) continue
 
-      planners.push({ perspective, overlay: body })
+      specialists.push({ perspective, overlay: body })
     } catch {
       // Skip unreadable files
     }
   }
 
-  return planners
-}
-
-const resolveSynthesizerPrompt = (): string => {
-  const dir = resolvePlannersDir()
-  if (dir) {
-    const synthPath = path.join(dir, "synthesizer.md")
-    if (fs.existsSync(synthPath)) return fs.readFileSync(synthPath, "utf-8")
-  }
-  // Fallback to core agents location
-  return resolveAgentPrompt("synthesizer.md")
+  return specialists
 }
 
 // ---------------------------------------------------------------------------
@@ -119,7 +113,177 @@ export const extractJSON = (raw: string): unknown => {
 }
 
 // ---------------------------------------------------------------------------
-// JSON schema for structured specialist output
+// Generic ensemble runner
+// ---------------------------------------------------------------------------
+
+export type EnsembleConfig<TDraft> = {
+  /** Human label for spinner and error messages, e.g., "Planning" or "Specifying" */
+  label: string
+
+  /** Subdirectory under agents/ to discover specialists, e.g., "planners" */
+  agentDir: string
+
+  /** Files to exclude from specialist discovery, e.g., ["context.md"] */
+  excludeFiles?: string[]
+
+  /** Build the system prompt for a specialist given their overlay text */
+  buildSpecialistPrompt: (overlay: string) => string
+
+  /** The user prompt sent to each specialist */
+  specialistUserPrompt: string
+
+  /** JSON schema string for structured specialist output */
+  specialistSchema: string
+
+  /** Pre-resolved synthesizer system prompt content */
+  synthesizerPrompt: string
+
+  /** Build the synthesizer user prompt from successful drafts */
+  buildSynthesizerUserPrompt: (
+    drafts: { perspective: string; draft: TDraft }[]
+  ) => string
+
+  /** Allowed tools for the synthesizer invocation */
+  synthesizerTools: string[]
+
+  /** Model name for invokeClaude */
+  model: string
+
+  /** Timeout in minutes */
+  timeoutMinutes: number
+
+  /** Budget cap (null = unlimited) */
+  maxBudgetUsd: number | null
+
+  /** Optional post-synthesis verification. Throw to signal failure. */
+  verify?: () => void
+}
+
+export const invokeEnsemble = async <TDraft>(
+  config: EnsembleConfig<TDraft>
+): Promise<EnsembleResult> => {
+  // 1. Discover specialists
+  const specialists = discoverSpecialists({
+    agentDir: config.agentDir,
+    excludeFiles: config.excludeFiles,
+  })
+  if (specialists.length === 0) {
+    throw new Error(`No specialist overlays found in agents/${config.agentDir}/`)
+  }
+
+  // 2. Spawn specialists in parallel
+  const spinner = startSpinner(config.label)
+
+  const specialistPromises = specialists.map(({ perspective, overlay }) => {
+    const systemPrompt = config.buildSpecialistPrompt(overlay)
+    const startTime = Date.now()
+
+    return invokeClaude({
+      systemPrompt,
+      userPrompt: config.specialistUserPrompt,
+      model: config.model,
+      allowedTools: [],
+      cwd: process.cwd(),
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      jsonSchema: config.specialistSchema,
+      onStderr: createStderrHandler(perspective),
+    }).then((result) => {
+      const elapsed = formatElapsed(Date.now() - startTime)
+      spinner.printAbove(`  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`)
+      return { perspective, result }
+    })
+  })
+
+  const settled = await Promise.allSettled(specialistPromises)
+
+  // 3. Collect successful proposals
+  const successful: { perspective: string; result: ClaudeResult; draft: TDraft }[] = []
+
+  for (const outcome of settled) {
+    if (outcome.status === "fulfilled") {
+      const { perspective, result } = outcome.value
+      try {
+        const draft = extractJSON(result.result) as TDraft
+        successful.push({ perspective, result, draft })
+      } catch {
+        const preview = result.result.length > 300
+          ? result.result.slice(0, 300) + "…"
+          : result.result
+        printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
+      }
+    } else {
+      printError(`Specialist failed: ${outcome.reason}`)
+    }
+  }
+
+  // 4. Threshold check
+  const minRequired = Math.ceil(specialists.length / 2)
+  if (successful.length < minRequired) {
+    spinner.stop()
+    throw new Error(
+      `${config.label} requires at least ${minRequired} of ${specialists.length} specialist proposals to succeed, got ${successful.length}. ` +
+      "Check Claude authentication and try again."
+    )
+  }
+
+  if (successful.length < specialists.length) {
+    printInfo(`Continuing with ${successful.length} of ${specialists.length} proposals`)
+  }
+
+  // 5. Budget guard
+  const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
+  if (config.maxBudgetUsd !== null && specialistCost >= config.maxBudgetUsd) {
+    spinner.stop()
+    throw new Error(
+      `Specialist cost ($${specialistCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
+      "Skipping synthesis to avoid further cost."
+    )
+  }
+
+  // 6. Synthesize
+  spinner.stop()
+  printInfo("Synthesizing from specialist proposals...")
+
+  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
+
+  let synthResult: ClaudeResult
+  try {
+    synthResult = await invokeClaude({
+      systemPrompt: config.synthesizerPrompt,
+      userPrompt: config.buildSynthesizerUserPrompt(
+        successful.map(({ perspective, draft }) => ({ perspective, draft })),
+      ),
+      model: config.model,
+      allowedTools: config.synthesizerTools,
+      cwd: process.cwd(),
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      onStdout,
+      onStderr: createStderrHandler("synthesizer"),
+    })
+  } finally {
+    flush()
+  }
+
+  // 7. Post-synthesis verification
+  if (config.verify) {
+    config.verify()
+  }
+
+  // 8. Aggregate results
+  const specialistResults = successful.map((s) => s.result)
+  const totalCostUsd = specialistCost + synthResult.costUsd
+  const totalDurationMs = Math.max(...specialistResults.map((r) => r.durationMs)) + synthResult.durationMs
+
+  return {
+    specialistResults,
+    synthesizerResult: synthResult,
+    totalCostUsd,
+    totalDurationMs,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Planner ensemble — thin wrapper over invokeEnsemble
 // ---------------------------------------------------------------------------
 
 const SPECIALIST_PROPOSAL_SCHEMA = JSON.stringify({
@@ -151,30 +315,21 @@ const SPECIALIST_PROPOSAL_SCHEMA = JSON.stringify({
   required: ["perspective", "summary", "phases", "tradeoffs"],
 })
 
-// ---------------------------------------------------------------------------
-// Prompt construction
-// ---------------------------------------------------------------------------
+/** Load shared specialist context from agents/planners/context.md. */
+const loadPlannerContext = (): string => {
+  const dir = resolveAgentDir("planners")
+  if (dir) {
+    const contextPath = path.join(dir, "context.md")
+    if (fs.existsSync(contextPath)) return fs.readFileSync(contextPath, "utf-8")
+  }
+  throw new Error("Planner specialist context not found at agents/planners/context.md")
+}
 
 /**
- * Build a specialist system prompt by prepending the personality overlay to the
- * base planner prompt, then replacing the file-writing instructions with a
- * directive to return structured JSON.
+ * Build a planner specialist system prompt by concatenating shared context,
+ * the specialist's personality overlay, and a JSON output directive.
  */
-const buildSpecialistSystemPrompt = (basePrompt: string, overlay: string): string => {
-  // Strip YAML frontmatter from the base prompt
-  const withoutFrontmatter = basePrompt.replace(/^---\n[\s\S]*?\n---\n*/, "")
-
-  // Remove sections that conflict with JSON output:
-  // - "Your Task" tells the model to write markdown files
-  // - "File Naming" describes filesystem output conventions
-  // - "Phase Spec Format" shows a markdown template
-  // - "Process" describes a file-writing workflow
-  const stripped = withoutFrontmatter
-    .replace(/## Your Task[\s\S]*?(?=## Phase Sizing)/, "")
-    .replace(/## File Naming[\s\S]*?(?=## Phase Spec Format)/, "")
-    .replace(/## Phase Spec Format[\s\S]*?(?=## Rules)/, "")
-    .replace(/## Process[\s\S]*$/, "")
-
+const buildPlannerSpecialistPrompt = (context: string, overlay: string): string => {
   const jsonDirective = [
     "",
     "## Your Task",
@@ -194,18 +349,18 @@ const buildSpecialistSystemPrompt = (basePrompt: string, overlay: string): strin
     "Also include your `perspective` label, a `summary` of your approach, and the `tradeoffs` of your plan.",
   ].join("\n")
 
-  return `${overlay}\n\n${stripped}${jsonDirective}`
+  return `${context}\n\n${overlay}${jsonDirective}`
 }
 
-/** Assemble the user prompt for a specialist (no output directory). */
-const assembleSpecialistUserPrompt = (config: RidgelineConfig): string => {
+/** Assemble the user prompt for a planner specialist (no output directory). */
+const assemblePlannerSpecialistUserPrompt = (config: RidgelineConfig): string => {
   return assembleBaseUserPrompt(config) + "\n\nIMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON."
 }
 
-/** Assemble the user prompt for the synthesizer, including all proposals. */
-const assembleSynthesizerUserPrompt = (
+/** Assemble the user prompt for the planner synthesizer, including all proposals. */
+const assemblePlannerSynthesizerUserPrompt = (
   config: RidgelineConfig,
-  proposals: { perspective: string; proposal: SpecialistProposal }[],
+  drafts: { perspective: string; draft: SpecialistProposal }[],
 ): string => {
   const sections: string[] = []
 
@@ -215,13 +370,13 @@ const assembleSynthesizerUserPrompt = (
 
   // Include each specialist proposal
   sections.push("## Specialist Proposals\n")
-  for (const { perspective, proposal } of proposals) {
+  for (const { perspective, draft } of drafts) {
     sections.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist\n`)
-    sections.push(`**Summary:** ${proposal.summary}\n`)
-    sections.push(`**Tradeoffs:** ${proposal.tradeoffs}\n`)
-    sections.push(`**Phases (${proposal.phases.length}):**\n`)
-    for (let i = 0; i < proposal.phases.length; i++) {
-      const phase = proposal.phases[i]
+    sections.push(`**Summary:** ${draft.summary}\n`)
+    sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
+    sections.push(`**Phases (${draft.phases.length}):**\n`)
+    for (let i = 0; i < draft.phases.length; i++) {
+      const phase = draft.phases[i]
       sections.push(`#### Phase ${i + 1}: ${phase.title} (\`${phase.slug}\`)`)
       sections.push(`**Goal:** ${phase.goal}\n`)
       sections.push("**Acceptance Criteria:**")
@@ -242,135 +397,41 @@ const assembleSynthesizerUserPrompt = (
   return sections.join("\n")
 }
 
-// ---------------------------------------------------------------------------
-// Ensemble orchestration
-// ---------------------------------------------------------------------------
-
 export const invokePlanner = async (
   config: RidgelineConfig
-): Promise<{ result: ClaudeResult; phases: PhaseInfo[]; ensemble: EnsemblePlanResult }> => {
-  const planners = discoverPlanners()
-  if (planners.length === 0) {
-    throw new Error("No planner personalities found in agents/planners/")
-  }
+): Promise<{ result: ClaudeResult; phases: PhaseInfo[]; ensemble: EnsembleResult }> => {
+  const context = loadPlannerContext()
 
-  const basePrompt = resolveAgentPrompt("planner.md")
-  const specialistUserPrompt = assembleSpecialistUserPrompt(config)
+  const ensemble = await invokeEnsemble<SpecialistProposal>({
+    label: "Planning",
+    agentDir: "planners",
+    excludeFiles: ["context.md"],
 
-  // --- Phase 1: Spawn specialists in parallel ---
-  const spinner = startSpinner("Planning")
+    buildSpecialistPrompt: (overlay) => buildPlannerSpecialistPrompt(context, overlay),
+    specialistUserPrompt: assemblePlannerSpecialistUserPrompt(config),
+    specialistSchema: SPECIALIST_PROPOSAL_SCHEMA,
 
-  const specialistPromises = planners.map(({ perspective, overlay }) => {
-    const systemPrompt = buildSpecialistSystemPrompt(basePrompt, overlay)
-    const startTime = Date.now()
+    synthesizerPrompt: resolveAgentPrompt("planner.md"),
+    buildSynthesizerUserPrompt: (drafts) =>
+      assemblePlannerSynthesizerUserPrompt(config, drafts),
+    synthesizerTools: ["Write"],
 
-    return invokeClaude({
-      systemPrompt,
-      userPrompt: specialistUserPrompt,
-      model: config.model,
-      allowedTools: [],
-      cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      jsonSchema: SPECIALIST_PROPOSAL_SCHEMA,
-      onStderr: createStderrHandler(perspective),
-    }).then((result) => {
-      const elapsed = formatElapsed(Date.now() - startTime)
-      spinner.printAbove(`  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`)
-      return { perspective, result }
-    })
+    model: config.model,
+    timeoutMinutes: config.timeoutMinutes,
+    maxBudgetUsd: config.maxBudgetUsd,
+
+    verify: () => {
+      if (scanPhases(config.phasesDir).length === 0) {
+        throw new Error("Synthesizer did not generate any phase files")
+      }
+    },
   })
 
-  const settled = await Promise.allSettled(specialistPromises)
-
-  // --- Phase 2: Collect successful proposals ---
-  const successful: { perspective: string; result: ClaudeResult; proposal: SpecialistProposal }[] = []
-
-  for (const outcome of settled) {
-    if (outcome.status === "fulfilled") {
-      const { perspective, result } = outcome.value
-      try {
-        const proposal = extractJSON(result.result) as SpecialistProposal
-        successful.push({ perspective, result, proposal })
-      } catch {
-        const preview = result.result.length > 300
-          ? result.result.slice(0, 300) + "…"
-          : result.result
-        printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
-      }
-    } else {
-      printError(`Specialist failed: ${outcome.reason}`)
-    }
-  }
-
-  const minRequired = Math.ceil(planners.length / 2)
-  if (successful.length < minRequired) {
-    spinner.stop()
-    throw new Error(
-      `Planning requires at least ${minRequired} of ${planners.length} specialist proposals to succeed, got ${successful.length}. ` +
-      "Check Claude authentication and try again."
-    )
-  }
-
-  if (successful.length < planners.length) {
-    printInfo(`Continuing with ${successful.length} of ${planners.length} proposals`)
-  }
-
-  // --- Budget guard ---
-  const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
-  if (config.maxBudgetUsd !== null && specialistCost >= config.maxBudgetUsd) {
-    spinner.stop()
-    throw new Error(
-      `Specialist planning cost ($${specialistCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
-      "Skipping synthesis to avoid further cost."
-    )
-  }
-
-  // --- Phase 3: Synthesize ---
-  spinner.stop()
-  printInfo("Synthesizing best plan from specialist proposals...")
-
-  const synthesizerPrompt = resolveSynthesizerPrompt()
-  const synthesizerUserPrompt = assembleSynthesizerUserPrompt(
-    config,
-    successful.map(({ perspective, proposal }) => ({ perspective, proposal })),
-  )
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
-
-  let synthResult: ClaudeResult
-  try {
-    synthResult = await invokeClaude({
-      systemPrompt: synthesizerPrompt,
-      userPrompt: synthesizerUserPrompt,
-      model: config.model,
-      allowedTools: ["Write"],
-      cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      onStdout,
-      onStderr: createStderrHandler("synthesizer"),
-    })
-  } finally {
-    flush()
-  }
-
-  // --- Phase 4: Collect results ---
   const phases = scanPhases(config.phasesDir)
 
-  if (phases.length === 0) {
-    throw new Error("Synthesizer did not generate any phase files")
-  }
-
-  const specialistResults = successful.map((s) => s.result)
-  const totalCostUsd = specialistCost + synthResult.costUsd
-  const totalDurationMs = Math.max(...specialistResults.map((r) => r.durationMs)) + synthResult.durationMs
-
   return {
-    result: synthResult,
+    result: ensemble.synthesizerResult,
     phases,
-    ensemble: {
-      specialistResults,
-      synthesizerResult: synthResult,
-      totalCostUsd,
-      totalDurationMs,
-    },
+    ensemble,
   }
 }

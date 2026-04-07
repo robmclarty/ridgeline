@@ -4,7 +4,7 @@ import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 
 vi.mock("../../engine/pipeline/specify.exec", () => ({
-  invokeSpecEnsemble: vi.fn(),
+  invokeSpecifier: vi.fn(),
 }))
 
 vi.mock("../../ui/output", () => ({
@@ -16,7 +16,7 @@ vi.mock("../../store/state", () => ({
   advancePipeline: vi.fn(),
 }))
 
-import { invokeSpecEnsemble } from "../../engine/pipeline/specify.exec"
+import { invokeSpecifier } from "../../engine/pipeline/specify.exec"
 import { printError } from "../../ui/output"
 import { runSpec } from "../spec"
 
@@ -59,7 +59,7 @@ describe("commands/spec", () => {
     await runSpec("my-build", defaultOpts)
 
     expect(printError).toHaveBeenCalledWith(expect.stringContaining("shape.md not found"))
-    expect(invokeSpecEnsemble).not.toHaveBeenCalled()
+    expect(invokeSpecifier).not.toHaveBeenCalled()
   })
 
   it("reads shape.md and invokes ensemble", async () => {
@@ -67,7 +67,7 @@ describe("commands/spec", () => {
     fs.mkdirSync(buildDir, { recursive: true })
     fs.writeFileSync(path.join(buildDir, "shape.md"), "# My Shape\n\n## Intent\nBuild a CLI")
 
-    vi.mocked(invokeSpecEnsemble).mockImplementation(async () => {
+    vi.mocked(invokeSpecifier).mockImplementation(async () => {
       // Simulate specifier writing files
       fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
       fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
@@ -76,52 +76,22 @@ describe("commands/spec", () => {
 
     await runSpec("my-build", defaultOpts)
 
-    expect(invokeSpecEnsemble).toHaveBeenCalledTimes(1)
-    const [shapeMd, config] = vi.mocked(invokeSpecEnsemble).mock.calls[0]
+    expect(invokeSpecifier).toHaveBeenCalledTimes(1)
+    const [shapeMd, config] = vi.mocked(invokeSpecifier).mock.calls[0]
     expect(shapeMd).toContain("Build a CLI")
     expect(config.model).toBe("opus")
     expect(fs.realpathSync(config.buildDir)).toBe(fs.realpathSync(buildDir))
   })
 
-  it("warns when spec.md is not created", async () => {
+  it("propagates errors from invokeSpecifier", async () => {
     const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
     fs.mkdirSync(buildDir, { recursive: true })
     fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
 
-    vi.mocked(invokeSpecEnsemble).mockImplementation(async () => {
-      fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
-      return makeEnsembleResult()
-    })
+    vi.mocked(invokeSpecifier).mockRejectedValue(
+      new Error("Synthesizer did not create required files: spec.md"),
+    )
 
-    await runSpec("my-build", defaultOpts)
-
-    expect(printError).toHaveBeenCalledWith(expect.stringContaining("spec.md was not created"))
-  })
-
-  it("warns when constraints.md is not created", async () => {
-    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
-    fs.mkdirSync(buildDir, { recursive: true })
-    fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
-
-    vi.mocked(invokeSpecEnsemble).mockImplementation(async () => {
-      fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
-      return makeEnsembleResult()
-    })
-
-    await runSpec("my-build", defaultOpts)
-
-    expect(printError).toHaveBeenCalledWith(expect.stringContaining("constraints.md was not created"))
-  })
-
-  it("reports error when no spec files are created", async () => {
-    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
-    fs.mkdirSync(buildDir, { recursive: true })
-    fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
-
-    vi.mocked(invokeSpecEnsemble).mockResolvedValue(makeEnsembleResult())
-
-    await runSpec("my-build", defaultOpts)
-
-    expect(printError).toHaveBeenCalledWith(expect.stringContaining("No spec files were created"))
+    await expect(runSpec("my-build", defaultOpts)).rejects.toThrow("required files")
   })
 })
