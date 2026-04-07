@@ -198,14 +198,24 @@ flowchart LR
 
 ### What Specialists Produce
 
-Each specialist returns a structured JSON proposal containing:
+Each specialist returns a structured JSON proposal:
 
-- **perspective** and **summary** -- the specialist's label and a 1-2 sentence
-  overview of their approach
-- **phases** -- an array of phase objects, each with title, slug, goal (in
-  business terms), acceptance criteria, spec references, and rationale for the
-  phase boundary
-- **tradeoffs** -- what the approach sacrifices
+```json
+{
+  "perspective": "simplicity",
+  "summary": "Three-phase plan focusing on...",
+  "phases": [
+    {
+      "title": "Project Scaffold",
+      "slug": "project-scaffold",
+      "goal": "Establish base project structure...",
+      "acceptanceCriteria": ["...", "..."],
+      "specReference": "Sections 1-2 of spec.md",
+      "rationale": "Groups all foundational work..."
+    }
+  ],
+  "tradeoffs": "Defers edge-case handling to..."
+}
 
 ### Shared Context
 
