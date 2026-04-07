@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.3
+
+- Fix fallow dead-code, duplication, and complexity lint errors
+- Remove unused exports (`resolveAgentDir`, `discoverSpecialists`, `EnsembleConfig`, `CreateOptions`)
+- Extract `resolveBuildDir` helper to deduplicate build directory setup across commands
+- Extract `requireBuildName` and `handleCommandError` to deduplicate CLI command handlers
+- Extract `formatProposalHeading` to deduplicate specialist proposal formatting
+- Decompose `rewindTo` into `collectStageFiles` and `resetPipelineState` to reduce complexity
+
 ## 0.4.2
 
 - Extract generic ensemble runner (`invokeEnsemble`) from specifier and planner pipelines, deduplicating ~150 lines of orchestration logic
