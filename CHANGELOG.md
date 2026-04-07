@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- Extract generic ensemble runner (`invokeEnsemble`) from specifier and planner pipelines, deduplicating ~150 lines of orchestration logic
+- Fix lint errors in tests, markdown, and agent validation
+
 ## 0.4.1
 
 - Rename `sketchers/` to `specifiers/` and `sketch.exec.ts` to `specify.exec.ts` to better reflect that these agents produce structured spec proposals
