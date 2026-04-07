@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Rename `sketchers/` to `specifiers/` and `sketch.exec.ts` to `specify.exec.ts` to better reflect that these agents produce structured spec proposals
+- Fix pipeline diagram label (SKETCH → SHAPE)
+
 ## 0.4.0
 
 - Add four-stage pipeline: `shape → spec → plan → build` replacing the single `spec` command
