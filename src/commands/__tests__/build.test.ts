@@ -37,6 +37,7 @@ vi.mock("../../store/state", () => ({
   initState: vi.fn((name, phases) => ({
     buildName: name,
     startedAt: "2024-01-01T00:00:00.000Z",
+    pipeline: { shape: "pending", spec: "pending", plan: "pending", build: "pending" },
     phases: phases.map((p: any) => ({
       id: p.id,
       status: "pending",
@@ -53,6 +54,8 @@ vi.mock("../../store/state", () => ({
   getNextUnmergedPhase: vi.fn(() => null),
   resetRetries: vi.fn(),
   updatePhaseStatus: vi.fn(),
+  markBuildRunning: vi.fn(),
+  advancePipeline: vi.fn(),
 }))
 
 vi.mock("../../store/budget", () => ({
@@ -190,6 +193,7 @@ describe("commands/run", () => {
     vi.mocked(loadState).mockReturnValue({
       buildName: "test",
       startedAt: "2024-01-01T00:00:00.000Z",
+      pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
       phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, isMerged: false, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
     })
     vi.mocked(runPhase).mockResolvedValue("passed")
@@ -254,6 +258,7 @@ describe("commands/run", () => {
     vi.mocked(loadState).mockReturnValue({
       buildName: "test",
       startedAt: "2024-01-01T00:00:00.000Z",
+      pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
       phases: [{
         id: "01-scaffold", status: "complete", checkpointTag: "", completionTag: "ridgeline/phase/test/01-scaffold",
         isMerged: false, retries: 0, duration: 100, completedAt: "2024-01-01", failedAt: null,
@@ -287,6 +292,7 @@ describe("commands/run", () => {
     vi.mocked(loadState).mockReturnValue({
       buildName: "test",
       startedAt: "2024-01-01T00:00:00.000Z",
+      pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
       phases: [{
         id: "01-scaffold", status: "complete", checkpointTag: "", completionTag: "ridgeline/phase/test/01-scaffold",
         isMerged: false, retries: 0, duration: 100, completedAt: "2024-01-01", failedAt: null,

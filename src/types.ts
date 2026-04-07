@@ -42,10 +42,21 @@ export type PhaseState = {
   failedAt: string | null
 }
 
+// Pipeline stage status
+export type PipelineStage = "shape" | "spec" | "plan" | "build"
+
+export type PipelineState = {
+  shape: "pending" | "complete"
+  spec: "pending" | "complete"
+  plan: "pending" | "complete"
+  build: "pending" | "running" | "complete"
+}
+
 // Full state.json structure
 export type BuildState = {
   buildName: string
   startedAt: string
+  pipeline: PipelineState
   phases: PhaseState[]
 }
 
@@ -106,6 +117,44 @@ export type SpecialistProposal = {
 
 // Aggregate result from ensemble planning
 export type EnsemblePlanResult = {
+  specialistResults: ClaudeResult[]
+  synthesizerResult: ClaudeResult
+  totalCostUsd: number
+  totalDurationMs: number
+}
+
+// Structured draft from a spec specialist (completeness, clarity, pragmatism)
+export type SketchSpecialistDraft = {
+  perspective: string
+  spec: {
+    title: string
+    overview: string
+    features: { name: string; description: string; acceptanceCriteria: string[] }[]
+    scopeBoundaries: { inScope: string[]; outOfScope: string[] }
+  }
+  constraints: {
+    language: string
+    runtime: string
+    framework: string | null
+    directoryConventions: string
+    namingConventions: string
+    apiStyle: string | null
+    database: string | null
+    dependencies: string[]
+    checkCommand: string
+  }
+  taste: {
+    codeStyle: string[]
+    testPatterns: string[]
+    commitFormat: string | null
+    commentStyle: string | null
+  } | null
+  tradeoffs: string
+  concerns: string[]
+}
+
+// Aggregate result from spec ensemble (shape → spec)
+export type EnsembleSpecResult = {
   specialistResults: ClaudeResult[]
   synthesizerResult: ClaudeResult
   totalCostUsd: number

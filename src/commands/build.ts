@@ -3,7 +3,7 @@ import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../store/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
-import { loadState, saveState, initState, getNextIncompletePhase, getNextUnmergedPhase, resetRetries, updatePhaseStatus } from "../store/state"
+import { loadState, saveState, initState, getNextIncompletePhase, getNextUnmergedPhase, resetRetries, updatePhaseStatus, markBuildRunning, advancePipeline } from "../store/state"
 import { loadBudget } from "../store/budget"
 import { cleanupBuildTags } from "../store/tags"
 import { commitAll, isWorkingTreeDirty } from "../git"
@@ -224,6 +224,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   configureSandbox(config)
 
+  markBuildRunning(config.buildDir, config.buildName)
   printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
 
   const repoRoot = process.cwd()
@@ -280,6 +281,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   const isFullyDone = state.phases.every((p) => p.status === "complete" && p.isMerged)
 
   if (isFullyDone) {
+    advancePipeline(config.buildDir, config.buildName, "build")
     console.log("")
     console.log("  All phases complete!")
     console.log("  Cleaning up...")

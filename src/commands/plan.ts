@@ -5,6 +5,7 @@ import { printInfo } from "../ui/output"
 import { logTrajectory, makeTrajectoryEntry } from "../store/trajectory"
 import { recordCost } from "../store/budget"
 import { invokePlanner } from "../engine/pipeline/ensemble.exec"
+import { advancePipeline } from "../store/state"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   const specPath = path.join(config.buildDir, "spec.md")
@@ -41,6 +42,9 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
       costUsd: ensemble.totalCostUsd,
     }
   ))
+
+  // Advance pipeline state
+  advancePipeline(config.buildDir, config.buildName, "plan")
 
   // Print summary
   printInfo(`\nPlan complete: ${phases.length} phases generated\n`)

@@ -3,13 +3,21 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, getNextUnmergedPhase } from "../state"
-import type { PhaseInfo, BuildState } from "../../types"
+import type { PhaseInfo, BuildState, PipelineState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase
 vi.mock("../tags", () => ({
   checkpointTagName: vi.fn((buildName: string, phaseId: string) => `ridgeline/checkpoint/${buildName}/${phaseId}`),
   verifyCompletionTag: vi.fn(() => true),
+  cleanupBuildTags: vi.fn(),
 }))
+
+const defaultPipeline: PipelineState = {
+  shape: "pending",
+  spec: "pending",
+  plan: "pending",
+  build: "pending",
+}
 
 import { verifyCompletionTag } from "../tags"
 
@@ -40,6 +48,7 @@ describe("state", () => {
       const state: BuildState = {
         buildName: "test",
         startedAt: "2024-01-01T00:00:00.000Z",
+        pipeline: { ...defaultPipeline },
         phases: [],
       }
       fs.writeFileSync(path.join(tmpDir, "state.json"), JSON.stringify(state))
@@ -76,6 +85,7 @@ describe("state", () => {
       const state: BuildState = {
         buildName: "test",
         startedAt: "2024-01-01T00:00:00.000Z",
+        pipeline: { ...defaultPipeline },
         phases: [],
       }
       saveState(tmpDir, state)

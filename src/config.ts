@@ -35,7 +35,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
       `constraints.md not found. Checked:\n` +
       `  - ${buildDir}/constraints.md\n` +
       `  - ${ridgelineDir}/constraints.md\n` +
-      `Create one with 'ridgeline spec ${buildName}' or pass --constraints <path>`
+      `Create one with 'ridgeline shape ${buildName}' then 'ridgeline spec ${buildName}', or pass --constraints <path>`
     )
   }
 

@@ -116,6 +116,7 @@ const phase: PhaseInfo = {
 const makeState = (): BuildState => ({
   buildName: "test-build",
   startedAt: "2024-01-01T00:00:00.000Z",
+  pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "running" },
   phases: [
     {
       id: "01-scaffold",
