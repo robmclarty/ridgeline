@@ -7,22 +7,43 @@ user sees, and where the user can intervene.
 ## Overview
 
 ```text
-spec → plan → [build → review → retry/advance] × N phases → merge
+shape → spec → plan → [build → review → retry/advance] × N phases → merge
 ```
 
-The user authors a spec describing what to build. The planner decomposes it into
-phases. The builder implements each phase. The reviewer verifies it. Failed phases
-are retried with feedback. On success, the worktree merges back to the user's
-branch.
+The user describes what to build. The shaper gathers context. The specifier
+ensemble produces spec files. The planner ensemble decomposes the spec into
+phases. The builder implements each phase. The reviewer verifies it. Failed
+phases are retried with feedback. On success, the worktree merges back to the
+user's branch.
 
-## Step 1: Spec
+## Step 1: Shape
+
+```sh
+ridgeline shape my-feature "Build a REST API for task management"
+```
+
+The shaper agent analyzes your codebase (language, framework, structure) and
+asks clarifying questions across up to 4 rounds. It produces `shape.md` -- a
+structured document covering project context, intent, scope, risks, existing
+landscape, and technical preferences.
+
+The optional input argument can be a file path to an existing document or a
+natural language description. If provided, the shaper uses it to pre-populate
+its understanding and skip or reduce its clarification rounds.
+
+**What to review before proceeding:** Read `shape.md`. The shape document is
+the primary input to the specifier ensemble -- inaccuracies here cascade
+through the entire pipeline.
+
+## Step 2: Spec
 
 ```sh
 ridgeline spec my-feature
 ```
 
-The specifier agent launches an interactive Q&A session to scaffold the three
-input files:
+The specifier ensemble runs three specialist agents in parallel -- completeness,
+clarity, and pragmatism -- each producing a draft proposal. A synthesizer agent
+merges the proposals into the three input files:
 
 - **spec.md** -- what to build (features, behaviors, acceptance criteria)
 - **constraints.md** -- technical guardrails (language, framework, structure,
@@ -32,18 +53,11 @@ input files:
 Files are written to `.ridgeline/builds/my-feature/`. The user can also author
 these files directly -- the specifier is a convenience, not a requirement.
 
-The user can provide input upfront to shortcut the Q&A:
-
-```sh
-ridgeline spec my-feature "REST API with JWT auth, Fastify, PostgreSQL"
-ridgeline spec my-feature ./existing-requirements.md
-```
-
 **What to review before proceeding:** Read the generated files. Tighten
 acceptance criteria -- vague criteria produce vague results. Ensure the check
 command in constraints actually works on your codebase.
 
-## Step 2: Plan
+## Step 3: Plan
 
 ```sh
 ridgeline plan my-feature
@@ -81,7 +95,7 @@ To preview the plan without executing:
 ridgeline dry-run my-feature
 ```
 
-## Step 3: Build
+## Step 4: Build
 
 ```sh
 ridgeline build my-feature
@@ -111,7 +125,7 @@ For each phase:
 **What the user sees:** Streaming builder output in real-time, phase progress
 indicators, and per-phase cost summaries.
 
-## Step 4: Review
+## Step 5: Review
 
 After the builder completes each phase, the reviewer runs automatically.
 
@@ -127,7 +141,7 @@ and suggestions.
 **What the user sees:** A verdict summary showing which criteria passed, which
 failed, and any blocking issues with evidence.
 
-## Step 5: Retry or Advance
+## Step 6: Retry or Advance
 
 When a phase fails review, the harness writes a feedback file
 (`<phase>.feedback.md`) from the structured verdict. The builder retries with a
@@ -145,7 +159,7 @@ retries are exhausted:
 The user can then inspect the code, edit the phase spec or constraints, and
 re-run `ridgeline build my-feature`. The harness resumes from the failed phase.
 
-## Step 6: Completion
+## Step 7: Completion
 
 When all phases pass:
 

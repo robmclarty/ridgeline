@@ -23,15 +23,17 @@ Claude CLI tools it can use. The permission matrix:
 
 | Agent | Read | Write | Edit | Bash | Glob | Grep | Agent |
 |------------|------|-------|------|------|------|------|-------|
+| Shaper     | yes  | --    | --   | --   | yes  | yes  | --    |
 | Specifier  | yes  | yes   | --   | --   | yes  | yes  | --    |
 | Planner    | --   | yes   | --   | --   | --   | --   | --    |
 | Builder    | yes  | yes   | yes  | yes  | yes  | yes  | yes   |
 | Reviewer   | yes  | --    | --   | yes  | yes  | yes  | yes   |
 
-The **planner** can only write phase files — it cannot read the codebase or
-execute commands. The **reviewer** cannot write or edit files, enforcing a
-read-only review posture. These restrictions are enforced by the Claude CLI at
-the tool-call level, not just by prompt instructions.
+The **shaper** can read the codebase to gather context but cannot write files
+or run commands. The **planner** can only write phase files — it cannot read
+the codebase or execute commands. The **reviewer** cannot write or edit files,
+enforcing a read-only review posture. These restrictions are enforced by the
+Claude CLI at the tool-call level, not just by prompt instructions.
 
 Specialist sub-agents (verifier, scout, auditor, tester) are also constrained by
 their parent's tool allowlist and by their own system prompts which instruct

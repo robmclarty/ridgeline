@@ -15,22 +15,35 @@ scoped tool permissions.
 
 ```mermaid
 flowchart LR
-    subgraph Input
-        spec[spec.md]
-        constraints[constraints.md]
-        taste[taste.md]
+    input[User input] --> shaper
+
+    shaper[Shaper Agent] -->|writes| shape[shape.md]
+
+    shape --> spec_ensemble
+
+    subgraph spec_ensemble ["Specifier Ensemble"]
+        direction TB
+        s_specialists["3 specialists\n(completeness, clarity, pragmatism)"]
+        s_synth["Synthesizer"]
+        s_specialists --> s_synth
     end
 
-    spec --> specifier
-    specifier[ridgeline spec] -->|generates| spec
-    specifier -->|generates| constraints
-    specifier -->|generates| taste
+    spec_ensemble -->|writes| spec[spec.md]
+    spec_ensemble -->|writes| constraints[constraints.md]
+    spec_ensemble -->|writes| taste[taste.md]
 
-    spec --> planner
-    constraints --> planner
-    taste --> planner
+    spec --> plan_ensemble
+    constraints --> plan_ensemble
+    taste --> plan_ensemble
 
-    planner[Planner Agent] -->|writes| phases["Phase files\n01-scaffold.md\n02-core.md\n..."]
+    subgraph plan_ensemble ["Planner Ensemble"]
+        direction TB
+        p_specialists["3 specialists\n(simplicity, velocity, thoroughness)"]
+        p_synth["Synthesizer"]
+        p_specialists --> p_synth
+    end
+
+    plan_ensemble -->|writes| phases["Phase files\n01-scaffold.md\n02-core.md\n..."]
 
     phases --> builder
 
@@ -55,8 +68,9 @@ Each agent has a focused role and scoped tool access enforced by the Claude CLI.
 
 | Agent | Role | Tools | Notes |
 |-------|------|-------|-------|
-| **Specifier** | Interactive Q&A to scaffold spec files | Read, Write, Glob, Grep | Only active during `ridgeline spec` |
-| **Planner** | Decomposes spec into numbered phase files | Write | Cannot read the codebase; works from spec alone |
+| **Shaper** | Gathers project context through Q&A and codebase analysis | Read, Glob, Grep | Only active during `ridgeline shape` |
+| **Specifier** | Synthesizes spec from shape + specialist proposals | Read, Write, Glob, Grep | Ensemble: 3 specialists + synthesizer |
+| **Planner** | Synthesizes phase plan from spec + specialist proposals | Write | Ensemble: 3 specialists + synthesizer |
 | **Builder** | Implements a single phase spec | Read, Write, Edit, Bash, Glob, Grep, Agent | Full access; sandbox optional |
 | **Reviewer** | Verifies phase output against acceptance criteria | Read, Bash, Glob, Grep, Agent | Read-only to project files; produces JSON verdict |
 
@@ -162,7 +176,7 @@ graph TD
   count, and timestamps. Used by `ridgeline build` to resume from the last
   successful phase.
 
-- **budget.json** -- records every Claude invocation: phase, role (planner,
+- **budget.json** -- records every Claude invocation: phase, role (shaper,
   specialist, synthesizer, builder, reviewer), attempt number, cost in USD,
   input/output tokens, and duration. Running total enables `--max-budget-usd`
   enforcement. The granularity is deliberate: per-phase, per-role, per-attempt
@@ -216,6 +230,7 @@ flags with hardcoded defaults:
 ├── plugin/                         # Project-level plugins (optional)
 └── builds/
     └── <build-name>/
+        ├── shape.md                # Structured project context (from shaper)
         ├── spec.md                 # What to build
         ├── constraints.md          # Build-level constraints (overrides project-level)
         ├── taste.md                # Build-level taste (optional)

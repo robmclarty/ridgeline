@@ -83,37 +83,55 @@ Taste is useful for maintaining consistency across phases and builds within a
 project. It is not enforced by the reviewer -- the reviewer checks acceptance
 criteria and constraints, not style preferences.
 
-## The Specifier Agent
+## The Shape and Specify Pipeline
 
 Writing specs from scratch can be daunting, especially for large projects.
-`ridgeline spec` launches an interactive assistant that helps scaffold the three
-input files.
+Ridgeline breaks the process into two stages: **shaping** and **specifying**.
 
-The specifier works in two modes:
-
-1. **Q&A mode.** Asks 3-5 targeted questions per round (up to 3 rounds),
-   grouped by theme: features, users, integrations, constraints, scope. The
-   questions surface gaps you might not think of -- "Who are the users?", "What
-   external systems does this integrate with?", "What's explicitly out of
-   scope?"
-
-2. **Generation mode.** Once it has enough context, it writes spec.md,
-   constraints.md, and optionally taste.md to the build directory.
-
-You can shortcut the Q&A by providing input directly:
+### Shaping
 
 ```sh
-# Detailed description -- specifier skips or pre-populates questions
-ridgeline spec my-feature "Build a REST API for task management with JWT auth,
-PostgreSQL backing, Fastify framework, deployed to AWS Lambda"
-
-# Existing document -- specifier reads it and fills gaps
-ridgeline spec my-feature ./existing-requirements.md
+ridgeline shape my-feature "Build a REST API for task management"
 ```
 
-The specifier does not ask about implementation details. It asks about outcomes,
-users, integrations, and scope. Implementation details belong in constraints,
-which can be authored directly or refined from the specifier's output.
+The shaper agent analyzes your codebase (language, framework, structure) and
+asks clarifying questions across up to 4 rounds, grouped by theme: intent and
+scope, solution shape and existing landscape, risks and complexities, and
+technical preferences. It produces `shape.md` -- a structured document that
+captures the project context needed to write a precise spec.
+
+You can provide input upfront to shortcut the Q&A:
+
+```sh
+# Detailed description -- shaper skips or reduces clarification rounds
+ridgeline shape my-feature "Build a REST API for task management with JWT auth,
+PostgreSQL backing, Fastify framework, deployed to AWS Lambda"
+
+# Existing document -- shaper reads it and fills gaps
+ridgeline shape my-feature ./existing-requirements.md
+```
+
+The shaper does not ask about implementation details. It asks about outcomes,
+users, integrations, and scope. Implementation details emerge in the constraints
+file during the specifying stage.
+
+### Specifying
+
+```sh
+ridgeline spec my-feature
+```
+
+The specifier uses an ensemble pattern: three specialist agents -- completeness,
+clarity, and pragmatism -- each draft a full spec proposal from the shape
+document. A synthesizer agent then merges the proposals, resolving disagreements
+and incorporating unique insights, to produce `spec.md`, `constraints.md`, and
+optionally `taste.md`.
+
+The ensemble approach surfaces gaps that a single agent would miss. The
+completeness specialist covers edge cases and error states. The clarity
+specialist converts vague language into concrete, testable criteria. The
+pragmatism specialist flags unrealistic scope and suggests proven defaults.
+See [Ensemble Flows](ensemble-flows.md) for details on the ensemble pattern.
 
 ## Flexibility: Loose to Precise
 

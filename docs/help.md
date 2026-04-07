@@ -16,41 +16,63 @@ npm install -g ridgeline
 
 ## Commands
 
-### `ridgeline spec [build-name] [input]`
+### `ridgeline [build-name] [input]` (default)
 
-Scaffold build input files from a description or existing spec. Creates
-`.ridgeline/builds/<build-name>/` with `spec.md`, `constraints.md`, and
-optionally `taste.md`.
+Auto-advance the build through the next incomplete pipeline stage
+(shape → spec → plan → build). Accepts all flags from the individual commands.
 
-The optional `input` argument can be a file path to an existing spec document
-or a natural language description. If the input is detailed enough, the
-assistant skips or pre-populates its clarification questions.
+```sh
+ridgeline my-feature "Build a REST API for task management"
+```
+
+### `ridgeline shape [build-name] [input]`
+
+Gather project context through interactive Q&A and codebase analysis. Produces
+`shape.md` in `.ridgeline/builds/<build-name>/`. The optional `input` argument
+can be a file path to an existing document or a natural language description.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | `opus` | Model for spec assistant |
+| `--model <name>` | `opus` | Model for shaper agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 
 ```sh
 # Interactive mode
-ridgeline spec my-feature
+ridgeline shape my-feature
 
 # From a description
-ridgeline spec my-feature "Build a REST API for task management with JWT auth"
+ridgeline shape my-feature "Build a REST API for task management with JWT auth"
 
 # From an existing document
-ridgeline spec my-feature ./existing-spec.md
+ridgeline shape my-feature ./existing-spec.md
+```
+
+### `ridgeline spec [build-name]`
+
+Run the specifier ensemble to produce `spec.md`, `constraints.md`, and
+optionally `taste.md`. Three specialist agents (completeness, clarity,
+pragmatism) draft proposals in parallel, then a synthesizer merges them.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for specifier agents |
+| `--timeout <minutes>` | `10` | Max duration per turn |
+| `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
+
+```sh
+ridgeline spec my-feature
 ```
 
 ### `ridgeline plan [build-name]`
 
-Generate phase specs from `spec.md` and `constraints.md`. Invokes the planner
-agent to decompose the spec into numbered phase files (`01-slug.md`,
-`02-slug.md`, ...) stored in the build's `phases/` directory.
+Run the planner ensemble to decompose the spec into numbered phase files
+(`01-slug.md`, `02-slug.md`, ...) stored in the build's `phases/` directory.
+Three specialist planners (simplicity, thoroughness, velocity) propose in
+parallel, then a synthesizer merges them.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | `opus` | Model for the planner |
+| `--model <name>` | `opus` | Model for planner agents |
 | `--timeout <minutes>` | `120` | Max planning duration |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
@@ -87,10 +109,23 @@ phase if previous state exists.
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
+| `--context <text>` | none | Extra context appended to builder and planner prompts |
 | `--unsafe` | off | Disable sandbox (skip auto-detected Greywall/bwrap) |
 
 ```sh
 ridgeline build my-feature
+```
+
+### `ridgeline rewind <build-name>`
+
+Reset pipeline state to a given stage and delete downstream artifacts.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, or `plan` |
+
+```sh
+ridgeline rewind my-feature --to spec
 ```
 
 ### `ridgeline clean`
@@ -109,23 +144,24 @@ ridgeline clean
 **Full workflow from scratch:**
 
 ```sh
-ridgeline spec my-feature "Build a task management API"
+ridgeline shape my-feature "Build a task management API"
+ridgeline spec my-feature
 ridgeline plan my-feature
 ridgeline dry-run my-feature    # preview before committing
 ridgeline build my-feature
 ```
 
-**Quick start (build auto-plans if no phases exist):**
+**Auto-advance (runs the next incomplete stage each time):**
 
 ```sh
-ridgeline spec my-feature
-ridgeline build my-feature
+ridgeline my-feature "Build a task management API"
+ridgeline my-feature   # continues from where it left off
 ```
 
-**Use an existing spec document:**
+**Use an existing document as input:**
 
 ```sh
-ridgeline spec my-feature ./detailed-spec.md
+ridgeline shape my-feature ./detailed-spec.md
 ridgeline build my-feature
 ```
 

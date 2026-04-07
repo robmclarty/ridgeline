@@ -18,22 +18,26 @@
 Build harness for long-horizon software execution using AI agents.
 
 Ridgeline decomposes large software ideas into phased builds using a
-three-agent system (planner, builder, reviewer) driven by the Claude CLI. It
-manages state through git checkpoints, tracks costs, and supports resumable
-execution when things go wrong.
+multi-agent pipeline (shaper, specifier, planner, builder, reviewer) driven by
+the Claude CLI. It manages state through git checkpoints, tracks costs, and
+supports resumable execution when things go wrong.
 
 ## How it works
 
-1. **Write a spec** -- describe what you want built in a markdown file along
-   with technical constraints and optional style preferences.
-2. **Plan** -- the planner agent reads your spec and produces numbered phase
-   files, each with its own scope and acceptance criteria.
-3. **Build** -- for each phase the builder agent implements the spec inside your
+1. **Shape** -- describe what you want built. The shaper agent analyzes your
+   codebase and asks clarifying questions to produce a structured shape document.
+2. **Specify** -- an ensemble of three specialist agents (completeness, clarity,
+   pragmatism) drafts spec proposals, then a synthesizer merges them into
+   `spec.md`, `constraints.md`, and optionally `taste.md`.
+3. **Plan** -- an ensemble of three specialist planners (simplicity,
+   thoroughness, velocity) proposes phase decompositions, then a synthesizer
+   merges them into numbered phase files with acceptance criteria.
+4. **Build** -- for each phase the builder agent implements the spec inside your
    repo, then creates a git checkpoint.
-4. **Review** -- the reviewer agent (read-only) checks the output against the
+5. **Review** -- the reviewer agent (read-only) checks the output against the
    acceptance criteria and returns a structured verdict. On failure, the harness
    generates a feedback file from the verdict for the builder's next attempt.
-5. **Retry or advance** -- failed phases are retried up to a configurable limit;
+6. **Retry or advance** -- failed phases are retried up to a configurable limit;
    passing phases hand off context to the next one.
 
 ## Install
@@ -58,24 +62,21 @@ Sandboxing is on by default when a provider is detected. No flags needed.
 ## Quick start
 
 ```sh
-# Scaffold a new build (interactive wizard)
+# Auto-advance through the pipeline (shape → spec → plan → build)
+ridgeline my-feature "Build a REST API for task management"
+
+# Or run each stage individually
+ridgeline shape my-feature "Build a REST API for task management"
 ridgeline spec my-feature
-
-# Or provide a description or existing spec document
-ridgeline spec my-feature "Build a REST API for task management"
-ridgeline spec my-feature ./my-spec.md
-
-# Generate the phase plan
 ridgeline plan my-feature
-
-# Preview what will run
-ridgeline dry-run my-feature
-
-# Execute the full build
+ridgeline dry-run my-feature   # preview before committing
 ridgeline build my-feature
 
 # Resume after a failure (re-run build)
 ridgeline build my-feature
+
+# Rewind to an earlier stage and redo from there
+ridgeline rewind my-feature --to spec
 
 # Clean up stale worktrees from failed builds
 ridgeline clean
@@ -83,27 +84,44 @@ ridgeline clean
 
 ## Commands
 
-### `ridgeline spec [build-name] [input]`
+### `ridgeline [build-name] [input]` (default)
 
-Creates the build directory under `.ridgeline/builds/<build-name>/` and collects
-your spec, constraints, and optional taste file. Accepts an optional input
-argument — a file path to an existing spec document or a natural language
-description. If the input is detailed enough, the assistant skips or
-pre-populates its clarification questions.
+Auto-advances the build through the next incomplete pipeline stage
+(shape → spec → plan → build). Accepts all flags from the individual commands.
+
+### `ridgeline shape [build-name] [input]`
+
+Gathers project context through interactive Q&A and codebase analysis. Produces
+`shape.md` in the build directory. Accepts an optional input argument -- a file
+path to an existing document or a natural language description.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | `opus` | Model for spec assistant |
+| `--model <name>` | `opus` | Model for shaper agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
+
+### `ridgeline spec [build-name]`
+
+Runs the specifier ensemble: three specialist agents (completeness, clarity,
+pragmatism) draft proposals in parallel, then a synthesizer merges them into
+`spec.md`, `constraints.md`, and optionally `taste.md`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for specifier agents |
+| `--timeout <minutes>` | `10` | Max duration per turn |
+| `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
 
 ### `ridgeline plan [build-name]`
 
-Invokes the planner agent to decompose the spec into numbered phase files
-(`01-slug.md`, `02-slug.md`, ...) stored in the build's `phases/` directory.
+Runs the planner ensemble: three specialist planners (simplicity, thoroughness,
+velocity) propose phase decompositions in parallel, then a synthesizer merges
+them into numbered phase files (`01-slug.md`, `02-slug.md`, ...) stored in the
+build's `phases/` directory.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | `opus` | Model for the planner |
+| `--model <name>` | `opus` | Model for planner agents |
 | `--timeout <minutes>` | `120` | Max planning duration |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
@@ -128,12 +146,21 @@ and advance on success.
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
+| `--context <text>` | none | Extra context appended to builder and planner prompts |
 | `--unsafe` | off | Disable sandbox auto-detection |
 
 The build command automatically resumes from the last successful phase if
 previous state exists. Each build runs in an isolated git worktree -- completed
 phases are reflected back to your branch, and failed builds leave the worktree
 intact for inspection.
+
+### `ridgeline rewind <build-name>`
+
+Resets pipeline state to a given stage and deletes downstream artifacts.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, or `plan` |
 
 ### `ridgeline clean`
 
@@ -148,6 +175,7 @@ WIP branches. Use this after inspecting a failed build.
 ├── worktrees/         # Git worktrees for active builds
 │   └── <build-name>/  # Isolated working directory per build
 └── builds/<build-name>/
+    ├── shape.md           # Structured project context (from shaper)
     ├── spec.md            # What to build
     ├── constraints.md     # Technical constraints and check commands
     ├── taste.md           # Optional coding style preferences

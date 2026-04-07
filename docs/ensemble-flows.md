@@ -216,6 +216,7 @@ Each specialist returns a structured JSON proposal:
   ],
   "tradeoffs": "Defers edge-case handling to..."
 }
+```
 
 ### Shared Context
 

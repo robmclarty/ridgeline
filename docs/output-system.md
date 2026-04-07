@@ -27,14 +27,14 @@ Harness lines use the `[ridgeline] [phase] action` format. LLM output appears be
 Four modules with distinct responsibilities:
 
 ```text
-streamParser.ts    — parse NDJSON, extract results (pure functions, no I/O)
-claudeInvoker.ts   — spawn claude subprocess, collect output, call callbacks
-buildInvoker.ts    — assemble prompts, wire up display, call invoker
-  (and reviewInvoker, planInvoker, spec)
-phaseRunner.ts     — orchestrate phases, own the [ridgeline] log lines
+stream.decode.ts     — parse NDJSON, extract results (pure functions, no I/O)
+claude.exec.ts       — spawn claude subprocess, collect output, call callbacks
+build.exec.ts        — assemble prompts, wire up display, call invoker
+  (and review.exec, plan.exec, specify.exec)
+phase.sequence.ts    — orchestrate phases, own the [ridgeline] log lines
 ```
 
-### streamParser.ts
+### stream.decode.ts
 
 Pure functions, fully testable, no side effects.
 
@@ -43,7 +43,7 @@ Pure functions, fully testable, no side effects.
 - `extractResult(ndjsonStdout)` — scans accumulated stdout backward for the `type: "result"` event and returns a parsed `ClaudeResult`.
 - `createDisplayCallbacks()` — convenience function that wires up a stream handler to write assistant text to `process.stdout` with blank line padding. Returns `{ onStdout, flush }`.
 
-### claudeInvoker.ts
+### claude.exec.ts
 
 Generic subprocess runner. No display logic.
 
@@ -52,7 +52,7 @@ Generic subprocess runner. No display logic.
 - Calls `opts.onStdout?.(chunk)` for each raw stdout chunk — callers decide what to do with it.
 - On close, calls `extractResult()` to parse the final result.
 
-### Invokers (buildInvoker, reviewInvoker, planInvoker, spec)
+### Invokers (build.exec, review.exec, plan.exec, specify.exec)
 
 Each invoker:
 
@@ -86,24 +86,6 @@ Claude CLI with `--output-format stream-json` emits one JSON object per line:
 We only display `assistant` events with `subtype: "text"`. Tool use, system messages, and other events are silently skipped. The `result` event is parsed for cost/usage/session tracking but not displayed.
 
 ## Future work
-
-### Spinner
-
-Replace `createDisplayCallbacks()` with a spinner-aware version in each invoker. The spinner would:
-
-- Show an animated indicator while waiting for text events.
-- Pause on first text event, let text stream through, resume on silence.
-- The stream parser and subprocess runner don't need to change.
-
-Look at trellis-exec's `src/ui/spinner.ts` for a reference implementation with pause/resume coordination.
-
-### Specialist agents
-
-Specialist sub-agents (verifier, scout, tester, auditor) are now implemented.
-They are discovered at runtime from `src/agents/specialists/` via frontmatter
-scanning in `src/engine/discovery/agent.scan.ts` and passed to the builder and
-reviewer via Claude CLI's `--agents` flag. The stream parser and invoker require
-no changes — specialist output flows through the same NDJSON stream.
 
 ### Quiet mode
 
