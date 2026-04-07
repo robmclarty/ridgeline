@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1
+
+- Add 10 new agent flavours: game-dev, mobile-app, technical-writing, legal-drafting, screenwriting, music-composition, security-audit, test-suite, translation, machine-learning
+
 ## 0.5.0
 
 - Add `--flavour` flag to all CLI commands for pluggable agent sets
