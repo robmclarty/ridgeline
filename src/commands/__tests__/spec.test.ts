@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 
-vi.mock("../../engine/pipeline/sketch.exec", () => ({
+vi.mock("../../engine/pipeline/specify.exec", () => ({
   invokeSpecEnsemble: vi.fn(),
 }))
 
@@ -16,7 +16,7 @@ vi.mock("../../store/state", () => ({
   advancePipeline: vi.fn(),
 }))
 
-import { invokeSpecEnsemble } from "../../engine/pipeline/sketch.exec"
+import { invokeSpecEnsemble } from "../../engine/pipeline/specify.exec"
 import { printError } from "../../ui/output"
 import { runSpec } from "../spec"
 

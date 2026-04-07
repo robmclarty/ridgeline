@@ -10,7 +10,7 @@
 . /  |         |       \/     |     \   |         |  \ .
 ./   |         |              |      \  |         |   \.
 -----+---------+--------------+--------+---------+-----
-     IDEA      SKETCH         SPEC     PLAN      BUILD
+     IDEA      SHAPE          SPEC     PLAN      BUILD
 ```
 
 # Ridgeline

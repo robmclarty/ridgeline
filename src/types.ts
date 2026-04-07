@@ -124,7 +124,7 @@ export type EnsemblePlanResult = {
 }
 
 // Structured draft from a spec specialist (completeness, clarity, pragmatism)
-export type SketchSpecialistDraft = {
+export type SpecifierDraft = {
   perspective: string
   spec: {
     title: string

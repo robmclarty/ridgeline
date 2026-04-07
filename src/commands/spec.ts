@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
-import { invokeSpecEnsemble, SpecEnsembleConfig } from "../engine/pipeline/sketch.exec"
+import { invokeSpecEnsemble, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
 import { advancePipeline } from "../store/state"
 
 export type SpecOptions = {

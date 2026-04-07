@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { ClaudeResult, SketchSpecialistDraft, EnsembleSpecResult } from "../../types"
+import { ClaudeResult, SpecifierDraft, EnsembleSpecResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { parseFrontmatter } from "../discovery/agent.scan"
@@ -11,19 +11,19 @@ import { extractJSON } from "./ensemble.exec"
 import { createStderrHandler } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
-// Sketcher discovery — reads personality overlays from agents/sketchers/
+// Specifier discovery — reads personality overlays from agents/specifiers/
 // ---------------------------------------------------------------------------
 
-type SketcherDef = {
+type SpecifierDef = {
   perspective: string
   overlay: string
 }
 
-const resolveSketchersDir = (): string | null => {
+const resolveSpecifiersDir = (): string | null => {
   const candidates = [
-    path.join(__dirname, "..", "agents", "sketchers"),
-    path.join(__dirname, "..", "..", "agents", "sketchers"),
-    path.join(__dirname, "..", "..", "..", "src", "agents", "sketchers"),
+    path.join(__dirname, "..", "agents", "specifiers"),
+    path.join(__dirname, "..", "..", "agents", "specifiers"),
+    path.join(__dirname, "..", "..", "..", "src", "agents", "specifiers"),
   ]
   for (const dir of candidates) {
     if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
@@ -31,11 +31,11 @@ const resolveSketchersDir = (): string | null => {
   return null
 }
 
-const discoverSketchers = (): SketcherDef[] => {
-  const dir = resolveSketchersDir()
+const discoverSpecifiers = (): SpecifierDef[] => {
+  const dir = resolveSpecifiersDir()
   if (!dir) return []
 
-  const sketchers: SketcherDef[] = []
+  const specifiers: SpecifierDef[] = []
 
   for (const entry of fs.readdirSync(dir)) {
     if (!entry.endsWith(".md")) continue
@@ -52,13 +52,13 @@ const discoverSketchers = (): SketcherDef[] => {
       const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
       if (!body) continue
 
-      sketchers.push({ perspective, overlay: body })
+      specifiers.push({ perspective, overlay: body })
     } catch {
       // Skip unreadable files
     }
   }
 
-  return sketchers
+  return specifiers
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +167,7 @@ const assembleSpecialistUserPrompt = (shapeMd: string): string => {
 const assembleSynthesizerUserPrompt = (
   shapeMd: string,
   buildDir: string,
-  proposals: { perspective: string; draft: SketchSpecialistDraft }[],
+  proposals: { perspective: string; draft: SpecifierDraft }[],
 ): string => {
   const sections: string[] = []
 
@@ -238,9 +238,9 @@ export const invokeSpecEnsemble = async (
   shapeMd: string,
   config: SpecEnsembleConfig,
 ): Promise<EnsembleSpecResult> => {
-  const sketchers = discoverSketchers()
-  if (sketchers.length === 0) {
-    throw new Error("No spec specialist overlays found in agents/sketchers/")
+  const specifiers = discoverSpecifiers()
+  if (specifiers.length === 0) {
+    throw new Error("No spec specialist overlays found in agents/specifiers/")
   }
 
   const specialistUserPrompt = assembleSpecialistUserPrompt(shapeMd)
@@ -248,7 +248,7 @@ export const invokeSpecEnsemble = async (
   // --- Phase 1: Spawn spec specialists in parallel ---
   const spinner = startSpinner("Specifying")
 
-  const specialistPromises = sketchers.map(({ perspective, overlay }) => {
+  const specialistPromises = specifiers.map(({ perspective, overlay }) => {
     const systemPrompt = buildSpecSpecialistPrompt(overlay)
     const startTime = Date.now()
 
@@ -271,13 +271,13 @@ export const invokeSpecEnsemble = async (
   const settled = await Promise.allSettled(specialistPromises)
 
   // --- Phase 2: Collect successful proposals ---
-  const successful: { perspective: string; result: ClaudeResult; draft: SketchSpecialistDraft }[] = []
+  const successful: { perspective: string; result: ClaudeResult; draft: SpecifierDraft }[] = []
 
   for (const outcome of settled) {
     if (outcome.status === "fulfilled") {
       const { perspective, result } = outcome.value
       try {
-        const draft = extractJSON(result.result) as SketchSpecialistDraft
+        const draft = extractJSON(result.result) as SpecifierDraft
         successful.push({ perspective, result, draft })
       } catch {
         const preview = result.result.length > 300
@@ -290,17 +290,17 @@ export const invokeSpecEnsemble = async (
     }
   }
 
-  const minRequired = Math.ceil(sketchers.length / 2)
+  const minRequired = Math.ceil(specifiers.length / 2)
   if (successful.length < minRequired) {
     spinner.stop()
     throw new Error(
-      `Spec generation requires at least ${minRequired} of ${sketchers.length} specialist proposals to succeed, got ${successful.length}. ` +
+      `Spec generation requires at least ${minRequired} of ${specifiers.length} specialist proposals to succeed, got ${successful.length}. ` +
       "Check Claude authentication and try again."
     )
   }
 
-  if (successful.length < sketchers.length) {
-    printInfo(`Continuing with ${successful.length} of ${sketchers.length} proposals`)
+  if (successful.length < specifiers.length) {
+    printInfo(`Continuing with ${successful.length} of ${specifiers.length} proposals`)
   }
 
   // --- Budget guard ---
