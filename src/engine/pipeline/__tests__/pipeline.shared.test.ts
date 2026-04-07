@@ -1,9 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { makeConfig } from "../../../../test/factories"
 
-vi.mock("../../discovery/agent.scan", () => ({
-  discoverBuiltinAgents: vi.fn(() => new Map()),
-  buildAgentsFlag: vi.fn(() => ({})),
+vi.mock("../../discovery/agent.registry", () => ({
+  buildAgentRegistry: vi.fn(() => ({
+    getCorePrompt: vi.fn(() => ""),
+    getSpecialists: vi.fn(() => []),
+    getContext: vi.fn(() => null),
+    getSubAgents: vi.fn(() => []),
+    getAgentsFlag: vi.fn(() => ({})),
+  })),
+}))
+
+vi.mock("../../discovery/flavour.resolve", () => ({
+  resolveFlavour: vi.fn(() => null),
 }))
 
 vi.mock("../../discovery/plugin.scan", () => ({
@@ -21,7 +30,7 @@ vi.mock("node:fs", async () => {
 })
 
 import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, commonInvokeOptions } from "../pipeline.shared"
-import { discoverBuiltinAgents, buildAgentsFlag } from "../../discovery/agent.scan"
+import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan"
 import { printError } from "../../../ui/output"
 import * as fs from "node:fs"
@@ -31,25 +40,38 @@ beforeEach(() => vi.clearAllMocks())
 describe("prepareAgentsAndPlugins", () => {
   it("returns agents and pluginDirs from discovery", () => {
     const agents = { scout: { description: "Scout", prompt: "..." } }
-    vi.mocked(buildAgentsFlag).mockReturnValue(agents)
+    const mockRegistry = {
+      getCorePrompt: vi.fn(() => ""),
+      getSpecialists: vi.fn(() => []),
+      getContext: vi.fn(() => null),
+      getSubAgents: vi.fn(() => []),
+      getAgentsFlag: vi.fn(() => agents),
+    }
+    vi.mocked(buildAgentRegistry).mockReturnValue(mockRegistry)
     vi.mocked(discoverPluginDirs).mockReturnValue([{ dir: "/plugin-a", createdPluginJson: false }])
 
     const result = prepareAgentsAndPlugins(makeConfig())
 
-    expect(discoverBuiltinAgents).toHaveBeenCalled()
+    expect(buildAgentRegistry).toHaveBeenCalled()
     expect(result.agents).toEqual(agents)
     expect(result.pluginDirs).toEqual([{ dir: "/plugin-a", createdPluginJson: false }])
   })
 
   it("returns undefined agents when agents map is empty", () => {
-    vi.mocked(buildAgentsFlag).mockReturnValue({})
+    const mockRegistry = {
+      getCorePrompt: vi.fn(() => ""),
+      getSpecialists: vi.fn(() => []),
+      getContext: vi.fn(() => null),
+      getSubAgents: vi.fn(() => []),
+      getAgentsFlag: vi.fn(() => ({})),
+    }
+    vi.mocked(buildAgentRegistry).mockReturnValue(mockRegistry)
 
     const result = prepareAgentsAndPlugins(makeConfig())
     expect(result.agents).toBeUndefined()
   })
 
   it("appends core plugin dir when unsafe and no sandbox", () => {
-    vi.mocked(buildAgentsFlag).mockReturnValue({})
     vi.mocked(discoverPluginDirs).mockReturnValue([])
     vi.mocked(getCorePluginDir).mockReturnValue("/core/plugins")
 
@@ -58,7 +80,6 @@ describe("prepareAgentsAndPlugins", () => {
   })
 
   it("does not append core plugin dir when sandbox is set", () => {
-    vi.mocked(buildAgentsFlag).mockReturnValue({})
     vi.mocked(discoverPluginDirs).mockReturnValue([])
 
     const provider = { name: "bwrap", command: "bwrap", checkReady: () => null, buildArgs: () => [] }
@@ -67,7 +88,6 @@ describe("prepareAgentsAndPlugins", () => {
   })
 
   it("does not append core plugin dir when not unsafe", () => {
-    vi.mocked(buildAgentsFlag).mockReturnValue({})
     vi.mocked(discoverPluginDirs).mockReturnValue([])
 
     const result = prepareAgentsAndPlugins(makeConfig({ unsafe: false }))

@@ -67,6 +67,7 @@ program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runCreate(await requireBuildName(buildName), {
@@ -80,6 +81,7 @@ program
         taste: opts.taste as string | undefined,
         context: opts.context as string | undefined,
         unsafe: opts.unsafe === true,
+        flavour: opts.flavour as string | undefined,
         input,
       })
     } catch (err) {
@@ -92,11 +94,13 @@ program
   .description("Gather project context and produce shape.md")
   .option("--model <name>", "Model for shaper agent", "opus")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runShape(await requireBuildName(buildName), {
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
+        flavour: (opts.flavour as string) ?? undefined,
         input,
       })
     } catch (err) {
@@ -110,12 +114,14 @@ program
   .option("--model <name>", "Model for specialists and synthesizer", "opus")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runSpec(await requireBuildName(buildName), {
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
+        flavour: (opts.flavour as string) ?? undefined,
       })
     } catch (err) {
       handleCommandError(err)
@@ -129,6 +135,7 @@ program
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(withConfig(runPlan))
 
 program
@@ -138,6 +145,7 @@ program
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(withConfig(runDryRun))
 
 program
@@ -153,6 +161,7 @@ program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(withConfig(runBuild))
 
 program

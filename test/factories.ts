@@ -18,6 +18,7 @@ export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfi
   networkAllowlist: [],
   worktreePath: null,
   extraContext: null,
+  flavour: null,
   ...overrides,
 })
 

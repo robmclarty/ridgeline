@@ -1,11 +1,12 @@
 import * as fs from "node:fs"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
-import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { getDiff } from "../../git"
 import { parseVerdict } from "../../store/feedback"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
+import { buildAgentRegistry } from "../discovery/agent.registry"
+import { resolveFlavour } from "../discovery/flavour.resolve"
 import { prepareAgentsAndPlugins, commonInvokeOptions } from "./pipeline.shared"
 
 const assembleUserPrompt = (
@@ -42,7 +43,8 @@ export const invokeReviewer = async (
   phase: PhaseInfo,
   checkpointTag: string
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
-  const systemPrompt = resolveAgentPrompt("reviewer.md")
+  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const systemPrompt = registry.getCorePrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
   const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: config.worktreePath ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)

@@ -18,6 +18,7 @@ export type RidgelineConfig = {
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
   worktreePath: string | null
   extraContext: string | null
+  flavour: string | null
 }
 
 // Phase metadata parsed from filesystem

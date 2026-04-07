@@ -5,8 +5,18 @@ vi.mock("../../claude/claude.exec", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../claude/agent.prompt", () => ({
-  resolveAgentPrompt: vi.fn(() => "reviewer system prompt"),
+vi.mock("../../discovery/agent.registry", () => ({
+  buildAgentRegistry: vi.fn(() => ({
+    getCorePrompt: vi.fn(() => "reviewer system prompt"),
+    getSpecialists: vi.fn(() => []),
+    getContext: vi.fn(() => null),
+    getSubAgents: vi.fn(() => []),
+    getAgentsFlag: vi.fn(() => ({})),
+  })),
+}))
+
+vi.mock("../../discovery/flavour.resolve", () => ({
+  resolveFlavour: vi.fn(() => null),
 }))
 
 vi.mock("../../claude/stream.decode", () => ({
@@ -56,7 +66,7 @@ vi.mock("node:fs", async () => {
 
 import { invokeReviewer } from "../review.exec"
 import { invokeClaude } from "../../claude/claude.exec"
-import { resolveAgentPrompt } from "../../claude/agent.prompt"
+import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { createDisplayCallbacks } from "../../claude/stream.decode"
 import { getDiff } from "../../../git"
 import { parseVerdict } from "../../../store/feedback"
@@ -70,7 +80,7 @@ describe("invokeReviewer", () => {
 
     await invokeReviewer(makeConfig(), makePhase(), "checkpoint-tag")
 
-    expect(resolveAgentPrompt).toHaveBeenCalledWith("reviewer.md")
+    expect(buildAgentRegistry).toHaveBeenCalled()
     expect(invokeClaude).toHaveBeenCalledWith(
       expect.objectContaining({
         systemPrompt: "reviewer system prompt",

@@ -29,6 +29,7 @@ type RidgelineSettings = {
   network?: {
     allowlist?: string[]
   }
+  flavour?: string
 }
 
 export const loadSettings = (ridgelineDir: string): RidgelineSettings => {

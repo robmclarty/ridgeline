@@ -2,7 +2,8 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { SpecifierDraft, EnsembleResult } from "../../types"
 import { invokeEnsemble } from "./ensemble.exec"
-import { resolveAgentPrompt } from "../claude/agent.prompt"
+import { buildAgentRegistry } from "../discovery/agent.registry"
+import { resolveFlavour } from "../discovery/flavour.resolve"
 import { formatProposalHeading } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
@@ -175,21 +176,24 @@ export type SpecEnsembleConfig = {
   timeoutMinutes: number
   maxBudgetUsd: number | null
   buildDir: string
+  flavour: string | null
 }
 
 export const invokeSpecifier = async (
   shapeMd: string,
   config: SpecEnsembleConfig,
 ): Promise<EnsembleResult> => {
+  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+
   return invokeEnsemble<SpecifierDraft>({
     label: "Specifying",
-    agentDir: "specifiers",
+    specialists: registry.getSpecialists("specifiers"),
 
     buildSpecialistPrompt: buildSpecSpecialistPrompt,
     specialistUserPrompt: assembleSpecialistUserPrompt(shapeMd),
     specialistSchema: SPEC_SPECIALIST_SCHEMA,
 
-    synthesizerPrompt: resolveAgentPrompt("specifier.md"),
+    synthesizerPrompt: registry.getCorePrompt("specifier.md"),
     buildSynthesizerUserPrompt: (drafts) =>
       assembleSynthesizerUserPrompt(shapeMd, config.buildDir, drafts),
     synthesizerTools: ["Write"],

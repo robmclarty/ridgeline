@@ -3,7 +3,8 @@ import * as path from "node:path"
 import * as readline from "node:readline"
 import { printInfo, printError } from "../ui/output"
 import { invokeClaude } from "../engine/claude/claude.exec"
-import { resolveAgentPrompt } from "../engine/claude/agent.prompt"
+import { buildAgentRegistry } from "../engine/discovery/agent.registry"
+import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { createDisplayCallbacks } from "../engine/claude/stream.decode"
 import { advancePipeline } from "../store/state"
 import { resolveBuildDir } from "../config"
@@ -125,6 +126,7 @@ const parseQAResponse = (resultText: string): QAResponse => {
 export type ShapeOptions = {
   model: string
   timeout: number
+  flavour?: string
   input?: string
 }
 
@@ -292,7 +294,8 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
   const buildDir = resolveBuildDir(buildName, { ensure: true })
   printInfo(`Build directory: ${buildDir}`)
 
-  const systemPrompt = resolveAgentPrompt("shaper.md")
+  const registry = buildAgentRegistry(resolveFlavour(opts.flavour ?? null))
+  const systemPrompt = registry.getCorePrompt("shaper.md")
   const timeoutMs = opts.timeout * 60 * 1000
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })

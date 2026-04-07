@@ -2,10 +2,11 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
-import { resolveAgentPrompt } from "../claude/agent.prompt"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { readHandoff } from "../../store/handoff"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
+import { buildAgentRegistry } from "../discovery/agent.registry"
+import { resolveFlavour } from "../discovery/flavour.resolve"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, commonInvokeOptions } from "./pipeline.shared"
 
 const assembleUserPrompt = (
@@ -58,7 +59,8 @@ export const invokeBuilder = async (
   phase: PhaseInfo,
   feedbackPath: string | null
 ): Promise<ClaudeResult> => {
-  const systemPrompt = resolveAgentPrompt("builder.md")
+  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const systemPrompt = registry.getCorePrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: config.worktreePath ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)

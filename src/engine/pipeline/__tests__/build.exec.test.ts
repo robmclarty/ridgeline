@@ -5,8 +5,18 @@ vi.mock("../../claude/claude.exec", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../claude/agent.prompt", () => ({
-  resolveAgentPrompt: vi.fn(() => "builder system prompt"),
+vi.mock("../../discovery/agent.registry", () => ({
+  buildAgentRegistry: vi.fn(() => ({
+    getCorePrompt: vi.fn(() => "builder system prompt"),
+    getSpecialists: vi.fn(() => []),
+    getContext: vi.fn(() => null),
+    getSubAgents: vi.fn(() => []),
+    getAgentsFlag: vi.fn(() => ({})),
+  })),
+}))
+
+vi.mock("../../discovery/flavour.resolve", () => ({
+  resolveFlavour: vi.fn(() => null),
 }))
 
 vi.mock("../../claude/stream.decode", () => ({
@@ -48,7 +58,7 @@ vi.mock("node:fs", async () => {
 
 import { invokeBuilder } from "../build.exec"
 import { invokeClaude } from "../../claude/claude.exec"
-import { resolveAgentPrompt } from "../../claude/agent.prompt"
+import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { createDisplayCallbacks } from "../../claude/stream.decode"
 import { readHandoff } from "../../../store/handoff"
 import { cleanupPluginDirs } from "../../discovery/plugin.scan"
@@ -63,7 +73,7 @@ describe("invokeBuilder", () => {
 
     await invokeBuilder(makeConfig(), makePhase(), null)
 
-    expect(resolveAgentPrompt).toHaveBeenCalledWith("builder.md")
+    expect(buildAgentRegistry).toHaveBeenCalled()
     expect(invokeClaude).toHaveBeenCalledWith(
       expect.objectContaining({
         systemPrompt: "builder system prompt",

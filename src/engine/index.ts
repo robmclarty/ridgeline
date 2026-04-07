@@ -1,4 +1,3 @@
-export { resolveAgentPrompt } from './claude/agent.prompt'
 export {
   type DiscoveredAgent,
   parseFrontmatter,
@@ -6,6 +5,8 @@ export {
   discoverBuiltinAgents,
   buildAgentsFlag,
 } from './discovery/agent.scan'
+export { type AgentRegistry, type SpecialistDef, buildAgentRegistry } from './discovery/agent.registry'
+export { resolveFlavour } from './discovery/flavour.resolve'
 export { invokeBuilder } from './pipeline/build.exec'
 export { type InvokeOptions, invokeClaude } from './claude/claude.exec'
 export { runPhase } from './pipeline/phase.sequence'

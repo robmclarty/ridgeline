@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "./types"
 import { resolveFile, parseCheckCommand } from "./store/inputs"
-import { resolveNetworkAllowlist } from "./store/settings"
+import { resolveNetworkAllowlist, loadSettings } from "./store/settings"
 
 // Load version from package.json at runtime
 export const loadVersion = (): string => {
@@ -73,5 +73,6 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     networkAllowlist: resolveNetworkAllowlist(ridgelineDir),
     worktreePath: null,
     extraContext: (opts.context as string) ?? null,
+    flavour: (opts.flavour as string) ?? loadSettings(ridgelineDir).flavour ?? null,
   }
 }

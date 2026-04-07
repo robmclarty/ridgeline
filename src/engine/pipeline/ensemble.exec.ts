@@ -1,73 +1,15 @@
-import * as fs from "node:fs"
-import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { scanPhases } from "../../store/phases"
-import { parseFrontmatter } from "../discovery/agent.scan"
 import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
-import { resolveAgentPrompt } from "../claude/agent.prompt"
+import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
+import { resolveFlavour } from "../discovery/flavour.resolve"
 import { assembleBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
 
-// ---------------------------------------------------------------------------
-// Shared specialist discovery
-// ---------------------------------------------------------------------------
-
-type SpecialistDef = {
-  perspective: string
-  overlay: string
-}
-
-/** Resolve agents/{subdir}/ across candidate paths. */
-const resolveAgentDir = (subdir: string): string | null => {
-  const candidates = [
-    path.join(__dirname, "..", "agents", subdir),
-    path.join(__dirname, "..", "..", "agents", subdir),
-    path.join(__dirname, "..", "..", "..", "src", "agents", subdir),
-  ]
-  for (const dir of candidates) {
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
-  }
-  return null
-}
-
-/** Read .md files from agents/{subdir}/, extract perspective + overlay. */
-const discoverSpecialists = (opts: {
-  agentDir: string
-  excludeFiles?: string[]
-}): SpecialistDef[] => {
-  const dir = resolveAgentDir(opts.agentDir)
-  if (!dir) return []
-
-  const exclude = new Set(opts.excludeFiles ?? [])
-  const specialists: SpecialistDef[] = []
-
-  for (const entry of fs.readdirSync(dir)) {
-    if (!entry.endsWith(".md")) continue
-    if (exclude.has(entry)) continue
-
-    const filepath = path.join(dir, entry)
-    try {
-      const content = fs.readFileSync(filepath, "utf-8")
-      const fm = parseFrontmatter(content)
-      if (!fm) continue
-
-      const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
-      const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
-
-      const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
-      if (!body) continue
-
-      specialists.push({ perspective, overlay: body })
-    } catch {
-      // Skip unreadable files
-    }
-  }
-
-  return specialists
-}
+export type { SpecialistDef } from "../discovery/agent.registry"
 
 // ---------------------------------------------------------------------------
 // Robust JSON extraction — handles markdown fences and surrounding text
@@ -120,11 +62,8 @@ type EnsembleConfig<TDraft> = {
   /** Human label for spinner and error messages, e.g., "Planning" or "Specifying" */
   label: string
 
-  /** Subdirectory under agents/ to discover specialists, e.g., "planners" */
-  agentDir: string
-
-  /** Files to exclude from specialist discovery, e.g., ["context.md"] */
-  excludeFiles?: string[]
+  /** Pre-resolved specialists from the agent registry */
+  specialists: SpecialistDef[]
 
   /** Build the system prompt for a specialist given their overlay text */
   buildSpecialistPrompt: (overlay: string) => string
@@ -162,13 +101,10 @@ type EnsembleConfig<TDraft> = {
 export const invokeEnsemble = async <TDraft>(
   config: EnsembleConfig<TDraft>
 ): Promise<EnsembleResult> => {
-  // 1. Discover specialists
-  const specialists = discoverSpecialists({
-    agentDir: config.agentDir,
-    excludeFiles: config.excludeFiles,
-  })
+  // 1. Validate pre-resolved specialists
+  const specialists = config.specialists
   if (specialists.length === 0) {
-    throw new Error(`No specialist overlays found in agents/${config.agentDir}/`)
+    throw new Error(`No specialist agents found for ${config.label}`)
   }
 
   // 2. Spawn specialists in parallel
@@ -315,16 +251,6 @@ const SPECIALIST_PROPOSAL_SCHEMA = JSON.stringify({
   required: ["perspective", "summary", "phases", "tradeoffs"],
 })
 
-/** Load shared specialist context from agents/planners/context.md. */
-const loadPlannerContext = (): string => {
-  const dir = resolveAgentDir("planners")
-  if (dir) {
-    const contextPath = path.join(dir, "context.md")
-    if (fs.existsSync(contextPath)) return fs.readFileSync(contextPath, "utf-8")
-  }
-  throw new Error("Planner specialist context not found at agents/planners/context.md")
-}
-
 /**
  * Build a planner specialist system prompt by concatenating shared context,
  * the specialist's personality overlay, and a JSON output directive.
@@ -399,18 +325,18 @@ const assemblePlannerSynthesizerUserPrompt = (
 export const invokePlanner = async (
   config: RidgelineConfig
 ): Promise<{ result: ClaudeResult; phases: PhaseInfo[]; ensemble: EnsembleResult }> => {
-  const context = loadPlannerContext()
+  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const context = registry.getContext("planners") ?? ""
 
   const ensemble = await invokeEnsemble<SpecialistProposal>({
     label: "Planning",
-    agentDir: "planners",
-    excludeFiles: ["context.md"],
+    specialists: registry.getSpecialists("planners"),
 
     buildSpecialistPrompt: (overlay) => buildPlannerSpecialistPrompt(context, overlay),
     specialistUserPrompt: assemblePlannerSpecialistUserPrompt(config),
     specialistSchema: SPECIALIST_PROPOSAL_SCHEMA,
 
-    synthesizerPrompt: resolveAgentPrompt("planner.md"),
+    synthesizerPrompt: registry.getCorePrompt("planner.md"),
     buildSynthesizerUserPrompt: (drafts) =>
       assemblePlannerSynthesizerUserPrompt(config, drafts),
     synthesizerTools: ["Write"],

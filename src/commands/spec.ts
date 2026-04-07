@@ -8,6 +8,7 @@ export type SpecOptions = {
   model: string
   timeout: number
   maxBudgetUsd?: number
+  flavour?: string
 }
 
 export const runSpec = async (buildName: string, opts: SpecOptions): Promise<void> => {
@@ -29,6 +30,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     timeoutMinutes: opts.timeout,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
+    flavour: opts.flavour ?? null,
   }
 
   const result = await invokeSpecifier(shapeMd, config)

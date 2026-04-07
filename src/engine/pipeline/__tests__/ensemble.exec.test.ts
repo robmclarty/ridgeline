@@ -5,8 +5,21 @@ vi.mock("../../claude/claude.exec", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../claude/agent.prompt", () => ({
-  resolveAgentPrompt: vi.fn(() => "synthesizer prompt"),
+vi.mock("../../discovery/agent.registry", () => ({
+  buildAgentRegistry: vi.fn(() => ({
+    getCorePrompt: vi.fn(() => "synthesizer prompt"),
+    getSpecialists: vi.fn(() => [
+      { perspective: "speed", overlay: "Build fast" },
+      { perspective: "quality", overlay: "Build well" },
+    ]),
+    getContext: vi.fn(() => "planner context content"),
+    getSubAgents: vi.fn(() => []),
+    getAgentsFlag: vi.fn(() => ({})),
+  })),
+}))
+
+vi.mock("../../discovery/flavour.resolve", () => ({
+  resolveFlavour: vi.fn(() => null),
 }))
 
 vi.mock("../../claude/stream.decode", () => ({
@@ -17,9 +30,6 @@ vi.mock("../../../store/phases", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
-vi.mock("../../discovery/agent.scan", () => ({
-  parseFrontmatter: vi.fn(() => ({ name: "test-agent" })),
-}))
 
 vi.mock("../../../ui/output", () => ({
   printInfo: vi.fn(),
@@ -43,23 +53,10 @@ vi.mock("../pipeline.shared", async (importOriginal) => {
   }
 })
 
-// Mock fs to control specialist discovery
-vi.mock("node:fs", async () => {
-  const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
-  return {
-    ...actual,
-    existsSync: vi.fn(() => false),
-    statSync: vi.fn(() => ({ isDirectory: () => true })),
-    readdirSync: vi.fn(() => []),
-    readFileSync: vi.fn(() => "---\nname: test\nperspective: speed\n---\nBuild fast"),
-  }
-})
-
 import { invokeEnsemble, invokePlanner, extractJSON } from "../ensemble.exec"
 import { invokeClaude } from "../../claude/claude.exec"
 import { scanPhases } from "../../../store/phases"
 import { printError } from "../../../ui/output"
-import * as fs from "node:fs"
 
 const makeProposal = (perspective = "speed") => JSON.stringify({
   perspective,
@@ -76,21 +73,6 @@ const makeProposal = (perspective = "speed") => JSON.stringify({
   ],
   tradeoffs: "Less thorough",
 })
-
-/** Set up fs mocks so that specialist discovery finds `count` agents in `subdir`. */
-const setupDiscovery = (count: number, subdir = "planners") => {
-  vi.mocked(fs.existsSync).mockImplementation((p) => {
-    const s = String(p)
-    if (s.includes("agents") && s.includes(subdir) && !s.includes("context.md")) return true
-    // Match context.md reads for planners
-    if (s.includes("context.md")) return true
-    return false
-  })
-  vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any)
-
-  const files = Array.from({ length: count }, (_, i) => `agent-${i}.md`)
-  vi.mocked(fs.readdirSync).mockReturnValue(files as any)
-}
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -126,9 +108,12 @@ describe("extractJSON", () => {
 describe("invokeEnsemble", () => {
   const makeSimpleDraft = () => JSON.stringify({ value: "test" })
 
-  const makeEnsembleConfig = (overrides = {}) => ({
+  const makeEnsembleConfig = (overrides: Record<string, unknown> = {}) => ({
     label: "Testing",
-    agentDir: "test-agents",
+    specialists: (overrides.specialists as { perspective: string; overlay: string }[]) ?? [
+      { perspective: "speed", overlay: "Build fast" },
+      { perspective: "quality", overlay: "Build well" },
+    ],
     buildSpecialistPrompt: (overlay: string) => `system: ${overlay}`,
     specialistUserPrompt: "user prompt",
     specialistSchema: JSON.stringify({ type: "object" }),
@@ -141,17 +126,13 @@ describe("invokeEnsemble", () => {
     ...overrides,
   })
 
-  it("throws when no specialists are discovered", async () => {
-    vi.mocked(fs.existsSync).mockReturnValue(false)
-
+  it("throws when no specialists are provided", async () => {
     await expect(
-      invokeEnsemble(makeEnsembleConfig()),
-    ).rejects.toThrow("No specialist overlays found")
+      invokeEnsemble(makeEnsembleConfig({ specialists: [] })),
+    ).rejects.toThrow("No specialist agents found")
   })
 
   it("spawns each specialist in parallel", async () => {
-    setupDiscovery(2, "test-agents")
-
     const specialistResult = makeClaudeResult({ result: makeSimpleDraft() })
     const synthResult = makeClaudeResult({ result: "synthesized" })
 
@@ -167,8 +148,6 @@ describe("invokeEnsemble", () => {
   })
 
   it("handles partial specialist failures", async () => {
-    setupDiscovery(2, "test-agents")
-
     const specialistResult = makeClaudeResult({ result: makeSimpleDraft() })
     const synthResult = makeClaudeResult({ result: "synthesized" })
 
@@ -184,8 +163,6 @@ describe("invokeEnsemble", () => {
   })
 
   it("handles unparseable specialist JSON", async () => {
-    setupDiscovery(2, "test-agents")
-
     const badResult = makeClaudeResult({ result: "not json" })
     const goodResult = makeClaudeResult({ result: makeSimpleDraft() })
     const synthResult = makeClaudeResult({ result: "synthesized" })
@@ -201,7 +178,11 @@ describe("invokeEnsemble", () => {
   })
 
   it("throws when fewer than half of specialists succeed", async () => {
-    setupDiscovery(3, "test-agents")
+    const threeSpecialists = [
+      { perspective: "a", overlay: "A" },
+      { perspective: "b", overlay: "B" },
+      { perspective: "c", overlay: "C" },
+    ]
 
     vi.mocked(invokeClaude)
       .mockRejectedValueOnce(new Error("fail 1"))
@@ -209,37 +190,37 @@ describe("invokeEnsemble", () => {
       .mockRejectedValueOnce(new Error("fail 3"))
 
     await expect(
-      invokeEnsemble(makeEnsembleConfig()),
+      invokeEnsemble(makeEnsembleConfig({ specialists: threeSpecialists })),
     ).rejects.toThrow(/requires at least 2 of 3/)
   })
 
   it("throws when specialist cost exceeds budget", async () => {
-    setupDiscovery(1, "test-agents")
+    const oneSpecialist = [{ perspective: "speed", overlay: "Build fast" }]
 
     vi.mocked(invokeClaude).mockResolvedValueOnce(
       makeClaudeResult({ result: makeSimpleDraft(), costUsd: 5.00 }),
     )
 
     await expect(
-      invokeEnsemble(makeEnsembleConfig({ maxBudgetUsd: 1.00 })),
+      invokeEnsemble(makeEnsembleConfig({ specialists: oneSpecialist, maxBudgetUsd: 1.00 })),
     ).rejects.toThrow(/Specialist cost.*exceeds budget/)
   })
 
   it("calls verify callback after synthesis", async () => {
-    setupDiscovery(1, "test-agents")
+    const oneSpecialist = [{ perspective: "speed", overlay: "Build fast" }]
 
     vi.mocked(invokeClaude)
       .mockResolvedValueOnce(makeClaudeResult({ result: makeSimpleDraft() }))
       .mockResolvedValueOnce(makeClaudeResult({ result: "synthesized" }))
 
     const verify = vi.fn()
-    await invokeEnsemble(makeEnsembleConfig({ verify }))
+    await invokeEnsemble(makeEnsembleConfig({ specialists: oneSpecialist, verify }))
 
     expect(verify).toHaveBeenCalledTimes(1)
   })
 
   it("throws when verify fails", async () => {
-    setupDiscovery(1, "test-agents")
+    const oneSpecialist = [{ perspective: "speed", overlay: "Build fast" }]
 
     vi.mocked(invokeClaude)
       .mockResolvedValueOnce(makeClaudeResult({ result: makeSimpleDraft() }))
@@ -247,14 +228,13 @@ describe("invokeEnsemble", () => {
 
     await expect(
       invokeEnsemble(makeEnsembleConfig({
+        specialists: oneSpecialist,
         verify: () => { throw new Error("Verification failed") },
       })),
     ).rejects.toThrow("Verification failed")
   })
 
   it("aggregates costs and durations correctly", async () => {
-    setupDiscovery(2, "test-agents")
-
     const spec1 = makeClaudeResult({ result: makeSimpleDraft(), costUsd: 0.10, durationMs: 3000 })
     const spec2 = makeClaudeResult({ result: makeSimpleDraft(), costUsd: 0.15, durationMs: 5000 })
     const synth = makeClaudeResult({ result: "done", costUsd: 0.20, durationMs: 2000 })
@@ -273,8 +253,7 @@ describe("invokeEnsemble", () => {
   })
 
   it("passes drafts to buildSynthesizerUserPrompt", async () => {
-    setupDiscovery(1, "test-agents")
-
+    const oneSpecialist = [{ perspective: "speed", overlay: "Build fast" }]
     const draft = { value: "test-value" }
     vi.mocked(invokeClaude)
       .mockResolvedValueOnce(makeClaudeResult({ result: JSON.stringify(draft) }))
@@ -282,7 +261,7 @@ describe("invokeEnsemble", () => {
 
     const buildSynthUserPrompt = vi.fn(() => "synth user prompt")
 
-    await invokeEnsemble(makeEnsembleConfig({ buildSynthesizerUserPrompt: buildSynthUserPrompt }))
+    await invokeEnsemble(makeEnsembleConfig({ specialists: oneSpecialist, buildSynthesizerUserPrompt: buildSynthUserPrompt }))
 
     expect(buildSynthUserPrompt).toHaveBeenCalledWith([
       expect.objectContaining({ draft }),
@@ -291,30 +270,7 @@ describe("invokeEnsemble", () => {
 })
 
 describe("invokePlanner", () => {
-  /** Set up fs mocks for planner discovery + context.md loading. */
-  const setupPlannerDiscovery = (count: number) => {
-    vi.mocked(fs.existsSync).mockImplementation((p) => {
-      const s = String(p)
-      if (s.includes("agents") && s.includes("planners") && !s.includes("context.md")) return true
-      if (s.includes("context.md")) return true
-      return false
-    })
-    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any)
-
-    const files = Array.from({ length: count }, (_, i) => `planner-${i}.md`)
-    // context.md is excluded from discovery but loaded separately
-    vi.mocked(fs.readdirSync).mockReturnValue(files as any)
-  }
-
-  it("throws when planner context is missing", async () => {
-    vi.mocked(fs.existsSync).mockReturnValue(false)
-
-    await expect(invokePlanner(makeConfig())).rejects.toThrow("Planner specialist context not found")
-  })
-
   it("invokes each specialist in parallel", async () => {
-    setupPlannerDiscovery(2)
-
     const specialistResult = makeClaudeResult({ result: makeProposal() })
     const synthResult = makeClaudeResult({ result: "synthesized" })
 
@@ -327,31 +283,11 @@ describe("invokePlanner", () => {
 
     await invokePlanner(makeConfig())
 
-    // 2 specialist calls + 1 synthesizer call
+    // 2 specialist calls (from mock registry) + 1 synthesizer call
     expect(invokeClaude).toHaveBeenCalledTimes(3)
   })
 
-  it("parses specialist JSON proposals", async () => {
-    setupPlannerDiscovery(1)
-
-    const specialistResult = makeClaudeResult({ result: makeProposal("velocity") })
-    const synthResult = makeClaudeResult({ result: "synthesized" })
-
-    vi.mocked(invokeClaude)
-      .mockResolvedValueOnce(specialistResult)
-      .mockResolvedValueOnce(synthResult)
-
-    vi.mocked(scanPhases).mockReturnValue([makePhase()])
-
-    const output = await invokePlanner(makeConfig())
-
-    expect(invokeClaude).toHaveBeenCalledTimes(2)
-    expect(output.phases).toHaveLength(1)
-  })
-
   it("handles specialist failures gracefully", async () => {
-    setupPlannerDiscovery(2)
-
     const specialistResult = makeClaudeResult({ result: makeProposal() })
     const synthResult = makeClaudeResult({ result: "synthesized" })
 
@@ -368,20 +304,25 @@ describe("invokePlanner", () => {
   })
 
   it("throws when fewer than half of specialists succeed", async () => {
-    setupPlannerDiscovery(3)
-
     vi.mocked(invokeClaude)
       .mockRejectedValueOnce(new Error("fail 1"))
       .mockRejectedValueOnce(new Error("fail 2"))
-      .mockRejectedValueOnce(new Error("fail 3"))
 
     await expect(invokePlanner(makeConfig())).rejects.toThrow(
-      /requires at least 2 of 3 specialist proposals/,
+      /requires at least 1 of 2 specialist proposals/,
     )
   })
 
   it("parses specialist output wrapped in markdown fences", async () => {
-    setupPlannerDiscovery(1)
+    // Mock registry with 1 specialist for this test
+    const { buildAgentRegistry } = await import("../../discovery/agent.registry")
+    vi.mocked(buildAgentRegistry).mockReturnValueOnce({
+      getCorePrompt: vi.fn(() => "synthesizer prompt"),
+      getSpecialists: vi.fn(() => [{ perspective: "velocity", overlay: "Build fast" }]),
+      getContext: vi.fn(() => "planner context"),
+      getSubAgents: vi.fn(() => []),
+      getAgentsFlag: vi.fn(() => ({})),
+    })
 
     const fenced = "```json\n" + makeProposal("velocity") + "\n```"
     const specialistResult = makeClaudeResult({ result: fenced })
@@ -400,8 +341,6 @@ describe("invokePlanner", () => {
   })
 
   it("throws when specialist JSON is unparseable", async () => {
-    setupPlannerDiscovery(2)
-
     vi.mocked(invokeClaude)
       .mockResolvedValueOnce(makeClaudeResult({ result: "not json" }))
       .mockResolvedValueOnce(makeClaudeResult({ result: "also not json" }))
@@ -414,7 +353,15 @@ describe("invokePlanner", () => {
   })
 
   it("throws when specialist cost exceeds budget", async () => {
-    setupPlannerDiscovery(1)
+    // Mock registry with 1 specialist for this test
+    const { buildAgentRegistry } = await import("../../discovery/agent.registry")
+    vi.mocked(buildAgentRegistry).mockReturnValueOnce({
+      getCorePrompt: vi.fn(() => "synthesizer prompt"),
+      getSpecialists: vi.fn(() => [{ perspective: "speed", overlay: "Build fast" }]),
+      getContext: vi.fn(() => "planner context"),
+      getSubAgents: vi.fn(() => []),
+      getAgentsFlag: vi.fn(() => ({})),
+    })
 
     vi.mocked(invokeClaude).mockResolvedValueOnce(
       makeClaudeResult({ result: makeProposal(), costUsd: 5.00 }),
@@ -426,11 +373,13 @@ describe("invokePlanner", () => {
   })
 
   it("calls scanPhases after synthesis", async () => {
-    setupPlannerDiscovery(1)
+    const specialistResult = makeClaudeResult({ result: makeProposal() })
+    const synthResult = makeClaudeResult({ result: "synthesized" })
 
     vi.mocked(invokeClaude)
-      .mockResolvedValueOnce(makeClaudeResult({ result: makeProposal() }))
-      .mockResolvedValueOnce(makeClaudeResult({ result: "synthesized" }))
+      .mockResolvedValueOnce(specialistResult)
+      .mockResolvedValueOnce(specialistResult)
+      .mockResolvedValueOnce(synthResult)
 
     vi.mocked(scanPhases).mockReturnValue([makePhase()])
 
@@ -440,11 +389,13 @@ describe("invokePlanner", () => {
   })
 
   it("throws when synthesizer produces no phase files", async () => {
-    setupPlannerDiscovery(1)
+    const specialistResult = makeClaudeResult({ result: makeProposal() })
+    const synthResult = makeClaudeResult({ result: "synthesized" })
 
     vi.mocked(invokeClaude)
-      .mockResolvedValueOnce(makeClaudeResult({ result: makeProposal() }))
-      .mockResolvedValueOnce(makeClaudeResult({ result: "synthesized" }))
+      .mockResolvedValueOnce(specialistResult)
+      .mockResolvedValueOnce(specialistResult)
+      .mockResolvedValueOnce(synthResult)
 
     vi.mocked(scanPhases).mockReturnValue([])
 
@@ -454,8 +405,6 @@ describe("invokePlanner", () => {
   })
 
   it("returns correct shape with cost and duration aggregation", async () => {
-    setupPlannerDiscovery(2)
-
     const spec1 = makeClaudeResult({ result: makeProposal(), costUsd: 0.10, durationMs: 3000 })
     const spec2 = makeClaudeResult({ result: makeProposal("thoroughness"), costUsd: 0.15, durationMs: 5000 })
     const synth = makeClaudeResult({ result: "done", costUsd: 0.20, durationMs: 2000 })

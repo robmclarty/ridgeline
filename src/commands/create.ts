@@ -18,6 +18,7 @@ type CreateOptions = {
   checkTimeout?: string
   context?: string
   unsafe?: boolean
+  flavour?: string
   input?: string
 }
 
@@ -64,6 +65,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
       const shapeOpts: ShapeOptions = {
         model: opts.model,
         timeout: parseInt(opts.timeout, 10),
+        flavour: opts.flavour,
         input: opts.input,
       }
       await runShape(buildName, shapeOpts)
@@ -74,6 +76,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         model: opts.model,
         timeout: parseInt(opts.timeout, 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(opts.maxBudgetUsd) : undefined,
+        flavour: opts.flavour,
       }
       await runSpec(buildName, specOpts)
       break
@@ -84,6 +87,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         timeout: opts.timeout,
         constraints: opts.constraints,
         taste: opts.taste,
+        flavour: opts.flavour,
       })
       await runPlan(config)
       break
@@ -100,6 +104,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         context: opts.context,
         unsafe: opts.unsafe,
         maxBudgetUsd: opts.maxBudgetUsd,
+        flavour: opts.flavour,
       })
       await runBuild(config)
       break

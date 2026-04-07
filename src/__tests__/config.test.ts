@@ -8,6 +8,7 @@ vi.mock("../store/inputs", () => ({
 
 vi.mock("../store/settings", () => ({
   resolveNetworkAllowlist: vi.fn(() => ["registry.npmjs.org"]),
+  loadSettings: vi.fn(() => ({})),
 }))
 
 import { resolveConfig, loadVersion } from "../config"
