@@ -7,7 +7,7 @@ export type SpecialistDef = {
   overlay: string
 }
 
-export type AgentRegistry = {
+type AgentRegistry = {
   /** Get a core agent prompt by filename (e.g., "builder.md"). Throws if missing. */
   getCorePrompt: (filename: string) => string
 

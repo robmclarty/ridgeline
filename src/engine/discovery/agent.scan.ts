@@ -76,7 +76,7 @@ export const discoverAgentsInDir = (
   return agents
 }
 
-export const discoverBuiltinAgents = (): DiscoveredAgent[] => {
+const discoverBuiltinAgents = (): DiscoveredAgent[] => {
   const specialistsDir = resolveSpecialistsDir()
   if (!specialistsDir) return []
   return discoverAgentsInDir(specialistsDir)

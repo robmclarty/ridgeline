@@ -9,8 +9,6 @@ import { resolveFlavour } from "../discovery/flavour.resolve"
 import { assembleBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
 
-export type { SpecialistDef } from "../discovery/agent.registry"
-
 // ---------------------------------------------------------------------------
 // Robust JSON extraction — handles markdown fences and surrounding text
 // ---------------------------------------------------------------------------

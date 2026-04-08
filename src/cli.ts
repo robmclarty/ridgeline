@@ -128,24 +128,21 @@ program
     }
   })
 
-program
-  .command("plan [build-name]")
-  .description("Generate phase specs from spec.md and constraints.md")
+const addPlanOptions = (cmd: Command) => cmd
   .option("--model <name>", "Model for planner", "opus")
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+
+addPlanOptions(program
+  .command("plan [build-name]")
+  .description("Generate phase specs from spec.md and constraints.md"))
   .action(withConfig(runPlan))
 
-program
+addPlanOptions(program
   .command("dry-run [build-name]")
-  .description("Display the plan without executing")
-  .option("--model <name>", "Model for planner", "opus")
-  .option("--timeout <minutes>", "Max duration for planning", "120")
-  .option("--constraints <path>", "Path to constraints.md")
-  .option("--taste <path>", "Path to taste.md")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .description("Display the plan without executing"))
   .action(withConfig(runDryRun))
 
 program
