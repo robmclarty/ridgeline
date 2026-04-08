@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { isClaudeAvailable } from "./helpers"
 import { invokeClaude } from "../../src/engine/claude/claude.exec"
-import { extractResult } from "../../src/engine/claude/stream.decode"
+import { extractResult } from "../../src/engine/claude/stream.result"
 import { spawn } from "node:child_process"
 
 /**

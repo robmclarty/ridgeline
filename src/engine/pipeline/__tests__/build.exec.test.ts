@@ -19,7 +19,7 @@ vi.mock("../../discovery/flavour.resolve", () => ({
   resolveFlavour: vi.fn(() => null),
 }))
 
-vi.mock("../../claude/stream.decode", () => ({
+vi.mock("../../claude/stream.display", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
@@ -59,7 +59,7 @@ vi.mock("node:fs", async () => {
 import { invokeBuilder } from "../build.exec"
 import { invokeClaude } from "../../claude/claude.exec"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
-import { createDisplayCallbacks } from "../../claude/stream.decode"
+import { createDisplayCallbacks } from "../../claude/stream.display"
 import { readHandoff } from "../../../stores/handoff"
 import { cleanupPluginDirs } from "../../discovery/plugin.scan"
 import * as fs from "node:fs"

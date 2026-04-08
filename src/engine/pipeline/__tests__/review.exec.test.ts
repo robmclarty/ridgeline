@@ -19,7 +19,7 @@ vi.mock("../../discovery/flavour.resolve", () => ({
   resolveFlavour: vi.fn(() => null),
 }))
 
-vi.mock("../../claude/stream.decode", () => ({
+vi.mock("../../claude/stream.display", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
@@ -27,7 +27,7 @@ vi.mock("../../../git", () => ({
   getDiff: vi.fn(() => "diff --git a/file.ts"),
 }))
 
-vi.mock("../../../stores/feedback", () => ({
+vi.mock("../../../stores/feedback.verdict", () => ({
   parseVerdict: vi.fn(() => ({
     passed: true,
     summary: "All good",
@@ -67,9 +67,9 @@ vi.mock("node:fs", async () => {
 import { invokeReviewer } from "../review.exec"
 import { invokeClaude } from "../../claude/claude.exec"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
-import { createDisplayCallbacks } from "../../claude/stream.decode"
+import { createDisplayCallbacks } from "../../claude/stream.display"
 import { getDiff } from "../../../git"
-import { parseVerdict } from "../../../stores/feedback"
+import { parseVerdict } from "../../../stores/feedback.verdict"
 import { cleanupPluginDirs } from "../../discovery/plugin.scan"
 
 beforeEach(() => vi.clearAllMocks())

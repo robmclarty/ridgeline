@@ -1,7 +1,7 @@
 {
   "entry": ["examples/**"],
   "ignoreExports": [
-    { "file": "src/engine/claude/stream.decode.ts", "exports": ["StreamEvent"] },
+    { "file": "src/engine/claude/stream.parse.ts", "exports": ["StreamEvent"] },
     { "file": "src/commands/spec.ts", "exports": ["SpecOptions"] },
     { "file": "src/engine/discovery/plugin.scan.ts", "exports": ["PluginDir"] },
     { "file": "src/stores/phases.ts", "exports": ["PhaseContent"] },

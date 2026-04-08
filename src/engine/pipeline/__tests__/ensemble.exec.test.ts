@@ -22,7 +22,7 @@ vi.mock("../../discovery/flavour.resolve", () => ({
   resolveFlavour: vi.fn(() => null),
 }))
 
-vi.mock("../../claude/stream.decode", () => ({
+vi.mock("../../claude/stream.display", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 

@@ -18,6 +18,6 @@ export { invokeReviewer } from './pipeline/review.exec'
 export {
   parseStreamLine,
   createStreamHandler,
-  extractResult,
-  createDisplayCallbacks,
-} from './claude/stream.decode'
+} from './claude/stream.parse'
+export { extractResult } from './claude/stream.result'
+export { createDisplayCallbacks } from './claude/stream.display'

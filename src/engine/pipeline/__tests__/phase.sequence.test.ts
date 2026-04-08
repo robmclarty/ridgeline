@@ -45,10 +45,13 @@ vi.mock("../review.exec", () => ({
   invokeReviewer: vi.fn(),
 }))
 
-vi.mock("../../../stores/feedback", () => ({
+vi.mock("../../../stores/feedback.verdict", () => ({
   formatIssue: vi.fn((issue: { description: string; file?: string }) =>
     issue.file ? `${issue.file}: ${issue.description}` : issue.description
   ),
+}))
+
+vi.mock("../../../stores/feedback.io", () => ({
   writeFeedback: vi.fn(),
   archiveFeedback: vi.fn(),
 }))

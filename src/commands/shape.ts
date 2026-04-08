@@ -5,7 +5,7 @@ import { printInfo, printError } from "../ui/output"
 import { invokeClaude } from "../engine/claude/claude.exec"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
-import { createDisplayCallbacks } from "../engine/claude/stream.decode"
+import { createDisplayCallbacks } from "../engine/claude/stream.display"
 import { advancePipeline } from "../stores/state"
 import { resolveBuildDir } from "../config"
 

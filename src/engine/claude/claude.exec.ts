@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "node:child_process"
 import { ClaudeResult } from "../../types"
-import { extractResult } from "./stream.decode"
+import { extractResult } from "./stream.result"
 import { SandboxProvider } from "./sandbox"
 
 /** Default: kill if no stdout arrives within 2 minutes of spawn. */

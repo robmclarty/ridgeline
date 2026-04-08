@@ -1,14 +1,16 @@
 export { loadBudget, saveBudget, recordCost, getTotalCost } from './budget'
 export {
+  parseVerdict,
+  formatIssue,
+  generateFeedback,
+} from './feedback.verdict'
+export {
   feedbackPath,
   archiveFeedbackPath,
   readFeedback,
   writeFeedback,
   archiveFeedback,
-  parseVerdict,
-  formatIssue,
-  generateFeedback,
-} from './feedback'
+} from './feedback.io'
 export { readHandoff, ensureHandoffExists } from './handoff'
 export { resolveFile, parseCheckCommand } from './inputs'
 export {
