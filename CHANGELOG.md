@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2
+
+- Rename `scout` specialist to `explorer` across all flavours and docs
+- Rename `store/` directory to `stores/` to reflect collection semantics
+- Remove dead exports and fix duplication flagged by fallow lint
+
 ## 0.5.1
 
 - Add 10 new agent flavours: game-dev, mobile-app, technical-writing, legal-drafting, screenwriting, music-composition, security-audit, test-suite, translation, machine-learning
