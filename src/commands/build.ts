@@ -31,7 +31,13 @@ const readSpecDescription = (buildDir: string): string | null => {
   }
 }
 
-const printSummaryTable = (config: RidgelineConfig, completed: number, failed: number, totalPhases: number): void => {
+const formatTokens = (count: number): string => {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`
+  return String(count)
+}
+
+const printSummaryTable = (config: RidgelineConfig): void => {
   const budget = loadBudget(config.buildDir)
 
   // Build per-phase stats from budget entries
@@ -62,6 +68,12 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
   let totalBuildTime = 0
   let totalReviewTime = 0
   let totalCost = planCost
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
+  for (const entry of budget.entries) {
+    totalInputTokens += entry.inputTokens
+    totalOutputTokens += entry.outputTokens
+  }
   for (const stats of phaseStats.values()) {
     totalAttempts += stats.attempts
     totalBuildTime += stats.buildTime
@@ -69,8 +81,14 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
     totalCost += stats.cost
   }
 
-  const sep = "  " + "=".repeat(60)
-  const div = "  " + "-".repeat(60)
+  // Wall-clock elapsed time
+  const timestamps = budget.entries.map((e) => e.timestamp).filter(Boolean)
+  const elapsed = timestamps.length >= 2
+    ? new Date(timestamps[timestamps.length - 1]).getTime() - new Date(timestamps[0]).getTime()
+    : 0
+
+  const sep = "  " + "=".repeat(65)
+  const div = "  " + "-".repeat(65)
 
   // Header
   console.log("")
@@ -80,7 +98,6 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
   if (description) {
     console.log(`  ${description}`)
   }
-  console.log(`  Phases: ${completed} passed, ${failed} failed, ${totalPhases} total`)
   console.log(sep)
 
   // Breakdown table
@@ -115,6 +132,14 @@ const printSummaryTable = (config: RidgelineConfig, completed: number, failed: n
     formatDuration(totalReviewTime),
     `$${totalCost.toFixed(2)}`,
   ))
+
+  // Footer stats
+  console.log("")
+  const footerParts = [`  Tokens: ${formatTokens(totalInputTokens)} in / ${formatTokens(totalOutputTokens)} out`]
+  if (elapsed > 0) {
+    footerParts.push(`Elapsed: ${formatDuration(elapsed)}`)
+  }
+  console.log(footerParts.join("  ·  "))
 }
 
 export const ensurePhases = async (config: RidgelineConfig) => {
@@ -209,8 +234,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   }
 
   // Summary — always printed, even on failure
-  const totalCompleted = state.phases.filter((p) => p.status === "complete").length
-  printSummaryTable(config, totalCompleted, failed, phases.length)
+  printSummaryTable(config)
 
   if (failed > 0) {
     killAllClaudeSync()
