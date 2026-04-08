@@ -66,7 +66,6 @@ export const setupE2eDir = (): { dir: string; config: RidgelineConfig; cleanup: 
     checkTimeoutSeconds: 30,
     checkCommand: "node hello.js",
     maxBudgetUsd: 5,
-    unsafe: true,
   }
 
   const cleanup = () => {
