@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.6
+
+- Clean up build summary table: remove redundant phase counts header, widen dividers to match row width, add token usage and elapsed time footer
+- Fix e2e pipeline test to expect specialist/synthesizer budget roles instead of planner
+- Make e2e feedback-file assertion resilient to builder retries
+- Remove unused `discoverBuiltinAgents` and `resolveSpecialistsDir`
+
 ## 0.5.5
 
 - Remove worktree isolation — builder now writes directly to the main repo, giving users live visibility into build progress
