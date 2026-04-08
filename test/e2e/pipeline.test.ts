@@ -63,10 +63,11 @@ describe.skipIf(!isClaudeAvailable())("e2e: full pipeline", () => {
       fs.readFileSync(path.join(config.buildDir, "budget.json"), "utf-8")
     )
     expect(budget.totalCostUsd).toBeGreaterThan(0)
-    expect(budget.entries.length).toBeGreaterThanOrEqual(3) // planner + at least 1 builder + 1 reviewer
+    expect(budget.entries.length).toBeGreaterThanOrEqual(4) // specialists + synthesizer + at least 1 builder + 1 reviewer
 
     const roles = budget.entries.map((e) => e.role)
-    expect(roles).toContain("planner")
+    expect(roles).toContain("specialist")
+    expect(roles).toContain("synthesizer")
     expect(roles).toContain("builder")
     expect(roles).toContain("reviewer")
 
