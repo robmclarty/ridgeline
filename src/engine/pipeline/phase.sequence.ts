@@ -72,9 +72,8 @@ const executeBuild = async (
   const budget = recordCost(config.buildDir, phase.id, "builder", attempt, result)
 
   // Commit builder work so the reviewer can see the diff
-  const worktreeCwd = config.worktreePath ?? undefined
-  if (isWorkingTreeDirty(worktreeCwd)) {
-    commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`, worktreeCwd)
+  if (isWorkingTreeDirty()) {
+    commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`)
   }
 
   return { result, isBudgetExceeded: isBudgetExceeded(budget.totalCostUsd, config, phase, state) }
@@ -148,7 +147,7 @@ export const runPhase = async (
   const checkpointTag = phaseState.checkpointTag
   const startTime = Date.now()
 
-  createCheckpoint(checkpointTag, phase.id, config.worktreePath ?? undefined)
+  createCheckpoint(checkpointTag, phase.id)
   ensureHandoffExists(config.buildDir)
 
   let attempt = phaseState.retries
@@ -181,7 +180,7 @@ export const runPhase = async (
 
     if (verdict.passed) {
       const duration = Date.now() - startTime
-      const completionTag = createCompletionTag(config.buildName, phase.id, config.worktreePath ?? undefined)
+      const completionTag = createCompletionTag(config.buildName, phase.id)
 
       updatePhaseStatus(config.buildDir, state, phase.id, {
         status: "complete",

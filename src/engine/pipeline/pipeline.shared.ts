@@ -92,7 +92,7 @@ export const commonInvokeOptions = (
 ) => ({
   agents: prepared.agents,
   pluginDirs: pluginDirPaths(prepared.pluginDirs),
-  cwd: config.worktreePath ?? process.cwd(),
+  cwd: process.cwd(),
   timeoutMs: config.timeoutMinutes * 60 * 1000,
   onStdout,
   onStderr: createStderrHandler(),

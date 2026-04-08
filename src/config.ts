@@ -71,7 +71,6 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,
     unsafe: opts.unsafe === true,
     networkAllowlist: resolveNetworkAllowlist(ridgelineDir),
-    worktreePath: null,
     extraContext: (opts.context as string) ?? null,
     flavour: (opts.flavour as string) ?? loadSettings(ridgelineDir).flavour ?? null,
   }

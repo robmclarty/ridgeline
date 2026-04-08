@@ -1,8 +1,5 @@
 import { printInfo } from "../ui/output"
-import { cleanAllWorktrees } from "../engine/worktree"
 
-export const runClean = (repoRoot: string): void => {
-  printInfo("Cleaning up worktrees...")
-  cleanAllWorktrees(repoRoot)
-  printInfo("Done.")
+export const runClean = (_repoRoot: string): void => {
+  printInfo("Nothing to clean up.")
 }

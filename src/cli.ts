@@ -175,7 +175,7 @@ program
 
 program
   .command("clean")
-  .description("Remove all build worktrees and WIP branches")
+  .description("Clean up build artifacts")
   .action(() => {
     try {
       const { runClean } = require("./commands/clean")

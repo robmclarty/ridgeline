@@ -1,22 +1,14 @@
-import { RidgelineConfig, BuildState } from "../types"
+import { RidgelineConfig } from "../types"
 import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../stores/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
-import { loadState, saveState, initState, getNextIncompletePhase, getNextUnmergedPhase, resetRetries, updatePhaseStatus, markBuildRunning, advancePipeline } from "../stores/state"
+import { loadState, saveState, initState, getNextIncompletePhase, resetRetries, markBuildRunning, advancePipeline } from "../stores/state"
 import { loadBudget } from "../stores/budget"
 import { cleanupBuildTags } from "../stores/tags"
-import { commitAll, isWorkingTreeDirty } from "../git"
 import { killAllClaudeSync } from "../engine/claude/claude.exec"
 import { runPlan } from "./plan"
-import {
-  createWorktree,
-  validateWorktree,
-  reflectCommits,
-  removeWorktree,
-  worktreePath as getWorktreePath,
-  ensureGitRepo,
-} from "../engine/worktree"
+import { ensureGitRepo } from "../engine/worktree"
 import * as fs from "node:fs"
 import * as path from "node:path"
 
@@ -151,60 +143,6 @@ const configureSandbox = (config: RidgelineConfig): void => {
   }
 }
 
-const setupWorktree = (repoRoot: string, config: RidgelineConfig): void => {
-  if (ensureGitRepo(repoRoot)) {
-    printInfo("Initialised git repo with initial commit")
-  }
-  if (validateWorktree(repoRoot, config.buildName)) {
-    config.worktreePath = getWorktreePath(repoRoot, config.buildName)
-    printInfo(`Resuming in worktree: ${config.worktreePath}`)
-  } else {
-    const existingPath = getWorktreePath(repoRoot, config.buildName)
-    if (fs.existsSync(existingPath)) {
-      removeWorktree(repoRoot, config.buildName)
-    }
-    config.worktreePath = createWorktree(repoRoot, config.buildName)
-    printInfo(`Worktree: ${config.worktreePath}`)
-  }
-}
-
-/** Merge a completed phase's worktree commits into main. Returns true on success. */
-const mergePhaseIntoMain = (
-  repoRoot: string, config: RidgelineConfig, state: BuildState, phaseId: string,
-): boolean => {
-  if (config.worktreePath && isWorkingTreeDirty(config.worktreePath)) {
-    commitAll(`ridgeline: ${phaseId}`, config.worktreePath)
-  }
-  printInfo("Merging phase into main...")
-  try {
-    reflectCommits(repoRoot, config.buildName)
-    updatePhaseStatus(config.buildDir, state, phaseId, { isMerged: true })
-    return true
-  } catch (err) {
-    printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
-    return false
-  }
-}
-
-/** Retry merges for complete-but-unmerged phases (from a previous interrupted run). Returns failure count. */
-const retryUnmergedPhases = (repoRoot: string, config: RidgelineConfig, state: BuildState): number => {
-  let failures = 0
-  let unmerged = getNextUnmergedPhase(state)
-  while (unmerged) {
-    printInfo(`Merging previously completed phase: ${unmerged.id}`)
-    try {
-      reflectCommits(repoRoot, config.buildName)
-      updatePhaseStatus(config.buildDir, state, unmerged.id, { isMerged: true })
-    } catch (err) {
-      printError(`Merge failed: ${err instanceof Error ? err.message : err}`)
-      failures++
-      break
-    }
-    unmerged = getNextUnmergedPhase(state)
-  }
-  return failures
-}
-
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   const phases = await ensurePhases(config)
 
@@ -229,8 +167,9 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   markBuildRunning(config.buildDir, config.buildName)
   printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
 
-  const repoRoot = process.cwd()
-  setupWorktree(repoRoot, config)
+  if (ensureGitRepo(process.cwd())) {
+    printInfo("Initialised git repo with initial commit")
+  }
 
   let completed = 0
   let failed = 0
@@ -252,7 +191,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
       if (result !== "passed") { failed++; break }
 
       completed++
-      if (!mergePhaseIntoMain(repoRoot, config, state, phase.id)) { failed++; break }
 
       if (config.maxBudgetUsd) {
         const budget = loadBudget(config.buildDir)
@@ -265,7 +203,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
       nextPhaseState = getNextIncompletePhase(state)
     }
 
-    failed += retryUnmergedPhases(repoRoot, config, state)
   } catch (err) {
     printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
     failed++
@@ -280,14 +217,12 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     process.exit(1)
   }
 
-  const isFullyDone = state.phases.every((p) => p.status === "complete" && p.isMerged)
+  const isFullyDone = state.phases.every((p) => p.status === "complete")
 
   if (isFullyDone) {
     advancePipeline(config.buildDir, config.buildName, "build")
     console.log("")
     console.log("  All phases complete!")
-    console.log("  Cleaning up...")
     cleanupBuildTags(config.buildName)
-    removeWorktree(repoRoot, config.buildName)
   }
 }

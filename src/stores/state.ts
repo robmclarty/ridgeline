@@ -17,12 +17,6 @@ export const loadState = (buildDir: string): BuildState | null => {
   const fp = statePath(buildDir)
   if (fs.existsSync(fp)) {
     const state: BuildState = JSON.parse(fs.readFileSync(fp, "utf-8"))
-    // Backfill isMerged for legacy state files
-    for (const phase of state.phases) {
-      if ((phase as any).isMerged === undefined) {
-        phase.isMerged = false
-      }
-    }
     // Backfill pipeline for legacy state files
     if (!state.pipeline) {
       state.pipeline = derivePipelineFromArtifacts(buildDir)
@@ -45,7 +39,6 @@ export const initState = (buildName: string, phases: PhaseInfo[]): BuildState =>
     status: "pending",
     checkpointTag: checkpointTagName(buildName, p.id),
     completionTag: null,
-    isMerged: false,
     retries: 0,
     duration: null,
     completedAt: null,
@@ -75,15 +68,6 @@ export const resetRetries = (buildDir: string, state: BuildState): void => {
     }
   }
   saveState(buildDir, state)
-}
-
-export const getNextUnmergedPhase = (state: BuildState): PhaseState | null => {
-  for (const phase of state.phases) {
-    if (phase.status === "complete" && !phase.isMerged) {
-      return phase
-    }
-  }
-  return null
 }
 
 export const getNextIncompletePhase = (

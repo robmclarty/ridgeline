@@ -16,7 +16,6 @@ export type RidgelineConfig = {
   unsafe: boolean
   networkAllowlist: string[]
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
-  worktreePath: string | null
   extraContext: string | null
   flavour: string | null
 }
@@ -36,7 +35,6 @@ export type PhaseState = {
   status: "pending" | "building" | "reviewing" | "complete" | "failed"
   checkpointTag: string
   completionTag: string | null
-  isMerged: boolean
   retries: number
   duration: number | null
   completedAt: string | null

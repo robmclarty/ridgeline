@@ -16,7 +16,6 @@ export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfi
   maxBudgetUsd: null,
   unsafe: false,
   networkAllowlist: [],
-  worktreePath: null,
   extraContext: null,
   flavour: null,
   ...overrides,

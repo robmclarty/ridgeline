@@ -62,7 +62,7 @@ export const invokeBuilder = async (
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
   const systemPrompt = registry.getCorePrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: config.worktreePath ?? process.cwd() })
+  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
   try {

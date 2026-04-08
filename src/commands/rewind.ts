@@ -34,12 +34,6 @@ export const runRewind = (buildName: string, to: string): void => {
     }
   }
 
-  // Also clean up worktree directory if it exists
-  const worktreeDir = path.join(ridgelineDir, "worktrees", buildName)
-  if (fs.existsSync(worktreeDir)) {
-    printInfo(`Worktree at ${worktreeDir} may need manual cleanup (use 'ridgeline clean')`)
-  }
-
   const statusAfter = getPipelineStatus(buildDir)
 
   if (filesToDelete.length > 0) {

@@ -20,7 +20,7 @@ const assembleUserPrompt = (
   sections.push(fs.readFileSync(phase.filepath, "utf-8"))
   sections.push("")
 
-  const diff = getDiff(checkpointTag, config.worktreePath ?? undefined)
+  const diff = getDiff(checkpointTag)
   sections.push("## Git Diff (checkpoint to HEAD)\n")
   if (diff) {
     sections.push("```diff")
@@ -46,7 +46,7 @@ export const invokeReviewer = async (
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
   const systemPrompt = registry.getCorePrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
-  const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: config.worktreePath ?? process.cwd() })
+  const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
   try {

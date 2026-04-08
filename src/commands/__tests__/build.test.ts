@@ -43,7 +43,6 @@ vi.mock("../../stores/state", () => ({
       status: "pending",
       checkpointTag: `ridgeline/checkpoint/${name}/${p.id}`,
       completionTag: null,
-      isMerged: false,
       retries: 0,
       duration: null,
       completedAt: null,
@@ -51,9 +50,7 @@ vi.mock("../../stores/state", () => ({
     })),
   })),
   getNextIncompletePhase: vi.fn(),
-  getNextUnmergedPhase: vi.fn(() => null),
   resetRetries: vi.fn(),
-  updatePhaseStatus: vi.fn(),
   markBuildRunning: vi.fn(),
   advancePipeline: vi.fn(),
 }))
@@ -74,30 +71,17 @@ vi.mock("../../engine/claude/sandbox", () => ({
   detectSandbox: vi.fn(() => ({ provider: null, warning: null })),
 }))
 
-vi.mock("../../git", () => ({
-  isWorkingTreeDirty: vi.fn(() => false),
-  commitAll: vi.fn(),
-}))
-
 vi.mock("../../engine/worktree", () => ({
-  createWorktree: vi.fn(() => "/tmp/worktree"),
-  validateWorktree: vi.fn(() => false),
-  reflectCommits: vi.fn(),
-  removeWorktree: vi.fn(),
-  worktreePath: vi.fn(() => "/tmp/worktree"),
-  cleanAllWorktrees: vi.fn(),
   ensureGitRepo: vi.fn(() => false),
 }))
 
 import { runBuild } from "../build"
 import { scanPhases } from "../../stores/phases"
 import { runPhase } from "../../engine/pipeline/phase.sequence"
-import { getNextIncompletePhase, getNextUnmergedPhase, loadState, resetRetries } from "../../stores/state"
+import { getNextIncompletePhase, loadState, resetRetries } from "../../stores/state"
 import { loadBudget } from "../../stores/budget"
 import { detectSandbox } from "../../engine/claude/sandbox"
 import { printInfo } from "../../ui/output"
-import { reflectCommits, removeWorktree, validateWorktree } from "../../engine/worktree"
-import { cleanupBuildTags } from "../../stores/tags"
 
 describe("commands/run", () => {
   let tmpDir: string
@@ -125,7 +109,6 @@ describe("commands/run", () => {
       maxBudgetUsd: null,
       unsafe: false,
       networkAllowlist: [],
-      worktreePath: null,
       extraContext: null,
     }
 
@@ -156,8 +139,8 @@ describe("commands/run", () => {
 
     // Simulate getNextIncompletePhase returning each phase then null
     vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
       .mockReturnValueOnce(null)
 
     await runBuild(config)
@@ -173,7 +156,7 @@ describe("commands/run", () => {
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("failed")
     vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
 
     try {
       await runBuild(config)
@@ -194,11 +177,11 @@ describe("commands/run", () => {
       buildName: "test",
       startedAt: "2024-01-01T00:00:00.000Z",
       pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
-      phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, isMerged: false, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
+      phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
     })
     vi.mocked(runPhase).mockResolvedValue("passed")
     vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
       .mockReturnValueOnce(null)
 
     await runBuild(config)
@@ -216,8 +199,8 @@ describe("commands/run", () => {
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("passed")
     vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
       .mockReturnValueOnce(null)
 
     // After first phase, budget exceeds limit
@@ -239,7 +222,7 @@ describe("commands/run", () => {
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("passed")
     vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
+      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
       .mockReturnValueOnce(null)
     vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
 
@@ -249,85 +232,4 @@ describe("commands/run", () => {
     expect(detectSandbox).not.toHaveBeenCalled()
   })
 
-  it("retries merge without re-running phase when phase is complete but unmerged", async () => {
-    const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
-    ]
-
-    vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(loadState).mockReturnValue({
-      buildName: "test",
-      startedAt: "2024-01-01T00:00:00.000Z",
-      pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
-      phases: [{
-        id: "01-scaffold", status: "complete", checkpointTag: "", completionTag: "ridgeline/phase/test/01-scaffold",
-        isMerged: false, retries: 0, duration: 100, completedAt: "2024-01-01", failedAt: null,
-      }],
-    })
-
-    // No incomplete phases — all are "complete"
-    vi.mocked(getNextIncompletePhase).mockReturnValue(null)
-    // But one is unmerged
-    vi.mocked(getNextUnmergedPhase)
-      .mockReturnValueOnce({
-        id: "01-scaffold", status: "complete", checkpointTag: "", completionTag: "ridgeline/phase/test/01-scaffold",
-        isMerged: false, retries: 0, duration: 100, completedAt: "2024-01-01", failedAt: null,
-      })
-      .mockReturnValueOnce(null)
-
-    await runBuild(config)
-
-    // Phase should NOT be re-run
-    expect(runPhase).not.toHaveBeenCalled()
-    // But reflectCommits should be called to retry the merge
-    expect(reflectCommits).toHaveBeenCalled()
-  })
-
-  it("does not clean up when all phases complete but not all merged", async () => {
-    const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
-    ]
-
-    vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(loadState).mockReturnValue({
-      buildName: "test",
-      startedAt: "2024-01-01T00:00:00.000Z",
-      pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
-      phases: [{
-        id: "01-scaffold", status: "complete", checkpointTag: "", completionTag: "ridgeline/phase/test/01-scaffold",
-        isMerged: false, retries: 0, duration: 100, completedAt: "2024-01-01", failedAt: null,
-      }],
-    })
-
-    vi.mocked(getNextIncompletePhase).mockReturnValue(null)
-    vi.mocked(getNextUnmergedPhase)
-      .mockReturnValueOnce({
-        id: "01-scaffold", status: "complete", checkpointTag: "", completionTag: "ridgeline/phase/test/01-scaffold",
-        isMerged: false, retries: 0, duration: 100, completedAt: "2024-01-01", failedAt: null,
-      })
-    vi.mocked(reflectCommits).mockImplementation(() => { throw new Error("conflict") })
-
-    try { await runBuild(config) } catch { /* process.exit */ }
-
-    expect(removeWorktree).not.toHaveBeenCalled()
-    expect(cleanupBuildTags).not.toHaveBeenCalled()
-  })
-
-  it("resumes existing valid worktree instead of creating new one", async () => {
-    const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
-    ]
-
-    vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(runPhase).mockResolvedValue("passed")
-    vi.mocked(validateWorktree).mockReturnValue(true)
-    vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, isMerged: false, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce(null)
-    vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
-
-    try { await runBuild(config) } catch { /* process.exit mock throws */ }
-
-    expect(printInfo).toHaveBeenCalledWith(expect.stringContaining("Resuming in worktree"))
-  })
 })

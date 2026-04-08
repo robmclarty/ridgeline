@@ -13,7 +13,6 @@
       "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/helloworld/01-hello-script",
       "completionTag": "ridgeline/phase/helloworld/01-hello-script",
-      "isMerged": false,
       "retries": 0,
       "duration": 48796,
       "completedAt": "2026-04-02T15:57:29.884Z",

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, getNextUnmergedPhase } from "../state"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries } from "../state"
 import type { PhaseInfo, BuildState, PipelineState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase
@@ -57,27 +57,6 @@ describe("state", () => {
       expect(loaded).toEqual(state)
     })
 
-    it("backfills isMerged=false for legacy state files missing the field", () => {
-      const legacyState = {
-        buildName: "test",
-        startedAt: "2024-01-01T00:00:00.000Z",
-        phases: [{
-          id: "01-scaffold",
-          status: "complete",
-          checkpointTag: "ridgeline/checkpoint/test/01-scaffold",
-          completionTag: "ridgeline/phase/test/01-scaffold",
-          retries: 0,
-          duration: 100,
-          completedAt: "2024-01-01T00:00:00.000Z",
-          failedAt: null,
-          // no isMerged field
-        }],
-      }
-      fs.writeFileSync(path.join(tmpDir, "state.json"), JSON.stringify(legacyState))
-
-      const loaded = loadState(tmpDir)
-      expect(loaded!.phases[0].isMerged).toBe(false)
-    })
   })
 
   describe("saveState", () => {
@@ -200,42 +179,6 @@ describe("state", () => {
       getNextIncompletePhase(state, "/my/cwd")
 
       expect(verifyCompletionTag).toHaveBeenCalledWith("build", "01-scaffold", "/my/cwd")
-    })
-  })
-
-  describe("getNextUnmergedPhase", () => {
-    it("returns null when no phases are complete", () => {
-      const state = initState("build", samplePhases)
-      expect(getNextUnmergedPhase(state)).toBeNull()
-    })
-
-    it("returns null when all complete phases are merged", () => {
-      const state = initState("build", samplePhases)
-      state.phases[0].status = "complete"
-      state.phases[0].isMerged = true
-      expect(getNextUnmergedPhase(state)).toBeNull()
-    })
-
-    it("returns the first complete-but-unmerged phase", () => {
-      const state = initState("build", samplePhases)
-      state.phases[0].status = "complete"
-      state.phases[0].isMerged = true
-      state.phases[1].status = "complete"
-      state.phases[1].isMerged = false
-
-      const next = getNextUnmergedPhase(state)
-      expect(next?.id).toBe("02-api")
-    })
-
-    it("returns the earliest unmerged phase even if later ones exist", () => {
-      const state = initState("build", samplePhases)
-      state.phases[0].status = "complete"
-      state.phases[0].isMerged = false
-      state.phases[1].status = "complete"
-      state.phases[1].isMerged = false
-
-      const next = getNextUnmergedPhase(state)
-      expect(next?.id).toBe("01-scaffold")
     })
   })
 
