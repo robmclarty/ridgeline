@@ -39,7 +39,7 @@ beforeEach(() => vi.clearAllMocks())
 
 describe("prepareAgentsAndPlugins", () => {
   it("returns agents and pluginDirs from discovery", () => {
-    const agents = { scout: { description: "Scout", prompt: "..." } }
+    const agents = { explorer: { description: "Explorer", prompt: "..." } }
     const mockRegistry = {
       getCorePrompt: vi.fn(() => ""),
       getSpecialists: vi.fn(() => []),
