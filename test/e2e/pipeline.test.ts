@@ -101,8 +101,11 @@ describe.skipIf(!isClaudeAvailable())("e2e: full pipeline", () => {
     const output = execSync("node hello.js", { cwd: dir, encoding: "utf-8" })
     expect(output).toContain("Hello")
 
-    // --- No feedback files (everything passed) ---
+    // --- Feedback files only exist if a phase was retried ---
     const feedbackFiles = fs.readdirSync(config.phasesDir).filter((f) => f.includes(".feedback"))
-    expect(feedbackFiles.length).toBe(0)
+    const builderAttempts = budget.entries.filter((e) => e.role === "builder").length
+    if (builderAttempts === state.phases.length) {
+      expect(feedbackFiles.length).toBe(0)
+    }
   })
 })
