@@ -33,18 +33,6 @@ export const parseFrontmatter = (content: string): Frontmatter | null => {
   }
 }
 
-const resolveSpecialistsDir = (): string | null => {
-  const candidates = [
-    path.join(__dirname, "agents", "specialists"),
-    path.join(__dirname, "..", "agents", "specialists"),
-    path.join(__dirname, "..", "..", "src", "agents", "specialists"),
-  ]
-  for (const dir of candidates) {
-    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) return dir
-  }
-  return null
-}
-
 export const discoverAgentsInDir = (
   dir: string
 ): DiscoveredAgent[] => {
@@ -74,12 +62,6 @@ export const discoverAgentsInDir = (
   }
 
   return agents
-}
-
-const discoverBuiltinAgents = (): DiscoveredAgent[] => {
-  const specialistsDir = resolveSpecialistsDir()
-  if (!specialistsDir) return []
-  return discoverAgentsInDir(specialistsDir)
 }
 
 export const buildAgentsFlag = (
