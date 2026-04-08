@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3
+
+- Stream e2e test output in real-time instead of buffering until completion
+
 ## 0.5.2
 
 - Rename `scout` specialist to `explorer` across all flavours and docs
