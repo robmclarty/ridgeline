@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.4
+
+- Split `stream.decode.ts` into `stream.parse`, `stream.result`, and `stream.display` modules
+- Split `feedback.ts` into `feedback.verdict` (pure logic) and `feedback.io` (filesystem)
+- Extract `executeBuild`, `executeReview`, and `handleExhaustion` from `runPhase` to reduce cognitive complexity
+
 ## 0.5.3
 
 - Stream e2e test output in real-time instead of buffering until completion
