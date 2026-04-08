@@ -6,5 +6,7 @@ export default defineConfig({
     setupFiles: ["test/setup.ts"],
     include: ["test/e2e/**/*.test.ts"],
     testTimeout: 600_000, // 10 minutes — real LLM calls are slow
+    reporters: ["verbose"],
+    disableConsoleIntercept: true,
   },
 })
