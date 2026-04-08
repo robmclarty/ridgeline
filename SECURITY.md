@@ -35,7 +35,7 @@ the codebase or execute commands. The **reviewer** cannot write or edit files,
 enforcing a read-only review posture. These restrictions are enforced by the
 Claude CLI at the tool-call level, not just by prompt instructions.
 
-Specialist sub-agents (verifier, scout, auditor, tester) are also constrained by
+Specialist sub-agents (verifier, explorer, auditor, tester) are also constrained by
 their parent's tool allowlist and by their own system prompts which instruct
 read-only behavior.
 

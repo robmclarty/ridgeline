@@ -128,7 +128,7 @@
 - Resolve all fallow duplication and complexity errors: extract shared pipeline boilerplate, reduce cognitive complexity in parseVerdict/runBuild/runSpec, and deduplicate CLI and worktree init logic
 - Configure fallow with test duplication exclusions and reasonable complexity thresholds; fallow now exits cleanly without `|| true` fallback
 - Fix fallow dead-code warnings by unexporting internal-only types and removing unused barrel re-exports
-- Rename specialist agents for clarity: navigator → scout, depender → auditor, checker → verifier
+- Rename specialist agents for clarity: navigator → scout (later renamed explorer), depender → auditor, checker → verifier
 - Add ensemble planning documentation
 - Fix documentation drift: correct non-existent CLI flags and broken cross-references
 

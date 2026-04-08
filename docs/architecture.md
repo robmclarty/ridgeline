@@ -123,7 +123,7 @@ markdown files with valid frontmatter.
 | Specialist | Model | Purpose |
 |------------|-------|---------|
 | **verifier** | sonnet | Runs check commands, lint, type-check, tests. Can auto-fix mechanical issues. |
-| **scout** | sonnet | Read-only codebase exploration. Returns structured briefings on targeted areas. |
+| **explorer** | sonnet | Read-only codebase exploration. Returns structured briefings on targeted areas. |
 | **tester** | sonnet | Writes acceptance-level tests from criteria. |
 | **auditor** | sonnet | Checks module graph integrity -- circular deps, unresolved imports. Read-only. |
 

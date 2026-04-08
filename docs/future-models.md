@@ -49,8 +49,8 @@ targeted tests, produce cleaner incremental commits, and generate more useful
 handoff notes. Every step in the builder's process -- orient, implement, check,
 commit, handoff -- benefits from better tool fluency.
 
-Specialist sub-agents (verifier, scout, tester, auditor) also improve.
-Better tool use means the verifier runs more thorough verification, the scout
+Specialist sub-agents (verifier, explorer, tester, auditor) also improve.
+Better tool use means the verifier runs more thorough verification, the explorer
 produces more useful codebase briefings, and the tester writes more
 comprehensive acceptance tests.
 
