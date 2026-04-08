@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.5
+
+- Remove worktree isolation — builder now writes directly to the main repo, giving users live visibility into build progress
+- Remove `isMerged` phase state and worktree merge step (`reflectCommits`, `mergePhaseIntoMain`, `retryUnmergedPhases`)
+- Fix pipeline state loss when restarting a build with empty phases but existing pipeline metadata
+
 ## 0.5.4
 
 - Split `stream.decode.ts` into `stream.parse`, `stream.result`, and `stream.display` modules
