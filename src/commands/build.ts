@@ -210,9 +210,11 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   // Load or init state
   let state = loadState(config.buildDir)
-  const isResume = state !== null
-  if (!state) {
+  const isResume = state !== null && state.phases.length > 0
+  if (!state || state.phases.length === 0) {
+    const pipeline = state?.pipeline
     state = initState(config.buildName, phases)
+    if (pipeline) state.pipeline = pipeline
     saveState(config.buildDir, state)
   }
 
