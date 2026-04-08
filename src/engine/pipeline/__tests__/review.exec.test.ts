@@ -27,7 +27,7 @@ vi.mock("../../../git", () => ({
   getDiff: vi.fn(() => "diff --git a/file.ts"),
 }))
 
-vi.mock("../../../store/feedback", () => ({
+vi.mock("../../../stores/feedback", () => ({
   parseVerdict: vi.fn(() => ({
     passed: true,
     summary: "All good",
@@ -69,7 +69,7 @@ import { invokeClaude } from "../../claude/claude.exec"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { createDisplayCallbacks } from "../../claude/stream.decode"
 import { getDiff } from "../../../git"
-import { parseVerdict } from "../../../store/feedback"
+import { parseVerdict } from "../../../stores/feedback"
 import { cleanupPluginDirs } from "../../discovery/plugin.scan"
 
 beforeEach(() => vi.clearAllMocks())

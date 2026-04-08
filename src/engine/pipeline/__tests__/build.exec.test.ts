@@ -23,7 +23,7 @@ vi.mock("../../claude/stream.decode", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
-vi.mock("../../../store/handoff", () => ({
+vi.mock("../../../stores/handoff", () => ({
   readHandoff: vi.fn(() => null),
 }))
 
@@ -60,7 +60,7 @@ import { invokeBuilder } from "../build.exec"
 import { invokeClaude } from "../../claude/claude.exec"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { createDisplayCallbacks } from "../../claude/stream.decode"
-import { readHandoff } from "../../../store/handoff"
+import { readHandoff } from "../../../stores/handoff"
 import { cleanupPluginDirs } from "../../discovery/plugin.scan"
 import * as fs from "node:fs"
 

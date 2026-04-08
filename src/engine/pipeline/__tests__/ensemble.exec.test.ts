@@ -26,7 +26,7 @@ vi.mock("../../claude/stream.decode", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
-vi.mock("../../../store/phases", () => ({
+vi.mock("../../../stores/phases", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
@@ -55,7 +55,7 @@ vi.mock("../pipeline.shared", async (importOriginal) => {
 
 import { invokeEnsemble, invokePlanner, extractJSON } from "../ensemble.exec"
 import { invokeClaude } from "../../claude/claude.exec"
-import { scanPhases } from "../../../store/phases"
+import { scanPhases } from "../../../stores/phases"
 import { printError } from "../../../ui/output"
 
 const makeProposal = (perspective = "speed") => JSON.stringify({

@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "./types"
-import { resolveFile, parseCheckCommand } from "./store/inputs"
-import { resolveNetworkAllowlist, loadSettings } from "./store/settings"
+import { resolveFile, parseCheckCommand } from "./stores/inputs"
+import { resolveNetworkAllowlist, loadSettings } from "./stores/settings"
 
 // Load version from package.json at runtime
 export const loadVersion = (): string => {

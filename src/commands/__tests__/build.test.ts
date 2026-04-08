@@ -10,7 +10,7 @@ vi.mock("../../ui/output", () => ({
   printPhaseHeader: vi.fn(),
 }))
 
-vi.mock("../../store/trajectory", () => ({
+vi.mock("../../stores/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -23,7 +23,7 @@ vi.mock("../../store/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../store/phases", () => ({
+vi.mock("../../stores/phases", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
@@ -31,7 +31,7 @@ vi.mock("../../engine/pipeline/phase.sequence", () => ({
   runPhase: vi.fn(),
 }))
 
-vi.mock("../../store/state", () => ({
+vi.mock("../../stores/state", () => ({
   loadState: vi.fn(() => null),
   saveState: vi.fn(),
   initState: vi.fn((name, phases) => ({
@@ -58,11 +58,11 @@ vi.mock("../../store/state", () => ({
   advancePipeline: vi.fn(),
 }))
 
-vi.mock("../../store/budget", () => ({
+vi.mock("../../stores/budget", () => ({
   loadBudget: vi.fn(() => ({ entries: [], totalCostUsd: 0 })),
 }))
 
-vi.mock("../../store/tags", () => ({
+vi.mock("../../stores/tags", () => ({
   cleanupBuildTags: vi.fn(),
 }))
 
@@ -90,14 +90,14 @@ vi.mock("../../engine/worktree", () => ({
 }))
 
 import { runBuild } from "../build"
-import { scanPhases } from "../../store/phases"
+import { scanPhases } from "../../stores/phases"
 import { runPhase } from "../../engine/pipeline/phase.sequence"
-import { getNextIncompletePhase, getNextUnmergedPhase, loadState, resetRetries } from "../../store/state"
-import { loadBudget } from "../../store/budget"
+import { getNextIncompletePhase, getNextUnmergedPhase, loadState, resetRetries } from "../../stores/state"
+import { loadBudget } from "../../stores/budget"
 import { detectSandbox } from "../../engine/claude/sandbox"
 import { printInfo } from "../../ui/output"
 import { reflectCommits, removeWorktree, validateWorktree } from "../../engine/worktree"
-import { cleanupBuildTags } from "../../store/tags"
+import { cleanupBuildTags } from "../../stores/tags"
 
 describe("commands/run", () => {
   let tmpDir: string

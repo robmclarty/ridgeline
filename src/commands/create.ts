@@ -1,5 +1,5 @@
 import { printInfo } from "../ui/output"
-import { getPipelineStatus, getNextPipelineStage } from "../store/state"
+import { getPipelineStatus, getNextPipelineStage } from "../stores/state"
 import { PipelineStage } from "../types"
 import { runShape, ShapeOptions } from "./shape"
 import { runSpec, SpecOptions } from "./spec"

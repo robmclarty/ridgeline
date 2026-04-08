@@ -8,7 +8,7 @@ vi.mock("../../ui/output", () => ({
   printInfo: vi.fn(),
 }))
 
-vi.mock("../../store/trajectory", () => ({
+vi.mock("../../stores/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -21,7 +21,7 @@ vi.mock("../../store/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../store/budget", () => ({
+vi.mock("../../stores/budget", () => ({
   recordCost: vi.fn(),
 }))
 

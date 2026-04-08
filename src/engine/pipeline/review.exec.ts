@@ -3,7 +3,7 @@ import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../../t
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.decode"
 import { getDiff } from "../../git"
-import { parseVerdict } from "../../store/feedback"
+import { parseVerdict } from "../../stores/feedback"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"

@@ -2,10 +2,10 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../types"
 import { printInfo } from "../ui/output"
-import { logTrajectory, makeTrajectoryEntry } from "../store/trajectory"
-import { recordCost } from "../store/budget"
+import { logTrajectory, makeTrajectoryEntry } from "../stores/trajectory"
+import { recordCost } from "../stores/budget"
 import { invokePlanner } from "../engine/pipeline/ensemble.exec"
-import { advancePipeline } from "../store/state"
+import { advancePipeline } from "../stores/state"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   const specPath = path.join(config.buildDir, "spec.md")

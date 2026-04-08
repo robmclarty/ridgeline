@@ -1,7 +1,7 @@
 import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.decode"
-import { scanPhases } from "../../store/phases"
+import { scanPhases } from "../../stores/phases"
 import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
 import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"

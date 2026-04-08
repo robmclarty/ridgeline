@@ -2,21 +2,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types"
 
 // Mock all external dependencies
-vi.mock("../../../store/tags", () => ({
+vi.mock("../../../stores/tags", () => ({
   createCheckpoint: vi.fn(),
   createCompletionTag: vi.fn((buildName: string, phaseId: string) => `ridgeline/phase/${buildName}/${phaseId}`),
 }))
 
-vi.mock("../../../store/budget", () => ({
+vi.mock("../../../stores/budget", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.10 })),
   getTotalCost: vi.fn(() => 0.10),
 }))
 
-vi.mock("../../../store/handoff", () => ({
+vi.mock("../../../stores/handoff", () => ({
   ensureHandoffExists: vi.fn(),
 }))
 
-vi.mock("../../../store/state", () => ({
+vi.mock("../../../stores/state", () => ({
   updatePhaseStatus: vi.fn(),
 }))
 
@@ -24,7 +24,7 @@ vi.mock("../../../ui/output", () => ({
   printPhase: vi.fn(),
 }))
 
-vi.mock("../../../store/trajectory", () => ({
+vi.mock("../../../stores/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -45,7 +45,7 @@ vi.mock("../review.exec", () => ({
   invokeReviewer: vi.fn(),
 }))
 
-vi.mock("../../../store/feedback", () => ({
+vi.mock("../../../stores/feedback", () => ({
   formatIssue: vi.fn((issue: { description: string; file?: string }) =>
     issue.file ? `${issue.file}: ${issue.description}` : issue.description
   ),
@@ -61,9 +61,9 @@ vi.mock("../../../git", () => ({
 import { runPhase } from "../phase.sequence"
 import { invokeBuilder } from "../build.exec"
 import { invokeReviewer } from "../review.exec"
-import { createCheckpoint, createCompletionTag } from "../../../store/tags"
-import { recordCost } from "../../../store/budget"
-import { updatePhaseStatus } from "../../../store/state"
+import { createCheckpoint, createCompletionTag } from "../../../stores/tags"
+import { recordCost } from "../../../stores/budget"
+import { updatePhaseStatus } from "../../../stores/state"
 
 const makeResult = (cost = 0.05): ClaudeResult => ({
   success: true,

@@ -6,7 +6,7 @@ import { invokeClaude } from "../engine/claude/claude.exec"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { createDisplayCallbacks } from "../engine/claude/stream.decode"
-import { advancePipeline } from "../store/state"
+import { advancePipeline } from "../stores/state"
 import { resolveBuildDir } from "../config"
 
 const MAX_CLARIFICATION_ROUNDS = 4

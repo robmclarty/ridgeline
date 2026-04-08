@@ -12,7 +12,7 @@ vi.mock("../../ui/output", () => ({
   printError: vi.fn(),
 }))
 
-vi.mock("../../store/state", () => ({
+vi.mock("../../stores/state", () => ({
   advancePipeline: vi.fn(),
 }))
 

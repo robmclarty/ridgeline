@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
 import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
-import { advancePipeline } from "../store/state"
+import { advancePipeline } from "../stores/state"
 
 export type SpecOptions = {
   model: string
