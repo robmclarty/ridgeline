@@ -101,13 +101,37 @@ describe("stream.result", () => {
       expect(JSON.parse(result.result)).toEqual({ answer: 42 })
     })
 
-    it("preserves result field when it has content", () => {
+    it("preserves result field when it has content and no StructuredOutput", () => {
       const stdout =
         '{"type":"assistant","subtype":"text","text":"streamed text"}\n' +
         JSON.stringify(sampleResult) + "\n"
 
       const result = extractResult(stdout)
       expect(result.result).toBe("All done")
+    })
+
+    it("prefers StructuredOutput over non-empty result field", () => {
+      const resultWithProse = { ...sampleResult, result: "Here is a summary of the plan..." }
+      const assistantMsg = {
+        type: "assistant",
+        message: {
+          content: [
+            {
+              type: "tool_use",
+              name: "StructuredOutput",
+              input: { perspective: "velocity", summary: "Fast build", phases: [], tradeoffs: "none" },
+            },
+          ],
+        },
+      }
+      const stdout =
+        JSON.stringify(assistantMsg) + "\n" +
+        JSON.stringify(resultWithProse) + "\n"
+
+      const result = extractResult(stdout)
+      const parsed = JSON.parse(result.result)
+      expect(parsed.perspective).toBe("velocity")
+      expect(parsed.summary).toBe("Fast build")
     })
 
     it("throws if no result event found", () => {

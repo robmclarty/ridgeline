@@ -60,9 +60,13 @@ export const extractResult = (ndjsonStdout: string): ClaudeResult => {
     throw new Error("No result event found in stream-json output")
   }
 
-  // Populate result from fallbacks: StructuredOutput first, then text content
-  if (!resultEvent.result) {
-    resultEvent.result = fallbacks.structuredOutput ?? (fallbacks.textParts.length > 0 ? fallbacks.textParts.join("") : "")
+  // StructuredOutput (from --json-schema) is the authoritative structured
+  // response and always takes priority — even when the result event already
+  // contains prose text from the model.
+  if (fallbacks.structuredOutput) {
+    resultEvent.result = fallbacks.structuredOutput
+  } else if (!resultEvent.result) {
+    resultEvent.result = fallbacks.textParts.length > 0 ? fallbacks.textParts.join("") : ""
   }
 
   return resultEvent
