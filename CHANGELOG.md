@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.7
+
+- Fix built-in flavours not found when running from a global install (flavours were not copied to dist during build)
+- Add flavours guide covering usage, structure, and pipeline effects
+
 ## 0.5.6
 
 - Clean up build summary table: remove redundant phase counts header, widen dividers to match row width, add token usage and elapsed time footer
