@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.8
+
+- Fix StructuredOutput being ignored when the result event already contains prose text, causing planner specialists to fail JSON parsing with `--json-schema`
+
 ## 0.5.7
 
 - Fix built-in flavours not found when running from a global install (flavours were not copied to dist during build)
