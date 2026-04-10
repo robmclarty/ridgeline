@@ -46,7 +46,18 @@ Verify your work after writing. If a check command is specified in constraints.m
 - If checks fail, fix the failures. Then check again.
 - Do not skip verification. Do not ignore broken links or failing code samples. Do not proceed with inconsistent terminology.
 
-### 4. Commit
+### 4. Verify acceptance criteria
+
+Before saving, walk each acceptance criterion from the phase spec:
+
+- Re-read the acceptance criteria list.
+- For each criterion, confirm it is satisfied: run commands, check file existence, inspect output, or verify behavior.
+- If any criterion is not met, fix it now. Then re-verify.
+- Do not proceed to save until every criterion passes.
+
+This is distinct from the check command. The check command catches mechanical failures (compilation, tests). This step catches specification gaps (missing features, incomplete coverage, unmet requirements).
+
+### 5. Commit
 
 Commit incrementally as you complete logical units of work. Use conventional commits:
 
@@ -61,7 +72,7 @@ Types: docs (new/updated pages), fix (corrections), refactor (restructure), chor
 
 Write commit messages descriptive enough to serve as shared state between context windows. Another writer reading your commits should understand what documentation ground was covered.
 
-### 5. Write the handoff
+### 6. Write the handoff
 
 After completing the phase, append to handoff.md. Do not overwrite existing content.
 
@@ -90,7 +101,7 @@ After completing the phase, append to handoff.md. Do not overwrite existing cont
 <Anything the next writer needs to know — pages that need cross-linking, terms that need consistent use, code samples that depend on prior setup>
 ```
 
-### 6. Handle retries
+### 7. Handle retries
 
 If a feedback file is present, this is a retry. Read the feedback carefully. Fix only what the reviewer flagged — broken code samples, missing content, inconsistent terminology. Do not rewrite docs that already passed. The feedback describes the desired end state, not the fix procedure.
 

@@ -44,7 +44,18 @@ Verify your work after making changes. Run the test suite. If a check command is
 - If tests fail, fix the failures. Distinguish between test bugs and production bugs. Fix test bugs. Report production bugs in the handoff.
 - Do not skip verification. Do not ignore failures. Do not proceed with broken tests.
 
-### 4. Commit
+### 4. Verify acceptance criteria
+
+Before saving, walk each acceptance criterion from the phase spec:
+
+- Re-read the acceptance criteria list.
+- For each criterion, confirm it is satisfied: run commands, check file existence, inspect output, or verify behavior.
+- If any criterion is not met, fix it now. Then re-verify.
+- Do not proceed to save until every criterion passes.
+
+This is distinct from the check command. The check command catches mechanical failures (compilation, tests). This step catches specification gaps (missing features, incomplete coverage, unmet requirements).
+
+### 5. Commit
 
 Commit incrementally as you complete logical units of work. Use conventional commits:
 
@@ -59,7 +70,7 @@ Types: test, fix, chore, docs. Scope: the module or area being tested.
 
 Write commit messages descriptive enough to serve as shared state between context windows. Another builder reading your commits should understand what tests were added and what they cover.
 
-### 5. Write the handoff
+### 6. Write the handoff
 
 After completing the phase, append to handoff.md. Do not overwrite existing content.
 
@@ -85,7 +96,7 @@ After completing the phase, append to handoff.md. Do not overwrite existing cont
 <Anything the next builder needs to know — flaky areas, untestable code, production bugs found>
 ```
 
-### 6. Handle retries
+### 7. Handle retries
 
 If a feedback file is present, this is a retry. Read the feedback carefully. Fix only what the reviewer flagged. Do not redo work that already passed. The feedback describes the desired end state, not the fix procedure.
 

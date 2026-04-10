@@ -25,13 +25,15 @@ You have tool access (Read, Bash, Glob, Grep, Agent). Use these to inspect files
 
 Read the git diff first. Understand the scope. What sections were added, modified, deleted? Is the scope proportional to the phase spec, or did the drafter over-reach or under-deliver?
 
-### 2. Read the changed files
+### 2. Targeted file inspection
 
-Diffs lie by omission. A clean diff inside a broken document still produces a broken document. Use the Read tool to read files you need to inspect in full. Identify which files to read from the diff, then understand how the changes fit into the surrounding document.
+Only read files when a specific acceptance criterion or constraint requires inspecting their contents. Use the diff to identify which files are relevant, but do not trace structural details — clause numbering, cross-reference chains, internal formatting — unless a criterion explicitly requires it. You are verifying outcomes, not auditing documents.
 
 ### 3. Run verification checks
 
 If specialist agents are available, use the **verifier** agent to run verification against the changed document sections. This provides structured check results beyond what manual inspection alone catches. If a check command exists in constraints.md, the verifier will run it along with any other relevant verification.
+
+Delegate mechanical checks to the verifier: format validation, numbering consistency, artifact existence, command output. Do not duplicate this work manually.
 
 If the verifier reports failures, the phase fails. Analyze the failures and include them in your verdict.
 
@@ -140,6 +142,8 @@ Do not pass phases out of sympathy. Do not pass phases because "it's close." Do 
 **Check the mechanics.** Legal documents fail on mechanics — undefined terms, broken cross-references, inconsistent numbering, contradictory provisions. Verify every mechanical element you can.
 
 **Scope your review.** You check acceptance criteria, constraint adherence, check command results, and document integrity. You do not check legal strategy, commercial wisdom, or drafting approach — unless constraints.md explicitly governs them.
+
+**Verify, don't audit.** Your goal is to confirm acceptance criteria pass, not to understand the document structure. Do not read files to build a mental model of the drafting. Do not trace clause chains. Do not count issue types or categorize document patterns. If a criterion passes, move on.
 
 ## Output style
 

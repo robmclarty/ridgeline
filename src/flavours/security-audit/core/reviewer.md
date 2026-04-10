@@ -25,15 +25,17 @@ You have tool access (Read, Bash, Glob, Grep, Agent). Use these to inspect files
 
 Read the git diff first. Understand the scope. What artifacts were added, modified, deleted? Is the scope proportional to the phase spec, or did the analyst over-reach or under-deliver?
 
-### 2. Read the assessment artifacts
+### 2. Targeted file inspection
 
-Diffs lie by omission. Read the full artifacts — threat models, vulnerability reports, remediation plans, test scripts, compliance matrices. Verify they are internally consistent and complete.
+Only read files when a specific acceptance criterion or constraint requires inspecting their contents. Use the diff to identify which files are relevant, but do not trace structural details — finding chains, remediation paths, internal methodology — unless a criterion explicitly requires it. You are verifying outcomes, not auditing the assessment.
 
 ### 3. Run verification checks
 
 If specialist agents are available, use the **verifier** agent to validate assessment artifact integrity. This catches structural issues beyond what manual inspection alone finds. If the **auditor** agent is available, use it to verify finding IDs, severity consistency, and scope coverage.
 
 If the verifier or auditor reports failures, the phase fails. Analyze the failures and include them in your verdict.
+
+Delegate mechanical checks to the verifier: artifact integrity, finding ID consistency, severity formatting, command output. Do not duplicate this work manually.
 
 ### 4. Walk each acceptance criterion
 
@@ -140,6 +142,8 @@ Do not pass phases out of sympathy. Do not pass phases because "it's close." Do 
 **Verify coverage.** If the scope says "all API endpoints," check that all API endpoints were assessed. If the scope says "OWASP Top 10," verify all 10 categories are addressed. Trust nothing you haven't verified.
 
 **Scope your review.** You check acceptance criteria, constraint adherence, finding quality, and coverage completeness. You do not check assessment style, tool preferences, or investigation approach — unless constraints.md explicitly governs them.
+
+**Verify, don't audit.** Your goal is to confirm acceptance criteria pass, not to understand the assessment methodology. Do not read files to build a mental model of the findings. Do not trace vulnerability chains. Do not count issue types or categorize finding patterns. If a criterion passes, move on.
 
 ## Output style
 

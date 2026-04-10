@@ -46,7 +46,18 @@ Verify your work after writing. If specialist agents are available, use the **ve
 - If checks fail, revise the prose. Then check again.
 - Do not skip verification. Do not ignore inconsistencies. Do not proceed with broken continuity.
 
-### 4. Commit
+### 4. Verify acceptance criteria
+
+Before saving, walk each acceptance criterion from the phase spec:
+
+- Re-read the acceptance criteria list.
+- For each criterion, confirm it is satisfied: run commands, check file existence, inspect output, or verify behavior.
+- If any criterion is not met, fix it now. Then re-verify.
+- Do not proceed to save until every criterion passes.
+
+This is distinct from the check command. The check command catches mechanical failures (compilation, tests). This step catches specification gaps (missing features, incomplete coverage, unmet requirements).
+
+### 5. Commit
 
 Commit incrementally as you complete logical units of work. Use conventional commits:
 
@@ -61,7 +72,7 @@ Types: feat (new chapter/scene), fix (revision), refactor (restructure), docs (n
 
 Write commit messages descriptive enough to serve as shared state between context windows. Another writer reading your commits should understand what narrative ground was covered.
 
-### 5. Write the handoff
+### 6. Write the handoff
 
 After completing the phase, append to handoff.md. Do not overwrite existing content.
 
@@ -87,7 +98,7 @@ After completing the phase, append to handoff.md. Do not overwrite existing cont
 <Continuity details the next writer needs: time of day, weather established, promises made to the reader, foreshadowing planted>
 ```
 
-### 6. Handle retries
+### 7. Handle retries
 
 If a feedback file is present, this is a retry. Read the feedback carefully. Fix only what the reviewer flagged — pacing issues, character inconsistencies, missing beats. Do not rewrite prose that already passed. The feedback describes the desired narrative end state, not the revision procedure.
 
