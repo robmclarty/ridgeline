@@ -87,8 +87,11 @@ const printSummaryTable = (config: RidgelineConfig): void => {
     ? new Date(timestamps[timestamps.length - 1]).getTime() - new Date(timestamps[0]).getTime()
     : 0
 
-  const sep = "  " + "=".repeat(65)
-  const div = "  " + "-".repeat(65)
+  const nameColWidth = Math.max(24, "Planning".length, "Total".length,
+    ...[...phaseStats.keys()].map((id) => id.length))
+  const tableWidth = nameColWidth + 35
+  const sep = "  " + "=".repeat(tableWidth)
+  const div = "  " + "-".repeat(tableWidth)
 
   // Header
   console.log("")
@@ -102,7 +105,7 @@ const printSummaryTable = (config: RidgelineConfig): void => {
 
   // Breakdown table
   const formatRow = (name: string, attempts: string, build: string, review: string, cost: string): string =>
-    `  ${name.padEnd(24)} ${attempts.padStart(8)}  ${build.padStart(8)}  ${review.padStart(8)}    ${cost.padStart(8)}`
+    `  ${name.padEnd(nameColWidth)} ${attempts.padStart(8)}  ${build.padStart(8)}  ${review.padStart(8)}    ${cost.padStart(8)}`
 
   console.log("")
   console.log(formatRow("", "Attempts", "Build", "Review", "Cost"))

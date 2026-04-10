@@ -58,7 +58,9 @@ const executeBuild = async (
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`))
 
+  const wallStart = Date.now()
   const result = await invokeBuilder(config, phase, feedbackFilePath)
+  result.durationMs = Date.now() - wallStart
 
   logTrajectory(config.buildDir, makeTrajectoryEntry(
     "build_complete", phase.id, "Build complete",
@@ -91,7 +93,9 @@ const executeReview = async (
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
   logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`))
 
+  const wallStart = Date.now()
   const { result, verdict } = await invokeReviewer(config, phase, checkpointTag)
+  result.durationMs = Date.now() - wallStart
 
   logTrajectory(config.buildDir, makeTrajectoryEntry(
     "review_complete", phase.id, verdict.summary,
