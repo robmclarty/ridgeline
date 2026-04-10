@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.9
+
+- Use wall-clock duration instead of Claude's self-reported time for build/review budget entries
+- Compute summary table column width dynamically so long phase names don't break alignment
+- Add acceptance criteria verification step to builder agents, reducing avoidable review failures
+- Scope-limit reviewer agents to targeted inspection and verifier delegation instead of full audits
+- Propagate builder and reviewer improvements to all 13 flavours with domain-adapted language
+- Add shaping guide for non-technical users
+
 ## 0.5.8
 
 - Fix StructuredOutput being ignored when the result event already contains prose text, causing planner specialists to fail JSON parsing with `--json-schema`
