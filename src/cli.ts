@@ -5,6 +5,7 @@ import { loadVersion, resolveConfig } from "./config"
 import { RidgelineConfig } from "./types"
 import { askBuildName } from "./ui/prompt"
 import { runShape } from "./commands/shape"
+import { runDesign } from "./commands/design"
 import { runSpec } from "./commands/spec"
 import { runPlan } from "./commands/plan"
 import { runDryRun } from "./commands/dry-run"
@@ -104,6 +105,24 @@ program
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         flavour: (opts.flavour as string) ?? undefined,
         input,
+      })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+program
+  .command("design [build-name]")
+  .description("Establish or update visual design system (design.md)")
+  .option("--model <name>", "Model for designer agent", "opus")
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      await runDesign(buildName ? await requireBuildName(buildName) : null, {
+        model: (opts.model as string) ?? "opus",
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
+        flavour: (opts.flavour as string) ?? undefined,
       })
     } catch (err) {
       handleCommandError(err)
