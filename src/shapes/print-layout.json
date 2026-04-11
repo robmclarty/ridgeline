@@ -1,0 +1,9 @@
+{
+  "name": "print-layout",
+  "keywords": [
+    "print", "PDF", "document", "brochure", "typography",
+    "poster", "flyer", "report"
+  ],
+  "toolFamily": "print-layout",
+  "reviewerContext": "Verify bleed and trim areas. Check font embedding. Validate resolution meets print DPI requirements. Evaluate typographic hierarchy and spacing consistency."
+}
