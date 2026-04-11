@@ -1,15 +1,16 @@
 # Ensemble Flows
 
-Ridgeline uses an ensemble pattern at two critical decision points in the
-pipeline: **specifying** (turning a shape into a spec) and **planning**
-(turning a spec into phases). Both flows run multiple specialist agents in
-parallel, each bringing a different perspective, then merge their proposals
-through a synthesizer agent. The underlying engine is identical -- a generic
+Ridgeline uses an ensemble pattern at three decision points in the pipeline:
+**specifying** (turning a shape into a spec), **researching** (investigating
+the spec against external sources), and **planning** (turning a spec into
+phases). All three flows run multiple specialist agents in parallel, each
+bringing a different perspective, then merge their proposals through a
+synthesizer agent. The underlying engine is identical -- a generic
 `invokeEnsemble<TDraft>` function parameterized by draft type, agent
 directory, and prompt construction.
 
-This document explains the shared ensemble engine, the two flows built on it,
-and why the pattern improves output quality.
+This document explains the shared ensemble engine, the three flows built on
+it, and why the pattern improves output quality.
 
 ## The Ensemble Engine
 
@@ -48,8 +49,15 @@ All specialists run concurrently. Each receives:
 
 - A **system prompt** built from the specialist's overlay
 - A **user prompt** containing the input documents
-- A **JSON schema** enforcing structured output
-- **No tools** -- specialists reason from inputs alone and return JSON
+- A **JSON schema** enforcing structured output (when `isStructured` is true)
+- Tools are pipeline-specific -- specifier and planner specialists have **no
+  tools** and return JSON, while researcher specialists have **WebFetch,
+  WebSearch, and Bash** and return prose markdown
+
+The engine's `isStructured` flag controls the output mode. When true (used by
+specifier and planner ensembles), specialists return schema-validated JSON
+drafts. When false (used by the researcher ensemble), specialists return
+free-form markdown text. The synthesizer handles both modes.
 
 Parallelism means wall-clock time is bounded by the slowest specialist, not
 the sum of all.
@@ -244,6 +252,76 @@ files were created.
 
 ---
 
+## Researcher Ensemble
+
+The researcher ensemble investigates a spec against external sources. It runs
+as part of the `ridgeline research` command and is optional -- users can skip
+it and go directly from spec to plan. See [Research and Refine](research.md)
+for the full user guide.
+
+```mermaid
+flowchart LR
+    inputs["spec.md\nconstraints.md\ntaste.md"] --> specialists
+
+    subgraph specialists ["Parallel Specialists"]
+        direction TB
+        acad[Academic]
+        eco[Ecosystem]
+        comp[Competitive]
+    end
+
+    specialists --> reports["Prose markdown\nresearch reports"]
+    reports --> synthesizer[Researcher\nSynthesizer]
+    synthesizer -->|writes| research["research.md"]
+```
+
+### Specialist Perspectives
+
+| Specialist | Focus | Tendency |
+|------------|-------|----------|
+| **Academic** | Novel algorithms, architectures, recent papers | Searches arxiv, Semantic Scholar, Google Scholar. Finds cutting-edge techniques that could simplify or improve the spec's approach. Flags known pitfalls from research. |
+| **Ecosystem** | Framework docs, library features, version updates | Checks official docs, release notes, changelogs, migration guides. Surfaces built-in solutions that would replace custom implementations. Catches deprecations. |
+| **Competitive** | How other tools solve the same problem | Investigates GitHub repos, product pages, developer discussions. Identifies well-considered patterns, common feature requests, and documented anti-patterns. |
+
+### Quick vs Deep Mode
+
+In **quick mode** (default, no flag), only the first specialist (ecosystem)
+runs. This is faster and focused on the immediate tech stack -- good for a
+sanity check against the latest documentation.
+
+In **deep mode** (`--deep`), all three specialists run in parallel. This
+provides broader coverage across academic research, ecosystem updates, and
+competitive landscape.
+
+### Differences from Other Ensembles
+
+The researcher ensemble differs from the specifier and planner ensembles in
+two ways:
+
+1. **Specialists have tools.** Research specialists use WebFetch, WebSearch,
+   and Bash to access the web. Specifier and planner specialists have no tools
+   and reason from inputs alone.
+
+2. **Output is prose, not JSON.** The engine runs with `isStructured: false`.
+   Specialists produce free-form markdown research reports rather than
+   schema-validated JSON drafts. The synthesizer reads these reports and merges
+   them into a structured `research.md` file.
+
+### Auto Mode
+
+The `--auto [N]` flag chains research and refine into an iterative loop. Each
+iteration runs the research ensemble, then invokes the refiner agent (a single
+agent, not an ensemble) to rewrite `spec.md` incorporating the findings. The
+next iteration researches the updated spec, enabling deeper exploration. See
+[Research and Refine -- Auto Mode](research.md#auto-mode) for details.
+
+### Verification
+
+After synthesis, the engine confirms that `research.md` exists in the build
+directory. If missing, the run fails immediately.
+
+---
+
 ## How Ensembles Improve Quality
 
 ### Perspective Diversity
@@ -313,7 +391,7 @@ retry logic, no manual intervention.
 
 ## End-to-End Flow
 
-The two ensembles sit at adjacent stages of the pipeline. Together they
+The three ensembles sit at adjacent stages of the pipeline. Together they
 transform a rough idea into a fully decomposed build plan:
 
 ```mermaid
@@ -331,7 +409,21 @@ flowchart LR
     spec_ensemble -->|writes| constraints[constraints.md]
     spec_ensemble -->|writes| taste[taste.md]
 
-    spec --> plan_ensemble
+    spec --> research_ensemble
+    spec -->|skip research| plan_ensemble
+
+    subgraph research_ensemble ["Researcher Ensemble (optional)"]
+        direction TB
+        r_spec["1-3 specialists\n(academic, ecosystem, competitive)"]
+        r_synth["Synthesizer"]
+        r_spec --> r_synth
+    end
+
+    research_ensemble -->|writes| research[research.md]
+    research --> refiner[Refiner Agent]
+    refiner -->|rewrites| spec2[spec.md]
+    spec2 --> plan_ensemble
+
     constraints --> plan_ensemble
     taste --> plan_ensemble
 
@@ -347,26 +439,30 @@ flowchart LR
     phases --> builder[Builder Agent]
 ```
 
-Each ensemble costs four Claude calls (three specialists + one synthesizer)
-instead of one. The tradeoff is worth it because both stages make
-high-leverage decisions: the specifier defines **what** gets built, and the
-planner defines **in what order**. Errors at either stage cascade through the
-entire build. Investing in quality at these decision points pays for itself
-many times over in avoided rework downstream.
+The specifier and planner ensembles each cost four Claude calls (three
+specialists + one synthesizer). The researcher ensemble costs two to four
+calls depending on quick vs deep mode. The tradeoff is worth it because these
+stages make high-leverage decisions: the specifier defines **what** gets built,
+the researcher validates it against external sources, and the planner defines
+**in what order**. Errors at any stage cascade through the entire build.
+Investing in quality at these decision points pays for itself many times over
+in avoided rework downstream.
 
 ---
 
 ## Extensibility
 
-Both ensembles are designed to be extended without code changes:
+All three ensembles are designed to be extended without code changes:
 
-- **New specialists**: drop a `.md` file in `src/agents/specifiers/` or
-  `src/agents/planners/` with `name`, `description`, and `perspective`
-  frontmatter. The engine discovers it automatically on the next run.
+- **New specialists**: drop a `.md` file in `src/agents/specifiers/`,
+  `src/agents/researchers/`, or `src/agents/planners/` with `name`,
+  `description`, and `perspective` frontmatter. The engine discovers it
+  automatically on the next run.
 
-- **Different synthesis strategies**: edit `src/agents/core/specifier.md` or
-  `src/agents/core/planner.md` to change how proposals are merged -- weight
-  certain perspectives, apply domain heuristics, or adjust sizing targets.
+- **Different synthesis strategies**: edit `src/agents/core/specifier.md`,
+  `src/agents/core/researcher.md`, or `src/agents/core/planner.md` to change
+  how proposals are merged -- weight certain perspectives, apply domain
+  heuristics, or adjust sizing targets.
 
 - **New ensemble pipelines**: the generic `invokeEnsemble<TDraft>` function
   can be reused for any future pipeline stage that benefits from multi-

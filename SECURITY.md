@@ -21,19 +21,27 @@ a compromised OS, or adversarial modifications to its own source code.
 Each agent is invoked with an explicit `--allowedTools` flag that limits which
 Claude CLI tools it can use. The permission matrix:
 
-| Agent | Read | Write | Edit | Bash | Glob | Grep | Agent |
-|------------|------|-------|------|------|------|------|-------|
-| Shaper     | yes  | --    | --   | --   | yes  | yes  | --    |
-| Specifier  | yes  | yes   | --   | --   | yes  | yes  | --    |
-| Planner    | --   | yes   | --   | --   | --   | --   | --    |
-| Builder    | yes  | yes   | yes  | yes  | yes  | yes  | yes   |
-| Reviewer   | yes  | --    | --   | yes  | yes  | yes  | yes   |
+| Agent | Read | Write | Edit | Bash | Glob | Grep | Agent | Web* |
+|------------|------|-------|------|------|------|------|-------|------|
+| Shaper     | yes  | --    | --   | --   | yes  | yes  | --    | --   |
+| Specifier  | yes  | yes   | --   | --   | yes  | yes  | --    | --   |
+| Researcher | --   | yes†  | --   | yes‡ | --   | --   | --    | yes‡ |
+| Refiner    | yes  | yes   | --   | --   | --   | --   | --    | --   |
+| Planner    | --   | yes   | --   | --   | --   | --   | --    | --   |
+| Builder    | yes  | yes   | yes  | yes  | yes  | yes  | yes   | --   |
+| Reviewer   | yes  | --    | --   | yes  | yes  | yes  | yes   | --   |
+
+*\* Web = WebFetch + WebSearch. † Synthesizer only. ‡ Specialists only.*
 
 The **shaper** can read the codebase to gather context but cannot write files
-or run commands. The **planner** can only write phase files — it cannot read
-the codebase or execute commands. The **reviewer** cannot write or edit files,
-enforcing a read-only review posture. These restrictions are enforced by the
-Claude CLI at the tool-call level, not just by prompt instructions.
+or run commands. The **researcher** specialists have web access (WebFetch,
+WebSearch, Bash) for retrieving external sources; the synthesizer can only
+write `research.md`. The **refiner** reads `research.md` and `spec.md` and
+writes the revised `spec.md` — it has no Bash or web access. The **planner**
+can only write phase files — it cannot read the codebase or execute commands.
+The **reviewer** cannot write or edit files, enforcing a read-only review
+posture. These restrictions are enforced by the Claude CLI at the tool-call
+level, not just by prompt instructions.
 
 Specialist sub-agents (verifier, explorer, auditor, tester) are also constrained by
 their parent's tool allowlist and by their own system prompts which instruct

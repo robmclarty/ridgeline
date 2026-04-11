@@ -215,7 +215,7 @@ program
 program
   .command("rewind <build-name>")
   .description("Reset pipeline state to a given stage and clean up downstream artifacts")
-  .requiredOption("--to <stage>", "Stage to rewind to (shape, spec, plan)")
+  .requiredOption("--to <stage>", "Stage to rewind to (shape, spec, research, refine, plan)")
   .action((buildName: string, opts: Opts) => {
     try {
       runRewind(buildName, opts.to as string)

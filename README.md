@@ -5,9 +5,9 @@
 Build harness for long-horizon software execution using AI agents.
 
 Ridgeline decomposes large software ideas into phased builds using a
-multi-agent pipeline (shaper, specifier, planner, builder, reviewer) driven by
-the Claude CLI. It manages state through git checkpoints, tracks costs, and
-supports resumable execution when things go wrong.
+multi-agent pipeline (shaper, specifier, researcher, refiner, planner, builder,
+reviewer) driven by the Claude CLI. It manages state through git checkpoints,
+tracks costs, and supports resumable execution when things go wrong.
 
 ## How it works
 
@@ -16,15 +16,22 @@ supports resumable execution when things go wrong.
 2. **Specify** -- an ensemble of three specialist agents (completeness, clarity,
    pragmatism) drafts spec proposals, then a synthesizer merges them into
    `spec.md`, `constraints.md`, and optionally `taste.md`.
-3. **Plan** -- an ensemble of three specialist planners (simplicity,
+3. **Research** (optional) -- an ensemble of research specialists (academic,
+   ecosystem, competitive) investigates the spec using web sources, then a
+   synthesizer merges findings into `research.md`. A quick single-agent mode
+   is also available. See [Research and Refine](docs/research.md).
+4. **Refine** (optional) -- the refiner agent rewrites `spec.md` incorporating
+   research findings. Additive by default -- adds insights without removing
+   user-authored content.
+5. **Plan** -- an ensemble of three specialist planners (simplicity,
    thoroughness, velocity) proposes phase decompositions, then a synthesizer
    merges them into numbered phase files with acceptance criteria.
-4. **Build** -- for each phase the builder agent implements the spec inside your
+6. **Build** -- for each phase the builder agent implements the spec inside your
    repo, then creates a git checkpoint.
-5. **Review** -- the reviewer agent (read-only) checks the output against the
+7. **Review** -- the reviewer agent (read-only) checks the output against the
    acceptance criteria and returns a structured verdict. On failure, the harness
    generates a feedback file from the verdict for the builder's next attempt.
-6. **Retry or advance** -- failed phases are retried up to a configurable limit;
+8. **Retry or advance** -- failed phases are retried up to a configurable limit;
    passing phases hand off context to the next one.
 
 ## Install
@@ -55,6 +62,8 @@ ridgeline my-feature "Build a REST API for task management"
 # Or run each stage individually
 ridgeline shape my-feature "Build a REST API for task management"
 ridgeline spec my-feature
+ridgeline research my-feature --deep  # optional: enrich spec with web research
+ridgeline refine my-feature           # optional: merge research into spec
 ridgeline plan my-feature
 ridgeline dry-run my-feature   # preview before committing
 ridgeline build my-feature
@@ -74,7 +83,8 @@ ridgeline clean
 ### `ridgeline [build-name] [input]` (default)
 
 Auto-advances the build through the next incomplete pipeline stage
-(shape → spec → plan → build). Accepts all flags from the individual commands.
+(shape → spec → plan → build; research and refine are opt-in). Accepts all
+flags from the individual commands.
 
 ### `ridgeline shape [build-name] [input]`
 
@@ -86,6 +96,7 @@ path to an existing document or a natural language description.
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for shaper agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 ### `ridgeline spec [build-name]`
 
@@ -98,6 +109,33 @@ pragmatism) draft proposals in parallel, then a synthesizer merges them into
 | `--model <name>` | `opus` | Model for specifier agents |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
+
+### `ridgeline research [build-name]`
+
+Researches the spec using web sources. Produces `research.md` in the build
+directory. Optional step between `spec` and `plan`. See
+[Research and Refine](docs/research.md) for details.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for research agents |
+| `--timeout <minutes>` | `15` | Max duration per agent |
+| `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
+| `--deep` | off | Run full ensemble (3 specialists) instead of quick single-agent |
+| `--auto [iterations]` | off | Auto-loop: research + refine for N iterations (default 3) |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
+
+### `ridgeline refine [build-name]`
+
+Merges `research.md` findings into `spec.md`. Run after reviewing or editing
+`research.md`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for refiner agent |
+| `--timeout <minutes>` | `10` | Max duration |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 ### `ridgeline plan [build-name]`
 
@@ -112,6 +150,7 @@ build's `phases/` directory.
 | `--timeout <minutes>` | `120` | Max planning duration |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 ### `ridgeline dry-run [build-name]`
 
@@ -135,6 +174,7 @@ and advance on success.
 | `--taste <path>` | auto | Path to taste file |
 | `--context <text>` | none | Extra context appended to builder and planner prompts |
 | `--unsafe` | off | Disable sandbox auto-detection |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 The build command automatically resumes from the last successful phase if
 previous state exists. Each build runs in an isolated git worktree -- completed
@@ -147,7 +187,7 @@ Resets pipeline state to a given stage and deletes downstream artifacts.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, or `plan` |
+| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, `research`, `refine`, or `plan` |
 
 ### `ridgeline clean`
 
@@ -166,6 +206,7 @@ WIP branches. Use this after inspecting a failed build.
     ├── spec.md            # What to build
     ├── constraints.md     # Technical constraints and check commands
     ├── taste.md           # Optional coding style preferences
+    ├── research.md        # Optional research findings (from researcher)
     ├── phases/
     │   ├── 01-scaffold.md
     │   ├── 01-scaffold.feedback.md  # Generated by harness on review failure

@@ -83,10 +83,11 @@ Taste is useful for maintaining consistency across phases and builds within a
 project. It is not enforced by the reviewer -- the reviewer checks acceptance
 criteria and constraints, not style preferences.
 
-## The Shape and Specify Pipeline
+## The Shape, Specify, and Research Pipeline
 
 Writing specs from scratch can be daunting, especially for large projects.
-Ridgeline breaks the process into two stages: **shaping** and **specifying**.
+Ridgeline breaks the process into up to four stages: **shaping**,
+**specifying**, and optionally **researching** and **refining**.
 
 ### Shaping
 
@@ -132,6 +133,36 @@ completeness specialist covers edge cases and error states. The clarity
 specialist converts vague language into concrete, testable criteria. The
 pragmatism specialist flags unrealistic scope and suggests proven defaults.
 See [Ensemble Flows](ensemble-flows.md) for details on the ensemble pattern.
+
+### Researching and Refining (Optional)
+
+```sh
+ridgeline research my-feature --deep
+ridgeline refine my-feature
+```
+
+After specifying, you can optionally research the spec using web sources
+before planning. The research ensemble investigates the spec against academic
+literature, ecosystem documentation, and competitive landscape -- surfacing
+information that prevents costly mistakes downstream.
+
+The refiner then merges research findings back into `spec.md`, adding insights
+and edge cases without removing user-authored content. Sources are cited
+inline so you can trace what came from research.
+
+The `--auto` flag chains research and refine for multiple iterations,
+progressively improving the spec:
+
+```sh
+ridgeline research my-feature --deep --auto 3
+```
+
+This is particularly useful when the spec involves unfamiliar technology,
+complex architectural decisions, or libraries where recent version changes
+matter. For well-understood domains and simple specs, skip research and go
+straight to planning.
+
+See [Research and Refine](research.md) for the full guide.
 
 ## Flexibility: Loose to Precise
 
