@@ -26,10 +26,10 @@ vi.mock("../../../ui/output", () => ({
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
-  return { ...actual, readFileSync: vi.fn(() => "file content") }
+  return { ...actual, readFileSync: vi.fn(() => "file content"), existsSync: vi.fn(() => false) }
 })
 
-import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, commonInvokeOptions } from "../pipeline.shared"
+import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, commonInvokeOptions } from "../pipeline.shared"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan"
 import { printError } from "../../../ui/output"
@@ -176,6 +176,59 @@ describe("appendConstraintsAndTaste", () => {
     appendConstraintsAndTaste(sections, makeConfig({ extraContext: null }))
 
     expect(sections.join("\n")).not.toContain("## Additional Context")
+  })
+})
+
+describe("appendDesign", () => {
+  it("injects feature-level design.md when it exists", () => {
+    vi.mocked(fs.existsSync).mockImplementation((p: any) => String(p).includes("/tmp/build"))
+    vi.mocked(fs.readFileSync).mockReturnValue("feature design content")
+    const sections: string[] = []
+
+    appendDesign(sections, makeConfig())
+
+    const joined = sections.join("\n")
+    expect(joined).toContain("## Feature Design")
+    expect(joined).toContain("feature design content")
+  })
+
+  it("injects project-level design.md when it exists", () => {
+    vi.mocked(fs.existsSync).mockImplementation((p: any) => {
+      const s = String(p)
+      return s.includes("ridgeline/design.md") && !s.includes("/tmp/build")
+    })
+    vi.mocked(fs.readFileSync).mockReturnValue("project design content")
+    const sections: string[] = []
+
+    appendDesign(sections, makeConfig())
+
+    const joined = sections.join("\n")
+    expect(joined).toContain("## Project Design")
+    expect(joined).toContain("project design content")
+  })
+
+  it("injects both levels when both exist", () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true)
+    vi.mocked(fs.readFileSync).mockImplementation((p: any) => {
+      if (String(p).includes("/tmp/build")) return "feature design"
+      return "project design"
+    })
+    const sections: string[] = []
+
+    appendDesign(sections, makeConfig())
+
+    const joined = sections.join("\n")
+    expect(joined).toContain("## Project Design")
+    expect(joined).toContain("## Feature Design")
+  })
+
+  it("does nothing when no design.md exists", () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false)
+    const sections: string[] = []
+
+    appendDesign(sections, makeConfig())
+
+    expect(sections).toHaveLength(0)
   })
 })
 
