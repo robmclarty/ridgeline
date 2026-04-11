@@ -69,8 +69,14 @@ type EnsembleConfig<TDraft> = {
   /** The user prompt sent to each specialist */
   specialistUserPrompt: string
 
-  /** JSON schema string for structured specialist output */
+  /** JSON schema string for structured specialist output. Ignored when isStructured is false. */
   specialistSchema: string
+
+  /**
+   * When true (default), specialists output structured JSON parsed via specialistSchema.
+   * When false, specialists output free-form prose returned as-is in TDraft (expects TDraft = string).
+   */
+  isStructured?: boolean
 
   /** Pre-resolved synthesizer system prompt content */
   synthesizerPrompt: string
@@ -83,6 +89,9 @@ type EnsembleConfig<TDraft> = {
   /** Allowed tools for the synthesizer invocation */
   synthesizerTools: string[]
 
+  /** Allowed tools for specialist invocations (default: none) */
+  specialistTools?: string[]
+
   /** Model name for invokeClaude */
   model: string
 
@@ -94,6 +103,12 @@ type EnsembleConfig<TDraft> = {
 
   /** Optional post-synthesis verification. Throw to signal failure. */
   verify?: () => void
+
+  /** Network allowlist for specialist invocations (e.g., research needs web access) */
+  networkAllowlist?: string[]
+
+  /** Sandbox provider for specialist invocations */
+  sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
 }
 
 export const invokeEnsemble = async <TDraft>(
@@ -111,16 +126,19 @@ export const invokeEnsemble = async <TDraft>(
   const specialistPromises = specialists.map(({ perspective, overlay }) => {
     const systemPrompt = config.buildSpecialistPrompt(overlay)
     const startTime = Date.now()
+    const isStructured = config.isStructured !== false // default true
 
     return invokeClaude({
       systemPrompt,
       userPrompt: config.specialistUserPrompt,
       model: config.model,
-      allowedTools: [],
+      allowedTools: config.specialistTools ?? [],
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
-      jsonSchema: config.specialistSchema,
+      jsonSchema: isStructured ? config.specialistSchema : undefined,
       onStderr: createStderrHandler(perspective),
+      networkAllowlist: config.networkAllowlist,
+      sandboxProvider: config.sandboxProvider,
     }).then((result) => {
       const elapsed = formatElapsed(Date.now() - startTime)
       spinner.printAbove(`  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`)
@@ -132,18 +150,24 @@ export const invokeEnsemble = async <TDraft>(
 
   // 3. Collect successful proposals
   const successful: { perspective: string; result: ClaudeResult; draft: TDraft }[] = []
+  const isStructured = config.isStructured !== false
 
   for (const outcome of settled) {
     if (outcome.status === "fulfilled") {
       const { perspective, result } = outcome.value
-      try {
-        const draft = extractJSON(result.result) as TDraft
-        successful.push({ perspective, result, draft })
-      } catch {
-        const preview = result.result.length > 300
-          ? result.result.slice(0, 300) + "…"
-          : result.result
-        printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
+      if (isStructured) {
+        try {
+          const draft = extractJSON(result.result) as TDraft
+          successful.push({ perspective, result, draft })
+        } catch {
+          const preview = result.result.length > 300
+            ? result.result.slice(0, 300) + "..."
+            : result.result
+          printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
+        }
+      } else {
+        // Prose mode: treat the raw result text as the draft
+        successful.push({ perspective, result, draft: result.result as TDraft })
       }
     } else {
       printError(`Specialist failed: ${outcome.reason}`)

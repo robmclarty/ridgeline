@@ -19,7 +19,7 @@ npm install -g ridgeline
 ### `ridgeline [build-name] [input]` (default)
 
 Auto-advance the build through the next incomplete pipeline stage
-(shape → spec → plan → build). Accepts all flags from the individual commands.
+(shape → spec → plan → build; research and refine are opt-in). Accepts all flags from the individual commands.
 
 ```sh
 ridgeline my-feature "Build a REST API for task management"
@@ -61,6 +61,41 @@ pragmatism) draft proposals in parallel, then a synthesizer merges them.
 
 ```sh
 ridgeline spec my-feature
+```
+
+### `ridgeline research [build-name]`
+
+Research the spec using web sources. Optional step between `spec` and `plan`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--deep` | off | Run full ensemble (3 specialists: academic, ecosystem, competitive) instead of quick single-agent mode |
+| `--auto [N]` | off | Auto-loop: research + refine for N iterations (default 3 if no number given) |
+| `--model <name>` | `opus` | Model for research agents |
+| `--timeout <minutes>` | `15` | Max duration per agent |
+| `--max-budget-usd <n>` | none | Halt if cumulative research cost exceeds this amount |
+| `--flavour <name-or-path>` | none | Agent flavour |
+
+```sh
+ridgeline research my-feature              # Quick research (1 agent)
+ridgeline research my-feature --deep       # Deep research (3 specialists)
+ridgeline research my-feature --auto       # 3 auto iterations
+ridgeline research my-feature --auto 5     # 5 auto iterations
+ridgeline research my-feature --deep --auto 2  # Deep + 2 auto iterations
+```
+
+### `ridgeline refine [build-name]`
+
+Merge research.md findings into spec.md. Run after reviewing/editing research.md.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for refiner agent |
+| `--timeout <minutes>` | `10` | Max duration |
+| `--flavour <name-or-path>` | none | Agent flavour |
+
+```sh
+ridgeline refine my-feature
 ```
 
 ### `ridgeline plan [build-name]`
@@ -122,7 +157,7 @@ Reset pipeline state to a given stage and delete downstream artifacts.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, or `plan` |
+| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, `research`, `refine`, or `plan` |
 
 ```sh
 ridgeline rewind my-feature --to spec
@@ -146,6 +181,8 @@ ridgeline clean
 ```sh
 ridgeline shape my-feature "Build a task management API"
 ridgeline spec my-feature
+ridgeline research my-feature --deep  # optional: enrich spec with web research
+ridgeline refine my-feature           # optional: merge research into spec
 ridgeline plan my-feature
 ridgeline dry-run my-feature    # preview before committing
 ridgeline build my-feature

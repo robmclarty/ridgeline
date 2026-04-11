@@ -9,6 +9,8 @@ const statePath = (buildDir: string): string =>
 const DEFAULT_PIPELINE: PipelineState = {
   shape: "pending",
   spec: "pending",
+  research: "skipped",
+  refine: "skipped",
   plan: "pending",
   build: "pending",
 }
@@ -99,6 +101,7 @@ const derivePipelineFromArtifacts = (buildDir: string): PipelineState => {
   const hasShape = fs.existsSync(path.join(buildDir, "shape.md"))
   const hasSpec = fs.existsSync(path.join(buildDir, "spec.md"))
   const hasConstraints = fs.existsSync(path.join(buildDir, "constraints.md"))
+  const hasResearch = fs.existsSync(path.join(buildDir, "research.md"))
   const phasesDir = path.join(buildDir, "phases")
   const hasPhases = fs.existsSync(phasesDir) &&
     fs.readdirSync(phasesDir).some((f) => f.endsWith(".md") && /^\d+-.+\.md$/.test(f))
@@ -106,6 +109,8 @@ const derivePipelineFromArtifacts = (buildDir: string): PipelineState => {
   return {
     shape: hasShape ? "complete" : "pending",
     spec: hasSpec && hasConstraints ? "complete" : "pending",
+    research: hasResearch ? "complete" : "skipped",
+    refine: hasResearch ? "complete" : "skipped",
     plan: hasPhases ? "complete" : "pending",
     build: "pending",
   }
@@ -121,6 +126,8 @@ export const getPipelineStatus = (buildDir: string): PipelineState => {
   return {
     shape: fromState.shape === "complete" && fromDisk.shape === "complete" ? "complete" : fromDisk.shape,
     spec: fromState.spec === "complete" && fromDisk.spec === "complete" ? "complete" : fromDisk.spec,
+    research: fromState.research ?? "skipped",
+    refine: fromState.refine ?? "skipped",
     plan: fromState.plan === "complete" && fromDisk.plan === "complete" ? "complete" : fromDisk.plan,
     build: fromState.build === "pending" ? "pending" : fromState.build,
   }
@@ -160,12 +167,17 @@ export const markBuildRunning = (buildDir: string, buildName: string): void => {
   saveState(buildDir, state)
 }
 
-const PIPELINE_STAGES: PipelineStage[] = ["shape", "spec", "plan", "build"]
+// The ordered list of stages for auto-advance.
+// Research and refine are excluded — they are opt-in only.
+const REQUIRED_PIPELINE_STAGES: PipelineStage[] = ["shape", "spec", "plan", "build"]
+
+// All stages including optional ones, for rewind calculations.
+const ALL_PIPELINE_STAGES: PipelineStage[] = ["shape", "spec", "research", "refine", "plan", "build"]
 
 /** Determine the next incomplete pipeline stage. */
 export const getNextPipelineStage = (buildDir: string): PipelineStage | null => {
   const status = getPipelineStatus(buildDir)
-  for (const stage of PIPELINE_STAGES) {
+  for (const stage of REQUIRED_PIPELINE_STAGES) {
     const s = status[stage]
     if (s === "pending" || s === "running") return stage
   }
@@ -178,6 +190,16 @@ const collectStageFiles = (buildDir: string, stage: PipelineStage): string[] => 
   const phasesDir = path.join(buildDir, "phases")
 
   switch (stage) {
+    case "research": {
+      const fp = path.join(buildDir, "research.md")
+      if (fs.existsSync(fp)) files.push(fp)
+      break
+    }
+    case "refine":
+      // Refine modifies spec.md in-place — no separate artifact to delete.
+      // Rewinding to refine means "undo the refinement" which requires
+      // rewinding spec too (the user should rewind to spec instead).
+      break
     case "spec":
       for (const f of ["spec.md", "constraints.md", "taste.md"]) {
         const fp = path.join(buildDir, f)
@@ -209,29 +231,36 @@ const resetPipelineState = (
   buildDir: string,
   buildName: string,
   targetStage: PipelineStage,
-  resetStages: PipelineStage[],
+  _resetStages: PipelineStage[],
 ): void => {
   const state = loadState(buildDir)
   if (!state) return
 
-  const targetIndex = PIPELINE_STAGES.indexOf(targetStage)
-  for (const stage of PIPELINE_STAGES) {
-    if (PIPELINE_STAGES.indexOf(stage) > targetIndex) {
-      state.pipeline[stage] = "pending" as any
+  const targetIndex = ALL_PIPELINE_STAGES.indexOf(targetStage)
+  for (const stage of ALL_PIPELINE_STAGES) {
+    if (ALL_PIPELINE_STAGES.indexOf(stage) > targetIndex) {
+      // Optional stages reset to "skipped", required stages to "pending"
+      if (stage === "research" || stage === "refine") {
+        state.pipeline[stage] = "skipped" as any
+      } else {
+        state.pipeline[stage] = "pending" as any
+      }
     }
   }
 
   if (targetStage === "build") {
     state.pipeline.build = "pending"
+  } else if (targetStage === "research" || targetStage === "refine") {
+    state.pipeline[targetStage] = "complete" as any
   } else {
     state.pipeline[targetStage] = "complete"
   }
 
-  if (resetStages.includes("plan") || resetStages.includes("build")) {
+  if (_resetStages.includes("plan") || _resetStages.includes("build")) {
     state.phases = []
   }
 
-  if (resetStages.includes("build")) {
+  if (_resetStages.includes("build")) {
     cleanupBuildTags(buildName)
   }
 
@@ -243,7 +272,7 @@ const resetPipelineState = (
  * return list of files/dirs to delete from disk.
  */
 export const rewindTo = (buildDir: string, buildName: string, targetStage: PipelineStage): string[] => {
-  const resetStages = PIPELINE_STAGES.slice(PIPELINE_STAGES.indexOf(targetStage) + 1)
+  const resetStages = ALL_PIPELINE_STAGES.slice(ALL_PIPELINE_STAGES.indexOf(targetStage) + 1)
   const toDelete = resetStages.flatMap((stage) => collectStageFiles(buildDir, stage))
 
   resetPipelineState(buildDir, buildName, targetStage, resetStages)

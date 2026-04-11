@@ -8,6 +8,20 @@ export const CLAUDE_REQUIRED_DOMAINS: string[] = [
   "http-intake.logs.us5.datadoghq.com",
 ]
 
+/** Additional domains needed for research agents (web search, docs, academic). */
+const RESEARCH_NETWORK_DOMAINS: string[] = [
+  "arxiv.org",
+  "export.arxiv.org",
+  "api.semanticscholar.org",
+  "scholar.google.com",
+  "docs.python.org",
+  "developer.mozilla.org",
+  "docs.rs",
+  "pkg.go.dev",
+  "learn.microsoft.com",
+  "devdocs.io",
+]
+
 export const DEFAULT_NETWORK_ALLOWLIST: string[] = [
   ...CLAUDE_REQUIRED_DOMAINS,
   "registry.npmjs.org",
@@ -51,5 +65,14 @@ export const resolveNetworkAllowlist = (ridgelineDir: string): string[] => {
   if (base.includes("*")) return []
   // Always include Claude's required domains even if the user overrides the list
   const merged = new Set([...CLAUDE_REQUIRED_DOMAINS, ...base])
+  return [...merged]
+}
+
+/** Build the network allowlist for research agents: base allowlist + research domains. */
+export const resolveResearchAllowlist = (ridgelineDir: string): string[] => {
+  const base = resolveNetworkAllowlist(ridgelineDir)
+  // If base is empty, user set "*" (unrestricted) — keep it unrestricted
+  if (base.length === 0) return []
+  const merged = new Set([...base, ...RESEARCH_NETWORK_DOMAINS])
   return [...merged]
 }

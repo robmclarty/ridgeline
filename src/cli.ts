@@ -11,6 +11,8 @@ import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
 import { runCreate } from "./commands/create"
 import { runRewind } from "./commands/rewind"
+import { runResearch } from "./commands/research"
+import { runRefine } from "./commands/refine"
 import { killAllClaude } from "./engine/claude/claude.exec"
 
 // Kill all Claude subprocesses on Ctrl+C before exiting
@@ -121,6 +123,55 @@ program
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
+        flavour: (opts.flavour as string) ?? undefined,
+      })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+program
+  .command("research [build-name]")
+  .description("Research the spec using web sources to find improvements (optional step between spec and plan)")
+  .option("--model <name>", "Model for research agents", "opus")
+  .option("--timeout <minutes>", "Max duration per agent in minutes", "15")
+  .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
+  .option("--deep", "Run full ensemble (3 specialists) instead of quick single-agent research")
+  .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 3)")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      const autoRaw = opts.auto
+      let auto: number | null = null
+      if (autoRaw !== undefined) {
+        auto = autoRaw === true ? 3 : parseInt(String(autoRaw), 10)
+        if (isNaN(auto) || auto < 1) auto = 3
+      }
+
+      await runResearch(await requireBuildName(buildName), {
+        model: (opts.model as string) ?? "opus",
+        timeout: parseInt(String(opts.timeout ?? "15"), 10),
+        maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
+        flavour: (opts.flavour as string) ?? undefined,
+        isDeep: opts.deep === true,
+        auto,
+      })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+program
+  .command("refine [build-name]")
+  .description("Merge research.md findings into spec.md")
+  .option("--model <name>", "Model for refiner agent", "opus")
+  .option("--timeout <minutes>", "Max duration in minutes", "10")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      await runRefine(await requireBuildName(buildName), {
+        model: (opts.model as string) ?? "opus",
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
         flavour: (opts.flavour as string) ?? undefined,
       })
     } catch (err) {

@@ -42,11 +42,13 @@ export type PhaseState = {
 }
 
 // Pipeline stage status
-export type PipelineStage = "shape" | "spec" | "plan" | "build"
+export type PipelineStage = "shape" | "spec" | "research" | "refine" | "plan" | "build"
 
 export type PipelineState = {
   shape: "pending" | "complete"
   spec: "pending" | "complete"
+  research: "pending" | "complete" | "skipped"
+  refine: "pending" | "complete" | "skipped"
   plan: "pending" | "complete"
   build: "pending" | "running" | "complete"
 }
@@ -156,7 +158,7 @@ export type SpecifierDraft = {
 // Single entry in budget.json
 export type BudgetEntry = {
   phase: string
-  role: "planner" | "builder" | "reviewer" | "specialist" | "synthesizer"
+  role: "planner" | "builder" | "reviewer" | "specialist" | "synthesizer" | "researcher" | "refiner"
   attempt: number
   costUsd: number
   inputTokens: number
@@ -186,6 +188,10 @@ export type TrajectoryEntry = {
     | "phase_advance"
     | "phase_fail"
     | "budget_exceeded"
+    | "research_start"
+    | "research_complete"
+    | "refine_start"
+    | "refine_complete"
   phaseId: string | null
   duration: number | null
   tokens: { input: number; output: number } | null
