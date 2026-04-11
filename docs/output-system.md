@@ -30,7 +30,7 @@ Four modules with distinct responsibilities:
 stream.decode.ts     — parse NDJSON, extract results (pure functions, no I/O)
 claude.exec.ts       — spawn claude subprocess, collect output, call callbacks
 build.exec.ts        — assemble prompts, wire up display, call invoker
-  (and review.exec, plan.exec, specify.exec)
+  (and review.exec, plan.exec, specify.exec, research.exec, refine.exec)
 phase.sequence.ts    — orchestrate phases, own the [ridgeline] log lines
 ```
 

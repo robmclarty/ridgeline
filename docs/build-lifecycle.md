@@ -7,8 +7,11 @@ user sees, and where the user can intervene.
 ## Overview
 
 ```text
-shape → spec → plan → [build → review → retry/advance] × N phases → merge
+shape → spec → [research → refine] → plan → [build → review → retry/advance] × N phases → merge
 ```
+
+Research and refine are optional. Skipping them goes straight from spec to
+plan.
 
 The user describes what to build. The shaper gathers context. The specifier
 ensemble produces spec files. The planner ensemble decomposes the spec into
@@ -57,7 +60,47 @@ these files directly -- the specifier is a convenience, not a requirement.
 acceptance criteria -- vague criteria produce vague results. Ensure the check
 command in constraints actually works on your codebase.
 
-## Step 3: Plan
+## Step 3: Research (optional)
+
+```sh
+ridgeline research my-feature         # quick mode (1 specialist)
+ridgeline research my-feature --deep  # deep mode (3 specialists)
+```
+
+The research ensemble investigates the spec against external sources --
+academic papers, framework documentation, and competitive products. In quick
+mode, one specialist (ecosystem) runs. In deep mode, three specialists
+(academic, ecosystem, competitive) run in parallel, each searching through a
+different lens. A synthesizer merges the reports into `research.md`.
+
+Auto mode (`--auto [N]`) chains research and refine for N iterations,
+progressively improving the spec.
+
+See [Research and Refine](research.md) for full details.
+
+**What to review before proceeding:** Read `research.md`. Remove irrelevant
+findings, add your own notes. The refiner works from whatever is in
+`research.md`, so your edits are incorporated.
+
+## Step 4: Refine (optional)
+
+```sh
+ridgeline refine my-feature
+```
+
+The refiner agent reads `spec.md` and `research.md`, then rewrites `spec.md`
+incorporating the research findings. It is additive by default -- it adds
+insights and edge cases without removing user-authored content. Sources are
+cited inline so you can trace what came from research.
+
+The refiner does not modify `constraints.md` or `taste.md`.
+
+**What to review before proceeding:** Read the updated `spec.md`. Check that
+research additions are accurate and within scope. The refiner flags conflicts
+with existing spec decisions rather than silently overriding them -- review
+these flagged sections carefully.
+
+## Step 5: Plan
 
 ```sh
 ridgeline plan my-feature
@@ -95,7 +138,7 @@ To preview the plan without executing:
 ridgeline dry-run my-feature
 ```
 
-## Step 4: Build
+## Step 6: Build
 
 ```sh
 ridgeline build my-feature
@@ -125,7 +168,7 @@ For each phase:
 **What the user sees:** Streaming builder output in real-time, phase progress
 indicators, and per-phase cost summaries.
 
-## Step 5: Review
+## Step 7: Review
 
 After the builder completes each phase, the reviewer runs automatically.
 
@@ -141,7 +184,7 @@ and suggestions.
 **What the user sees:** A verdict summary showing which criteria passed, which
 failed, and any blocking issues with evidence.
 
-## Step 6: Retry or Advance
+## Step 8: Retry or Advance
 
 When a phase fails review, the harness writes a feedback file
 (`<phase>.feedback.md`) from the structured verdict. The builder retries with a
@@ -159,7 +202,7 @@ retries are exhausted:
 The user can then inspect the code, edit the phase spec or constraints, and
 re-run `ridgeline build my-feature`. The harness resumes from the failed phase.
 
-## Step 7: Completion
+## Step 9: Completion
 
 When all phases pass:
 
@@ -183,9 +226,14 @@ ridgeline clean
 Ridgeline's pipeline is autonomous during execution, but the user has control
 at several points:
 
-**Between spec and plan.** Edit spec.md, constraints.md, and taste.md before
-planning. The planner works from these files, so changes here cascade through
-the entire build.
+**Between spec and plan (research/refine).** Optionally run
+`ridgeline research` and `ridgeline refine` to enrich the spec with external
+sources before planning. You can also edit `research.md` between research and
+refine to curate the findings.
+
+**Between spec and plan (manual edits).** Edit spec.md, constraints.md, and
+taste.md before planning. The planner works from these files, so changes here
+cascade through the entire build.
 
 **Between plan and build.** Edit phase files in `phases/`. Adjust scope, rewrite
 acceptance criteria, reorder phases, add or remove phases. Phase files are plain
