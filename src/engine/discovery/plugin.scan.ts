@@ -50,7 +50,33 @@ export const discoverPluginDirs = (config: RidgelineConfig): PluginDir[] => {
     dirs.push({ dir: pluginDir, createdPluginJson })
   }
 
+  // Discover bundled plugins (shipped with ridgeline)
+  const bundledRoot = getBundledPluginDir()
+  if (bundledRoot) {
+    for (const entry of fs.readdirSync(bundledRoot)) {
+      const subdir = path.join(bundledRoot, entry)
+      if (!fs.statSync(subdir).isDirectory()) continue
+      if (!fs.existsSync(path.join(subdir, "plugin.json"))) continue
+      dirs.push({ dir: subdir, createdPluginJson: false })
+    }
+  }
+
   return dirs
+}
+
+export const getBundledPluginDir = (): string | null => {
+  const candidates = [
+    path.join(__dirname, "..", "..", "plugin"),           // dist/plugin
+    path.join(__dirname, "..", "..", "..", "plugin"),      // src layout
+    path.join(__dirname, "..", "..", "..", "..", "plugin"), // dev fallback
+  ]
+  for (const dir of candidates) {
+    if (fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+      const entries = fs.readdirSync(dir)
+      if (entries.length > 0) return dir
+    }
+  }
+  return null
 }
 
 export const getCorePluginDir = (): string | null => {
