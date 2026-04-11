@@ -1,0 +1,10 @@
+{
+  "name": "web-ui",
+  "recommendedSkills": [
+    "agent-browser",
+    "visual-diff",
+    "css-audit",
+    "a11y-audit",
+    "lighthouse"
+  ]
+}
