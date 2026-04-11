@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries } from "../state"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, recordMatchedShapes, getMatchedShapes } from "../state"
 import type { PhaseInfo, BuildState, PipelineState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase
@@ -223,6 +223,60 @@ describe("state", () => {
       const loaded = loadState(tmpDir)
       expect(loaded!.phases[0].status).toBe("pending")
       expect(loaded!.phases[0].retries).toBe(0)
+    })
+  })
+
+  describe("recordMatchedShapes", () => {
+    it("creates state.json and records shapes when no state exists yet", () => {
+      recordMatchedShapes(tmpDir, "my-build", ["api", "cli"])
+
+      const loaded = loadState(tmpDir)
+      expect(loaded).not.toBeNull()
+      expect(loaded!.buildName).toBe("my-build")
+      expect(loaded!.matchedShapes).toEqual(["api", "cli"])
+    })
+
+    it("updates existing state.json with matched shapes", () => {
+      const state = initState("my-build", samplePhases)
+      saveState(tmpDir, state)
+
+      recordMatchedShapes(tmpDir, "my-build", ["dashboard", "crud"])
+
+      const loaded = loadState(tmpDir)
+      expect(loaded!.matchedShapes).toEqual(["dashboard", "crud"])
+    })
+
+    it("preserves existing state fields when updating", () => {
+      const state = initState("my-build", samplePhases)
+      state.phases[0].status = "complete"
+      state.phases[0].completionTag = "ridgeline/phase/my-build/01-scaffold"
+      saveState(tmpDir, state)
+
+      recordMatchedShapes(tmpDir, "my-build", ["api"])
+
+      const loaded = loadState(tmpDir)
+      expect(loaded!.matchedShapes).toEqual(["api"])
+      expect(loaded!.phases[0].status).toBe("complete")
+      expect(loaded!.buildName).toBe("my-build")
+    })
+  })
+
+  describe("getMatchedShapes", () => {
+    it("returns empty array when state.json does not exist", () => {
+      expect(getMatchedShapes(tmpDir)).toEqual([])
+    })
+
+    it("returns empty array when state exists but has no matchedShapes field", () => {
+      const state = initState("my-build", samplePhases)
+      saveState(tmpDir, state)
+
+      expect(getMatchedShapes(tmpDir)).toEqual([])
+    })
+
+    it("returns the recorded shapes array", () => {
+      recordMatchedShapes(tmpDir, "my-build", ["api", "cli", "dashboard"])
+
+      expect(getMatchedShapes(tmpDir)).toEqual(["api", "cli", "dashboard"])
     })
   })
 })
