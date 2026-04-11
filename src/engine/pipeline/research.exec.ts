@@ -2,8 +2,10 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { EnsembleResult } from "../../types"
 import { invokeEnsemble } from "./ensemble.exec"
+import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
+import { createStderrHandler } from "./pipeline.shared"
 
 // ---------------------------------------------------------------------------
 // Shared prompt helpers
@@ -27,6 +29,74 @@ export const assembleInputSections = (specMd: string, constraintsMd: string, tas
 }
 
 // ---------------------------------------------------------------------------
+// Research agenda
+// ---------------------------------------------------------------------------
+
+const AGENDA_SYSTEM_PROMPT = `You are a research agenda planner. Given a specification and a domain gap checklist, identify what the spec is missing or vague about, and produce a focused research agenda.
+
+Your output is a markdown research agenda that will be given to research specialists to focus their web searches. Be specific — name the gaps, suggest search terms, and prioritize by impact.
+
+If prior research findings are provided, note which areas are already well-covered and should not be re-researched unless contradictory information is found. Focus the agenda on unexplored territory.
+
+Keep your response concise — under 500 words. No preamble.`
+
+const buildAgendaUserPrompt = (
+  specMd: string,
+  gapsMd: string | null,
+  existingResearchMd: string | null,
+  changelogMd: string | null,
+): string => {
+  const sections: string[] = []
+
+  sections.push("## spec.md\n")
+  sections.push(specMd)
+  sections.push("")
+
+  if (gapsMd) {
+    sections.push("## Domain Gap Checklist\n")
+    sections.push(gapsMd)
+    sections.push("")
+  }
+
+  if (existingResearchMd) {
+    sections.push("## Prior Research (already conducted)\n")
+    sections.push(existingResearchMd)
+    sections.push("")
+  }
+
+  if (changelogMd) {
+    sections.push("## Spec Changelog (recommendations already incorporated)\n")
+    sections.push(changelogMd)
+    sections.push("")
+  }
+
+  sections.push("Produce a focused research agenda identifying gaps and specific questions for specialists to investigate.")
+
+  return sections.join("\n")
+}
+
+const buildResearchAgenda = async (
+  specMd: string,
+  gapsMd: string | null,
+  existingResearchMd: string | null,
+  changelogMd: string | null,
+  model: string,
+  timeoutMinutes: number,
+): Promise<string> => {
+  const result = await invokeClaude({
+    systemPrompt: AGENDA_SYSTEM_PROMPT,
+    userPrompt: buildAgendaUserPrompt(specMd, gapsMd, existingResearchMd, changelogMd),
+    model: "sonnet",
+    allowedTools: [],
+    cwd: process.cwd(),
+    timeoutMs: Math.min(timeoutMinutes * 60 * 1000, 3 * 60 * 1000), // cap at 3 min
+    onStderr: createStderrHandler("agenda"),
+  })
+
+  return (result.result as string) ?? ""
+}
+
+// ---------------------------------------------------------------------------
 // Prompt construction
 // ---------------------------------------------------------------------------
 
@@ -36,8 +106,21 @@ const buildResearchSpecialistPrompt = (context: string, overlay: string): string
 }
 
 /** Assemble the user prompt for a research specialist. */
-const assembleSpecialistUserPrompt = (specMd: string, constraintsMd: string, tasteMd: string | null): string => {
+const assembleSpecialistUserPrompt = (
+  specMd: string,
+  constraintsMd: string,
+  tasteMd: string | null,
+  agenda: string | null,
+): string => {
   const sections = assembleInputSections(specMd, constraintsMd, tasteMd)
+
+  if (agenda) {
+    sections.push("## Research Agenda\n")
+    sections.push("The following gaps and questions were identified. Focus your research on these areas:\n")
+    sections.push(agenda)
+    sections.push("")
+  }
+
   sections.push("Research this spec thoroughly using your web tools. Produce a markdown research report as your response.")
   return sections.join("\n")
 }
@@ -47,6 +130,9 @@ const assembleSynthesizerUserPrompt = (
   specMd: string,
   buildDir: string,
   drafts: { perspective: string; draft: string }[],
+  existingResearchMd: string | null,
+  changelogMd: string | null,
+  iterationNumber: number,
 ): string => {
   const sections: string[] = []
 
@@ -61,8 +147,24 @@ const assembleSynthesizerUserPrompt = (
     sections.push("\n---\n")
   }
 
+  if (existingResearchMd) {
+    sections.push("## Existing research.md (to be updated, not replaced)\n")
+    sections.push(existingResearchMd)
+    sections.push("")
+  }
+
+  if (changelogMd) {
+    sections.push("## spec.changelog.md (recommendations already acted on)\n")
+    sections.push(changelogMd)
+    sections.push("")
+  }
+
+  sections.push("## Current Iteration\n")
+  sections.push(`Iteration: ${iterationNumber}`)
+  sections.push("")
+
   sections.push("## Output\n")
-  sections.push(`Write the synthesized research report to: ${buildDir}/research.md`)
+  sections.push(`Write the ${existingResearchMd ? "updated" : "new"} research report to: ${buildDir}/research.md`)
   sections.push("Use the Write tool to create the file.")
 
   return sections.join("\n")
@@ -81,6 +183,9 @@ export type ResearchConfig = {
   isDeep: boolean
   networkAllowlist: string[]
   sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
+  existingResearchMd: string | null
+  changelogMd: string | null
+  iterationNumber: number
 }
 
 export const invokeResearcher = async (
@@ -91,6 +196,7 @@ export const invokeResearcher = async (
 ): Promise<EnsembleResult> => {
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
   const context = registry.getContext("researchers") ?? ""
+  const gapsMd = registry.getGaps("researchers")
   const allSpecialists = registry.getSpecialists("researchers")
 
   // Quick mode: use only the first specialist (ecosystem by default — most broadly useful)
@@ -101,19 +207,36 @@ export const invokeResearcher = async (
       ? [allSpecialists[0]]
       : []
 
+  // Build a research agenda before dispatching specialists
+  const agenda = await buildResearchAgenda(
+    specMd,
+    gapsMd,
+    config.existingResearchMd,
+    config.changelogMd,
+    config.model,
+    config.timeoutMinutes,
+  )
+
   return invokeEnsemble<string>({
     label: "Researching",
     specialists,
     isStructured: false,
 
     buildSpecialistPrompt: (overlay) => buildResearchSpecialistPrompt(context, overlay),
-    specialistUserPrompt: assembleSpecialistUserPrompt(specMd, constraintsMd, tasteMd),
+    specialistUserPrompt: assembleSpecialistUserPrompt(specMd, constraintsMd, tasteMd, agenda || null),
     specialistSchema: "", // unused when isStructured is false
     specialistTools: ["WebFetch", "WebSearch", "Bash"],
 
     synthesizerPrompt: registry.getCorePrompt("researcher.md"),
     buildSynthesizerUserPrompt: (drafts) =>
-      assembleSynthesizerUserPrompt(specMd, config.buildDir, drafts),
+      assembleSynthesizerUserPrompt(
+        specMd,
+        config.buildDir,
+        drafts,
+        config.existingResearchMd,
+        config.changelogMd,
+        config.iterationNumber,
+      ),
     synthesizerTools: ["Write"],
 
     model: config.model,

@@ -10,6 +10,14 @@ type RefineOptions = {
   model: string
   timeout: number
   flavour?: string
+  iterationNumber?: number
+}
+
+/** Derive the next iteration number from existing spec.changelog.md content. */
+const deriveRefineIterationNumber = (changelogMd: string | null): number => {
+  if (!changelogMd) return 1
+  const matches = changelogMd.match(/^## Iteration \d+/gm)
+  return (matches?.length ?? 0) + 1
 }
 
 export const runRefine = async (buildName: string, opts: RefineOptions): Promise<void> => {
@@ -42,31 +50,40 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
   const constraintsMd = fs.readFileSync(constraintsPath, "utf-8")
   const tastePath = path.join(buildDir, "taste.md")
   const tasteMd = fs.existsSync(tastePath) ? fs.readFileSync(tastePath, "utf-8") : null
+  const changelogPath = path.join(buildDir, "spec.changelog.md")
+  const changelogMd = fs.existsSync(changelogPath) ? fs.readFileSync(changelogPath, "utf-8") : null
+
+  const iterationNumber = opts.iterationNumber ?? deriveRefineIterationNumber(changelogMd)
 
   const config: RefineConfig = {
     model: opts.model,
     timeoutMinutes: opts.timeout,
     buildDir,
     flavour: opts.flavour ?? null,
+    changelogMd,
+    iterationNumber,
   }
 
-  logTrajectory(buildDir, makeTrajectoryEntry("refine_start", null, "Refine started"))
+  logTrajectory(buildDir, makeTrajectoryEntry("refine_start", null,
+    `Refine started (iteration ${iterationNumber})`))
 
   const result = await invokeRefiner(specMd, researchMd, constraintsMd, tasteMd, config)
 
   recordCost(buildDir, "refine", "refiner", 0, result)
 
-  logTrajectory(buildDir, makeTrajectoryEntry("refine_complete", null, "Refine complete", {
-    duration: result.durationMs,
-    tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-    costUsd: result.costUsd,
-  }))
+  logTrajectory(buildDir, makeTrajectoryEntry("refine_complete", null,
+    `Refine complete (iteration ${iterationNumber})`, {
+      duration: result.durationMs,
+      tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
+      costUsd: result.costUsd,
+    }))
 
   advancePipeline(buildDir, buildName, "refine")
 
-  printInfo(`\nSpec refined with research findings.`)
+  printInfo(`\nSpec refined with research findings (iteration ${iterationNumber}).`)
   printInfo(`Cost: $${result.costUsd.toFixed(2)}`)
   console.log("")
   printInfo(`Review: ${path.join(buildDir, "spec.md")}`)
+  printInfo(`Changelog: ${path.join(buildDir, "spec.changelog.md")}`)
   printInfo(`Next: ridgeline plan ${buildName}`)
 }

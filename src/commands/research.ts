@@ -22,7 +22,19 @@ const readBuildFile = (buildDir: string, filename: string): string | null => {
   return fs.existsSync(fp) ? fs.readFileSync(fp, "utf-8") : null
 }
 
-const runSingleResearch = async (buildName: string, buildDir: string, opts: ResearchOptions): Promise<void> => {
+/** Derive the next iteration number from existing research.md content. */
+const deriveIterationNumber = (existingResearchMd: string | null): number => {
+  if (!existingResearchMd) return 1
+  const matches = existingResearchMd.match(/^### Iteration \d+/gm)
+  return (matches?.length ?? 0) + 1
+}
+
+const runSingleResearch = async (
+  buildName: string,
+  buildDir: string,
+  opts: ResearchOptions,
+  iterationNumber?: number,
+): Promise<void> => {
   const specMd = readBuildFile(buildDir, "spec.md")
   if (!specMd) {
     printError(`spec.md not found. Run 'ridgeline spec ${buildName}' first.`)
@@ -36,7 +48,11 @@ const runSingleResearch = async (buildName: string, buildDir: string, opts: Rese
   }
 
   const tasteMd = readBuildFile(buildDir, "taste.md")
+  const existingResearchMd = readBuildFile(buildDir, "research.md")
+  const changelogMd = readBuildFile(buildDir, "spec.changelog.md")
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
+
+  const iteration = iterationNumber ?? deriveIterationNumber(existingResearchMd)
 
   const config: ResearchConfig = {
     model: opts.model,
@@ -46,10 +62,13 @@ const runSingleResearch = async (buildName: string, buildDir: string, opts: Rese
     flavour: opts.flavour ?? null,
     isDeep: opts.isDeep,
     networkAllowlist: resolveResearchAllowlist(ridgelineDir),
+    existingResearchMd,
+    changelogMd,
+    iterationNumber: iteration,
   }
 
   logTrajectory(buildDir, makeTrajectoryEntry("research_start", null,
-    `Research started (${opts.isDeep ? "deep" : "quick"} mode)`))
+    `Research started (${opts.isDeep ? "deep" : "quick"} mode, iteration ${iteration})`))
 
   const result = await invokeResearcher(specMd, constraintsMd, tasteMd, config)
 
@@ -60,7 +79,7 @@ const runSingleResearch = async (buildName: string, buildDir: string, opts: Rese
   recordCost(buildDir, "research", "synthesizer", 0, result.synthesizerResult)
 
   logTrajectory(buildDir, makeTrajectoryEntry("research_complete", null,
-    `Research complete (${result.specialistResults.length} specialists)`, {
+    `Research complete (${result.specialistResults.length} specialists, iteration ${iteration})`, {
       duration: result.totalDurationMs,
       tokens: {
         input: result.specialistResults.reduce((sum, r) => sum + r.usage.inputTokens, 0) + result.synthesizerResult.usage.inputTokens,
@@ -71,16 +90,22 @@ const runSingleResearch = async (buildName: string, buildDir: string, opts: Rese
 
   advancePipeline(buildDir, buildName, "research")
 
-  printInfo(`\nResearch complete: ${result.specialistResults.length} specialist(s) + synthesizer`)
+  printInfo(`\nResearch complete: ${result.specialistResults.length} specialist(s) + synthesizer (iteration ${iteration})`)
   printInfo(`Cost: $${result.totalCostUsd.toFixed(2)}`)
   printInfo(`Output: ${path.join(buildDir, "research.md")}`)
 }
 
-const runSingleRefine = async (buildName: string, _buildDir: string, opts: ResearchOptions): Promise<void> => {
+const runSingleRefine = async (
+  buildName: string,
+  _buildDir: string,
+  opts: ResearchOptions,
+  iterationNumber: number,
+): Promise<void> => {
   await runRefine(buildName, {
     model: opts.model,
     timeout: opts.timeout,
     flavour: opts.flavour,
+    iterationNumber,
   })
 }
 
@@ -100,8 +125,8 @@ export const runResearch = async (buildName: string, opts: ResearchOptions): Pro
     for (let i = 1; i <= iterations; i++) {
       printInfo(`--- Iteration ${i} of ${iterations} ---\n`)
 
-      await runSingleResearch(buildName, buildDir, opts)
-      await runSingleRefine(buildName, buildDir, opts)
+      await runSingleResearch(buildName, buildDir, opts, i)
+      await runSingleRefine(buildName, buildDir, opts, i)
 
       if (i < iterations) {
         printInfo("") // blank line between iterations

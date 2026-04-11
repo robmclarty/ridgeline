@@ -17,6 +17,9 @@ type AgentRegistry = {
   /** Get shared context for an ensemble subfolder. Returns null if no context.md. */
   getContext: (subfolder: string) => string | null
 
+  /** Get gap checklist for an ensemble subfolder. Falls back to base if flavour has none. */
+  getGaps: (subfolder: string) => string | null
+
   /** Get sub-agents from specialists/ as DiscoveredAgent[]. */
   getSubAgents: () => DiscoveredAgent[]
 
@@ -127,7 +130,7 @@ export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry =>
   const getSpecialists = (subfolder: string): SpecialistDef[] => {
     const dir = resolveSubfolder(subfolder, flavourPath, defaultAgentsDir)
     if (!dir) return []
-    return discoverSpecialistsInDir(dir, ["context.md"])
+    return discoverSpecialistsInDir(dir, ["context.md", "gaps.md"])
   }
 
   const getContext = (subfolder: string): string | null => {
@@ -145,9 +148,22 @@ export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry =>
     return discoverAgentsInDir(dir)
   }
 
+  // Independent fallback: check flavour first, then base — unlike getContext which
+  // is bound to whichever subfolder resolveSubfolder picks (whole-subfolder replacement).
+  // This ensures every flavour gets at least the base gap checklist.
+  const getGaps = (subfolder: string): string | null => {
+    if (flavourPath) {
+      const flavourGaps = path.join(flavourPath, subfolder, "gaps.md")
+      if (fs.existsSync(flavourGaps)) return fs.readFileSync(flavourGaps, "utf-8")
+    }
+    const baseGaps = path.join(defaultAgentsDir, subfolder, "gaps.md")
+    if (fs.existsSync(baseGaps)) return fs.readFileSync(baseGaps, "utf-8")
+    return null
+  }
+
   const getAgentsFlag = () => {
     return buildAgentsFlag(getSubAgents())
   }
 
-  return { getCorePrompt, getSpecialists, getContext, getSubAgents, getAgentsFlag }
+  return { getCorePrompt, getSpecialists, getContext, getGaps, getSubAgents, getAgentsFlag }
 }

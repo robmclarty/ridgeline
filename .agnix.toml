@@ -6,6 +6,7 @@ exclude = [
     "src/agents/core/**",
     "src/agents/planners/context.md",
     "src/agents/researchers/context.md",
+    "src/agents/researchers/gaps.md",
 ]
 target = "ClaudeCode"
 tools = ["claude-code"]
