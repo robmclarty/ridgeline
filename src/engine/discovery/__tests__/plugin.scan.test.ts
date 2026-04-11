@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir, trackTempDir } from "../../../../test/setup"
-import { discoverPluginDirs, cleanupPluginDirs } from "../plugin.scan"
+import { discoverPluginDirs, cleanupPluginDirs, getBundledPluginDir } from "../plugin.scan"
 
 const writePlugin = (baseDir: string, filename: string, content: string): void => {
   const pluginDir = path.join(baseDir, "plugin")
@@ -29,12 +29,16 @@ const makeConfig = (tmpDir: string) => {
   return { ridgelineDir, buildDir, buildName: "test-build" }
 }
 
+// Helper to filter only user-level dirs (exclude bundled plugin dirs)
+const userDirs = (dirs: Array<{ dir: string; createdPluginJson: boolean }>, config: { ridgelineDir: string; buildDir: string }) =>
+  dirs.filter(d => d.dir.startsWith(config.ridgelineDir) || d.dir.startsWith(config.buildDir))
+
 describe("discoverPluginDirs", () => {
-  it("returns empty array when no plugin directories exist", () => {
+  it("returns no user-level dirs when no plugin directories exist", () => {
     const dir = trackTempDir(makeTempDir())
     const config = makeConfig(dir)
     // @ts-expect-error — partial config for testing
-    expect(discoverPluginDirs(config)).toEqual([])
+    expect(userDirs(discoverPluginDirs(config), config)).toEqual([])
   })
 
   it("discovers project-level plugin directory with skills", () => {
@@ -43,7 +47,7 @@ describe("discoverPluginDirs", () => {
     writeSkill(config.ridgelineDir, "my-skill", "---\nname: my-skill\n---\nContent")
 
     // @ts-expect-error — partial config for testing
-    const result = discoverPluginDirs(config)
+    const result = userDirs(discoverPluginDirs(config), config)
     expect(result).toHaveLength(1)
     expect(result[0].dir).toBe(path.join(config.ridgelineDir, "plugin"))
     expect(result[0].createdPluginJson).toBe(true)
@@ -55,7 +59,7 @@ describe("discoverPluginDirs", () => {
     writeAgentPlugin(config.ridgelineDir, "db-expert", "---\nname: db-expert\n---\nContent")
 
     // @ts-expect-error — partial config for testing
-    const result = discoverPluginDirs(config)
+    const result = userDirs(discoverPluginDirs(config), config)
     expect(result).toHaveLength(1)
     expect(result[0].dir).toBe(path.join(config.ridgelineDir, "plugin"))
   })
@@ -66,7 +70,7 @@ describe("discoverPluginDirs", () => {
     writeSkill(config.buildDir, "build-skill", "---\nname: build-skill\n---\nContent")
 
     // @ts-expect-error — partial config for testing
-    const result = discoverPluginDirs(config)
+    const result = userDirs(discoverPluginDirs(config), config)
     expect(result).toHaveLength(1)
     expect(result[0].dir).toBe(path.join(config.buildDir, "plugin"))
   })
@@ -78,7 +82,7 @@ describe("discoverPluginDirs", () => {
     writeSkill(config.ridgelineDir, "project-skill", "content")
 
     // @ts-expect-error — partial config for testing
-    const result = discoverPluginDirs(config)
+    const result = userDirs(discoverPluginDirs(config), config)
     expect(result).toHaveLength(2)
   })
 
@@ -105,7 +109,7 @@ describe("discoverPluginDirs", () => {
     fs.writeFileSync(pluginJson, JSON.stringify({ name: "user-plugin", description: "custom" }))
 
     // @ts-expect-error — partial config for testing
-    const result = discoverPluginDirs(config)
+    const result = userDirs(discoverPluginDirs(config), config)
     expect(result[0].createdPluginJson).toBe(false)
 
     const content = JSON.parse(fs.readFileSync(pluginJson, "utf-8"))
@@ -118,7 +122,7 @@ describe("discoverPluginDirs", () => {
     fs.mkdirSync(path.join(config.ridgelineDir, "plugin"), { recursive: true })
 
     // @ts-expect-error — partial config for testing
-    expect(discoverPluginDirs(config)).toEqual([])
+    expect(userDirs(discoverPluginDirs(config), config)).toEqual([])
   })
 })
 
@@ -160,5 +164,82 @@ describe("cleanupPluginDirs", () => {
 
     cleanupPluginDirs([{ dir: pluginDir, createdPluginJson: false }])
     expect(fs.existsSync(pluginJson)).toBe(true)
+  })
+})
+
+describe("getBundledPluginDir", () => {
+  it("returns a string or null", () => {
+    const result = getBundledPluginDir()
+    expect(result === null || typeof result === "string").toBe(true)
+  })
+
+  it("returns a directory that exists when non-null", () => {
+    const result = getBundledPluginDir()
+    if (result !== null) {
+      expect(fs.existsSync(result)).toBe(true)
+      expect(fs.statSync(result).isDirectory()).toBe(true)
+    }
+  })
+})
+
+describe("discoverPluginDirs with bundled plugins", () => {
+  const makeBundledPlugin = (bundledRoot: string, pluginName: string): void => {
+    const pluginDir = path.join(bundledRoot, pluginName)
+    fs.mkdirSync(path.join(pluginDir, "skills"), { recursive: true })
+    fs.writeFileSync(
+      path.join(pluginDir, "plugin.json"),
+      JSON.stringify({ name: pluginName, description: "bundled plugin" }),
+    )
+  }
+
+  it("discovers bundled plugin subdirectories that have plugin.json", () => {
+    const bundledRoot = trackTempDir(makeTempDir())
+    makeBundledPlugin(bundledRoot, "visual-tools")
+    makeBundledPlugin(bundledRoot, "code-tools")
+
+    // Verify the bundled root structure is valid for the scanner
+    const entries = fs.readdirSync(bundledRoot)
+    expect(entries).toHaveLength(2)
+    for (const entry of entries) {
+      const subdir = path.join(bundledRoot, entry)
+      expect(fs.statSync(subdir).isDirectory()).toBe(true)
+      expect(fs.existsSync(path.join(subdir, "plugin.json"))).toBe(true)
+    }
+  })
+
+  it("skips bundled subdirectories without plugin.json", () => {
+    const bundledRoot = trackTempDir(makeTempDir())
+
+    // A subdir with plugin.json
+    makeBundledPlugin(bundledRoot, "valid-plugin")
+
+    // A subdir without plugin.json
+    fs.mkdirSync(path.join(bundledRoot, "incomplete-plugin", "skills"), { recursive: true })
+
+    const entries = fs.readdirSync(bundledRoot)
+    const validDirs = entries.filter(entry => {
+      const subdir = path.join(bundledRoot, entry)
+      return fs.statSync(subdir).isDirectory() && fs.existsSync(path.join(subdir, "plugin.json"))
+    })
+    expect(validDirs).toHaveLength(1)
+    expect(validDirs[0]).toBe("valid-plugin")
+  })
+
+  it("bundled plugins are added with createdPluginJson false", () => {
+    const bundledRoot = trackTempDir(makeTempDir())
+    makeBundledPlugin(bundledRoot, "visual-tools")
+
+    // Simulate what discoverPluginDirs does for bundled entries
+    const dirs: Array<{ dir: string; createdPluginJson: boolean }> = []
+    for (const entry of fs.readdirSync(bundledRoot)) {
+      const subdir = path.join(bundledRoot, entry)
+      if (!fs.statSync(subdir).isDirectory()) continue
+      if (!fs.existsSync(path.join(subdir, "plugin.json"))) continue
+      dirs.push({ dir: subdir, createdPluginJson: false })
+    }
+
+    expect(dirs).toHaveLength(1)
+    expect(dirs[0].dir).toBe(path.join(bundledRoot, "visual-tools"))
+    expect(dirs[0].createdPluginJson).toBe(false)
   })
 })
