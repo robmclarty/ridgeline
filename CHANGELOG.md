@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.0
+
+- Add `ridgeline research` and `ridgeline refine` as optional pipeline stages between spec and plan
+- Research ensemble uses web-sourced specialists (academic, ecosystem, competitive) with quick and deep modes
+- Refine merges research findings back into spec.md via a dedicated refiner agent
+- Add `--auto [N]` flag for iterative research-refine loops
+- Add `isStructured` flag to ensemble engine for prose output (used by researcher)
+- Create researcher and refiner agents for all 13 flavours
+- Update all documentation for research/refine pipeline and `--flavour` flag
+- Add docs/research.md as a comprehensive standalone guide for the research feature
+- Fix stale `--to` help text in the rewind CLI command
+
 ## 0.5.9
 
 - Use wall-clock duration instead of Claude's self-reported time for build/review budget entries
