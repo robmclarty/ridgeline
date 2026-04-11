@@ -6,8 +6,10 @@ import { invokeClaude } from "../engine/claude/claude.exec"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { createDisplayCallbacks } from "../engine/claude/stream.display"
-import { advancePipeline } from "../stores/state"
+import { advancePipeline, recordMatchedShapes } from "../stores/state"
 import { resolveBuildDir } from "../config"
+import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
+import { runDesign } from "./design"
 
 const MAX_CLARIFICATION_ROUNDS = 4
 
@@ -378,11 +380,37 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
     // Update pipeline state
     advancePipeline(buildDir, buildName, "shape")
 
-    console.log("")
-    printInfo("Created:")
-    console.log(`  ${path.join(buildDir, "shape.md")}`)
-    console.log("")
-    printInfo(`Next: ridgeline spec ${buildName}`)
+    // --- Shape detection ---
+    const shapeMdContent = fs.readFileSync(path.join(buildDir, "shape.md"), "utf-8")
+    const shapeDefinitions = loadShapeDefinitions()
+    const matchedShapes = detectShapes(shapeMdContent, shapeDefinitions)
+
+    if (matchedShapes.length > 0) {
+      const matchedNames = matchedShapes.map((s) => s.name)
+      recordMatchedShapes(buildDir, buildName, matchedNames)
+
+      console.log("")
+      printInfo("Created:")
+      console.log(`  ${path.join(buildDir, "shape.md")}`)
+      console.log("")
+      printInfo(`Visual concerns detected: ${matchedNames.join(", ")}`)
+      printInfo("Auto-chaining to design...")
+      console.log("")
+
+      // Auto-chain to design command within the same build context
+      await runDesign(buildName, {
+        model: opts.model,
+        timeout: opts.timeout,
+        flavour: opts.flavour,
+        matchedShapes: matchedNames,
+      })
+    } else {
+      console.log("")
+      printInfo("Created:")
+      console.log(`  ${path.join(buildDir, "shape.md")}`)
+      console.log("")
+      printInfo(`Next: ridgeline spec ${buildName}`)
+    }
   } finally {
     rl.close()
   }
