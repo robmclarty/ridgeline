@@ -7,7 +7,9 @@ import { parseVerdict } from "../../stores/feedback.verdict"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
-import { prepareAgentsAndPlugins, commonInvokeOptions } from "./pipeline.shared"
+import { prepareAgentsAndPlugins, commonInvokeOptions, appendDesign } from "./pipeline.shared"
+import { getMatchedShapes } from "../../stores/state"
+import { loadShapeDefinitions } from "../../shapes/detect"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -34,6 +36,31 @@ const assembleUserPrompt = (
   sections.push("## constraints.md\n")
   sections.push(fs.readFileSync(config.constraintsPath, "utf-8"))
   sections.push("")
+
+  // Inject design.md
+  appendDesign(sections, config)
+
+  // Inject reviewer context from matched shapes
+  const matchedShapeNames = getMatchedShapes(config.buildDir)
+  if (matchedShapeNames.length > 0) {
+    const allDefs = loadShapeDefinitions()
+    const matchedDefs = allDefs.filter((d) => matchedShapeNames.includes(d.name))
+
+    if (matchedDefs.length > 0) {
+      sections.push("## Visual Design Review Context\n")
+      sections.push("The following visual design heuristics apply to this phase:\n")
+      for (const def of matchedDefs) {
+        sections.push(`### ${def.name}\n`)
+        sections.push(def.reviewerContext)
+        sections.push("")
+      }
+      sections.push("**Review rules for design.md:**")
+      sections.push("- Hard token violations (specific values with imperative language) → severity: blocking")
+      sections.push("- Soft guidance deviations (directional language) → severity: suggestion")
+      sections.push("- Skipped tools → noted in verdict, never blocking")
+      sections.push("")
+    }
+  }
 
   return sections.join("\n")
 }
