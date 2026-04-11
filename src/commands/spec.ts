@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
 import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
-import { advancePipeline } from "../stores/state"
+import { advancePipeline, getMatchedShapes } from "../stores/state"
 
 export type SpecOptions = {
   model: string
@@ -31,6 +31,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     flavour: opts.flavour ?? null,
+    matchedShapes: getMatchedShapes(buildDir),
   }
 
   const result = await invokeSpecifier(shapeMd, config)

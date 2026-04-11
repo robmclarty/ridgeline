@@ -72,6 +72,24 @@ const SPEC_SPECIALIST_SCHEMA = JSON.stringify({
       items: { type: "string" },
       description: "Things the other specialists might miss",
     },
+    design: {
+      type: ["object", "null"],
+      properties: {
+        hardTokens: { type: "array", items: { type: "string" } },
+        softGuidance: { type: "array", items: { type: "string" } },
+        featureVisuals: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              feature: { type: "string" },
+              criteria: { type: "array", items: { type: "string" } },
+            },
+            required: ["feature", "criteria"],
+          },
+        },
+      },
+    },
   },
   required: ["perspective", "spec", "constraints", "tradeoffs", "concerns"],
 })
@@ -103,9 +121,42 @@ const buildSpecSpecialistPrompt = (overlay: string): string => {
   return `${overlay}${jsonDirective}`
 }
 
-/** Assemble the user prompt for a spec specialist — just the shape content. */
-const assembleSpecialistUserPrompt = (shapeMd: string): string => {
-  return `## shape.md\n\n${shapeMd}\n\nIMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON.`
+/** Assemble the user prompt for a spec specialist — shape content plus design context. */
+const assembleSpecialistUserPrompt = (
+  shapeMd: string,
+  config: SpecEnsembleConfig,
+): string => {
+  const sections: string[] = []
+
+  sections.push(`## shape.md\n\n${shapeMd}`)
+  sections.push("")
+
+  // Inject design.md for visual specialist context
+  const ridgelineDir = path.join(config.buildDir, "..", "..")
+  const projectDesignPath = path.join(ridgelineDir, "design.md")
+  const featureDesignPath = path.join(config.buildDir, "design.md")
+
+  if (fs.existsSync(projectDesignPath)) {
+    sections.push("## Project Design\n")
+    sections.push(fs.readFileSync(projectDesignPath, "utf-8"))
+    sections.push("")
+  }
+
+  if (fs.existsSync(featureDesignPath)) {
+    sections.push("## Feature Design\n")
+    sections.push(fs.readFileSync(featureDesignPath, "utf-8"))
+    sections.push("")
+  }
+
+  if (config.matchedShapes.length > 0) {
+    sections.push("## Matched Visual Shape Categories\n")
+    sections.push(config.matchedShapes.join(", "))
+    sections.push("")
+  }
+
+  sections.push("IMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON.")
+
+  return sections.join("\n")
 }
 
 /** Assemble the user prompt for the specifier synthesizer. */
@@ -157,6 +208,23 @@ const assembleSynthesizerUserPrompt = (
       sections.push("")
     }
 
+    if (draft.design) {
+      sections.push("**Design Proposal:**")
+      if (draft.design.hardTokens && draft.design.hardTokens.length > 0) {
+        sections.push(`- Hard tokens: ${draft.design.hardTokens.join("; ")}`)
+      }
+      if (draft.design.softGuidance && draft.design.softGuidance.length > 0) {
+        sections.push(`- Soft guidance: ${draft.design.softGuidance.join("; ")}`)
+      }
+      if (draft.design.featureVisuals && draft.design.featureVisuals.length > 0) {
+        sections.push("- Feature visuals:")
+        for (const fv of draft.design.featureVisuals) {
+          sections.push(`  - **${fv.feature}**: ${fv.criteria.join("; ")}`)
+        }
+      }
+      sections.push("")
+    }
+
     sections.push("---\n")
   }
 
@@ -177,6 +245,7 @@ export type SpecEnsembleConfig = {
   maxBudgetUsd: number | null
   buildDir: string
   flavour: string | null
+  matchedShapes: string[]
 }
 
 export const invokeSpecifier = async (
@@ -185,12 +254,23 @@ export const invokeSpecifier = async (
 ): Promise<EnsembleResult> => {
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
 
+  // Get standard specialists
+  let specialists = registry.getSpecialists("specifiers")
+
+  // Conditionally add visual coherence specialist when visual shapes matched
+  if (config.matchedShapes.length > 0) {
+    const visualSpecialist = registry.getSpecialist("specifiers", "visual-coherence.md")
+    if (visualSpecialist) {
+      specialists = [...specialists, visualSpecialist]
+    }
+  }
+
   return invokeEnsemble<SpecifierDraft>({
     label: "Specifying",
-    specialists: registry.getSpecialists("specifiers"),
+    specialists,
 
     buildSpecialistPrompt: buildSpecSpecialistPrompt,
-    specialistUserPrompt: assembleSpecialistUserPrompt(shapeMd),
+    specialistUserPrompt: assembleSpecialistUserPrompt(shapeMd, config),
     specialistSchema: SPEC_SPECIALIST_SCHEMA,
 
     synthesizerPrompt: registry.getCorePrompt("specifier.md"),
