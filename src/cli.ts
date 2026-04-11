@@ -137,15 +137,15 @@ program
   .option("--timeout <minutes>", "Max duration per agent in minutes", "15")
   .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
   .option("--deep", "Run full ensemble (3 specialists) instead of quick single-agent research")
-  .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 3)")
+  .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 2)")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       const autoRaw = opts.auto
       let auto: number | null = null
       if (autoRaw !== undefined) {
-        auto = autoRaw === true ? 3 : parseInt(String(autoRaw), 10)
-        if (isNaN(auto) || auto < 1) auto = 3
+        auto = autoRaw === true ? 2 : parseInt(String(autoRaw), 10)
+        if (isNaN(auto) || auto < 1) auto = 2
       }
 
       await runResearch(await requireBuildName(buildName), {
