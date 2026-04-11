@@ -24,6 +24,7 @@ type CreateOptions = {
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
   shape: "shape.md",
+  design: "design.md",
   spec: "spec.md",
   research: "research.md",
   refine: "refine",
@@ -47,7 +48,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
   console.log("")
   printInfo(`Build: ${buildName}`)
   console.log("")
-  const DISPLAY_STAGES: PipelineStage[] = ["shape", "spec", "research", "refine", "plan", "build"]
+  const DISPLAY_STAGES: PipelineStage[] = ["shape", "design", "spec", "research", "refine", "plan", "build"]
   for (const stage of DISPLAY_STAGES) {
     const icon = STATUS_ICONS[status[stage]] ?? (status[stage] === "skipped" ? "skip" : "---")
     const label = STAGE_LABELS[stage]
