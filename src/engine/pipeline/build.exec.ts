@@ -7,7 +7,7 @@ import { readHandoff } from "../../stores/handoff"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
-import { prepareAgentsAndPlugins, appendConstraintsAndTaste, commonInvokeOptions } from "./pipeline.shared"
+import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, commonInvokeOptions } from "./pipeline.shared"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -17,6 +17,7 @@ const assembleUserPrompt = (
   const sections: string[] = []
 
   appendConstraintsAndTaste(sections, config)
+  appendDesign(sections, config)
 
   const handoff = readHandoff(config.buildDir)
   if (handoff) {

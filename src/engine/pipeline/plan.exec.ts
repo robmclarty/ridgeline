@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../../types"
-import { appendConstraintsAndTaste } from "./pipeline.shared"
+import { appendConstraintsAndTaste, appendDesign } from "./pipeline.shared"
 
 /** Assemble the shared portion of the user prompt: spec, constraints, taste, target model. */
 export const assembleBaseUserPrompt = (config: RidgelineConfig): string => {
@@ -13,6 +13,7 @@ export const assembleBaseUserPrompt = (config: RidgelineConfig): string => {
   sections.push("")
 
   appendConstraintsAndTaste(sections, config)
+  appendDesign(sections, config)
 
   sections.push("## Target Model\n")
   sections.push(`The builder will use the \`${config.model}\` model.`)
