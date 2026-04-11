@@ -86,7 +86,6 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
         ? `[${event.tool}] ${summary}`
         : `[${event.tool}]`
       spinner.printAbove(line)
-      spinner.setDetail(event.tool)
       lastEventWasTool = true
     }
   })

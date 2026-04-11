@@ -250,12 +250,14 @@ const runClarificationLoop = async (
 
     const normalized = qa.questions.map(normalizeQuestion)
     console.log("\nI have a few questions:\n")
+    console.log(`  \x1b[90m(tip: you can enter a file path for longer answers)\x1b[0m\n`)
     const answers: string[] = []
     for (let i = 0; i < normalized.length; i++) {
+      if (i > 0) console.log("")
       const q = normalized[i]
       if (q.suggestedAnswer) {
         console.log(`  ${i + 1}. ${q.question}`)
-        console.log(`     (suggested: ${q.suggestedAnswer})`)
+        console.log(`     \x1b[90m(suggested: ${q.suggestedAnswer})\x1b[0m`)
         const answer = await askQuestion(rl, `  > `)
         answers.push(answer || q.suggestedAnswer)
       } else {
@@ -264,7 +266,7 @@ const runClarificationLoop = async (
       }
     }
 
-    console.log("\nProcessing your answers...")
+    process.stderr.write(`\n\x1b[90mProcessing your answers...\x1b[0m\n`)
     const answersPrompt = normalized
       .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
       .join("\n\n")
@@ -308,7 +310,7 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
     }
 
     // Intake turn — shaper analyzes codebase + user input
-    console.log("\nAnalyzing project and input...")
+    process.stderr.write(`\n\x1b[90mAnalyzing project and input...\x1b[0m\n`)
     const userPrompt = [
       `The user wants to create a new build called "${buildName}".`,
       "",
@@ -343,7 +345,7 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
     if (qa.summary) {
       console.log(`\nFinal understanding:\n  ${qa.summary}`)
     }
-    console.log("\nProducing shape document...")
+    process.stderr.write(`\n\x1b[90mProducing shape document...\x1b[0m\n`)
 
     display = createDisplayCallbacks({ projectRoot: process.cwd() })
     const shapeResult = await invokeClaude({
