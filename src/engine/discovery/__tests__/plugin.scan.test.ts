@@ -182,64 +182,51 @@ describe("getBundledPluginDir", () => {
   })
 })
 
-describe("discoverPluginDirs with bundled plugins", () => {
-  const makeBundledPlugin = (bundledRoot: string, pluginName: string): void => {
-    const pluginDir = path.join(bundledRoot, pluginName)
-    fs.mkdirSync(path.join(pluginDir, "skills"), { recursive: true })
-    fs.writeFileSync(
-      path.join(pluginDir, "plugin.json"),
-      JSON.stringify({ name: pluginName, description: "bundled plugin" }),
-    )
-  }
+describe("discoverPluginDirs includes bundled plugins", () => {
+  it("includes bundled plugin dirs in results when bundled root exists", () => {
+    const dir = trackTempDir(makeTempDir())
+    const config = makeConfig(dir)
 
-  it("discovers bundled plugin subdirectories that have plugin.json", () => {
-    const bundledRoot = trackTempDir(makeTempDir())
-    makeBundledPlugin(bundledRoot, "visual-tools")
-    makeBundledPlugin(bundledRoot, "code-tools")
+    // @ts-expect-error — partial config for testing
+    const result = discoverPluginDirs(config)
+    const bundledRoot = getBundledPluginDir()
 
-    // Verify the bundled root structure is valid for the scanner
-    const entries = fs.readdirSync(bundledRoot)
-    expect(entries).toHaveLength(2)
-    for (const entry of entries) {
-      const subdir = path.join(bundledRoot, entry)
-      expect(fs.statSync(subdir).isDirectory()).toBe(true)
-      expect(fs.existsSync(path.join(subdir, "plugin.json"))).toBe(true)
+    if (bundledRoot) {
+      // Bundled plugins should appear in results
+      const bundledDirs = result.filter(d => d.dir.startsWith(bundledRoot))
+      expect(bundledDirs.length).toBeGreaterThan(0)
+
+      // All bundled dirs should have createdPluginJson false
+      for (const d of bundledDirs) {
+        expect(d.createdPluginJson).toBe(false)
+      }
+
+      // Each bundled dir should have a plugin.json
+      for (const d of bundledDirs) {
+        expect(fs.existsSync(path.join(d.dir, "plugin.json"))).toBe(true)
+      }
     }
   })
 
-  it("skips bundled subdirectories without plugin.json", () => {
-    const bundledRoot = trackTempDir(makeTempDir())
+  it("bundled plugin dirs are real directories with plugin.json", () => {
+    const bundledRoot = getBundledPluginDir()
+    if (!bundledRoot) return
 
-    // A subdir with plugin.json
-    makeBundledPlugin(bundledRoot, "valid-plugin")
-
-    // A subdir without plugin.json
-    fs.mkdirSync(path.join(bundledRoot, "incomplete-plugin", "skills"), { recursive: true })
-
+    // Verify the structure that discoverPluginDirs relies on
     const entries = fs.readdirSync(bundledRoot)
-    const validDirs = entries.filter(entry => {
-      const subdir = path.join(bundledRoot, entry)
-      return fs.statSync(subdir).isDirectory() && fs.existsSync(path.join(subdir, "plugin.json"))
-    })
-    expect(validDirs).toHaveLength(1)
-    expect(validDirs[0]).toBe("valid-plugin")
-  })
-
-  it("bundled plugins are added with createdPluginJson false", () => {
-    const bundledRoot = trackTempDir(makeTempDir())
-    makeBundledPlugin(bundledRoot, "visual-tools")
-
-    // Simulate what discoverPluginDirs does for bundled entries
-    const dirs: Array<{ dir: string; createdPluginJson: boolean }> = []
-    for (const entry of fs.readdirSync(bundledRoot)) {
+    for (const entry of entries) {
       const subdir = path.join(bundledRoot, entry)
       if (!fs.statSync(subdir).isDirectory()) continue
       if (!fs.existsSync(path.join(subdir, "plugin.json"))) continue
-      dirs.push({ dir: subdir, createdPluginJson: false })
-    }
 
-    expect(dirs).toHaveLength(1)
-    expect(dirs[0].dir).toBe(path.join(bundledRoot, "visual-tools"))
-    expect(dirs[0].createdPluginJson).toBe(false)
+      // This subdir should appear in discoverPluginDirs results
+      const dir = trackTempDir(makeTempDir())
+      const config = makeConfig(dir)
+      // @ts-expect-error — partial config for testing
+      const result = discoverPluginDirs(config)
+      const match = result.find(d => d.dir === subdir)
+      expect(match).toBeDefined()
+      expect(match!.createdPluginJson).toBe(false)
+    }
   })
 })
