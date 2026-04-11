@@ -4,7 +4,7 @@ import { printInfo, printError } from "../ui/output"
 import { rewindTo, getPipelineStatus } from "../stores/state"
 import { PipelineStage } from "../types"
 
-const VALID_STAGES: PipelineStage[] = ["shape", "spec", "research", "refine", "plan"]
+const VALID_STAGES: PipelineStage[] = ["shape", "design", "spec", "research", "refine", "plan"]
 
 export const runRewind = (buildName: string, to: string): void => {
   if (!VALID_STAGES.includes(to as PipelineStage)) {
@@ -41,7 +41,7 @@ export const runRewind = (buildName: string, to: string): void => {
   }
 
   console.log("")
-  const ALL_DISPLAY_STAGES: PipelineStage[] = ["shape", "spec", "research", "refine", "plan", "build"]
+  const ALL_DISPLAY_STAGES: PipelineStage[] = ["shape", "design", "spec", "research", "refine", "plan", "build"]
   for (const stage of ALL_DISPLAY_STAGES) {
     const status = statusAfter[stage]
     const icon = status === "complete" ? "done" : status === "skipped" ? "skip" : "---"
