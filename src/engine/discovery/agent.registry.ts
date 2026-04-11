@@ -14,6 +14,9 @@ type AgentRegistry = {
   /** Get ensemble specialists for a subfolder (e.g., "planners"). */
   getSpecialists: (subfolder: string) => SpecialistDef[]
 
+  /** Get a single specialist by subfolder and filename. Returns null if not found. */
+  getSpecialist: (subfolder: string, filename: string) => SpecialistDef | null
+
   /** Get shared context for an ensemble subfolder. Returns null if no context.md. */
   getContext: (subfolder: string) => string | null
 
@@ -130,7 +133,31 @@ export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry =>
   const getSpecialists = (subfolder: string): SpecialistDef[] => {
     const dir = resolveSubfolder(subfolder, flavourPath, defaultAgentsDir)
     if (!dir) return []
-    return discoverSpecialistsInDir(dir, ["context.md", "gaps.md"])
+    return discoverSpecialistsInDir(dir, ["context.md", "gaps.md", "visual-coherence.md"])
+  }
+
+  const getSpecialist = (subfolder: string, filename: string): SpecialistDef | null => {
+    const dir = resolveSubfolder(subfolder, flavourPath, defaultAgentsDir)
+    if (!dir) return null
+
+    const filepath = path.join(dir, filename)
+    if (!fs.existsSync(filepath)) return null
+
+    try {
+      const content = fs.readFileSync(filepath, "utf-8")
+      const fm = parseFrontmatter(content)
+      if (!fm) return null
+
+      const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
+      const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
+
+      const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
+      if (!body) return null
+
+      return { perspective, overlay: body }
+    } catch {
+      return null
+    }
   }
 
   const getContext = (subfolder: string): string | null => {
@@ -165,5 +192,5 @@ export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry =>
     return buildAgentsFlag(getSubAgents())
   }
 
-  return { getCorePrompt, getSpecialists, getContext, getGaps, getSubAgents, getAgentsFlag }
+  return { getCorePrompt, getSpecialists, getSpecialist, getContext, getGaps, getSubAgents, getAgentsFlag }
 }
