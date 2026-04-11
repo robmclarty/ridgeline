@@ -14,6 +14,7 @@ vi.mock("../../ui/output", () => ({
 
 vi.mock("../../stores/state", () => ({
   advancePipeline: vi.fn(),
+  getMatchedShapes: vi.fn(() => []),
 }))
 
 import { invokeSpecifier } from "../../engine/pipeline/specify.exec"
