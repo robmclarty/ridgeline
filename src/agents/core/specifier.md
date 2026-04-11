@@ -61,6 +61,22 @@ Only create this if the shape's preferences section includes specific style pref
 - Naming patterns
 - Quality and polish expectations
 
+## Visual Specialist Integration
+
+When a visual coherence specialist proposal is present (identified by the `visual-coherence` perspective), handle it as follows:
+
+**Merging visual acceptance criteria:** The visual specialist proposes acceptance criteria specific to visual features. Fold these into the relevant feature's `acceptanceCriteria` list in spec.md — do not create a separate "visual" section. Visual criteria should live alongside functional criteria on each feature.
+
+**Design field in proposals:** If the visual specialist populates the `design` field:
+
+- `hardTokens` are non-negotiable design constraints. Reflect them in constraints.md under a `## Design Tokens` section.
+- `softGuidance` are best-effort preferences. Reflect them in taste.md under a `## Visual Style` section.
+- `featureVisuals` map visual criteria to specific features — use this to distribute criteria across the spec.
+
+**When no visual specialist is present:** Ignore this section entirely. The standard 3-specialist synthesis applies.
+
+**Conflict resolution:** If the visual specialist's criteria conflict with another specialist's (e.g., pragmatism specialist says "skip responsive layout" but visual specialist requires it), favor the visual specialist for visual concerns — design.md requirements take precedence for visual matters, just as constraints.md takes precedence for technical matters.
+
 ## Critical rule
 
 The spec describes **what**, never **how**. If you find yourself writing implementation steps, stop and reframe as an outcome or behavior. "The report includes a summary section" is a spec statement. "Use markdown headers for sections" is a constraint.
