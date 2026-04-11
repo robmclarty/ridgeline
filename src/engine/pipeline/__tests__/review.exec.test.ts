@@ -80,6 +80,9 @@ import { createDisplayCallbacks } from "../../claude/stream.display"
 import { getDiff } from "../../../git"
 import { parseVerdict } from "../../../stores/feedback.verdict"
 import { cleanupPluginDirs } from "../../discovery/plugin.scan"
+import { appendDesign } from "../pipeline.shared"
+import { getMatchedShapes } from "../../../stores/state"
+import { loadShapeDefinitions } from "../../../shapes/detect"
 
 beforeEach(() => vi.clearAllMocks())
 
@@ -167,6 +170,34 @@ describe("invokeReviewer", () => {
 
     expect(output.result).toBe(result)
     expect(output.verdict).toBe(passVerdict)
+  })
+
+  it("calls appendDesign with the config", async () => {
+    vi.mocked(invokeClaude).mockResolvedValue(makeClaudeResult())
+
+    const config = makeConfig()
+    await invokeReviewer(config, makePhase(), "checkpoint-tag")
+
+    expect(appendDesign).toHaveBeenCalledWith(expect.any(Array), config)
+  })
+
+  it("includes visual review context when shapes matched", async () => {
+    vi.mocked(invokeClaude).mockResolvedValue(makeClaudeResult())
+    vi.mocked(getMatchedShapes).mockReturnValue(["web-visual"])
+    vi.mocked(loadShapeDefinitions).mockReturnValue([
+      {
+        name: "web-visual",
+        keywords: ["web", "browser"],
+        toolFamily: "playwright",
+        reviewerContext: "Check responsive behavior at mobile/tablet/desktop viewports.",
+      },
+    ])
+
+    await invokeReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(invokeClaude).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## Visual Design Review Context")
+    expect(call.userPrompt).toContain("Check responsive behavior at mobile/tablet/desktop viewports.")
   })
 
   it("calls flush and cleanupPluginDirs in finally block", async () => {
