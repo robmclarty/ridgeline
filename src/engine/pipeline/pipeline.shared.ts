@@ -1,4 +1,5 @@
 import * as fs from "node:fs"
+import * as path from "node:path"
 import { RidgelineConfig } from "../../types"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
@@ -78,6 +79,31 @@ export const appendConstraintsAndTaste = (sections: string[], config: RidgelineC
   if (config.extraContext) {
     sections.push("## Additional Context\n")
     sections.push(config.extraContext)
+    sections.push("")
+  }
+}
+
+/**
+ * Append design.md sections to a prompt sections array.
+ * Checks both project-level (.ridgeline/design.md) and feature-level (buildDir/design.md).
+ * Both can coexist — injected as separate labeled sections.
+ */
+export const appendDesign = (sections: string[], config: RidgelineConfig): void => {
+  const projectDesignPath = path.join(config.ridgelineDir, "design.md")
+  const featureDesignPath = path.join(config.buildDir, "design.md")
+
+  const hasProject = fs.existsSync(projectDesignPath)
+  const hasFeature = fs.existsSync(featureDesignPath)
+
+  if (hasProject) {
+    sections.push("## Project Design\n")
+    sections.push(fs.readFileSync(projectDesignPath, "utf-8"))
+    sections.push("")
+  }
+
+  if (hasFeature) {
+    sections.push("## Feature Design\n")
+    sections.push(fs.readFileSync(featureDesignPath, "utf-8"))
     sections.push("")
   }
 }
