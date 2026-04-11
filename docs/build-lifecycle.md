@@ -68,12 +68,18 @@ ridgeline research my-feature --deep  # deep mode (3 specialists)
 ```
 
 The research ensemble investigates the spec against external sources --
-academic papers, framework documentation, and competitive products. In quick
-mode, one specialist (ecosystem) runs. In deep mode, three specialists
+academic papers, framework documentation, and competitive products. Before
+dispatching specialists, a lightweight agenda step evaluates the spec against a
+domain gap checklist (`gaps.md`) to focus the search on what's actually missing.
+In quick mode, one specialist (ecosystem) runs. In deep mode, three specialists
 (academic, ecosystem, competitive) run in parallel, each searching through a
 different lens. A synthesizer merges the reports into `research.md`.
 
-Auto mode (`--auto [N]`) chains research and refine for N iterations,
+Research findings accumulate across iterations -- each run appends new findings
+to a Findings Log rather than overwriting prior work. Active Recommendations
+are rewritten each iteration based on all findings.
+
+Auto mode (`--auto [N]`) chains research and refine for N iterations (default 2),
 progressively improving the spec.
 
 See [Research and Refine](research.md) for full details.
@@ -89,11 +95,13 @@ ridgeline refine my-feature
 ```
 
 The refiner agent reads `spec.md` and `research.md`, then rewrites `spec.md`
-incorporating the research findings. It is additive by default -- it adds
-insights and edge cases without removing user-authored content. Sources are
-cited inline so you can trace what came from research.
+incorporating the research findings. It also writes `spec.changelog.md`
+documenting what changed and why, with source citations. Both the researcher
+and refiner read the changelog on subsequent iterations to avoid redundant work.
 
-The refiner does not modify `constraints.md` or `taste.md`.
+The refiner is additive by default -- it adds insights and edge cases without
+removing user-authored content. Sources are cited inline so you can trace what
+came from research. It does not modify `constraints.md` or `taste.md`.
 
 **What to review before proceeding:** Read the updated `spec.md`. Check that
 research additions are accurate and within scope. The refiner flags conflicts

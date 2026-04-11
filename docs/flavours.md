@@ -91,12 +91,24 @@ game-dev/
 │   ├── completeness.md  ← "Is anything missing?"
 │   ├── clarity.md       ← "Is this unambiguous?"
 │   └── pragmatism.md    ← "Is this buildable?"
+├── researchers/
+│   ├── academic.md     ← Academic research perspective
+│   ├── competitive.md  ← Competitive analysis perspective
+│   ├── ecosystem.md    ← Ecosystem/docs research perspective
+│   └── gaps.md         ← Domain gap checklist for focused research
 └── specialists/
     ├── auditor.md       ← Domain-specific auditing
     ├── explorer.md      ← Codebase exploration
     ├── tester.md        ← Test strategy
     └── verifier.md      ← Output verification
 ```
+
+The `gaps.md` file is a static checklist, not an agent. It provides a
+domain-specific list of concerns and knowledge gaps that the research agenda
+step reads before dispatching specialists. For example, a game-dev `gaps.md`
+might list rendering pipeline choices, physics engine tradeoffs, and
+platform-specific performance concerns. This focuses research on the
+questions that matter most in the domain.
 
 ### Per-folder fallback
 
@@ -108,6 +120,12 @@ default specialists are used instead.
 This means a minimal flavour can override just the core agents and inherit
 everything else.
 
+The `gaps.md` file has independent fallback -- if a flavour does not provide
+its own `researchers/gaps.md`, the base gap checklist is used regardless of
+whether the flavour overrides other researcher files. This ensures every
+research run has gap guidance even when a flavour only customizes a subset
+of research agents.
+
 ## How flavours affect each stage
 
 ### Shape
@@ -117,6 +135,19 @@ engine choice, target platform, input methods, art style, and gameplay
 mechanics. A legal-drafting shaper asks about jurisdiction, contract type,
 parties, and governing law. The shape document that comes out is grounded in
 domain vocabulary and concerns.
+
+### Research
+
+The flavour's `researchers/` subfolder customizes the research pipeline. Domain
+researcher agents (academic, ecosystem, competitive) focus their web searches
+and analysis on domain-relevant sources and concerns. The `gaps.md` checklist
+steers the agenda step toward domain-specific questions -- a security-audit
+flavour's gap checklist probes for vulnerability databases and compliance
+frameworks, while a machine-learning flavour's checklist focuses on dataset
+licensing, model architecture benchmarks, and training infrastructure options.
+Together, the researcher agents and gap checklist ensure the research pipeline
+investigates what actually matters in the domain rather than applying generic
+due diligence.
 
 ### Spec
 

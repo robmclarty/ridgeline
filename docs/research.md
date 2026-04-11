@@ -54,6 +54,25 @@ investigates through a different lens:
 Use deep mode when the spec domain is unfamiliar, the architecture is complex,
 or you want competitive analysis to inform the design.
 
+### Research agenda pre-step
+
+Before dispatching specialists, the research pipeline runs a lightweight agenda
+generation step using sonnet. The agenda step evaluates the current spec against
+a domain gap checklist (`gaps.md`) and produces a focused research agenda --
+specific questions and search terms for specialists to investigate.
+
+On iteration 2+, the agenda shifts focus to unexplored territory, using the
+accumulated findings log and `spec.changelog.md` to avoid repeating prior work.
+
+### gaps.md
+
+Each flavour has a `researchers/gaps.md` file -- a static domain checklist of
+common spec gaps (e.g., security considerations, error handling, performance
+constraints, accessibility). There is also a base checklist for generic software
+projects. The agenda step reads this to know what to look for, ensuring
+specialists investigate areas the spec may have missed rather than only
+confirming what is already there.
+
 ### How specialists work
 
 Research specialists are different from specifier and planner specialists in
@@ -66,18 +85,18 @@ of schema-validated JSON.
 
 Each specialist receives the current `spec.md`, `constraints.md`, and
 `taste.md` as context, along with its shared context document
-(`agents/researchers/context.md`) and its personality overlay. It researches
-the spec using its web tools and returns a markdown report with sourced
-findings and recommendations.
+(`agents/researchers/context.md`), its personality overlay, and the research
+agenda. It researches the spec using its web tools and returns a markdown
+report with sourced findings and recommendations.
 
 The synthesizer (the `researcher` core agent) then merges the specialist
-reports into a single `research.md` file, deduplicating findings, resolving
-conflicts, and ranking recommendations by impact.
+reports into `research.md`, deduplicating findings, resolving conflicts, and
+ranking recommendations by impact.
 
 ## Auto Mode
 
 ```sh
-ridgeline research my-feature --auto        # 3 iterations (default)
+ridgeline research my-feature --auto        # 2 iterations (default)
 ridgeline research my-feature --auto 5      # 5 iterations
 ridgeline research my-feature --deep --auto 2  # deep + 2 iterations
 ```
@@ -85,17 +104,18 @@ ridgeline research my-feature --deep --auto 2  # deep + 2 iterations
 Auto mode chains research and refine into an iterative loop:
 
 ```text
-iteration 1: research → refine (spec.md updated)
-iteration 2: research → refine (spec.md updated again, building on iteration 1)
-iteration 3: research → refine (final spec.md)
+iteration 1: agenda → research → refine (spec.md updated, spec.changelog.md written)
+iteration 2: agenda → research → refine (final spec.md, changelog updated)
 ```
 
-Each iteration researches the current spec (which includes improvements from
-prior iterations) and refines it. This is useful when the domain is complex
-enough that a single research pass won't surface everything -- each iteration
-can dig deeper into areas the previous refine added.
+Each iteration generates an agenda, researches the current spec (which includes
+improvements from prior iterations), and refines it. This is useful when the
+domain is complex enough that a single research pass won't surface everything --
+each iteration can dig deeper into areas the previous refine added. The agenda
+step ensures later iterations focus on unexplored gaps rather than re-covering
+old ground.
 
-The default is 3 iterations when `--auto` is passed without a number. The
+The default is 2 iterations when `--auto` is passed without a number. The
 number is configurable: `--auto 1` for a single pass, `--auto 5` for thorough
 exploration.
 
@@ -108,8 +128,21 @@ to planning.
 ridgeline refine my-feature
 ```
 
-The refiner is a single agent (not an ensemble). It reads `spec.md` and
-`research.md`, then rewrites `spec.md` incorporating the research findings.
+The refiner is a single agent (not an ensemble). It reads `spec.md`,
+`research.md`, and `spec.changelog.md` (if it exists), then rewrites `spec.md`
+incorporating the research findings.
+
+### spec.changelog.md
+
+The refiner writes `spec.changelog.md` alongside `spec.md` after each
+iteration. This changelog documents what changed and why, with source citations
+from the research findings. It also includes "Skipped" entries for
+recommendations that were not incorporated, along with the reasoning.
+
+Both the researcher and refiner read `spec.changelog.md` on subsequent
+iterations to avoid redundant work -- the researcher shifts its agenda away
+from already-addressed topics, and the refiner avoids re-evaluating
+recommendations that were previously considered and skipped.
 
 ### Refinement rules
 
@@ -141,34 +174,53 @@ The refiner is a single agent (not an ensemble). It reads `spec.md` and
 
 ## research.md Format
 
-The synthesizer produces `research.md` in the build directory with this
-structure:
+The synthesizer produces `research.md` in the build directory. Findings
+accumulate across iterations -- the file is not overwritten each time. The
+format:
 
 ```markdown
 # Research Findings
 
-> Research conducted on [date] for spec: [spec title]
+> Spec: [spec title]
 
-## Key Recommendations
+## Active Recommendations
 
-Bullet list of the 3-5 most impactful recommendations.
+Bullet list of the 3-5 most impactful recommendations, rewritten each
+iteration based on all findings to date.
 
-## Detailed Findings
+## Findings Log
 
-### [Topic/Theme 1]
+### Iteration 2 — [date]
+
+#### [Topic/Theme]
 
 **Source:** [URL or citation]
 **Perspective:** [which specialist found this]
 **Relevance:** [why this matters to the spec]
 **Recommendation:** [what should change in the spec]
 
-### [Topic/Theme 2]
+...
+
+### Iteration 1 — [date]
+
+#### [Topic/Theme]
+
+**Source:** [URL or citation]
+**Perspective:** [which specialist found this]
+**Relevance:** [why this matters to the spec]
+**Recommendation:** [what should change in the spec]
+
 ...
 
 ## Sources
 
-Numbered list of all URLs and citations.
+Cumulative numbered list of all URLs and citations across all iterations.
 ```
+
+Newest iterations appear first in the Findings Log. Active Recommendations
+are rewritten each iteration to reflect the full body of accumulated findings,
+not just the latest round. Sources are cumulative -- new sources are appended
+each iteration, never removed.
 
 In quick mode (one specialist), the synthesizer still organizes and structures
 the findings rather than passing them through unchanged.
@@ -197,8 +249,8 @@ Run each step separately, reviewing and editing between them:
 ridgeline spec my-feature
 ridgeline research my-feature --deep   # produces research.md
 # Review and edit research.md -- remove noise, add notes
-ridgeline refine my-feature            # rewrites spec.md
-# Review the updated spec.md
+ridgeline refine my-feature            # rewrites spec.md, writes spec.changelog.md
+# Review the updated spec.md and spec.changelog.md
 ridgeline plan my-feature
 ```
 
@@ -213,8 +265,8 @@ Let research and refine iterate automatically:
 
 ```sh
 ridgeline spec my-feature
-ridgeline research my-feature --auto 3    # 3 iterations of research + refine
-# Review the final spec.md
+ridgeline research my-feature --auto 2    # 2 iterations of research + refine
+# Review the final spec.md and spec.changelog.md
 ridgeline plan my-feature
 ```
 
@@ -245,15 +297,18 @@ process and want to explore the domain broadly before reviewing the result.
 
 ## Cost
 
-Research costs depend on mode and iterations:
+Research costs depend on mode and iterations. Each iteration now includes an
+agenda step (1 sonnet call):
 
 | Configuration | Claude calls | Approximate cost profile |
 |---------------|-------------|--------------------------|
-| Quick research | 2 (1 specialist + 1 synthesizer) | Low |
-| Deep research | 4 (3 specialists + 1 synthesizer) | Moderate |
+| Quick research | 3 (1 agenda + 1 specialist + 1 synthesizer) | Low |
+| Deep research | 5 (1 agenda + 3 specialists + 1 synthesizer) | Moderate |
 | Refine | 1 | Low |
-| `--auto 3` (quick) | 9 (3 × research + 3 × refine) | Moderate |
-| `--auto 3 --deep` | 15 (3 × 4 research + 3 × 1 refine) | Higher |
+| `--auto 2` (quick) | 7 (2 x (1 agenda + 1 specialist + 1 synthesizer) + 2 x refine) | Low-Moderate |
+| `--auto 2 --deep` | 11 (2 x (1 agenda + 3 specialists + 1 synthesizer) + 2 x refine) | Moderate |
+
+`--auto 2` is the default when `--auto` is passed without a number.
 
 All costs are tracked in `budget.json` with `research` and `refine` role
 labels. Use `--max-budget-usd` to cap spending.
@@ -271,13 +326,13 @@ directory.
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
 | `--deep` | off | Run full ensemble (3 specialists) instead of quick single-agent |
-| `--auto [iterations]` | off | Auto-loop: research + refine for N iterations (default 3 if no number given) |
+| `--auto [iterations]` | off | Auto-loop: research + refine for N iterations (default 2 if no number given) |
 | `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 ### `ridgeline refine [build-name]`
 
 Merge research.md findings into spec.md. Requires `research.md` to exist in
-the build directory.
+the build directory. Writes `spec.changelog.md` alongside `spec.md`.
 
 | Flag | Default | Description |
 |------|---------|-------------|

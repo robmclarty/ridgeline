@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Make research.md accumulative across iterations — findings append to a Findings Log, Active Recommendations rewritten each iteration from all findings
+- Add `spec.changelog.md` written by the refiner to track what changed in spec.md per iteration, read by both researcher and refiner to avoid redundant work
+- Add research agenda pre-step (sonnet) that evaluates the spec against a domain gap checklist before dispatching specialists, focusing web searches on actual spec gaps
+- Add `gaps.md` domain gap checklists for all 13 flavours plus a base checklist for generic software projects
+- Change `--auto` default from 3 to 2 iterations
+- Update all documentation for accumulative research, spec.changelog.md, gap analysis, and flavour researchers
+
 ## 0.6.0
 
 - Add `ridgeline research` and `ridgeline refine` as optional pipeline stages between spec and plan
