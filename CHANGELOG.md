@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.1
 
 - Make research.md accumulative across iterations — findings append to a Findings Log, Active Recommendations rewritten each iteration from all findings
 - Add `spec.changelog.md` written by the refiner to track what changed in spec.md per iteration, read by both researcher and refiner to avoid redundant work
