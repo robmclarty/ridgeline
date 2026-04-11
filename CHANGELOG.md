@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0
+
+- Add visual design system: shape detection engine scans shape.md against keyword registries to identify visual concerns (web-visual, game-visual, print-layout)
+- Add `ridgeline design` command for interactive design.md creation with hard tokens and soft guidance, supporting both project-level and feature-level design artifacts
+- Auto-chain from shape to design when visual concerns are detected — seamless flow from shaping questions to design questions
+- Add design.md resolution and injection into all pipeline stages (planner, builder, reviewer) alongside constraints and taste
+- Add visual coherence specialist that conditionally joins the specifier ensemble (4 specialists instead of 3) when visual shapes match
+- Add web-visual tool family plugin with graceful degradation: Playwright screenshots, Project Wallace CSS audit, axe-core accessibility, pixelmatch visual diff, and Lighthouse audits
+- Inject shape-specific design heuristics into reviewer prompts with hard token violations as blocking and soft guidance deviations as suggestions
+- Add `design` as an optional pipeline stage with rewind support
+
 ## 0.6.2
 
 - Improve shape step output legibility: separate questions with blank lines, render suggestions and status messages in grey, add file-path input hint
