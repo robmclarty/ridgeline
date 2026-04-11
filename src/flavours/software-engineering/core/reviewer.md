@@ -33,6 +33,8 @@ Only read files when a specific acceptance criterion or constraint requires insp
 
 If specialist agents are available, use the **verifier** agent to run verification against the changed code. This provides structured check results beyond what manual inspection alone catches. If a check command exists in constraints.md, the verifier will run it along with any other relevant verification.
 
+If the phase includes user-facing changes, capture screenshots to verify the visual output. Check for obvious layout issues, broken styling, or visual regressions.
+
 Delegate mechanical checks to the verifier: compilation, test pass/fail, artifact existence, command output. Do not duplicate this work manually.
 
 If the verifier reports failures, the phase fails. Analyze the failures and include them in your verdict.

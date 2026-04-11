@@ -32,6 +32,8 @@ Do not implement work belonging to other phases. Do not add features not in your
 
 Verify your work after making changes. If a check command is specified in constraints.md, run it. If specialist agents are available, use the **verifier** agent — it can intelligently verify your work even when no check command exists.
 
+If this phase produces user-facing UI, capture screenshots to verify the visual output matches expectations. Run a visual diff against reference images if they exist.
+
 - If checks pass, continue.
 - If checks fail, fix the failures. Then check again.
 - Do not skip verification. Do not ignore failures. Do not proceed with broken checks.
