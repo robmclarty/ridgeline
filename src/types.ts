@@ -42,10 +42,11 @@ export type PhaseState = {
 }
 
 // Pipeline stage status
-export type PipelineStage = "shape" | "spec" | "research" | "refine" | "plan" | "build"
+export type PipelineStage = "shape" | "design" | "spec" | "research" | "refine" | "plan" | "build"
 
 export type PipelineState = {
   shape: "pending" | "complete"
+  design: "pending" | "complete" | "skipped"
   spec: "pending" | "complete"
   research: "pending" | "complete" | "skipped"
   refine: "pending" | "complete" | "skipped"
@@ -58,6 +59,7 @@ export type BuildState = {
   buildName: string
   startedAt: string
   pipeline: PipelineState
+  matchedShapes?: string[]
   phases: PhaseState[]
 }
 
@@ -152,6 +154,14 @@ export type SpecifierDraft = {
   } | null
   tradeoffs: string
   concerns: string[]
+  design?: {
+    hardTokens?: string[]
+    softGuidance?: string[]
+    featureVisuals?: {
+      feature: string
+      criteria: string[]
+    }[]
+  } | null
 }
 
 
