@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- Improve shape step output legibility: separate questions with blank lines, render suggestions and status messages in grey, add file-path input hint
+- Remove redundant tool name suffix from build spinner line (already shown in grey above)
+
 ## 0.6.1
 
 - Make research.md accumulative across iterations — findings append to a Findings Log, Active Recommendations rewritten each iteration from all findings
