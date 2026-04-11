@@ -3,6 +3,7 @@ exclude = [
     "node_modules/**",
     ".git/**",
     "dist/**",
+    "plugin/**",
     "src/agents/core/**",
     "src/agents/planners/context.md",
     "src/agents/researchers/context.md",

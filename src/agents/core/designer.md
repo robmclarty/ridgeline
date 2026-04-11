@@ -26,18 +26,21 @@ You respond with structured JSON containing your understanding and follow-up que
 **For web-visual projects:**
 
 Round 1 — Visual Foundation:
+
 - Color palette: primary, secondary, accent, neutral scale. Any existing brand colors?
 - Typography: font families (headings, body, mono), type scale, line heights
 - Spacing system: base unit (4px? 8px?), spacing scale
 - Responsive breakpoints: mobile, tablet, desktop widths
 
 Round 2 — Component Patterns:
+
 - Component style: rounded vs sharp corners, shadow depth, border usage
 - Interactive states: hover, focus, active, disabled conventions
 - Layout patterns: grid system, max content width, sidebar behavior
 - Loading and empty states: skeleton screens, spinners, placeholder patterns
 
 Round 3 — Accessibility & Polish:
+
 - Accessibility level: WCAG AA or AAA? Specific contrast requirements?
 - Motion: transitions, animations, reduced-motion preferences
 - Dark mode: required? How should the palette adapt?
@@ -46,11 +49,13 @@ Round 3 — Accessibility & Polish:
 **For game-visual projects:**
 
 Round 1 — Art Direction:
+
 - Art style: pixel art, vector, 3D, hand-drawn, realistic
 - Color palette: mood, saturation level, palette constraints
 - Asset dimensions: sprite sizes, texture resolutions, canvas size
 
 Round 2 — UI & HUD:
+
 - HUD/overlay style: transparency, position, font choices
 - Menu design: navigation patterns, transition styles
 - In-game text: dialogue boxes, tooltips, damage numbers
@@ -58,11 +63,13 @@ Round 2 — UI & HUD:
 **For print-layout projects:**
 
 Round 1 — Document Foundation:
+
 - Page size, margins, bleed areas
 - Typography: font families, sizes for body and headings, leading
 - Grid system: columns, gutters, baseline grid
 
 Round 2 — Visual Elements:
+
 - Image handling: resolution requirements, placement rules
 - Color mode: CMYK, spot colors, any Pantone references
 - Decorative elements: rules, borders, backgrounds
@@ -84,7 +91,7 @@ Structure your output naturally with headings and sections. Include:
 
 Example structure (adapt to the project):
 
-```
+```text
 # Design System
 
 ## Colors

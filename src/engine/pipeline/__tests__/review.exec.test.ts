@@ -41,8 +41,17 @@ vi.mock("../../discovery/plugin.scan", () => ({
   cleanupPluginDirs: vi.fn(),
 }))
 
+vi.mock("../../../stores/state", () => ({
+  getMatchedShapes: vi.fn(() => []),
+}))
+
+vi.mock("../../../shapes/detect", () => ({
+  loadShapeDefinitions: vi.fn(() => []),
+}))
+
 vi.mock("../pipeline.shared", () => ({
   prepareAgentsAndPlugins: vi.fn(() => ({ agents: undefined, pluginDirs: [] })),
+  appendDesign: vi.fn(),
   commonInvokeOptions: vi.fn(() => ({
     agents: undefined,
     pluginDirs: undefined,

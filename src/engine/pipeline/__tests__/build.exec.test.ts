@@ -34,6 +34,7 @@ vi.mock("../../discovery/plugin.scan", () => ({
 vi.mock("../pipeline.shared", () => ({
   prepareAgentsAndPlugins: vi.fn(() => ({ agents: undefined, pluginDirs: [] })),
   appendConstraintsAndTaste: vi.fn(),
+  appendDesign: vi.fn(),
   commonInvokeOptions: vi.fn(() => ({
     agents: undefined,
     pluginDirs: undefined,
