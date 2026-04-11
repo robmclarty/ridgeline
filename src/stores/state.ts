@@ -8,6 +8,7 @@ const statePath = (buildDir: string): string =>
 
 const DEFAULT_PIPELINE: PipelineState = {
   shape: "pending",
+  design: "skipped",
   spec: "pending",
   research: "skipped",
   refine: "skipped",
@@ -99,6 +100,7 @@ export const getNextIncompletePhase = (
 /** Derive pipeline state from existing artifacts on disk (for legacy state files). */
 const derivePipelineFromArtifacts = (buildDir: string): PipelineState => {
   const hasShape = fs.existsSync(path.join(buildDir, "shape.md"))
+  const hasDesign = fs.existsSync(path.join(buildDir, "design.md"))
   const hasSpec = fs.existsSync(path.join(buildDir, "spec.md"))
   const hasConstraints = fs.existsSync(path.join(buildDir, "constraints.md"))
   const hasResearch = fs.existsSync(path.join(buildDir, "research.md"))
@@ -108,6 +110,7 @@ const derivePipelineFromArtifacts = (buildDir: string): PipelineState => {
 
   return {
     shape: hasShape ? "complete" : "pending",
+    design: hasDesign ? "complete" : "skipped",
     spec: hasSpec && hasConstraints ? "complete" : "pending",
     research: hasResearch ? "complete" : "skipped",
     refine: hasResearch ? "complete" : "skipped",
@@ -125,6 +128,7 @@ export const getPipelineStatus = (buildDir: string): PipelineState => {
   // Belt and suspenders: if state says complete but file is missing, trust disk
   return {
     shape: fromState.shape === "complete" && fromDisk.shape === "complete" ? "complete" : fromDisk.shape,
+    design: fromState.design ?? "skipped",
     spec: fromState.spec === "complete" && fromDisk.spec === "complete" ? "complete" : fromDisk.spec,
     research: fromState.research ?? "skipped",
     refine: fromState.refine ?? "skipped",
@@ -172,7 +176,7 @@ export const markBuildRunning = (buildDir: string, buildName: string): void => {
 const REQUIRED_PIPELINE_STAGES: PipelineStage[] = ["shape", "spec", "plan", "build"]
 
 // All stages including optional ones, for rewind calculations.
-const ALL_PIPELINE_STAGES: PipelineStage[] = ["shape", "spec", "research", "refine", "plan", "build"]
+const ALL_PIPELINE_STAGES: PipelineStage[] = ["shape", "design", "spec", "research", "refine", "plan", "build"]
 
 /** Determine the next incomplete pipeline stage. */
 export const getNextPipelineStage = (buildDir: string): PipelineStage | null => {
@@ -192,6 +196,11 @@ const collectStageFiles = (buildDir: string, stage: PipelineStage): string[] => 
   switch (stage) {
     case "research": {
       const fp = path.join(buildDir, "research.md")
+      if (fs.existsSync(fp)) files.push(fp)
+      break
+    }
+    case "design": {
+      const fp = path.join(buildDir, "design.md")
       if (fs.existsSync(fp)) files.push(fp)
       break
     }
@@ -240,7 +249,7 @@ const resetPipelineState = (
   for (const stage of ALL_PIPELINE_STAGES) {
     if (ALL_PIPELINE_STAGES.indexOf(stage) > targetIndex) {
       // Optional stages reset to "skipped", required stages to "pending"
-      if (stage === "research" || stage === "refine") {
+      if (stage === "research" || stage === "refine" || stage === "design") {
         state.pipeline[stage] = "skipped" as any
       } else {
         state.pipeline[stage] = "pending" as any
@@ -250,7 +259,7 @@ const resetPipelineState = (
 
   if (targetStage === "build") {
     state.pipeline.build = "pending"
-  } else if (targetStage === "research" || targetStage === "refine") {
+  } else if (targetStage === "research" || targetStage === "refine" || targetStage === "design") {
     state.pipeline[targetStage] = "complete" as any
   } else {
     state.pipeline[targetStage] = "complete"
@@ -278,4 +287,25 @@ export const rewindTo = (buildDir: string, buildName: string, targetStage: Pipel
   resetPipelineState(buildDir, buildName, targetStage, resetStages)
 
   return toDelete
+}
+
+/** Record matched shape names in build state. */
+export const recordMatchedShapes = (buildDir: string, buildName: string, shapes: string[]): void => {
+  let state = loadState(buildDir)
+  if (!state) {
+    state = {
+      buildName,
+      startedAt: new Date().toISOString(),
+      pipeline: { ...DEFAULT_PIPELINE },
+      phases: [],
+    }
+  }
+  state.matchedShapes = shapes
+  saveState(buildDir, state)
+}
+
+/** Read matched shapes from build state. Returns empty array if none recorded. */
+export const getMatchedShapes = (buildDir: string): string[] => {
+  const state = loadState(buildDir)
+  return state?.matchedShapes ?? []
 }
