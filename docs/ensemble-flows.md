@@ -261,7 +261,9 @@ for the full user guide.
 
 ```mermaid
 flowchart LR
-    inputs["spec.md\nconstraints.md\ntaste.md"] --> specialists
+    inputs["spec.md\nconstraints.md\ntaste.md\nexisting research.md"] --> agenda
+
+    agenda["Agenda Step (sonnet)\nreads spec + gaps.md +\nexisting research.md"] --> specialists
 
     subgraph specialists ["Parallel Specialists"]
         direction TB
@@ -272,7 +274,7 @@ flowchart LR
 
     specialists --> reports["Prose markdown\nresearch reports"]
     reports --> synthesizer[Researcher\nSynthesizer]
-    synthesizer -->|writes| research["research.md"]
+    synthesizer -->|appends to| research["research.md\n(accumulated)"]
 ```
 
 ### Specialist Perspectives
@@ -293,6 +295,23 @@ In **deep mode** (`--deep`), all three specialists run in parallel. This
 provides broader coverage across academic research, ecosystem updates, and
 competitive landscape.
 
+### Agenda Pre-step
+
+Before dispatching specialists, the researcher ensemble runs a gap analysis
+agenda step using a sonnet call. The agenda step reads the current spec,
+the flavour's `gaps.md` (a domain-specific gap checklist), and any existing
+`research.md` from prior iterations. It produces a focused research agenda
+that tells each specialist exactly which gaps to investigate, avoiding
+redundant work and directing effort toward areas not yet covered.
+
+Specialists receive this focused agenda alongside the spec and constraints,
+so their web searches and analysis target the most valuable open questions
+rather than covering ground that previous iterations have already resolved.
+
+The synthesizer reads the existing `research.md` and appends new findings
+rather than replacing it. This means research accumulates across iterations
+-- each pass adds depth without losing prior discoveries.
+
 ### Differences from Other Ensembles
 
 The researcher ensemble differs from the specifier and planner ensembles in
@@ -309,10 +328,15 @@ two ways:
 
 ### Auto Mode
 
-The `--auto [N]` flag chains research and refine into an iterative loop. Each
-iteration runs the research ensemble, then invokes the refiner agent (a single
-agent, not an ensemble) to rewrite `spec.md` incorporating the findings. The
-next iteration researches the updated spec, enabling deeper exploration. See
+The `--auto [N]` flag chains research and refine into an iterative loop
+(default: 2 iterations). Each iteration runs the research ensemble, then
+invokes the refiner agent (a single agent, not an ensemble) to rewrite
+`spec.md` incorporating the findings. Because `research.md` accumulates
+findings across iterations rather than being overwritten, each pass builds
+on prior discoveries -- the agenda step reads the existing research to
+identify remaining gaps, and the synthesizer appends new findings. The next
+iteration researches the updated spec with awareness of what has already
+been covered, enabling progressively deeper exploration. See
 [Research and Refine -- Auto Mode](research.md#auto-mode) for details.
 
 ### Verification

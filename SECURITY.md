@@ -36,8 +36,10 @@ Claude CLI tools it can use. The permission matrix:
 The **shaper** can read the codebase to gather context but cannot write files
 or run commands. The **researcher** specialists have web access (WebFetch,
 WebSearch, Bash) for retrieving external sources; the synthesizer can only
-write `research.md`. The **refiner** reads `research.md` and `spec.md` and
-writes the revised `spec.md` — it has no Bash or web access. The **planner**
+write `research.md`. The research agenda step (sonnet) has no tools — it
+reasons from inputs only. The **refiner** reads `research.md`, `spec.md`, and
+`spec.changelog.md`, and writes the revised `spec.md` and `spec.changelog.md`
+— it has no Bash or web access. The **planner**
 can only write phase files — it cannot read the codebase or execute commands.
 The **reviewer** cannot write or edit files, enforcing a read-only review
 posture. These restrictions are enforced by the Claude CLI at the tool-call

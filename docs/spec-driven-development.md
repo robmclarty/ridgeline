@@ -146,15 +146,22 @@ before planning. The research ensemble investigates the spec against academic
 literature, ecosystem documentation, and competitive landscape -- surfacing
 information that prevents costly mistakes downstream.
 
-The refiner then merges research findings back into `spec.md`, adding insights
-and edge cases without removing user-authored content. Sources are cited
-inline so you can trace what came from research.
+Before dispatching specialists, a lightweight agenda step evaluates the spec
+against a domain gap checklist (`gaps.md`), focusing the search on what's
+actually missing. Findings accumulate across iterations rather than being
+overwritten.
 
-The `--auto` flag chains research and refine for multiple iterations,
-progressively improving the spec:
+The refiner then merges research findings back into `spec.md`, adding insights
+and edge cases without removing user-authored content. It also writes
+`spec.changelog.md` documenting what changed and why, so future iterations
+avoid redundant work. Sources are cited inline so you can trace what came from
+research.
+
+The `--auto` flag chains research and refine for multiple iterations (default
+2), progressively improving the spec:
 
 ```sh
-ridgeline research my-feature --deep --auto 3
+ridgeline research my-feature --deep --auto 2
 ```
 
 This is particularly useful when the spec involves unfamiliar technology,

@@ -70,7 +70,7 @@ Research the spec using web sources. Optional step between `spec` and `plan`.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--deep` | off | Run full ensemble (3 specialists: academic, ecosystem, competitive) instead of quick single-agent mode |
-| `--auto [N]` | off | Auto-loop: research + refine for N iterations (default 3 if no number given) |
+| `--auto [N]` | off | Auto-loop: research + refine for N iterations (default 2 if no number given) |
 | `--model <name>` | `opus` | Model for research agents |
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative research cost exceeds this amount |
@@ -79,14 +79,15 @@ Research the spec using web sources. Optional step between `spec` and `plan`.
 ```sh
 ridgeline research my-feature              # Quick research (1 agent)
 ridgeline research my-feature --deep       # Deep research (3 specialists)
-ridgeline research my-feature --auto       # 3 auto iterations
+ridgeline research my-feature --auto       # 2 auto iterations
 ridgeline research my-feature --auto 5     # 5 auto iterations
 ridgeline research my-feature --deep --auto 2  # Deep + 2 auto iterations
 ```
 
 ### `ridgeline refine [build-name]`
 
-Merge research.md findings into spec.md. Run after reviewing/editing research.md.
+Merge research.md findings into spec.md and write spec.changelog.md documenting
+what changed. Run after reviewing/editing research.md.
 
 | Flag | Default | Description |
 |------|---------|-------------|
