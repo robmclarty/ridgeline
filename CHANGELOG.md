@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.7
+
+- Add 48 tests covering pipeline state helpers, flavour resolution, QA clarification loop, and design catalog context — overall statement coverage rises from 83.8% to 90.2%
+
 ## 0.7.6
 
 - Add `ridgeline catalog` command for processing image assets into `asset-catalog.json` with tiered enrichment (deterministic metadata extraction via sharp/colorthief, optional vision descriptions via `--describe`, sprite atlas packing via `--pack`)
