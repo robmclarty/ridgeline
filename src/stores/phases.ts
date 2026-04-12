@@ -22,6 +22,23 @@ export type PhaseContent = {
   criteria: string
 }
 
+/**
+ * Parse YAML frontmatter from a phase file to extract depends_on.
+ * Supports: depends_on: [01-scaffold, 02-data-layer]
+ * Returns empty array if no frontmatter or no depends_on key.
+ */
+export const parsePhaseFrontmatter = (content: string): { dependsOn: string[] } => {
+  const match = content.match(/^---\n([\s\S]*?)\n---/)
+  if (!match) return { dependsOn: [] }
+
+  const raw = match[1]
+  const depMatch = raw.match(/depends_on:\s*\[([^\]]*)\]/)
+  if (!depMatch) return { dependsOn: [] }
+
+  const deps = depMatch[1].split(",").map((s) => s.trim()).filter(Boolean)
+  return { dependsOn: deps }
+}
+
 // Extract title, goal, and acceptance criteria from phase markdown content
 export const parsePhaseContent = (content: string): PhaseContent => {
   const titleMatch = content.match(/^#\s+(.+)/m)
@@ -43,12 +60,17 @@ export const scanPhases = (phasesDir: string): PhaseInfo[] => {
 
   return files.map((filename) => {
     const { id, index, slug } = parsePhaseFilename(filename)
+    const filepath = path.join(phasesDir, filename)
+    const content = fs.readFileSync(filepath, "utf-8")
+    const { dependsOn } = parsePhaseFrontmatter(content)
+
     return {
       id,
       index,
       slug,
       filename,
-      filepath: path.join(phasesDir, filename),
+      filepath,
+      dependsOn,
     }
   })
 }

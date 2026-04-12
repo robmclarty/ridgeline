@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { scanPhases, isPhaseFile, parsePhaseFilename, parsePhaseContent, PHASE_FILENAME_PATTERN } from "../phases"
+import { scanPhases, isPhaseFile, parsePhaseFilename, parsePhaseContent, parsePhaseFrontmatter, PHASE_FILENAME_PATTERN } from "../phases"
 
 describe("phases", () => {
   describe("PHASE_FILENAME_PATTERN", () => {
@@ -85,6 +85,32 @@ describe("phases", () => {
     })
   })
 
+  describe("parsePhaseFrontmatter", () => {
+    it("extracts depends_on from YAML frontmatter", () => {
+      const content = "---\ndepends_on: [01-scaffold, 02-api]\n---\n# Phase 3"
+      expect(parsePhaseFrontmatter(content)).toEqual({ dependsOn: ["01-scaffold", "02-api"] })
+    })
+
+    it("returns empty array when no frontmatter", () => {
+      expect(parsePhaseFrontmatter("# Phase 1\n\nSome content")).toEqual({ dependsOn: [] })
+    })
+
+    it("returns empty array when frontmatter has no depends_on", () => {
+      const content = "---\ntitle: Phase 1\n---\n# Phase 1"
+      expect(parsePhaseFrontmatter(content)).toEqual({ dependsOn: [] })
+    })
+
+    it("handles single dependency", () => {
+      const content = "---\ndepends_on: [01-scaffold]\n---\n# Phase 2"
+      expect(parsePhaseFrontmatter(content)).toEqual({ dependsOn: ["01-scaffold"] })
+    })
+
+    it("handles empty depends_on array", () => {
+      const content = "---\ndepends_on: []\n---\n# Phase 1"
+      expect(parsePhaseFrontmatter(content)).toEqual({ dependsOn: [] })
+    })
+  })
+
   describe("scanPhases", () => {
     let phasesDir: string
 
@@ -118,6 +144,7 @@ describe("phases", () => {
         slug: "scaffold",
         filename: "01-scaffold.md",
         filepath: path.join(phasesDir, "01-scaffold.md"),
+        dependsOn: [],
       })
       expect(phases[1].id).toBe("02-api")
       expect(phases[2].id).toBe("03-ui")
@@ -156,6 +183,23 @@ describe("phases", () => {
 
       const phases = scanPhases(phasesDir)
       expect(phases[0].slug).toBe("setup-database")
+    })
+
+    it("parses depends_on from frontmatter", () => {
+      fs.writeFileSync(path.join(phasesDir, "01-scaffold.md"), "# Scaffold")
+      fs.writeFileSync(
+        path.join(phasesDir, "02-api.md"),
+        "---\ndepends_on: [01-scaffold]\n---\n# API",
+      )
+      fs.writeFileSync(
+        path.join(phasesDir, "03-ui.md"),
+        "---\ndepends_on: [01-scaffold]\n---\n# UI",
+      )
+
+      const phases = scanPhases(phasesDir)
+      expect(phases[0].dependsOn).toEqual([])
+      expect(phases[1].dependsOn).toEqual(["01-scaffold"])
+      expect(phases[2].dependsOn).toEqual(["01-scaffold"])
     })
   })
 })
