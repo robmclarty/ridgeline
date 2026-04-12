@@ -6,6 +6,7 @@ import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { createStderrHandler } from "./pipeline.shared"
+import { startSpinner } from "../../ui/spinner"
 
 // ---------------------------------------------------------------------------
 // Shared prompt helpers
@@ -180,7 +181,7 @@ export type ResearchConfig = {
   maxBudgetUsd: number | null
   buildDir: string
   flavour: string | null
-  isDeep: boolean
+  isQuick: boolean
   networkAllowlist: string[]
   sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
   existingResearchMd: string | null
@@ -199,15 +200,14 @@ export const invokeResearcher = async (
   const gapsMd = registry.getGaps("researchers")
   const allSpecialists = registry.getSpecialists("researchers")
 
-  // Quick mode: use only the first specialist (ecosystem by default — most broadly useful)
-  // Deep mode: use all specialists
-  const specialists = config.isDeep
-    ? allSpecialists
-    : allSpecialists.length > 0
-      ? [allSpecialists[0]]
-      : []
+  // Quick mode: pick one specialist at random
+  // Default: use all specialists
+  const specialists = config.isQuick && allSpecialists.length > 0
+    ? [allSpecialists[Math.floor(Math.random() * allSpecialists.length)]]
+    : allSpecialists
 
   // Build a research agenda before dispatching specialists
+  const agendaSpinner = startSpinner("Building agenda")
   const agenda = await buildResearchAgenda(
     specMd,
     gapsMd,
@@ -216,6 +216,7 @@ export const invokeResearcher = async (
     config.model,
     config.timeoutMinutes,
   )
+  agendaSpinner.stop()
 
   return invokeEnsemble<string>({
     label: "Researching",
