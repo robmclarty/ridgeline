@@ -132,6 +132,82 @@ type EnsembleConfig<TDraft> = {
   ) => string
 }
 
+type AnnotationEntry = { perspective: string; annotation: string; result: ClaudeResult }
+
+/** Run the optional two-round annotation pass where specialists review each other's drafts. */
+const runAnnotationPass = async <TDraft>(
+  config: EnsembleConfig<TDraft>,
+  successful: { perspective: string; result: ClaudeResult; draft: TDraft }[],
+): Promise<AnnotationEntry[]> => {
+  if (!config.isTwoRound || !config.buildAnnotationPrompt || successful.length < 2) {
+    return []
+  }
+
+  printInfo("Round 2: cross-specialist annotations...")
+  const annotationSpinner = startSpinner("Annotating")
+
+  const annotationPromises = successful.map(({ perspective }) => {
+    const otherDrafts = successful
+      .filter((s) => s.perspective !== perspective)
+      .map((s) => ({ perspective: s.perspective, draft: s.draft }))
+
+    const annotationPrompt = config.buildAnnotationPrompt!(perspective, otherDrafts)
+    const startTime = Date.now()
+
+    return invokeClaude({
+      systemPrompt: config.buildSpecialistPrompt(""),
+      userPrompt: annotationPrompt,
+      model: config.model,
+      allowedTools: [],
+      cwd: process.cwd(),
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      onStderr: createStderrHandler(`${perspective}-annotate`),
+    }).then((result) => {
+      const elapsed = formatElapsed(Date.now() - startTime)
+      annotationSpinner.printAbove(`  ${perspective.padEnd(14)} annotated (${elapsed}, $${result.costUsd.toFixed(2)})`)
+      return { perspective, annotation: result.result, result }
+    })
+  })
+
+  const annotationSettled = await Promise.allSettled(annotationPromises)
+  annotationSpinner.stop()
+
+  const annotations: AnnotationEntry[] = []
+  for (const outcome of annotationSettled) {
+    if (outcome.status === "fulfilled") {
+      annotations.push(outcome.value)
+    } else {
+      printError(`Annotation failed: ${outcome.reason}`)
+    }
+  }
+
+  if (annotations.length > 0) {
+    printInfo(`Collected ${annotations.length} annotations`)
+  }
+
+  return annotations
+}
+
+/** Build the synthesizer user prompt, appending annotations if present. */
+const buildSynthPrompt = <TDraft>(
+  config: EnsembleConfig<TDraft>,
+  successful: { perspective: string; draft: TDraft }[],
+  annotations: AnnotationEntry[],
+): string => {
+  let prompt = config.buildSynthesizerUserPrompt(successful)
+  if (annotations.length > 0) {
+    const sections = ["\n## Cross-Specialist Annotations\n"]
+    sections.push("Each specialist reviewed the other proposals and provided these observations:\n")
+    for (const { perspective, annotation } of annotations) {
+      sections.push(`### ${perspective}\n`)
+      sections.push(annotation)
+      sections.push("")
+    }
+    prompt += sections.join("\n")
+  }
+  return prompt
+}
+
 export const invokeEnsemble = async <TDraft>(
   config: EnsembleConfig<TDraft>
 ): Promise<EnsembleResult> => {
@@ -147,7 +223,7 @@ export const invokeEnsemble = async <TDraft>(
   const specialistPromises = specialists.map(({ perspective, overlay }) => {
     const systemPrompt = config.buildSpecialistPrompt(overlay)
     const startTime = Date.now()
-    const isStructured = config.isStructured !== false // default true
+    const isStructured = config.isStructured !== false
 
     return invokeClaude({
       systemPrompt,
@@ -187,7 +263,6 @@ export const invokeEnsemble = async <TDraft>(
           printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
         }
       } else {
-        // Prose mode: treat the raw result text as the draft
         successful.push({ perspective, result, draft: result.result as TDraft })
       }
     } else {
@@ -209,53 +284,10 @@ export const invokeEnsemble = async <TDraft>(
     printInfo(`Continuing with ${successful.length} of ${specialists.length} proposals`)
   }
 
-  // 4b. Two-round annotation pass (optional)
-  let annotations: { perspective: string; annotation: string; result: ClaudeResult }[] = []
+  // 5. Two-round annotation pass (optional)
+  const annotations = await runAnnotationPass(config, successful)
 
-  if (config.isTwoRound && config.buildAnnotationPrompt && successful.length >= 2) {
-    printInfo("Round 2: cross-specialist annotations...")
-    const annotationSpinner = startSpinner("Annotating")
-
-    const annotationPromises = successful.map(({ perspective }) => {
-      const otherDrafts = successful
-        .filter((s) => s.perspective !== perspective)
-        .map((s) => ({ perspective: s.perspective, draft: s.draft }))
-
-      const annotationPrompt = config.buildAnnotationPrompt!(perspective, otherDrafts)
-      const startTime = Date.now()
-
-      return invokeClaude({
-        systemPrompt: config.buildSpecialistPrompt(""),
-        userPrompt: annotationPrompt,
-        model: config.model,
-        allowedTools: [],
-        cwd: process.cwd(),
-        timeoutMs: config.timeoutMinutes * 60 * 1000,
-        onStderr: createStderrHandler(`${perspective}-annotate`),
-      }).then((result) => {
-        const elapsed = formatElapsed(Date.now() - startTime)
-        annotationSpinner.printAbove(`  ${perspective.padEnd(14)} annotated (${elapsed}, $${result.costUsd.toFixed(2)})`)
-        return { perspective, annotation: result.result, result }
-      })
-    })
-
-    const annotationSettled = await Promise.allSettled(annotationPromises)
-    annotationSpinner.stop()
-
-    for (const outcome of annotationSettled) {
-      if (outcome.status === "fulfilled") {
-        annotations.push(outcome.value)
-      } else {
-        printError(`Annotation failed: ${outcome.reason}`)
-      }
-    }
-
-    if (annotations.length > 0) {
-      printInfo(`Collected ${annotations.length} annotations`)
-    }
-  }
-
-  // 5. Budget guard
+  // 6. Budget guard
   const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
   const annotationCost = annotations.reduce((sum, a) => sum + a.result.costUsd, 0)
   const preSynthCost = specialistCost + annotationCost
@@ -267,26 +299,16 @@ export const invokeEnsemble = async <TDraft>(
     )
   }
 
-  // 6. Synthesize
+  // 7. Synthesize
   spinner.stop()
   printInfo("Synthesizing from specialist proposals...")
 
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd(), dimText: true })
-
-  // Build synthesizer prompt, optionally appending cross-specialist annotations
-  let synthUserPrompt = config.buildSynthesizerUserPrompt(
+  const synthUserPrompt = buildSynthPrompt(
+    config,
     successful.map(({ perspective, draft }) => ({ perspective, draft })),
+    annotations,
   )
-  if (annotations.length > 0) {
-    const annotationSections = ["\n## Cross-Specialist Annotations\n"]
-    annotationSections.push("Each specialist reviewed the other proposals and provided these observations:\n")
-    for (const { perspective, annotation } of annotations) {
-      annotationSections.push(`### ${perspective}\n`)
-      annotationSections.push(annotation)
-      annotationSections.push("")
-    }
-    synthUserPrompt += annotationSections.join("\n")
-  }
 
   let synthResult: ClaudeResult
   try {
@@ -305,12 +327,12 @@ export const invokeEnsemble = async <TDraft>(
     flush()
   }
 
-  // 7. Post-synthesis verification
+  // 8. Post-synthesis verification
   if (config.verify) {
     config.verify()
   }
 
-  // 8. Aggregate results
+  // 9. Aggregate results
   const specialistResults = successful.map((s) => s.result)
   const annotationResults = annotations.map((a) => a.result)
   const totalCostUsd = preSynthCost + synthResult.costUsd
