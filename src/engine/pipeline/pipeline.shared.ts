@@ -108,6 +108,48 @@ export const appendDesign = (sections: string[], config: RidgelineConfig): void 
   }
 }
 
+const ASSET_USAGE_INSTRUCTIONS = `Key rules for using assets:
+- Load packed atlases from ./assets/packed/ using their JSON manifests
+- Use the spritesheet JSON frame data for animations, never hardcode pixel offsets
+- Respect the suggested_anchor for positioning (bottom-center for characters, top-left for tiles and backgrounds)
+- Respect the suggested_z_layer for render ordering
+- Use nearest-neighbor scaling for pixel art (CSS: image-rendering: pixelated)
+- Layout assets marked is_reference_only are mockups, not in-game graphics.
+  Read their layout_regions to understand spatial arrangement and build the
+  equivalent in code using the actual UI assets.
+- Tile assets marked is_tileable can be repeated to fill areas
+- Background assets go behind everything, at z_layer "background"
+- For React: use <img> or <canvas> with the atlas JSON data
+- For PixiJS: use PIXI.Spritesheet with the packed JSON directly
+- The catalog may contain warnings about palette mismatches or other suggestions.
+  These are informational only. Trust the user's asset files as provided.`
+
+/**
+ * Append asset catalog reference to a prompt sections array.
+ * Checks both build-level and project-level catalog paths.
+ * Injects by file path reference (not inlined) to keep prompts lean.
+ */
+export const appendAssetCatalog = (sections: string[], config: RidgelineConfig): void => {
+  const buildCatalogPath = path.join(config.buildDir, "asset-catalog.json")
+  const projectCatalogPath = path.join(config.ridgelineDir, "asset-catalog.json")
+  const catalogPath = fs.existsSync(buildCatalogPath)
+    ? buildCatalogPath
+    : fs.existsSync(projectCatalogPath)
+      ? projectCatalogPath
+      : null
+
+  if (!catalogPath) return
+
+  sections.push("## Available Assets\n")
+  sections.push(
+    `Read the asset catalog at ${catalogPath} to understand what visual assets are available and how to use them. ` +
+    "Do NOT attempt to interpret image files directly. The catalog contains visual descriptions, dimensions, " +
+    "animation metadata, and usage hints for every asset.\n"
+  )
+  sections.push(ASSET_USAGE_INSTRUCTIONS)
+  sections.push("")
+}
+
 /**
  * Build the common invokeClaude options shared across pipeline agents.
  */

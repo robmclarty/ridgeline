@@ -29,7 +29,7 @@ vi.mock("node:fs", async () => {
   return { ...actual, readFileSync: vi.fn(() => "file content"), existsSync: vi.fn(() => false) }
 })
 
-import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, commonInvokeOptions } from "../pipeline.shared"
+import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "../pipeline.shared"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan"
 import { printError } from "../../../ui/output"
@@ -227,6 +227,44 @@ describe("appendDesign", () => {
     const sections: string[] = []
 
     appendDesign(sections, makeConfig())
+
+    expect(sections).toHaveLength(0)
+  })
+})
+
+describe("appendAssetCatalog", () => {
+  it("injects asset catalog reference when build-level catalog exists", () => {
+    vi.mocked(fs.existsSync).mockImplementation((p: any) =>
+      String(p).includes("asset-catalog.json") && String(p).includes("/tmp/build")
+    )
+    const sections: string[] = []
+
+    appendAssetCatalog(sections, makeConfig())
+
+    const joined = sections.join("\n")
+    expect(joined).toContain("## Available Assets")
+    expect(joined).toContain("asset-catalog.json")
+    expect(joined).toContain("suggested_anchor")
+  })
+
+  it("falls back to project-level catalog", () => {
+    vi.mocked(fs.existsSync).mockImplementation((p: any) => {
+      const s = String(p)
+      return s.includes("asset-catalog.json") && s.includes("ridgeline/asset-catalog") && !s.includes("/tmp/build")
+    })
+    const sections: string[] = []
+
+    appendAssetCatalog(sections, makeConfig())
+
+    const joined = sections.join("\n")
+    expect(joined).toContain("## Available Assets")
+  })
+
+  it("does nothing when no catalog exists", () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false)
+    const sections: string[] = []
+
+    appendAssetCatalog(sections, makeConfig())
 
     expect(sections).toHaveLength(0)
   })
