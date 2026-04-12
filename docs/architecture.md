@@ -267,6 +267,49 @@ flags with hardcoded defaults:
         └── plugin/                 # Build-level plugins (optional)
 ```
 
+## Asset Catalog
+
+The asset catalog scans a user's media files -- images, audio, video, text --
+and builds a metadata index without copying or moving anything. The catalog
+feeds into the designer and builder as a structured reference.
+
+```mermaid
+flowchart TB
+    assets["User's asset directory\n(any structure)"] --> scan["Walk all\nmedia files"]
+    scan --> detect["Detect media type\n(extension-based)"]
+
+    detect --> image_path["Image\n(png, jpg, gif,\nwebp, svg, avif)"]
+    detect --> other_path["Audio / Video / Text\n(mp3, mp4, txt, json, ...)"]
+
+    image_path --> sharp["Extract metadata\n(sharp: dimensions, palette,\nspritesheet, tileable)"]
+    other_path --> basic["Extract basic metadata\n(file size, extension)"]
+
+    sharp --> category{"Already in a\ncategory folder?"}
+    basic --> category
+
+    category -->|yes| use_dir["Use directory name\nas category"]
+    category -->|no| classify{"--classify\nflag?"}
+    classify -->|no| uncategorized["uncategorized"]
+    classify -->|yes| heuristics["Filename heuristics\n(bgm_* → music,\nsfx_* → sfx, ...)"]
+    heuristics -->|match| classified["Assign category"]
+    heuristics -->|no match| ai["Claude AI\n(vision for images,\ntext-only for others)"]
+    ai --> classified
+
+    use_dir --> catalog
+    uncategorized --> catalog
+    classified --> catalog
+
+    catalog["asset-catalog.json\n(paths + metadata,\nno file duplication)"]
+    catalog --> designer["Designer reads\ncatalog for context"]
+    catalog --> builder["Builder reads\ncatalog for implementation"]
+```
+
+Optional enrichment layers:
+
+- `--describe` adds vision-based descriptions (Tier 2)
+- `--classify` adds AI-based category assignment for flat folders
+- `--pack` generates sprite atlases from image categories
+
 ## Plugin System
 
 Ridgeline supports Claude CLI plugins at two levels:
