@@ -1,10 +1,4 @@
-import { ClaudeResult } from "../../types"
-
-export type StreamEvent =
-  | { type: "text"; text: string }
-  | { type: "tool_use"; tool: string; summary?: string }
-  | { type: "result"; result: ClaudeResult }
-  | { type: "other" }
+import { parseClaudeResult, type StreamEvent } from "./stream.types"
 
 /**
  * Parse a single NDJSON line from `claude --output-format stream-json`.
@@ -29,25 +23,6 @@ const summarizeToolInput = (input: Record<string, unknown>): string | undefined 
   const firstLine = raw.split("\n")[0]
   if (firstLine.length <= MAX_SUMMARY_LEN) return firstLine
   return firstLine.slice(0, MAX_SUMMARY_LEN - 1) + "…"
-}
-
-export const parseClaudeResult = (parsed: Record<string, unknown>): ClaudeResult => {
-  const result = parsed.result
-  return {
-    success: !parsed.is_error,
-    result: typeof result === "string"
-      ? result
-      : (result != null ? JSON.stringify(result) : ""),
-    durationMs: (parsed.duration_ms as number) ?? 0,
-    costUsd: (parsed.total_cost_usd as number) ?? 0,
-    usage: {
-      inputTokens: (parsed as Record<string, Record<string, number>>).usage?.input_tokens ?? 0,
-      outputTokens: (parsed as Record<string, Record<string, number>>).usage?.output_tokens ?? 0,
-      cacheReadInputTokens: (parsed as Record<string, Record<string, number>>).usage?.cache_read_input_tokens ?? 0,
-      cacheCreationInputTokens: (parsed as Record<string, Record<string, number>>).usage?.cache_creation_input_tokens ?? 0,
-    },
-    sessionId: (parsed.session_id as string) ?? "",
-  }
 }
 
 export const parseStreamLine = (line: string): StreamEvent => {

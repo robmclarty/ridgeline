@@ -4,7 +4,7 @@ import { recordCost } from "../../stores/budget"
 import { ensureHandoffExists } from "../../stores/handoff"
 import { formatIssue } from "../../stores/feedback.verdict"
 import { writeFeedback, archiveFeedback } from "../../stores/feedback.io"
-import { logTrajectory, makeTrajectoryEntry } from "../../stores/trajectory"
+import { logTrajectory } from "../../stores/trajectory"
 import { updatePhaseStatus } from "../../stores/state"
 import { printPhase } from "../../ui/output"
 import { commitAll, isWorkingTreeDirty } from "../../git"
@@ -22,7 +22,7 @@ const handleInvokeError = (
   const event = step === "build" ? "build_complete" : "review_complete"
   const msg = String(err)
   printPhase(phase.id, `${label} failed: ${msg}`)
-  logTrajectory(config.buildDir, makeTrajectoryEntry(event, phase.id, `${label} error: ${msg}`))
+  logTrajectory(config.buildDir, event, phase.id, `${label} error: ${msg}`)
   if (msg.includes("Authentication failed")) {
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
     return "fatal"
@@ -38,10 +38,8 @@ const isBudgetExceeded = (
 ): boolean => {
   if (!config.maxBudgetUsd || totalCostUsd <= config.maxBudgetUsd) return false
   printPhase(phase.id, `Budget exceeded: $${totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
-  logTrajectory(config.buildDir, makeTrajectoryEntry(
-    "budget_exceeded", phase.id,
-    `Total cost $${totalCostUsd.toFixed(2)} exceeds budget $${config.maxBudgetUsd}`
-  ))
+  logTrajectory(config.buildDir, "budget_exceeded", phase.id,
+    `Total cost $${totalCostUsd.toFixed(2)} exceeds budget $${config.maxBudgetUsd}`)
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
   return true
 }
@@ -56,20 +54,17 @@ const executeBuild = async (
 ): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean }> => {
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
-  logTrajectory(config.buildDir, makeTrajectoryEntry("build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`))
+  logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
 
   const wallStart = Date.now()
   const result = await invokeBuilder(config, phase, feedbackFilePath)
   result.durationMs = Date.now() - wallStart
 
-  logTrajectory(config.buildDir, makeTrajectoryEntry(
-    "build_complete", phase.id, "Build complete",
-    {
-      duration: result.durationMs,
-      tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-      costUsd: result.costUsd,
-    }
-  ))
+  logTrajectory(config.buildDir, "build_complete", phase.id, "Build complete", {
+    duration: result.durationMs,
+    tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
+    costUsd: result.costUsd,
+  })
 
   const budget = recordCost(config.buildDir, phase.id, "builder", attempt, result)
 
@@ -91,20 +86,17 @@ const executeReview = async (
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   printPhase(phase.id, "Reviewing...")
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
-  logTrajectory(config.buildDir, makeTrajectoryEntry("review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`))
+  logTrajectory(config.buildDir, "review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`)
 
   const wallStart = Date.now()
   const { result, verdict } = await invokeReviewer(config, phase, checkpointTag)
   result.durationMs = Date.now() - wallStart
 
-  logTrajectory(config.buildDir, makeTrajectoryEntry(
-    "review_complete", phase.id, verdict.summary,
-    {
-      duration: result.durationMs,
-      tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-      costUsd: result.costUsd,
-    }
-  ))
+  logTrajectory(config.buildDir, "review_complete", phase.id, verdict.summary, {
+    duration: result.durationMs,
+    tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
+    costUsd: result.costUsd,
+  })
 
   recordCost(config.buildDir, phase.id, "reviewer", attempt, result)
 
@@ -128,7 +120,7 @@ const handleExhaustion = (
   })
 
   printPhase(phase.id, "FAILED: retries exhausted")
-  logTrajectory(config.buildDir, makeTrajectoryEntry("phase_fail", phase.id, "Retries exhausted"))
+  logTrajectory(config.buildDir, "phase_fail", phase.id, "Retries exhausted")
 
   console.log("")
   console.log(`Recovery: git reset --hard ${checkpointTag}`)
@@ -194,7 +186,7 @@ export const runPhase = async (
       })
 
       printPhase(phase.id, `PASSED (${(duration / 1000).toFixed(0)}s)`)
-      logTrajectory(config.buildDir, makeTrajectoryEntry("phase_advance", phase.id, "Phase passed"))
+      logTrajectory(config.buildDir, "phase_advance", phase.id, "Phase passed")
       return "passed"
     }
 

@@ -3,7 +3,7 @@ import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
 import { invokeRefiner, RefineConfig } from "../engine/pipeline/refine.exec"
 import { advancePipeline } from "../stores/state"
-import { logTrajectory, makeTrajectoryEntry } from "../stores/trajectory"
+import { logTrajectory } from "../stores/trajectory"
 import { recordCost } from "../stores/budget"
 
 type RefineOptions = {
@@ -64,19 +64,17 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
     iterationNumber,
   }
 
-  logTrajectory(buildDir, makeTrajectoryEntry("refine_start", null,
-    `Refine started (iteration ${iterationNumber})`))
+  logTrajectory(buildDir, "refine_start", null, `Refine started (iteration ${iterationNumber})`)
 
   const result = await invokeRefiner(specMd, researchMd, constraintsMd, tasteMd, config)
 
   recordCost(buildDir, "refine", "refiner", 0, result)
 
-  logTrajectory(buildDir, makeTrajectoryEntry("refine_complete", null,
-    `Refine complete (iteration ${iterationNumber})`, {
-      duration: result.durationMs,
-      tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-      costUsd: result.costUsd,
-    }))
+  logTrajectory(buildDir, "refine_complete", null, `Refine complete (iteration ${iterationNumber})`, {
+    duration: result.durationMs,
+    tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
+    costUsd: result.costUsd,
+  })
 
   advancePipeline(buildDir, buildName, "refine")
 

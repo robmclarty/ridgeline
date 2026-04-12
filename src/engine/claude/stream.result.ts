@@ -1,5 +1,5 @@
 import { ClaudeResult } from "../../types"
-import { parseClaudeResult } from "./stream.parse"
+import { parseClaudeResult } from "./stream.types"
 
 interface ContentFallbacks {
   textParts: string[]

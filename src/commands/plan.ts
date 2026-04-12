@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../types"
 import { printInfo } from "../ui/output"
-import { logTrajectory, makeTrajectoryEntry } from "../stores/trajectory"
+import { logTrajectory } from "../stores/trajectory"
 import { recordCost } from "../stores/budget"
 import { invokePlanner } from "../engine/pipeline/ensemble.exec"
 import { advancePipeline } from "../stores/state"
@@ -21,7 +21,7 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
 
   // Run planner
   printInfo("Running planner...")
-  logTrajectory(config.buildDir, makeTrajectoryEntry("plan_start", null, "Planning started"))
+  logTrajectory(config.buildDir, "plan_start", null, "Planning started")
 
   const { phases, ensemble } = await invokePlanner(config)
 
@@ -31,17 +31,14 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   }
   recordCost(config.buildDir, "plan", "synthesizer", 0, ensemble.synthesizerResult)
 
-  logTrajectory(config.buildDir, makeTrajectoryEntry(
-    "plan_complete", null, `Generated ${phases.length} phases`,
-    {
-      duration: ensemble.totalDurationMs,
-      tokens: {
-        input: ensemble.specialistResults.reduce((sum, r) => sum + r.usage.inputTokens, 0) + ensemble.synthesizerResult.usage.inputTokens,
-        output: ensemble.specialistResults.reduce((sum, r) => sum + r.usage.outputTokens, 0) + ensemble.synthesizerResult.usage.outputTokens,
-      },
-      costUsd: ensemble.totalCostUsd,
-    }
-  ))
+  logTrajectory(config.buildDir, "plan_complete", null, `Generated ${phases.length} phases`, {
+    duration: ensemble.totalDurationMs,
+    tokens: {
+      input: ensemble.specialistResults.reduce((sum, r) => sum + r.usage.inputTokens, 0) + ensemble.synthesizerResult.usage.inputTokens,
+      output: ensemble.specialistResults.reduce((sum, r) => sum + r.usage.outputTokens, 0) + ensemble.synthesizerResult.usage.outputTokens,
+    },
+    costUsd: ensemble.totalCostUsd,
+  })
 
   // Advance pipeline state
   advancePipeline(config.buildDir, config.buildName, "plan")

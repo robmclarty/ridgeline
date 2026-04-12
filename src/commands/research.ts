@@ -3,7 +3,7 @@ import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
 import { invokeResearcher, ResearchConfig } from "../engine/pipeline/research.exec"
 import { advancePipeline } from "../stores/state"
-import { logTrajectory, makeTrajectoryEntry } from "../stores/trajectory"
+import { logTrajectory } from "../stores/trajectory"
 import { recordCost } from "../stores/budget"
 import { resolveResearchAllowlist } from "../stores/settings"
 import { runRefine } from "./refine"
@@ -67,8 +67,8 @@ const runSingleResearch = async (
     iterationNumber: iteration,
   }
 
-  logTrajectory(buildDir, makeTrajectoryEntry("research_start", null,
-    `Research started (${opts.isDeep ? "deep" : "quick"} mode, iteration ${iteration})`))
+  logTrajectory(buildDir, "research_start", null,
+    `Research started (${opts.isDeep ? "deep" : "quick"} mode, iteration ${iteration})`)
 
   const result = await invokeResearcher(specMd, constraintsMd, tasteMd, config)
 
@@ -78,7 +78,7 @@ const runSingleResearch = async (
   }
   recordCost(buildDir, "research", "synthesizer", 0, result.synthesizerResult)
 
-  logTrajectory(buildDir, makeTrajectoryEntry("research_complete", null,
+  logTrajectory(buildDir, "research_complete", null,
     `Research complete (${result.specialistResults.length} specialists, iteration ${iteration})`, {
       duration: result.totalDurationMs,
       tokens: {
@@ -86,7 +86,7 @@ const runSingleResearch = async (
         output: result.specialistResults.reduce((sum, r) => sum + r.usage.outputTokens, 0) + result.synthesizerResult.usage.outputTokens,
       },
       costUsd: result.totalCostUsd,
-    }))
+    })
 
   advancePipeline(buildDir, buildName, "research")
 

@@ -159,6 +159,67 @@ const assembleSpecialistUserPrompt = (
   return sections.join("\n")
 }
 
+/** Format a single specialist draft into prompt sections. */
+const formatDraftProposal = (
+  sections: string[],
+  perspective: string,
+  draft: SpecifierDraft,
+): void => {
+  formatProposalHeading(sections, perspective, draft.tradeoffs)
+  sections.push(`**Concerns:** ${draft.concerns.join("; ")}\n`)
+
+  sections.push("**Spec Proposal:**")
+  sections.push(`- Title: ${draft.spec.title}`)
+  sections.push(`- Overview: ${draft.spec.overview}`)
+  sections.push(`- Features (${draft.spec.features.length}):`)
+  for (const feature of draft.spec.features) {
+    sections.push(`  - **${feature.name}**: ${feature.description}`)
+    sections.push(`    Criteria: ${feature.acceptanceCriteria.join("; ")}`)
+  }
+  sections.push(`- In scope: ${draft.spec.scopeBoundaries.inScope.join("; ")}`)
+  sections.push(`- Out of scope: ${draft.spec.scopeBoundaries.outOfScope.join("; ")}`)
+  sections.push("")
+
+  sections.push("**Constraints Proposal:**")
+  sections.push(`- Language: ${draft.constraints.language}, Runtime: ${draft.constraints.runtime}`)
+  if (draft.constraints.framework) sections.push(`- Framework: ${draft.constraints.framework}`)
+  sections.push(`- Directory: ${draft.constraints.directoryConventions}`)
+  sections.push(`- Naming: ${draft.constraints.namingConventions}`)
+  if (draft.constraints.apiStyle) sections.push(`- API style: ${draft.constraints.apiStyle}`)
+  if (draft.constraints.database) sections.push(`- Database: ${draft.constraints.database}`)
+  sections.push(`- Dependencies: ${draft.constraints.dependencies.join(", ")}`)
+  sections.push(`- Check command: \`${draft.constraints.checkCommand}\``)
+  sections.push("")
+
+  if (draft.taste) {
+    sections.push("**Taste Proposal:**")
+    if (draft.taste.codeStyle.length > 0) sections.push(`- Code style: ${draft.taste.codeStyle.join("; ")}`)
+    if (draft.taste.testPatterns.length > 0) sections.push(`- Test patterns: ${draft.taste.testPatterns.join("; ")}`)
+    if (draft.taste.commitFormat) sections.push(`- Commit format: ${draft.taste.commitFormat}`)
+    if (draft.taste.commentStyle) sections.push(`- Comment style: ${draft.taste.commentStyle}`)
+    sections.push("")
+  }
+
+  if (draft.design) {
+    sections.push("**Design Proposal:**")
+    if (draft.design.hardTokens && draft.design.hardTokens.length > 0) {
+      sections.push(`- Hard tokens: ${draft.design.hardTokens.join("; ")}`)
+    }
+    if (draft.design.softGuidance && draft.design.softGuidance.length > 0) {
+      sections.push(`- Soft guidance: ${draft.design.softGuidance.join("; ")}`)
+    }
+    if (draft.design.featureVisuals && draft.design.featureVisuals.length > 0) {
+      sections.push("- Feature visuals:")
+      for (const fv of draft.design.featureVisuals) {
+        sections.push(`  - **${fv.feature}**: ${fv.criteria.join("; ")}`)
+      }
+    }
+    sections.push("")
+  }
+
+  sections.push("---\n")
+}
+
 /** Assemble the user prompt for the specifier synthesizer. */
 const assembleSynthesizerUserPrompt = (
   shapeMd: string,
@@ -173,59 +234,7 @@ const assembleSynthesizerUserPrompt = (
 
   sections.push("## Specialist Proposals\n")
   for (const { perspective, draft } of drafts) {
-    formatProposalHeading(sections, perspective, draft.tradeoffs)
-    sections.push(`**Concerns:** ${draft.concerns.join("; ")}\n`)
-
-    sections.push("**Spec Proposal:**")
-    sections.push(`- Title: ${draft.spec.title}`)
-    sections.push(`- Overview: ${draft.spec.overview}`)
-    sections.push(`- Features (${draft.spec.features.length}):`)
-    for (const feature of draft.spec.features) {
-      sections.push(`  - **${feature.name}**: ${feature.description}`)
-      sections.push(`    Criteria: ${feature.acceptanceCriteria.join("; ")}`)
-    }
-    sections.push(`- In scope: ${draft.spec.scopeBoundaries.inScope.join("; ")}`)
-    sections.push(`- Out of scope: ${draft.spec.scopeBoundaries.outOfScope.join("; ")}`)
-    sections.push("")
-
-    sections.push("**Constraints Proposal:**")
-    sections.push(`- Language: ${draft.constraints.language}, Runtime: ${draft.constraints.runtime}`)
-    if (draft.constraints.framework) sections.push(`- Framework: ${draft.constraints.framework}`)
-    sections.push(`- Directory: ${draft.constraints.directoryConventions}`)
-    sections.push(`- Naming: ${draft.constraints.namingConventions}`)
-    if (draft.constraints.apiStyle) sections.push(`- API style: ${draft.constraints.apiStyle}`)
-    if (draft.constraints.database) sections.push(`- Database: ${draft.constraints.database}`)
-    sections.push(`- Dependencies: ${draft.constraints.dependencies.join(", ")}`)
-    sections.push(`- Check command: \`${draft.constraints.checkCommand}\``)
-    sections.push("")
-
-    if (draft.taste) {
-      sections.push("**Taste Proposal:**")
-      if (draft.taste.codeStyle.length > 0) sections.push(`- Code style: ${draft.taste.codeStyle.join("; ")}`)
-      if (draft.taste.testPatterns.length > 0) sections.push(`- Test patterns: ${draft.taste.testPatterns.join("; ")}`)
-      if (draft.taste.commitFormat) sections.push(`- Commit format: ${draft.taste.commitFormat}`)
-      if (draft.taste.commentStyle) sections.push(`- Comment style: ${draft.taste.commentStyle}`)
-      sections.push("")
-    }
-
-    if (draft.design) {
-      sections.push("**Design Proposal:**")
-      if (draft.design.hardTokens && draft.design.hardTokens.length > 0) {
-        sections.push(`- Hard tokens: ${draft.design.hardTokens.join("; ")}`)
-      }
-      if (draft.design.softGuidance && draft.design.softGuidance.length > 0) {
-        sections.push(`- Soft guidance: ${draft.design.softGuidance.join("; ")}`)
-      }
-      if (draft.design.featureVisuals && draft.design.featureVisuals.length > 0) {
-        sections.push("- Feature visuals:")
-        for (const fv of draft.design.featureVisuals) {
-          sections.push(`  - **${fv.feature}**: ${fv.criteria.join("; ")}`)
-        }
-      }
-      sections.push("")
-    }
-
-    sections.push("---\n")
+    formatDraftProposal(sections, perspective, draft)
   }
 
   sections.push("## Output Directory\n")

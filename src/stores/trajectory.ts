@@ -5,11 +5,7 @@ import { TrajectoryEntry } from "../types"
 const trajectoryPath = (buildDir: string): string =>
   path.join(buildDir, "trajectory.jsonl")
 
-export const logTrajectory = (buildDir: string, entry: TrajectoryEntry): void => {
-  fs.appendFileSync(trajectoryPath(buildDir), JSON.stringify(entry) + "\n")
-}
-
-export const makeTrajectoryEntry = (
+const makeEntry = (
   type: TrajectoryEntry["type"],
   phaseId: string | null,
   summary: string,
@@ -27,6 +23,20 @@ export const makeTrajectoryEntry = (
   costUsd: opts?.costUsd ?? null,
   summary,
 })
+
+export const logTrajectory = (
+  buildDir: string,
+  type: TrajectoryEntry["type"],
+  phaseId: string | null,
+  summary: string,
+  opts?: {
+    duration?: number
+    tokens?: { input: number; output: number }
+    costUsd?: number
+  }
+): void => {
+  fs.appendFileSync(trajectoryPath(buildDir), JSON.stringify(makeEntry(type, phaseId, summary, opts)) + "\n")
+}
 
 // Read all trajectory entries from the JSONL file
 export const readTrajectory = (buildDir: string): TrajectoryEntry[] => {
