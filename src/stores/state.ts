@@ -236,6 +236,23 @@ const collectStageFiles = (buildDir: string, stage: PipelineStage): string[] => 
   return files
 }
 
+/** Type-safe setter for pipeline stage status, avoiding `as any` on indexed union types. */
+const setPipelineStage = (
+  pipeline: PipelineState,
+  stage: PipelineStage,
+  status: "pending" | "complete" | "skipped" | "running",
+): void => {
+  switch (stage) {
+    case "shape": pipeline.shape = status as PipelineState["shape"]; break
+    case "design": pipeline.design = status as PipelineState["design"]; break
+    case "spec": pipeline.spec = status as PipelineState["spec"]; break
+    case "research": pipeline.research = status as PipelineState["research"]; break
+    case "refine": pipeline.refine = status as PipelineState["refine"]; break
+    case "plan": pipeline.plan = status as PipelineState["plan"]; break
+    case "build": pipeline.build = status as PipelineState["build"]; break
+  }
+}
+
 /** Reset pipeline state for stages downstream of targetStage. */
 const resetPipelineState = (
   buildDir: string,
@@ -251,19 +268,17 @@ const resetPipelineState = (
     if (ALL_PIPELINE_STAGES.indexOf(stage) > targetIndex) {
       // Optional stages reset to "skipped", required stages to "pending"
       if (stage === "research" || stage === "refine" || stage === "design") {
-        state.pipeline[stage] = "skipped" as any
+        setPipelineStage(state.pipeline, stage, "skipped")
       } else {
-        state.pipeline[stage] = "pending" as any
+        setPipelineStage(state.pipeline, stage, "pending")
       }
     }
   }
 
   if (targetStage === "build") {
-    state.pipeline.build = "pending"
-  } else if (targetStage === "research" || targetStage === "refine" || targetStage === "design") {
-    state.pipeline[targetStage] = "complete" as any
+    setPipelineStage(state.pipeline, targetStage, "pending")
   } else {
-    state.pipeline[targetStage] = "complete"
+    setPipelineStage(state.pipeline, targetStage, "complete")
   }
 
   if (_resetStages.includes("plan") || _resetStages.includes("build")) {
