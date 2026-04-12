@@ -5,35 +5,39 @@
 Build harness for long-horizon software execution using AI agents.
 
 Ridgeline decomposes large software ideas into phased builds using a
-multi-agent pipeline (shaper, specifier, researcher, refiner, planner, builder,
-reviewer) driven by the Claude CLI. It manages state through git checkpoints,
+multi-agent pipeline (shaper, designer, specifier, researcher, refiner, planner,
+builder, reviewer) driven by the Claude CLI. It manages state through git checkpoints,
 tracks costs, and supports resumable execution when things go wrong.
 
 ## How it works
 
 1. **Shape** -- describe what you want built. The shaper agent analyzes your
    codebase and asks clarifying questions to produce a structured shape document.
-2. **Specify** -- an ensemble of three specialist agents (completeness, clarity,
+2. **Design** (optional) -- the designer agent establishes a visual design system
+   (`design.md`) through interactive Q&A. Auto-runs the asset catalog if assets
+   exist, and injects catalog context (detected style, palette, resolution) into
+   the design conversation. Works at build level or project level.
+3. **Specify** -- an ensemble of three specialist agents (completeness, clarity,
    pragmatism) drafts spec proposals, then a synthesizer merges them into
    `spec.md`, `constraints.md`, and optionally `taste.md`.
-3. **Research** (optional) -- an ensemble of research specialists (academic,
+4. **Research** (optional) -- an ensemble of research specialists (academic,
    ecosystem, competitive) investigates the spec using web sources, then a
    synthesizer merges findings into `research.md`. A gap analysis agenda step
    runs before specialist dispatch to focus research on spec gaps. Findings
    accumulate across iterations rather than being overwritten. A quick
    single-agent mode is also available. See [Research and Refine](docs/research.md).
-4. **Refine** (optional) -- the refiner agent rewrites `spec.md` incorporating
+5. **Refine** (optional) -- the refiner agent rewrites `spec.md` incorporating
    research findings and writes `spec.changelog.md` documenting what changed.
    Additive by default -- adds insights without removing user-authored content.
-5. **Plan** -- an ensemble of three specialist planners (simplicity,
+6. **Plan** -- an ensemble of three specialist planners (simplicity,
    thoroughness, velocity) proposes phase decompositions, then a synthesizer
    merges them into numbered phase files with acceptance criteria.
-6. **Build** -- for each phase the builder agent implements the spec inside your
+7. **Build** -- for each phase the builder agent implements the spec inside your
    repo, then creates a git checkpoint.
-7. **Review** -- the reviewer agent (read-only) checks the output against the
+8. **Review** -- the reviewer agent (read-only) checks the output against the
    acceptance criteria and returns a structured verdict. On failure, the harness
    generates a feedback file from the verdict for the builder's next attempt.
-8. **Retry or advance** -- failed phases are retried up to a configurable limit;
+9. **Retry or advance** -- failed phases are retried up to a configurable limit;
    passing phases hand off context to the next one.
 
 ## Install
@@ -65,12 +69,16 @@ ridgeline my-feature "Build a REST API for task management"
 
 # Or run each stage individually
 ridgeline shape my-feature "Build a REST API for task management"
+ridgeline design my-feature            # optional: establish visual design system
 ridgeline spec my-feature
-ridgeline research my-feature --deep  # optional: enrich spec with web research
-ridgeline refine my-feature           # optional: merge research into spec
+ridgeline research my-feature --deep   # optional: enrich spec with web research
+ridgeline refine my-feature            # optional: merge research into spec
 ridgeline plan my-feature
 ridgeline dry-run my-feature   # preview before committing
 ridgeline build my-feature
+
+# Catalog media assets (images, audio, video, text)
+ridgeline catalog my-feature --classify --describe
 
 # Resume after a failure (re-run build)
 ridgeline build my-feature
@@ -87,8 +95,8 @@ ridgeline clean
 ### `ridgeline [build-name] [input]` (default)
 
 Auto-advances the build through the next incomplete pipeline stage
-(shape → spec → plan → build; research and refine are opt-in). Accepts all
-flags from the individual commands.
+(shape → spec → plan → build; design, research, and refine are opt-in).
+Accepts all flags from the individual commands.
 
 ### `ridgeline shape [build-name] [input]`
 
@@ -99,6 +107,20 @@ path to an existing document or a natural language description.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for shaper agent |
+| `--timeout <minutes>` | `10` | Max duration per turn |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
+
+### `ridgeline design [build-name]`
+
+Establishes or updates a visual design system through interactive Q&A. Produces
+`design.md` in the build directory (or project-level if no build name is given).
+If an asset directory exists but no catalog has been built, the catalog is
+auto-run and its summary (detected style, palette, resolution, category
+breakdown) is injected into the designer's context.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for designer agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 | `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
@@ -191,7 +213,70 @@ Resets pipeline state to a given stage and deletes downstream artifacts.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--to <stage>` | (required) | Stage to rewind to: `shape`, `spec`, `research`, `refine`, or `plan` |
+| `--to <stage>` | (required) | Stage to rewind to: `shape`, `design`, `spec`, `research`, `refine`, or `plan` |
+
+### `ridgeline catalog [build-name]`
+
+Indexes media assets into `asset-catalog.json` — a structured metadata file that
+feeds into the design and build phases. Supports images, audio, video, and text
+files. The catalog pipeline runs in three tiers:
+
+1. **Deterministic metadata** (always runs) — scans the asset directory, extracts
+   file metadata (size, hash, dimensions for images), detects spritesheets and
+   tileable textures, infers category from directory structure and filename
+   conventions (e.g., `characters/knight-walk.png` → category "characters",
+   subject "knight", state "walk"). Computes project-wide visual identity
+   aggregates (detected style, palette, resolution).
+2. **Classification** (with `--classify`) — assigns categories to uncategorized
+   files. Filename heuristics run first (e.g., `bg_*` → backgrounds, `sfx_*` →
+   sfx). Files that don't match any pattern fall through to AI classification
+   using Claude vision for images or text prompts for other media types.
+3. **Vision enrichment** (with `--describe`) — uses Claude vision to add semantic
+   descriptions, facing direction, pose, style tags, and animation type for image
+   assets. Layout and UI assets are auto-described regardless of the flag.
+4. **Sprite packing** (with `--pack`) — groups image assets by category and packs
+   them into 2048×2048 sprite atlases with PixiJS-compatible JSON metadata.
+   Backgrounds and layout references are excluded.
+
+The catalog is incremental — unchanged files (by content hash) are skipped on
+subsequent runs unless `--force` is set.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--asset-dir <path>` | auto | Path to asset directory |
+| `--classify` | off | AI-classify uncategorized files into categories |
+| `--describe` | off | Add vision-based descriptions for all image assets |
+| `--pack` | off | Generate sprite atlases after cataloging |
+| `--batch` | off | Batch multiple images per vision call |
+| `--force` | off | Re-process all assets ignoring content hash |
+| `--model <name>` | `opus` | Model for vision and classification |
+| `--timeout <minutes>` | `5` | Max duration per AI call |
+
+Asset directory is resolved in order: `--asset-dir` flag,
+`.ridgeline/builds/<build-name>/assets/`, `.ridgeline/assets/`, or the
+`assetDir` field in `settings.json`.
+
+### `ridgeline retrospective [build-name]`
+
+Analyzes a completed build and extracts learnings for future builds. Reads the
+trajectory log, budget, state, and any feedback files, then appends structured
+insights to `.ridgeline/learnings.md`. Future builds automatically pick up these
+learnings if the file exists.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | `opus` | Model for retrospective agent |
+| `--timeout <minutes>` | `10` | Max duration |
+| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
+
+### `ridgeline check`
+
+Checks recommended tools and prerequisites for a flavour. Reports which
+external tools are available and which are missing.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--flavour <name-or-path>` | from settings | Agent flavour to check |
 
 ### `ridgeline clean`
 
@@ -203,15 +288,19 @@ WIP branches. Use this after inspecting a failed build.
 ```text
 .ridgeline/
 ├── settings.json      # Optional project-level config (network allowlist, etc.)
+├── design.md          # Optional project-level visual design system
+├── learnings.md       # Optional accumulated build learnings (from retrospective)
 ├── worktrees/         # Git worktrees for active builds
 │   └── <build-name>/  # Isolated working directory per build
 └── builds/<build-name>/
     ├── shape.md           # Structured project context (from shaper)
+    ├── design.md          # Optional visual design system (from designer)
     ├── spec.md            # What to build
     ├── constraints.md     # Technical constraints and check commands
     ├── taste.md           # Optional coding style preferences
     ├── research.md        # Optional research findings (from researcher)
     ├── spec.changelog.md  # Optional changelog of spec refinements
+    ├── asset-catalog.json # Optional indexed media assets (from catalog)
     ├── phases/
     │   ├── 01-scaffold.md
     │   ├── 01-scaffold.feedback.md  # Generated by harness on review failure
