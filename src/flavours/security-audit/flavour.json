@@ -1,0 +1,8 @@
+{
+  "name": "security-audit",
+  "recommendedSkills": [
+    "vuln-scan",
+    "dependency-audit",
+    "secret-detect"
+  ]
+}
