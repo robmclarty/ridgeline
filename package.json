@@ -7,7 +7,7 @@
     "ridgeline": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/flavours && cp -r src/flavours dist/flavours && rm -rf dist/plugin && cp -r plugin dist/plugin",
+    "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/flavours && cp -r src/flavours dist/flavours && rm -rf dist/plugin && cp -r plugin dist/plugin && cp src/shapes/*.json dist/shapes/",
     "dev": "tsc --watch",
     "lint": "npm run lint:code && npm run lint:markdown && npm run lint:agents && npm run lint:fallow",
     "lint:code": "oxlint --ignore-pattern examples",
