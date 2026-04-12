@@ -151,9 +151,32 @@ you set up the best environment for the flavour upfront.
 ### Per-folder fallback
 
 You don't need to provide every subfolder. The agent registry resolves each
-subfolder independently: if your flavour has a `core/` directory, those agents
-replace the defaults. If it doesn't have a `specialists/` directory, the
-default specialists are used instead.
+subfolder independently:
+
+```mermaid
+flowchart TB
+    resolve["Resolve agents\nfor each subfolder"]
+
+    resolve --> core{"Flavour has\ncore/?}
+    core -->|yes| use_flavour_core["Use flavour core agents"]
+    core -->|no| use_default_core["Use default core agents"]
+
+    resolve --> spec{"Flavour has\nspecifiers/?}
+    spec -->|yes| use_flavour_spec["Use flavour specifiers"]
+    spec -->|no| use_default_spec["Use default specifiers"]
+
+    resolve --> plan{"Flavour has\nplanners/?}
+    plan -->|yes| use_flavour_plan["Use flavour planners"]
+    plan -->|no| use_default_plan["Use default planners"]
+
+    resolve --> research{"Flavour has\nresearchers/?}
+    research -->|yes| use_flavour_res["Use flavour researchers"]
+    research -->|no| use_default_res["Use default researchers"]
+
+    resolve --> gaps{"Flavour has\ngaps.md?"}
+    gaps -->|yes| use_flavour_gaps["Use flavour gaps.md"]
+    gaps -->|no| use_base_gaps["Use base gaps.md\n(always available)"]
+```
 
 This means a minimal flavour can override just the core agents and inherit
 everything else.

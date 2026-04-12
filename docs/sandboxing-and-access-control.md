@@ -34,8 +34,37 @@ The goal is to close this gap with layered controls that:
 
 ## Current Ridgeline Controls (Post-Implementation)
 
-As of v0.3.0, the sandbox and access control system has been implemented. The
-controls below reflect the current state.
+As of v0.3.0, the sandbox and access control system has been implemented.
+The defense layers stack from outermost (strongest) to innermost (softest):
+
+```mermaid
+flowchart TB
+    subgraph layer1 ["Layer 1: OS Sandbox (Hard)"]
+        direction TB
+        sandbox["Greywall (macOS/Linux)\nor bwrap (Linux)\nauto-detected, on by default"]
+        net["Network allowlist\n(settings.json domains)"]
+        sandbox --- net
+    end
+
+    subgraph layer2 ["Layer 2: Process Isolation (Hard)"]
+        worktree["Git worktrees\nper build"]
+        budget["Budget cap\n--max-budget-usd"]
+        timeout["Timeouts\nSIGTERM/SIGKILL"]
+        worktree --- budget --- timeout
+    end
+
+    subgraph layer3 ["Layer 3: Tool Restrictions (Hard)"]
+        tools["--allowedTools\nper agent role"]
+    end
+
+    subgraph layer4 ["Layer 4: Behavioral (Soft)"]
+        prompts["Agent system prompts"]
+        hook["Network guard hook\n(--unsafe mode only)"]
+        prompts --- hook
+    end
+
+    layer1 --> layer2 --> layer3 --> layer4
+```
 
 | Layer | Mechanism | Enforcement |
 |-------|-----------|-------------|

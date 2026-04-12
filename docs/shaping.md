@@ -271,40 +271,21 @@ to a known good state.
 
 Here's the entire flow from idea to working code:
 
-```text
-  "Build a task management API"          <-- you start here
-              │
-              ▼
-         ┌─────────┐
-         │  SHAPE  │  Shaper analyzes codebase, asks questions
-         └────┬────┘
-              │
-              ▼
-          shape.md                       <-- structured project context
-              │
-              ▼
-         ┌─────────┐
-         │  SPEC   │  3 specialists + synthesizer
-         └────┬────┘
-              │
-              ▼
-    spec.md + constraints.md + taste.md  <-- precise requirements
-              │
-              ▼
-         ┌─────────┐
-         │  PLAN   │  3 specialists + synthesizer
-         └────┬────┘
-              │
-              ▼
-    01-scaffold.md, 02-core.md, ...      <-- executable phases
-              │
-              ▼
-         ┌─────────┐
-         │  BUILD  │  Builder implements, reviewer verifies
-         └────┬────┘   (retry on failure, advance on pass)
-              │
-              ▼
-         Working code with git history   <-- done
+```mermaid
+flowchart TB
+    input["&quot;Build a task management API&quot;"]
+
+    input --> shape["SHAPE\nAnalyze codebase,\nask questions"]
+    shape --> shape_out[/"shape.md\nstructured project context"/]
+
+    shape_out --> spec["SPEC\n3 specialists +\nsynthesizer"]
+    spec --> spec_out[/"spec.md\nconstraints.md\ntaste.md"/]
+
+    spec_out --> plan["PLAN\n3 specialists +\nsynthesizer"]
+    plan --> plan_out[/"01-scaffold.md\n02-core.md\n..."/]
+
+    plan_out --> build["BUILD\nBuilder implements,\nreviewer verifies\n(retry on failure)"]
+    build --> done[/"Working code\nwith git history"/]
 ```
 
 ## Running It All at Once
