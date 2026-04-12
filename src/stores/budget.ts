@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { BudgetState, BudgetEntry, ClaudeResult } from "../types"
 import { atomicWriteSync } from "../utils/atomic-write"
+import { withFileLock } from "../utils/file-lock"
 
 const budgetPath = (buildDir: string): string =>
   path.join(buildDir, "budget.json")
@@ -25,23 +26,26 @@ export const recordCost = (
   attempt: number,
   result: ClaudeResult
 ): BudgetState => {
-  const budget = loadBudget(buildDir)
-  const entry: BudgetEntry = {
-    phase,
-    role,
-    attempt,
-    costUsd: result.costUsd,
-    inputTokens: result.usage.inputTokens,
-    outputTokens: result.usage.outputTokens,
-    cacheReadInputTokens: result.usage.cacheReadInputTokens,
-    cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
-    durationMs: result.durationMs,
-    timestamp: new Date().toISOString(),
-  }
-  budget.entries.push(entry)
-  budget.totalCostUsd = budget.entries.reduce((sum, e) => sum + e.costUsd, 0)
-  saveBudget(buildDir, budget)
-  return budget
+  const lockPath = budgetPath(buildDir) + ".lock"
+  return withFileLock(lockPath, () => {
+    const budget = loadBudget(buildDir)
+    const entry: BudgetEntry = {
+      phase,
+      role,
+      attempt,
+      costUsd: result.costUsd,
+      inputTokens: result.usage.inputTokens,
+      outputTokens: result.usage.outputTokens,
+      cacheReadInputTokens: result.usage.cacheReadInputTokens,
+      cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
+      durationMs: result.durationMs,
+      timestamp: new Date().toISOString(),
+    }
+    budget.entries.push(entry)
+    budget.totalCostUsd = budget.entries.reduce((sum, e) => sum + e.costUsd, 0)
+    saveBudget(buildDir, budget)
+    return budget
+  })
 }
 
 export const getTotalCost = (buildDir: string): number =>

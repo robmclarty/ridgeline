@@ -2,12 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo } from "../state"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo, rebuildStateFromTrajectory } from "../state"
 import type { PhaseInfo, BuildState, PipelineState } from "../../types"
 
-// Mock tags module for getNextIncompletePhase
+// Mock tags module for getNextIncompletePhase and trajectory recovery
 vi.mock("../tags", () => ({
   checkpointTagName: vi.fn((buildName: string, phaseId: string) => `ridgeline/checkpoint/${buildName}/${phaseId}`),
+  completionTagName: vi.fn((buildName: string, phaseId: string) => `ridgeline/phase/${buildName}/${phaseId}`),
   verifyCompletionTag: vi.fn(() => true),
   cleanupBuildTags: vi.fn(),
 }))
@@ -616,6 +617,111 @@ describe("state", () => {
       expect(state!.pipeline).toBeDefined()
       expect(state!.pipeline.shape).toBe("complete")
       expect(state!.pipeline.spec).toBe("pending")
+    })
+  })
+
+  describe("rebuildStateFromTrajectory", () => {
+    const writeTrajectory = (entries: Record<string, unknown>[]) => {
+      const lines = entries.map((e) => JSON.stringify(e)).join("\n") + "\n"
+      fs.writeFileSync(path.join(tmpDir, "trajectory.jsonl"), lines)
+    }
+
+    it("returns null when trajectory is empty", () => {
+      expect(rebuildStateFromTrajectory(tmpDir, "test", samplePhases)).toBeNull()
+    })
+
+    it("recovers completed phases from trajectory", () => {
+      writeTrajectory([
+        { timestamp: "2026-01-01T00:00:00.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 1" },
+        { timestamp: "2026-01-01T00:00:10.000Z", type: "build_complete", phaseId: "01-scaffold", duration: 9000, tokens: { input: 100, output: 200 }, costUsd: 0.05, summary: "Build complete" },
+        { timestamp: "2026-01-01T00:00:20.000Z", type: "review_complete", phaseId: "01-scaffold", duration: 5000, tokens: { input: 50, output: 100 }, costUsd: 0.03, summary: "All criteria met" },
+        { timestamp: "2026-01-01T00:00:25.000Z", type: "phase_advance", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Phase passed" },
+      ])
+
+      const state = rebuildStateFromTrajectory(tmpDir, "test", samplePhases)
+
+      expect(state).not.toBeNull()
+      expect(state!.buildName).toBe("test")
+      expect(state!.startedAt).toBe("2026-01-01T00:00:00.000Z")
+
+      const phase1 = state!.phases.find((p) => p.id === "01-scaffold")!
+      expect(phase1.status).toBe("complete")
+      expect(phase1.completionTag).toBe("ridgeline/phase/test/01-scaffold")
+      expect(phase1.retries).toBe(0)
+      expect(phase1.duration).toBe(25000) // 00:00:25 - 00:00:00
+      expect(phase1.completedAt).toBe("2026-01-01T00:00:25.000Z")
+      expect(phase1.failedAt).toBeNull()
+
+      // Unattempted phases should be pending
+      const phase2 = state!.phases.find((p) => p.id === "02-api")!
+      expect(phase2.status).toBe("pending")
+      expect(phase2.completionTag).toBeNull()
+      expect(phase2.retries).toBe(0)
+    })
+
+    it("recovers failed phases with retry count", () => {
+      writeTrajectory([
+        { timestamp: "2026-01-01T00:00:00.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 1" },
+        { timestamp: "2026-01-01T00:00:10.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 2" },
+        { timestamp: "2026-01-01T00:00:20.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 3" },
+        { timestamp: "2026-01-01T00:00:30.000Z", type: "phase_fail", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Retries exhausted" },
+      ])
+
+      const state = rebuildStateFromTrajectory(tmpDir, "test", samplePhases)
+      const phase1 = state!.phases.find((p) => p.id === "01-scaffold")!
+
+      expect(phase1.status).toBe("failed")
+      expect(phase1.retries).toBe(2) // 3 build_starts - 1
+      expect(phase1.failedAt).toBe("2026-01-01T00:00:30.000Z")
+      expect(phase1.completionTag).toBeNull()
+      expect(phase1.duration).toBe(30000) // 00:00:30 - 00:00:00
+    })
+  })
+
+  describe("loadState trajectory fallback", () => {
+    const writeTrajectory = (entries: Record<string, unknown>[]) => {
+      const lines = entries.map((e) => JSON.stringify(e)).join("\n") + "\n"
+      fs.writeFileSync(path.join(tmpDir, "trajectory.jsonl"), lines)
+    }
+
+    it("recovers from trajectory when state.json is missing", () => {
+      writeTrajectory([
+        { timestamp: "2026-01-01T00:00:00.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 1" },
+        { timestamp: "2026-01-01T00:00:25.000Z", type: "phase_advance", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Phase passed" },
+      ])
+
+      const state = loadState(tmpDir, "test", samplePhases)
+
+      expect(state).not.toBeNull()
+      expect(state!.phases.find((p) => p.id === "01-scaffold")!.status).toBe("complete")
+      // Verify recovered state was persisted
+      expect(fs.existsSync(path.join(tmpDir, "state.json"))).toBe(true)
+    })
+
+    it("recovers from trajectory when state.json is corrupt", () => {
+      fs.writeFileSync(path.join(tmpDir, "state.json"), "not valid json{{{")
+      writeTrajectory([
+        { timestamp: "2026-01-01T00:00:00.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 1" },
+        { timestamp: "2026-01-01T00:00:25.000Z", type: "phase_advance", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Phase passed" },
+      ])
+
+      const state = loadState(tmpDir, "test", samplePhases)
+
+      expect(state).not.toBeNull()
+      expect(state!.phases.find((p) => p.id === "01-scaffold")!.status).toBe("complete")
+    })
+
+    it("returns null when both state.json and trajectory are missing", () => {
+      expect(loadState(tmpDir, "test", samplePhases)).toBeNull()
+    })
+
+    it("returns null without buildName/phases even if trajectory exists", () => {
+      writeTrajectory([
+        { timestamp: "2026-01-01T00:00:00.000Z", type: "build_start", phaseId: "01-scaffold", duration: null, tokens: null, costUsd: null, summary: "Build attempt 1" },
+      ])
+
+      // Old call signature without extra args
+      expect(loadState(tmpDir)).toBeNull()
     })
   })
 })
