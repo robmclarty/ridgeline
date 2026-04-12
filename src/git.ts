@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process"
+import { printWarn } from "./ui/output"
 
 const run = (cmd: string, cwd?: string): string =>
   execSync(cmd, { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim()
@@ -67,8 +68,11 @@ export const getChangedFileContents = (fromTag: string, cwd?: string): Map<strin
 export const deleteTag = (tagName: string, cwd?: string): void => {
   try {
     run(`git tag -d ${tagName}`, cwd)
-  } catch {
-    // Tag doesn't exist
+  } catch (err) {
+    const msg = String(err)
+    if (!msg.includes("not found")) {
+      printWarn(`Tag cleanup: ${msg}`)
+    }
   }
 }
 
@@ -79,7 +83,10 @@ export const deleteTagsByPrefix = (prefix: string, cwd?: string): void => {
     for (const tag of tags.split("\n").filter(Boolean)) {
       deleteTag(tag, cwd)
     }
-  } catch {
-    // No tags to delete
+  } catch (err) {
+    const msg = String(err)
+    if (!msg.includes("not found")) {
+      printWarn(`Tag prefix cleanup: ${msg}`)
+    }
   }
 }
