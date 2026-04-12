@@ -1,6 +1,6 @@
 {
   "name": "ridgeline",
-  "version": "0.7.5",
+  "version": "0.7.6",
   "description": "Build harness for long-horizon software execution",
   "license": "MIT",
   "bin": {

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.6
+
+- Add `ridgeline catalog` command for processing image assets into `asset-catalog.json` with tiered enrichment (deterministic metadata extraction via sharp/colorthief, optional vision descriptions via `--describe`, sprite atlas packing via `--pack`)
+- Integrate asset catalog into design and build phases (auto-run catalog when assets exist, inject catalog summary into designer context, reference catalog in builder prompts)
+- Add `tsconfig.check.json` to cover all TS directories (src, test, top-level) in typecheck
+- Fix test mocks across 12 files to match evolved type definitions (RidgelineConfig, PipelineState, ShapeDefinition, AgentRegistry, SandboxProvider)
+
 ## 0.7.5
 
 - Fix synthesizer stall-kill during large Write tool calls (e.g., research on iteration 3+) by prompting synthesizers to emit a status line before each Write and bumping their stall timeout from 5 to 8 minutes
