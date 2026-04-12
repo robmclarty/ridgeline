@@ -1,3 +1,6 @@
+/** Media type detected from file extension. */
+export type MediaType = "image" | "audio" | "video" | "text"
+
 /** Region within a layout mockup image. */
 export type LayoutRegion = {
   area: string
@@ -9,26 +12,37 @@ export type LayoutRegion = {
 export type AssetEntry = {
   file: string
   hash: string
+  mediaType: MediaType
 
-  // Deterministic (Tier 1) — always present
+  // Convention-derived (always present)
   category: string
   name: string
   subject: string
   state: string | null
-  width: number
-  height: number
-  format: string
-  hasAlpha: boolean
-  channels: number
-  dominantColour: string
-  palette: string[]
-  isSpritesheet: boolean
-  frameCount: number
-  frameSize: { w: number; h: number } | null
-  frameDirection: "horizontal" | "vertical" | null
-  suggestedAnchor: string
-  suggestedZLayer: string
-  isTileable: boolean
+
+  // Basic metadata (always present)
+  fileSizeBytes: number
+  extension: string
+
+  // Image metadata (present when mediaType === "image")
+  width?: number
+  height?: number
+  format?: string
+  hasAlpha?: boolean
+  channels?: number
+  dominantColour?: string
+  palette?: string[]
+  isSpritesheet?: boolean
+  frameCount?: number
+  frameSize?: { w: number; h: number } | null
+  frameDirection?: "horizontal" | "vertical" | null
+  suggestedAnchor?: string
+  suggestedZLayer?: string
+  isTileable?: boolean
+
+  // Classification metadata (present when AI-classified)
+  isClassified?: boolean
+  classificationConfidence?: "high" | "medium" | "low"
 
   // Vision (Tier 2) — present only with --describe or for layouts/ui
   description?: string
@@ -66,6 +80,7 @@ export type CatalogOptions = {
   isForce: boolean
   isPack: boolean
   isBatch: boolean
+  isClassify: boolean
   model: string
   timeout: number
 }

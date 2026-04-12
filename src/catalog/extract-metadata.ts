@@ -1,5 +1,6 @@
 import * as crypto from "node:crypto"
 import * as fs from "node:fs"
+import * as path from "node:path"
 
 // Dynamic imports for native deps — only loaded when catalog command runs
 let sharpModule: typeof import("sharp") | null = null
@@ -141,6 +142,20 @@ export const detectTileable = async (filepath: string, width: number, height: nu
 export const computeContentHash = (filepath: string): string => {
   const data = fs.readFileSync(filepath)
   return crypto.createHash("md5").update(data).digest("hex")
+}
+
+type BasicMetadata = {
+  fileSizeBytes: number
+  extension: string
+}
+
+/** Extract basic file metadata for non-image assets. */
+export const extractBasicMetadata = (filepath: string): BasicMetadata => {
+  const stat = fs.statSync(filepath)
+  return {
+    fileSizeBytes: stat.size,
+    extension: path.extname(filepath).toLowerCase(),
+  }
 }
 
 // --- Helpers ---
