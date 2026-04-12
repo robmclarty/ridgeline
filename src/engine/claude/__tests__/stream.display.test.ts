@@ -68,6 +68,22 @@ describe("stream.display", () => {
       expect(calls).toEqual(["one\n", "two"])
     })
 
+    it("wraps text in dim grey ANSI codes when dimText is set", () => {
+      const { onStdout } = createDisplayCallbacks({ dimText: true })
+      onStdout('{"type":"assistant","subtype":"text","text":"hello"}\n')
+
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls[0]).toBe("\x1b[90mhello\x1b[0m")
+    })
+
+    it("writes plain text when dimText is not set", () => {
+      const { onStdout } = createDisplayCallbacks()
+      onStdout('{"type":"assistant","subtype":"text","text":"hello"}\n')
+
+      const calls = writeSpy.mock.calls.map((c) => c[0])
+      expect(calls[0]).toBe("hello")
+    })
+
     it("suppresses fenced JSON blocks when suppressJsonBlock is set", () => {
       const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true })
       onStdout('{"type":"assistant","subtype":"text","text":"review notes\\n"}\n')
