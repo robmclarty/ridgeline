@@ -11,23 +11,50 @@ import { commitAll, isWorkingTreeDirty } from "../../git"
 import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
 
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms))
+
+/** Exponential backoff with jitter. Base doubles per attempt, capped at 60s. */
+export const backoffMs = (attempt: number): number => {
+  const base = Math.min(1000 * Math.pow(2, attempt), 60_000)
+  const jitter = Math.random() * base * 0.5
+  return Math.round(base + jitter)
+}
+
+const FATAL_PATTERNS = [
+  "authentication failed",
+  "unauthorized",
+  "forbidden",
+  "invalid_api_key",
+  "oauth token has expired",
+]
+
+/** Classify an invocation error as fatal (don't retry) or transient (retry with backoff). */
+const classifyError = (msg: string): "fatal" | "transient" => {
+  const lower = msg.toLowerCase()
+  if (FATAL_PATTERNS.some((p) => lower.includes(p))) return "fatal"
+  return "transient"
+}
+
 const handleInvokeError = (
   err: unknown,
   step: "build" | "review",
   phase: PhaseInfo,
   config: RidgelineConfig,
   state: BuildState,
-): "fatal" | "retry" => {
+): "fatal" | "transient" => {
   const label = step === "build" ? "Build" : "Review"
   const event = step === "build" ? "build_complete" : "review_complete"
   const msg = String(err)
-  printPhase(phase.id, `${label} failed: ${msg}`)
-  logTrajectory(config.buildDir, event, phase.id, `${label} error: ${msg}`)
-  if (msg.includes("Authentication failed")) {
+  const classification = classifyError(msg)
+
+  printPhase(phase.id, `${label} failed (${classification}): ${msg}`)
+  logTrajectory(config.buildDir, event, phase.id, `${label} error (${classification}): ${msg}`)
+
+  if (classification === "fatal") {
     updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
-    return "fatal"
   }
-  return "retry"
+  return classification
 }
 
 const isBudgetExceeded = (
@@ -160,6 +187,9 @@ export const runPhase = async (
       if (build.isBudgetExceeded) return "failed"
     } catch (err) {
       if (handleInvokeError(err, "build", phase, config, state) === "fatal") return "failed"
+      const delay = backoffMs(attempt)
+      printPhase(phase.id, `Waiting ${(delay / 1000).toFixed(1)}s before retry...`)
+      await sleep(delay)
       attempt++
       continue
     }
@@ -170,6 +200,9 @@ export const runPhase = async (
       verdict = review.verdict
     } catch (err) {
       if (handleInvokeError(err, "review", phase, config, state) === "fatal") return "failed"
+      const delay = backoffMs(attempt)
+      printPhase(phase.id, `Waiting ${(delay / 1000).toFixed(1)}s before retry...`)
+      await sleep(delay)
       attempt++
       continue
     }
