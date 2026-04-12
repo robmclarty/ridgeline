@@ -115,6 +115,20 @@ type EnsembleConfig<TDraft> = {
 
   /** Stall timeout override for the synthesizer invocation (ms). */
   stallTimeoutMs?: number
+
+  /**
+   * Enable two-round ensemble: after round 1 (independent drafts), each specialist
+   * sees all other drafts and produces annotations (concerns, agreements, gaps).
+   * The synthesizer then receives both drafts and annotations.
+   * Default: false (opt-in, because it roughly doubles specialist cost).
+   */
+  isTwoRound?: boolean
+
+  /** Build the annotation prompt for round 2, given other drafts. Requires isTwoRound. */
+  buildAnnotationPrompt?: (
+    ownPerspective: string,
+    otherDrafts: { perspective: string; draft: TDraft }[],
+  ) => string
 }
 
 export const invokeEnsemble = async <TDraft>(
@@ -194,12 +208,60 @@ export const invokeEnsemble = async <TDraft>(
     printInfo(`Continuing with ${successful.length} of ${specialists.length} proposals`)
   }
 
+  // 4b. Two-round annotation pass (optional)
+  let annotations: { perspective: string; annotation: string; result: ClaudeResult }[] = []
+
+  if (config.isTwoRound && config.buildAnnotationPrompt && successful.length >= 2) {
+    printInfo("Round 2: cross-specialist annotations...")
+    const annotationSpinner = startSpinner("Annotating")
+
+    const annotationPromises = successful.map(({ perspective }) => {
+      const otherDrafts = successful
+        .filter((s) => s.perspective !== perspective)
+        .map((s) => ({ perspective: s.perspective, draft: s.draft }))
+
+      const annotationPrompt = config.buildAnnotationPrompt!(perspective, otherDrafts)
+      const startTime = Date.now()
+
+      return invokeClaude({
+        systemPrompt: config.buildSpecialistPrompt(""),
+        userPrompt: annotationPrompt,
+        model: config.model,
+        allowedTools: [],
+        cwd: process.cwd(),
+        timeoutMs: config.timeoutMinutes * 60 * 1000,
+        onStderr: createStderrHandler(`${perspective}-annotate`),
+      }).then((result) => {
+        const elapsed = formatElapsed(Date.now() - startTime)
+        annotationSpinner.printAbove(`  ${perspective.padEnd(14)} annotated (${elapsed}, $${result.costUsd.toFixed(2)})`)
+        return { perspective, annotation: result.result, result }
+      })
+    })
+
+    const annotationSettled = await Promise.allSettled(annotationPromises)
+    annotationSpinner.stop()
+
+    for (const outcome of annotationSettled) {
+      if (outcome.status === "fulfilled") {
+        annotations.push(outcome.value)
+      } else {
+        printError(`Annotation failed: ${outcome.reason}`)
+      }
+    }
+
+    if (annotations.length > 0) {
+      printInfo(`Collected ${annotations.length} annotations`)
+    }
+  }
+
   // 5. Budget guard
   const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
-  if (config.maxBudgetUsd !== null && specialistCost >= config.maxBudgetUsd) {
+  const annotationCost = annotations.reduce((sum, a) => sum + a.result.costUsd, 0)
+  const preSynthCost = specialistCost + annotationCost
+  if (config.maxBudgetUsd !== null && preSynthCost >= config.maxBudgetUsd) {
     spinner.stop()
     throw new Error(
-      `Specialist cost ($${specialistCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
+      `Pre-synthesis cost ($${preSynthCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
       "Skipping synthesis to avoid further cost."
     )
   }
@@ -210,13 +272,26 @@ export const invokeEnsemble = async <TDraft>(
 
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd(), dimText: true })
 
+  // Build synthesizer prompt, optionally appending cross-specialist annotations
+  let synthUserPrompt = config.buildSynthesizerUserPrompt(
+    successful.map(({ perspective, draft }) => ({ perspective, draft })),
+  )
+  if (annotations.length > 0) {
+    const annotationSections = ["\n## Cross-Specialist Annotations\n"]
+    annotationSections.push("Each specialist reviewed the other proposals and provided these observations:\n")
+    for (const { perspective, annotation } of annotations) {
+      annotationSections.push(`### ${perspective}\n`)
+      annotationSections.push(annotation)
+      annotationSections.push("")
+    }
+    synthUserPrompt += annotationSections.join("\n")
+  }
+
   let synthResult: ClaudeResult
   try {
     synthResult = await invokeClaude({
       systemPrompt: config.synthesizerPrompt,
-      userPrompt: config.buildSynthesizerUserPrompt(
-        successful.map(({ perspective, draft }) => ({ perspective, draft })),
-      ),
+      userPrompt: synthUserPrompt,
       model: config.model,
       allowedTools: config.synthesizerTools,
       cwd: process.cwd(),
@@ -236,12 +311,16 @@ export const invokeEnsemble = async <TDraft>(
 
   // 8. Aggregate results
   const specialistResults = successful.map((s) => s.result)
-  const totalCostUsd = specialistCost + synthResult.costUsd
-  const totalDurationMs = Math.max(...specialistResults.map((r) => r.durationMs)) + synthResult.durationMs
+  const annotationResults = annotations.map((a) => a.result)
+  const totalCostUsd = preSynthCost + synthResult.costUsd
+  const specialistWallMs = Math.max(...specialistResults.map((r) => r.durationMs))
+  const annotationWallMs = annotationResults.length > 0 ? Math.max(...annotationResults.map((r) => r.durationMs)) : 0
+  const totalDurationMs = specialistWallMs + annotationWallMs + synthResult.durationMs
 
   return {
     specialistNames: successful.map((s) => s.perspective),
     specialistResults,
+    ...(annotationResults.length > 0 ? { annotationResults } : {}),
     synthesizerResult: synthResult,
     totalCostUsd,
     totalDurationMs,
@@ -272,6 +351,11 @@ const SPECIALIST_PROPOSAL_SCHEMA = JSON.stringify({
           },
           specReference: { type: "string", description: "Relevant spec sections" },
           rationale: { type: "string", description: "Why this phase boundary exists" },
+          dependsOn: {
+            type: "array",
+            items: { type: "string" },
+            description: "Phase IDs (e.g., '01-scaffold') this phase depends on. Omit or empty for sequential dependency on the previous phase.",
+          },
         },
         required: ["title", "slug", "goal", "acceptanceCriteria", "specReference", "rationale"],
       },
@@ -375,6 +459,27 @@ export const invokePlanner = async (
     timeoutMinutes: config.timeoutMinutes,
     maxBudgetUsd: config.maxBudgetUsd,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
+
+    isTwoRound: config.isDeepEnsemble,
+    buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
+      const sections = [
+        `You are the ${ownPerspective} specialist. You have already submitted your proposal.`,
+        "Below are the other specialists' proposals. Review them and provide brief annotations:",
+        "- **Concerns:** Issues or risks you see in their approaches",
+        "- **Agreements:** Where their proposals align with or strengthen yours",
+        "- **Gaps:** What none of the proposals (including yours) adequately address",
+        "",
+        "Do NOT rewrite your proposal. Provide only annotations.",
+        "",
+      ]
+      for (const { perspective, draft } of otherDrafts) {
+        sections.push(`## ${perspective} Specialist Proposal\n`)
+        sections.push(`**Summary:** ${draft.summary}`)
+        sections.push(`**Phases:** ${draft.phases.length}`)
+        sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
+      }
+      return sections.join("\n")
+    },
 
     verify: () => {
       if (scanPhases(config.phasesDir).length === 0) {

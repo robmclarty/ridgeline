@@ -203,7 +203,7 @@ describe("invokeEnsemble", () => {
 
     await expect(
       invokeEnsemble(makeEnsembleConfig({ specialists: oneSpecialist, maxBudgetUsd: 1.00 })),
-    ).rejects.toThrow(/Specialist cost.*exceeds budget/)
+    ).rejects.toThrow(/cost.*exceeds budget/)
   })
 
   it("calls verify callback after synthesis", async () => {
@@ -372,7 +372,7 @@ describe("invokePlanner", () => {
     )
 
     await expect(invokePlanner(makeConfig({ maxBudgetUsd: 1.00 }))).rejects.toThrow(
-      /Specialist cost.*exceeds budget/,
+      /cost.*exceeds budget/,
     )
   })
 
