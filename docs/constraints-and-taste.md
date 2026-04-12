@@ -2,6 +2,27 @@
 
 ## Two Kinds of Guidance
 
+```mermaid
+flowchart LR
+    subgraph inputs ["Input Files"]
+        constraints["constraints.md\n(non-negotiable)"]
+        taste["taste.md\n(best-effort)"]
+    end
+
+    subgraph agents ["Agent Usage"]
+        direction TB
+        planner["Planner\nreads both for context"]
+        builder["Builder\nfollows both\n(notes taste deviations)"]
+        reviewer["Reviewer\nchecks constraints ONLY\n(ignores taste)"]
+    end
+
+    constraints --> planner
+    constraints --> builder
+    constraints --> reviewer
+    taste --> planner
+    taste --> builder
+```
+
 Ridgeline separates technical guidance into two files with different enforcement
 levels:
 
@@ -119,14 +140,26 @@ keeps their outputs stylistically coherent.
 
 ## Resolution
 
-Constraints and taste resolve through a three-tier precedence chain:
+Constraints and taste resolve through a three-tier precedence chain. The
+first match wins:
 
-1. **CLI flag** -- `--constraints <path>` or `--taste <path>`
-2. **Build-level** -- `.ridgeline/builds/<build-name>/constraints.md` or
-   `taste.md`
-3. **Project-level** -- `.ridgeline/constraints.md` or `taste.md`
+```mermaid
+flowchart TB
+    start["Resolve constraints.md\nor taste.md"] --> cli{"CLI flag\n--constraints/--taste?"}
+    cli -->|found| use_cli["Use CLI path"]
+    cli -->|not set| build{"Build-level?\n.ridgeline/builds/name/"}
+    build -->|found| use_build["Use build-level"]
+    build -->|not found| project{"Project-level?\n.ridgeline/"}
+    project -->|found| use_project["Use project-level"]
+    project -->|not found| missing["Error (constraints)\nor skip (taste)"]
 
-The first match wins. This enables layered configuration:
+    style use_cli fill:#d4edda
+    style use_build fill:#d4edda
+    style use_project fill:#d4edda
+    style missing fill:#f8d7da
+```
+
+This enables layered configuration:
 
 - **Project-level** for team-wide standards. "We always use TypeScript, Vitest,
   and this directory structure." Shared across all builds.

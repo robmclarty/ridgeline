@@ -37,6 +37,16 @@ not police style.
 
 ## The Review Process
 
+```mermaid
+flowchart TB
+    diff["Review the diff"] --> read["Read changed files\nin full"]
+    read --> verify["Run mechanical\nverification\n(check command)"]
+    verify --> criteria["Walk each\nacceptance criterion"]
+    criteria --> constraints["Check constraint\nadherence"]
+    constraints --> cleanup["Clean up\n(kill servers, etc.)"]
+    cleanup --> verdict["Produce\nstructured verdict"]
+```
+
 The reviewer follows a structured sequence:
 
 1. **Review the diff.** Understand the scope of changes -- what files were
@@ -151,6 +161,30 @@ phase can follow whichever convention has been established. Taste influences;
 it does not enforce.
 
 ## The Feedback Loop
+
+```mermaid
+stateDiagram-v2
+    state "Builder runs" as build
+    state "Reviewer checks" as review
+    state "Generate feedback" as feedback
+    state "Archive prior feedback" as archive
+
+    [*] --> build
+    build --> review : commits work
+    review --> pass : PASS
+    review --> feedback : FAIL
+    feedback --> archive : save previous\nfeedback file
+    archive --> build : retry with\nfresh context
+    pass --> [*]
+
+    state retries <<choice>>
+    feedback --> retries
+    retries --> archive : retries remaining
+    retries --> failed : retries exhausted
+
+    state "Phase failed\n(worktree preserved)" as failed
+    failed --> [*]
+```
 
 When a phase fails review, the harness generates a feedback file from the
 structured verdict. The process:
