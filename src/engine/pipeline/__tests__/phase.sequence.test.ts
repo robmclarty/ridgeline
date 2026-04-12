@@ -95,6 +95,7 @@ const failVerdict: ReviewVerdict = {
 
 const config: RidgelineConfig = {
   buildName: "test-build",
+  ridgelineDir: "/tmp/ridgeline",
   buildDir: "/tmp/build",
   constraintsPath: "/tmp/constraints.md",
   tastePath: null,
@@ -106,6 +107,10 @@ const config: RidgelineConfig = {
   checkTimeoutSeconds: 1200,
   checkCommand: "npm test",
   maxBudgetUsd: null,
+  unsafe: false,
+  networkAllowlist: [],
+  extraContext: null,
+  flavour: null,
 }
 
 const phase: PhaseInfo = {
@@ -119,7 +124,7 @@ const phase: PhaseInfo = {
 const makeState = (): BuildState => ({
   buildName: "test-build",
   startedAt: "2024-01-01T00:00:00.000Z",
-  pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "running" },
+  pipeline: { shape: "complete", design: "skipped", spec: "complete", research: "skipped", refine: "skipped", plan: "complete", build: "running" },
   phases: [
     {
       id: "01-scaffold",

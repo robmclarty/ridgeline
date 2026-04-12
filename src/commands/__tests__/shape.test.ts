@@ -168,7 +168,7 @@ describe("commands/shape", () => {
 
   it("auto-chains to design when visual shapes are detected", async () => {
     vi.mocked(detectShapes).mockReturnValue([
-      { name: "web-ui", description: "Web UI", keywords: [], matchedKeywords: [] },
+      { name: "web-ui", keywords: [], reviewerContext: "Web UI" },
     ])
 
     const buildName = "my-build"

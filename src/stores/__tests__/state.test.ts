@@ -14,7 +14,10 @@ vi.mock("../tags", () => ({
 
 const defaultPipeline: PipelineState = {
   shape: "pending",
+  design: "pending",
   spec: "pending",
+  research: "pending",
+  refine: "pending",
   plan: "pending",
   build: "pending",
 }

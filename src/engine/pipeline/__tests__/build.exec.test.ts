@@ -9,7 +9,9 @@ vi.mock("../../discovery/agent.registry", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: vi.fn(() => "builder system prompt"),
     getSpecialists: vi.fn(() => []),
+    getSpecialist: vi.fn(() => null),
     getContext: vi.fn(() => null),
+    getGaps: vi.fn(() => null),
     getSubAgents: vi.fn(() => []),
     getAgentsFlag: vi.fn(() => ({})),
   })),
@@ -107,7 +109,7 @@ describe("invokeBuilder", () => {
   })
 
   it("omits handoff section when no handoff", async () => {
-    vi.mocked(readHandoff).mockReturnValue(null)
+    vi.mocked(readHandoff).mockReturnValue("")
     vi.mocked(invokeClaude).mockResolvedValue(makeClaudeResult())
 
     await invokeBuilder(makeConfig(), makePhase(), null)

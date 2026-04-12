@@ -19,7 +19,7 @@ describe("stream.display", () => {
 
       expect(writeSpy).toHaveBeenCalledWith("hello")
       // No leading \n before first text
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls[0]).toBe("hello")
     })
 
@@ -55,7 +55,7 @@ describe("stream.display", () => {
       onStdout('{"type":"assistant","subtype":"text","text":"one"}\n')
       onStdout('{"type":"assistant","subtype":"text","text":"two"}\n')
 
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls).toEqual(["one", "\n", "two"])
     })
 
@@ -64,7 +64,7 @@ describe("stream.display", () => {
       onStdout('{"type":"assistant","subtype":"text","text":"one\\n"}\n')
       onStdout('{"type":"assistant","subtype":"text","text":"two"}\n')
 
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls).toEqual(["one\n", "two"])
     })
 
@@ -72,7 +72,7 @@ describe("stream.display", () => {
       const { onStdout } = createDisplayCallbacks({ dimText: true })
       onStdout('{"type":"assistant","subtype":"text","text":"hello"}\n')
 
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls[0]).toBe("\x1b[90mhello\x1b[0m")
     })
 
@@ -80,7 +80,7 @@ describe("stream.display", () => {
       const { onStdout } = createDisplayCallbacks()
       onStdout('{"type":"assistant","subtype":"text","text":"hello"}\n')
 
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls[0]).toBe("hello")
     })
 
@@ -91,7 +91,7 @@ describe("stream.display", () => {
       onStdout('{"type":"assistant","subtype":"text","text":"{\\"passed\\": true}\\n"}\n')
       onStdout('{"type":"assistant","subtype":"text","text":"```\\n"}\n')
 
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls).toEqual(["review notes\n"])
 
       writeSpy.mockClear()
@@ -103,7 +103,7 @@ describe("stream.display", () => {
       onStdout('{"type":"assistant","subtype":"text","text":"```json\\n"}\n')
       onStdout('{"type":"assistant","subtype":"text","text":"{\\"passed\\": true}\\n"}\n')
 
-      const calls = writeSpy.mock.calls.map((c) => c[0])
+      const calls = writeSpy.mock.calls.map((c: [string]) => c[0])
       expect(calls).toContainEqual("```json\n")
     })
 

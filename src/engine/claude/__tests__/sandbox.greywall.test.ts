@@ -70,13 +70,13 @@ describe("greywallProvider", () => {
     it("returns null when greyproxy is running", () => {
       vi.mocked(cp.execSync).mockReturnValue("✓ greyproxy running\n")
 
-      expect(greywallProvider.checkReady()).toBeNull()
+      expect(greywallProvider.checkReady!()).toBeNull()
     })
 
     it("returns error message when greyproxy is not running", () => {
       vi.mocked(cp.execSync).mockReturnValue("greyproxy stopped\n")
 
-      expect(greywallProvider.checkReady()).toContain("greyproxy is not running")
+      expect(greywallProvider.checkReady!()).toContain("greyproxy is not running")
     })
 
     it("returns null when execSync throws but output matches", () => {
@@ -85,7 +85,7 @@ describe("greywallProvider", () => {
       ;(err as any).stderr = ""
       vi.mocked(cp.execSync).mockImplementation(() => { throw err })
 
-      expect(greywallProvider.checkReady()).toBeNull()
+      expect(greywallProvider.checkReady!()).toBeNull()
     })
 
     it("returns error message when execSync throws and output does not match", () => {
@@ -94,7 +94,7 @@ describe("greywallProvider", () => {
       ;(err as any).stderr = "greywall: not found"
       vi.mocked(cp.execSync).mockImplementation(() => { throw err })
 
-      expect(greywallProvider.checkReady()).toContain("greyproxy is not running")
+      expect(greywallProvider.checkReady!()).toContain("greyproxy is not running")
     })
   })
 
