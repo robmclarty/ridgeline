@@ -114,11 +114,23 @@ const discoverSpecialistsInDir = (
 // Registry builder
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Registry cache — avoids re-scanning the filesystem on every invocation
+// ---------------------------------------------------------------------------
+
+let registryCache: { key: string; registry: AgentRegistry } | null = null
+
+/** Clear the cached registry. Exposed for tests and flavour changes. */
+export const clearRegistryCache = (): void => { registryCache = null }
+
 /**
  * Build an agent registry that resolves agents from an optional flavour
  * directory with per-subfolder fallback to the generic defaults in src/agents/.
+ * Results are cached by flavour path for the lifetime of the process.
  */
 export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry => {
+  const cacheKey = flavourPath ?? "__default__"
+  if (registryCache && registryCache.key === cacheKey) return registryCache.registry
   const defaultAgentsDir = resolveDefaultAgentsDir()
   if (!defaultAgentsDir) {
     throw new Error("Built-in agents directory not found")
@@ -183,5 +195,7 @@ export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry =>
     return buildAgentsFlag(getSubAgents())
   }
 
-  return { getCorePrompt, getSpecialists, getSpecialist, getContext, getGaps, getSubAgents, getAgentsFlag }
+  const registry: AgentRegistry = { getCorePrompt, getSpecialists, getSpecialist, getContext, getGaps, getSubAgents, getAgentsFlag }
+  registryCache = { key: cacheKey, registry }
+  return registry
 }
