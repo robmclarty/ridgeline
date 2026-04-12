@@ -1,8 +1,10 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { BuildState, PhaseState, PhaseInfo, PipelineState, PipelineStage } from "../types"
-import { checkpointTagName, verifyCompletionTag, cleanupBuildTags } from "./tags"
+import { checkpointTagName, completionTagName, verifyCompletionTag, cleanupBuildTags } from "./tags"
+import { readTrajectory } from "./trajectory"
 import { atomicWriteSync } from "../utils/atomic-write"
+import { withFileLock } from "../utils/file-lock"
 
 const statePath = (buildDir: string): string =>
   path.join(buildDir, "state.json")
@@ -17,16 +19,34 @@ const DEFAULT_PIPELINE: PipelineState = {
   build: "pending",
 }
 
-export const loadState = (buildDir: string): BuildState | null => {
+export const loadState = (
+  buildDir: string,
+  buildName?: string,
+  phases?: PhaseInfo[],
+): BuildState | null => {
   const fp = statePath(buildDir)
   if (fs.existsSync(fp)) {
-    const state: BuildState = JSON.parse(fs.readFileSync(fp, "utf-8"))
-    // Backfill pipeline for legacy state files
-    if (!state.pipeline) {
-      state.pipeline = derivePipelineFromArtifacts(buildDir)
+    try {
+      const state: BuildState = JSON.parse(fs.readFileSync(fp, "utf-8"))
+      // Backfill pipeline for legacy state files
+      if (!state.pipeline) {
+        state.pipeline = derivePipelineFromArtifacts(buildDir)
+      }
+      return state
+    } catch {
+      // Corrupt JSON — fall through to trajectory recovery
     }
-    return state
   }
+
+  // Fallback: reconstruct from trajectory if caller provided enough context
+  if (buildName && phases && phases.length > 0) {
+    const recovered = rebuildStateFromTrajectory(buildDir, buildName, phases)
+    if (recovered) {
+      saveState(buildDir, recovered)
+    }
+    return recovered
+  }
+
   return null
 }
 
@@ -50,17 +70,68 @@ export const initState = (buildName: string, phases: PhaseInfo[]): BuildState =>
   })),
 })
 
+/**
+ * Reconstruct BuildState from trajectory.jsonl when state.json is missing or corrupt.
+ * Returns null if trajectory is empty (no recovery possible).
+ */
+export const rebuildStateFromTrajectory = (
+  buildDir: string,
+  buildName: string,
+  phases: PhaseInfo[],
+): BuildState | null => {
+  const entries = readTrajectory(buildDir)
+  if (entries.length === 0) return null
+
+  const pipeline = derivePipelineFromArtifacts(buildDir)
+  const startedAt = entries[0].timestamp
+
+  const phaseStates: PhaseState[] = phases.map((p) => {
+    const phaseEntries = entries.filter((e) => e.phaseId === p.id)
+    const advanced = phaseEntries.find((e) => e.type === "phase_advance")
+    const failed = phaseEntries.find((e) => e.type === "phase_fail")
+    const buildStarts = phaseEntries.filter((e) => e.type === "build_start")
+    const firstStart = buildStarts[0]
+    const terminal = advanced ?? failed
+
+    let duration: number | null = null
+    if (firstStart && terminal) {
+      duration = new Date(terminal.timestamp).getTime() - new Date(firstStart.timestamp).getTime()
+    }
+
+    return {
+      id: p.id,
+      status: advanced ? "complete" as const : failed ? "failed" as const : "pending" as const,
+      checkpointTag: checkpointTagName(buildName, p.id),
+      completionTag: advanced ? completionTagName(buildName, p.id) : null,
+      retries: Math.max(0, buildStarts.length - 1),
+      duration,
+      completedAt: advanced?.timestamp ?? null,
+      failedAt: failed?.timestamp ?? null,
+    }
+  })
+
+  return { buildName, startedAt, pipeline, phases: phaseStates }
+}
+
 export const updatePhaseStatus = (
   buildDir: string,
   state: BuildState,
   phaseId: string,
   update: Partial<PhaseState>
 ): void => {
-  const phase = state.phases.find((p) => p.id === phaseId)
-  if (phase) {
-    Object.assign(phase, update)
-    saveState(buildDir, state)
-  }
+  const lockPath = statePath(buildDir) + ".lock"
+  withFileLock(lockPath, () => {
+    // Re-load from disk inside the lock — another parallel phase may have written
+    const freshState = loadState(buildDir) ?? state
+    const diskPhase = freshState.phases.find((p) => p.id === phaseId)
+    if (diskPhase) {
+      Object.assign(diskPhase, update)
+      saveState(buildDir, freshState)
+    }
+    // Also update the in-memory state object for the caller
+    const memPhase = state.phases.find((p) => p.id === phaseId)
+    if (memPhase) Object.assign(memPhase, update)
+  })
 }
 
 export const resetRetries = (buildDir: string, state: BuildState): void => {
