@@ -70,6 +70,7 @@ export const setupE2eDir = (): { dir: string; config: RidgelineConfig; cleanup: 
     networkAllowlist: [],
     extraContext: null,
     flavour: null,
+    isDeepEnsemble: false,
   }
 
   const cleanup = () => {
