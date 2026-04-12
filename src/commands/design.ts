@@ -2,15 +2,13 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
 import { printInfo } from "../ui/output"
-import { invokeClaude } from "../engine/claude/claude.exec"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
-import { createDisplayCallbacks } from "../engine/claude/stream.display"
 import { advancePipeline } from "../stores/state"
-import { QA_JSON_SCHEMA, parseQAResponse, runClarificationLoop } from "./qa-workflow"
+import { runQAIntake, runOutputTurn } from "./qa-workflow"
 
 /** Determine where to write design.md. */
-export const resolveDesignOutputPath = (
+const resolveDesignOutputPath = (
   buildDir: string | null,
   ridgelineDir: string,
 ): string => {
@@ -18,7 +16,7 @@ export const resolveDesignOutputPath = (
   return path.join(ridgelineDir, "design.md")
 }
 
-export type DesignOptions = {
+type DesignOptions = {
   model: string
   timeout: number
   flavour?: string
@@ -88,47 +86,23 @@ export const runDesign = async (
       "Remember: present ALL questions to the user even when pre-filled.",
     ].join("\n")
 
-    // Intake turn
-    process.stderr.write(`\n\x1b[90mAnalyzing design context...\x1b[0m\n`)
-    let display = createDisplayCallbacks({ projectRoot: process.cwd() })
-    const intakeResult = await invokeClaude({
-      systemPrompt,
-      userPrompt,
-      model: opts.model,
-      allowedTools: ["Read", "Glob", "Grep"],
-      cwd: process.cwd(),
-      timeoutMs,
-      jsonSchema: QA_JSON_SCHEMA,
-      onStdout: display.onStdout,
-    })
-    display.flush()
-
-    // Clarification loop
-    const { sessionId, qa } = await runClarificationLoop(
-      rl,
-      systemPrompt,
+    // Intake + clarification loop
+    const { sessionId, qa } = await runQAIntake(
+      rl, systemPrompt, userPrompt,
       { model: opts.model, questionLabel: "Design questions" },
-      timeoutMs,
-      { sessionId: intakeResult.sessionId, qa: parseQAResponse(intakeResult.result) },
+      timeoutMs, "Analyzing design context...",
     )
 
     // Design output turn — no JSON schema, freeform markdown
     if (qa.summary) {
       console.log(`\nDesign summary:\n  ${qa.summary}`)
     }
-    process.stderr.write(`\n\x1b[90mProducing design document...\x1b[0m\n`)
 
-    display = createDisplayCallbacks({ projectRoot: process.cwd() })
-    const designResult = await invokeClaude({
+    const designResult = await runOutputTurn(
       systemPrompt,
-      userPrompt: "Produce the final design document now. Respond with freeform markdown — NOT JSON. Structure it with headings, specific values (hard tokens), and directional guidance (soft guidance).",
-      model: opts.model,
-      cwd: process.cwd(),
-      timeoutMs,
-      sessionId,
-      onStdout: display.onStdout,
-    })
-    display.flush()
+      "Produce the final design document now. Respond with freeform markdown — NOT JSON. Structure it with headings, specific values (hard tokens), and directional guidance (soft guidance).",
+      opts.model, timeoutMs, sessionId, "Producing design document...",
+    )
 
     // Write design.md
     const designDir = path.dirname(outputPath)

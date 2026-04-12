@@ -2,15 +2,13 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
 import { printInfo, printError } from "../ui/output"
-import { invokeClaude } from "../engine/claude/claude.exec"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
-import { createDisplayCallbacks } from "../engine/claude/stream.display"
 import { advancePipeline, recordMatchedShapes } from "../stores/state"
 import { resolveBuildDir } from "../config"
 import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
 import { runDesign } from "./design"
-import { QA_JSON_SCHEMA, askQuestion, parseQAResponse, runClarificationLoop } from "./qa-workflow"
+import { askQuestion, runQAIntake, runOutputTurn } from "./qa-workflow"
 
 const SHAPE_OUTPUT_SCHEMA = JSON.stringify({
   type: "object",
@@ -201,7 +199,6 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
     }
 
     // Intake turn — shaper analyzes codebase + user input
-    process.stderr.write(`\n\x1b[90mAnalyzing project and input...\x1b[0m\n`)
     const userPrompt = [
       `The user wants to create a new build called "${buildName}".`,
       "",
@@ -213,43 +210,23 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
       "Remember: present ALL questions to the user even when pre-filled — the user has final say.",
     ].join("\n")
 
-    let display = createDisplayCallbacks({ projectRoot: process.cwd() })
-    const intakeResult = await invokeClaude({
-      systemPrompt,
-      userPrompt,
-      model: opts.model,
-      allowedTools: ["Read", "Glob", "Grep"],
-      cwd: process.cwd(),
-      timeoutMs,
-      jsonSchema: QA_JSON_SCHEMA,
-      onStdout: display.onStdout,
-    })
-    display.flush()
-
-    // Clarification loop
-    const { sessionId, qa } = await runClarificationLoop(rl, systemPrompt, { model: opts.model, questionLabel: "I have a few questions" }, timeoutMs, {
-      sessionId: intakeResult.sessionId,
-      qa: parseQAResponse(intakeResult.result),
-    })
+    // Intake + clarification loop
+    const { sessionId, qa } = await runQAIntake(
+      rl, systemPrompt, userPrompt,
+      { model: opts.model, questionLabel: "I have a few questions" },
+      timeoutMs, "Analyzing project and input...",
+    )
 
     // Shape output turn
     if (qa.summary) {
       console.log(`\nFinal understanding:\n  ${qa.summary}`)
     }
-    process.stderr.write(`\n\x1b[90mProducing shape document...\x1b[0m\n`)
 
-    display = createDisplayCallbacks({ projectRoot: process.cwd() })
-    const shapeResult = await invokeClaude({
+    const shapeResult = await runOutputTurn(
       systemPrompt,
-      userPrompt: "Produce the final shape output now. Respond with ONLY the structured JSON shape document.",
-      model: opts.model,
-      cwd: process.cwd(),
-      timeoutMs,
-      sessionId,
-      jsonSchema: SHAPE_OUTPUT_SCHEMA,
-      onStdout: display.onStdout,
-    })
-    display.flush()
+      "Produce the final shape output now. Respond with ONLY the structured JSON shape document.",
+      opts.model, timeoutMs, sessionId, "Producing shape document...", SHAPE_OUTPUT_SCHEMA,
+    )
 
     // Parse and write shape.md
     let shapeOutput: ShapeOutput

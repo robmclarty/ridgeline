@@ -36,4 +36,4 @@ export {
   verifyCompletionTag,
   cleanupBuildTags,
 } from './tags'
-export { logTrajectory, makeTrajectoryEntry, readTrajectory } from './trajectory'
+export { logTrajectory, readTrajectory } from './trajectory'

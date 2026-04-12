@@ -38,6 +38,12 @@ const handleCommandError = (err: unknown): never => {
   process.exit(1)
 }
 
+const parseBaseOpts = (opts: Opts) => ({
+  model: (opts.model as string) ?? "opus",
+  timeout: parseInt(String(opts.timeout ?? "10"), 10),
+  flavour: (opts.flavour as string) ?? undefined,
+})
+
 const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
   async (buildName: string | undefined, opts: Opts) => {
     try {
@@ -119,11 +125,7 @@ program
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
-      await runDesign(buildName ? await requireBuildName(buildName) : null, {
-        model: (opts.model as string) ?? "opus",
-        timeout: parseInt(String(opts.timeout ?? "10"), 10),
-        flavour: (opts.flavour as string) ?? undefined,
-      })
+      await runDesign(buildName ? await requireBuildName(buildName) : null, parseBaseOpts(opts))
     } catch (err) {
       handleCommandError(err)
     }
@@ -188,11 +190,7 @@ program
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
-      await runRefine(await requireBuildName(buildName), {
-        model: (opts.model as string) ?? "opus",
-        timeout: parseInt(String(opts.timeout ?? "10"), 10),
-        flavour: (opts.flavour as string) ?? undefined,
-      })
+      await runRefine(await requireBuildName(buildName), parseBaseOpts(opts))
     } catch (err) {
       handleCommandError(err)
     }

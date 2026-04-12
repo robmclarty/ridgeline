@@ -73,6 +73,25 @@ const resolveSubfolder = (
 // Specialist discovery (extracted from ensemble.exec.ts)
 // ---------------------------------------------------------------------------
 
+/** Parse a specialist .md file into a SpecialistDef, or null on failure. */
+const parseSpecialistFile = (filepath: string): SpecialistDef | null => {
+  try {
+    const content = fs.readFileSync(filepath, "utf-8")
+    const fm = parseFrontmatter(content)
+    if (!fm) return null
+
+    const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
+    const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
+
+    const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
+    if (!body) return null
+
+    return { perspective, overlay: body }
+  } catch {
+    return null
+  }
+}
+
 const discoverSpecialistsInDir = (
   dir: string,
   excludeFiles?: string[],
@@ -84,22 +103,8 @@ const discoverSpecialistsInDir = (
     if (!entry.endsWith(".md")) continue
     if (exclude.has(entry)) continue
 
-    const filepath = path.join(dir, entry)
-    try {
-      const content = fs.readFileSync(filepath, "utf-8")
-      const fm = parseFrontmatter(content)
-      if (!fm) continue
-
-      const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
-      const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
-
-      const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
-      if (!body) continue
-
-      specialists.push({ perspective, overlay: body })
-    } catch {
-      // Skip unreadable files
-    }
+    const result = parseSpecialistFile(path.join(dir, entry))
+    if (result) specialists.push(result)
   }
 
   return specialists
@@ -143,21 +148,7 @@ export const buildAgentRegistry = (flavourPath: string | null): AgentRegistry =>
     const filepath = path.join(dir, filename)
     if (!fs.existsSync(filepath)) return null
 
-    try {
-      const content = fs.readFileSync(filepath, "utf-8")
-      const fm = parseFrontmatter(content)
-      if (!fm) return null
-
-      const perspectiveMatch = content.match(/^perspective:\s*(.+)$/m)
-      const perspective = perspectiveMatch ? perspectiveMatch[1].trim() : fm.name
-
-      const body = content.replace(/^---\n[\s\S]*?\n---\n*/, "").trim()
-      if (!body) return null
-
-      return { perspective, overlay: body }
-    } catch {
-      return null
-    }
+    return parseSpecialistFile(filepath)
   }
 
   const getContext = (subfolder: string): string | null => {

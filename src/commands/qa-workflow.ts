@@ -2,9 +2,9 @@ import * as readline from "node:readline"
 import { invokeClaude } from "../engine/claude/claude.exec"
 import { createDisplayCallbacks } from "../engine/claude/stream.display"
 
-export const MAX_CLARIFICATION_ROUNDS = 4
+const MAX_CLARIFICATION_ROUNDS = 4
 
-export const QA_JSON_SCHEMA = JSON.stringify({
+const QA_JSON_SCHEMA = JSON.stringify({
   type: "object",
   properties: {
     ready: { type: "boolean" },
@@ -24,12 +24,12 @@ export const QA_JSON_SCHEMA = JSON.stringify({
   required: ["ready"],
 })
 
-export type QAQuestion = {
+type QAQuestion = {
   question: string
   suggestedAnswer?: string
 }
 
-export type QAResponse = {
+type QAResponse = {
   ready: boolean
   questions?: (string | QAQuestion)[]
   summary?: string
@@ -54,15 +54,75 @@ export const askQuestion = (rl: readline.Interface, prompt: string): Promise<str
   })
 }
 
-type ClarificationOpts = {
+type QAOpts = {
   model: string
   questionLabel?: string
 }
 
-export const runClarificationLoop = async (
+/**
+ * Run the QA intake turn — invoke Claude with the QA JSON schema to gather
+ * initial questions, then run the clarification loop until ready.
+ */
+export const runQAIntake = async (
   rl: readline.Interface,
   systemPrompt: string,
-  opts: ClarificationOpts,
+  userPrompt: string,
+  opts: QAOpts,
+  timeoutMs: number,
+  statusMessage: string,
+): Promise<{ sessionId: string; qa: QAResponse }> => {
+  process.stderr.write(`\n\x1b[90m${statusMessage}\x1b[0m\n`)
+  const display = createDisplayCallbacks({ projectRoot: process.cwd() })
+  const intakeResult = await invokeClaude({
+    systemPrompt,
+    userPrompt,
+    model: opts.model,
+    allowedTools: ["Read", "Glob", "Grep"],
+    cwd: process.cwd(),
+    timeoutMs,
+    jsonSchema: QA_JSON_SCHEMA,
+    onStdout: display.onStdout,
+  })
+  display.flush()
+
+  return runClarificationLoop(rl, systemPrompt, opts, timeoutMs, {
+    sessionId: intakeResult.sessionId,
+    qa: parseQAResponse(intakeResult.result),
+  })
+}
+
+/**
+ * Run the output turn — invoke Claude for the final output (no QA schema).
+ */
+export const runOutputTurn = async (
+  systemPrompt: string,
+  userPrompt: string,
+  model: string,
+  timeoutMs: number,
+  sessionId: string,
+  statusMessage: string,
+  jsonSchema?: string,
+): Promise<{ result: string; sessionId: string }> => {
+  process.stderr.write(`\n\x1b[90m${statusMessage}\x1b[0m\n`)
+  const display = createDisplayCallbacks({ projectRoot: process.cwd() })
+  const result = await invokeClaude({
+    systemPrompt,
+    userPrompt,
+    model,
+    cwd: process.cwd(),
+    timeoutMs,
+    sessionId,
+    jsonSchema,
+    onStdout: display.onStdout,
+  })
+  display.flush()
+  return { result: result.result, sessionId: result.sessionId }
+}
+
+const runClarificationLoop = async (
+  rl: readline.Interface,
+  systemPrompt: string,
+  opts: QAOpts,
   timeoutMs: number,
   initialResult: { sessionId: string; qa: QAResponse }
 ): Promise<{ sessionId: string; qa: QAResponse }> => {
