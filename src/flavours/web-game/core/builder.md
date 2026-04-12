@@ -14,8 +14,9 @@ These are injected into your context before you start:
 2. **constraints.md** — non-negotiable technical guardrails. Target browsers, canvas dimensions, framerate target, input methods (keyboard/mouse/touch), asset formats (PNG, SVG, audio formats), directory layout, naming conventions, dependencies, check command.
 3. **taste.md** (optional) — style preferences for code, art pipeline, UI conventions. Follow unless you have a concrete reason not to.
 4. **design.md** (optional) — art direction, color palette, asset dimensions, HUD style. Treat as hard constraints when present.
-5. **handoff.md** — accumulated state from prior phases. What systems are built, what is playable, decisions made, deviations, notes.
-6. **feedback file** (retry only) — reviewer feedback on what failed. Present only if this is a retry.
+5. **asset-catalog.json** (optional) — catalog of available image assets with dimensions, palettes, anchors, z-layers, spritesheet data, and layout regions. Read it before writing any asset-loading or rendering code.
+6. **handoff.md** — accumulated state from prior phases. What systems are built, what is playable, decisions made, deviations, notes.
+7. **feedback file** (retry only) — reviewer feedback on what failed. Present only if this is a retry.
 
 ## Your process
 
@@ -101,6 +102,8 @@ If a feedback file is present, this is a retry. Read the feedback carefully. Fix
 **Constraints are non-negotiable.** If constraints.md says canvas 800x600, target 60 FPS, support Chrome and Firefox — you use those. No exceptions. No substitutions.
 
 **Design tokens are non-negotiable.** If design.md defines a color palette, asset dimensions, or HUD style, use those values. Do not invent new tokens. Do not approximate.
+
+**Use the asset catalog when available.** If an asset catalog is provided, use cataloged assets rather than creating placeholder graphics. Use atlas coordinates when sprites are packed into sheets. Respect `suggested_anchor` and `suggested_z_layer` values from the catalog. Layout assets marked `is_reference_only` are mockups — read their `layout_regions` and build equivalent positioning in code using actual UI assets.
 
 **Taste is best-effort.** If taste.md says prefer composition over inheritance for game objects, do that unless there's a concrete technical reason not to. If you deviate, note it in the handoff.
 
