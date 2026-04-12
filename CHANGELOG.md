@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.11
+
+- Remove unused type exports (PhaseGraph, LogLevel) flagged by fallow dead-code analysis
+- Deduplicate clone groups: extract countByField helper for catalog/design, retryOrFail closure for phase retry logic
+- Reduce complexity in runBuild and invokeEnsemble by extracting focused helper functions
+- Fix build-catalog test type mismatches
+
 ## 0.7.10
 
 - Extend asset catalog to support all media types (audio, video, text) alongside images
