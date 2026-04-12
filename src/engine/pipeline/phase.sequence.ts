@@ -185,15 +185,20 @@ export const runPhase = async (
       ? phase.filepath.replace(/\.md$/, ".feedback.md")
       : null
 
-    try {
-      const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd)
-      if (build.isBudgetExceeded) return "failed"
-    } catch (err) {
-      if (handleInvokeError(err, "build", phase, config, state) === "fatal") return "failed"
+    const retryOrFail = async (err: unknown, label: "build" | "review"): Promise<"fatal" | "retried"> => {
+      if (handleInvokeError(err, label, phase, config, state) === "fatal") return "fatal"
       const delay = backoffMs(attempt)
       printPhase(phase.id, `Waiting ${(delay / 1000).toFixed(1)}s before retry...`)
       await sleep(delay)
       attempt++
+      return "retried"
+    }
+
+    try {
+      const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd)
+      if (build.isBudgetExceeded) return "failed"
+    } catch (err) {
+      if (await retryOrFail(err, "build") === "fatal") return "failed"
       continue
     }
 
@@ -202,11 +207,7 @@ export const runPhase = async (
       const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote, cwd)
       verdict = review.verdict
     } catch (err) {
-      if (handleInvokeError(err, "review", phase, config, state) === "fatal") return "failed"
-      const delay = backoffMs(attempt)
-      printPhase(phase.id, `Waiting ${(delay / 1000).toFixed(1)}s before retry...`)
-      await sleep(delay)
-      attempt++
+      if (await retryOrFail(err, "review") === "fatal") return "failed"
       continue
     }
 
