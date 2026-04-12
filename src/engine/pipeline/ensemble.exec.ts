@@ -202,7 +202,7 @@ export const invokeEnsemble = async <TDraft>(
   spinner.stop()
   printInfo("Synthesizing from specialist proposals...")
 
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
+  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd(), dimText: true })
 
   let synthResult: ClaudeResult
   try {
@@ -233,6 +233,7 @@ export const invokeEnsemble = async <TDraft>(
   const totalDurationMs = Math.max(...specialistResults.map((r) => r.durationMs)) + synthResult.durationMs
 
   return {
+    specialistNames: successful.map((s) => s.perspective),
     specialistResults,
     synthesizerResult: synthResult,
     totalCostUsd,

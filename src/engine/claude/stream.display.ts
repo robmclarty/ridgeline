@@ -6,6 +6,8 @@ interface DisplayCallbackOptions {
   suppressJsonBlock?: boolean
   /** When set, strip this prefix from tool-call file paths so the display shows relative paths. */
   projectRoot?: string
+  /** When set, render streamed text in dim grey (ANSI 90). */
+  dimText?: boolean
 }
 
 const RESUME_DEBOUNCE_MS = 200
@@ -59,7 +61,7 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
     if (!lastCharWasNewline) {
       process.stdout.write("\n")
     }
-    process.stdout.write(text)
+    process.stdout.write(opts?.dimText ? `\x1b[90m${text}\x1b[0m` : text)
     lastCharWasNewline = text.endsWith("\n")
   }
 
