@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-export type ShapeDefinition = {
+type ShapeDefinition = {
   name: string
   keywords: string[]
   reviewerContext: string
