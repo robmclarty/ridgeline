@@ -4,6 +4,5 @@
     "game", "sprite", "texture", "3D", "scene", "canvas",
     "WebGL", "Godot", "Unity", "Phaser"
   ],
-  "toolFamily": "game-visual",
-  "reviewerContext": "Verify asset dimensions match specification. Check color palette consistency. Validate sprite sheet layouts. Evaluate UI overlay legibility against game backgrounds."
+"reviewerContext": "Verify asset dimensions match specification. Check color palette consistency. Validate sprite sheet layouts. Evaluate UI overlay legibility against game backgrounds."
 }

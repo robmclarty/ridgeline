@@ -15,21 +15,18 @@ import { loadShapeDefinitions, detectShapes } from "../detect"
 const webVisual = {
   name: "web-visual",
   keywords: ["UI", "frontend", "web app", "dashboard"],
-  toolFamily: "web-visual",
   reviewerContext: "Check responsive behavior.",
 }
 
 const gameVisual = {
   name: "game-visual",
   keywords: ["game", "sprite", "WebGL"],
-  toolFamily: "game-visual",
   reviewerContext: "Verify asset dimensions.",
 }
 
 const printLayout = {
   name: "print-layout",
   keywords: ["print", "PDF", "brochure"],
-  toolFamily: "print-layout",
   reviewerContext: "Verify bleed and trim.",
 }
 
@@ -72,8 +69,8 @@ describe("loadShapeDefinitions", () => {
   })
 
   it("skips files missing required fields", () => {
-    const missingKeywords = { name: "incomplete", toolFamily: "x", reviewerContext: "y" }
-    const missingName = { keywords: ["a"], toolFamily: "x", reviewerContext: "y" }
+    const missingKeywords = { name: "incomplete", reviewerContext: "y" }
+    const missingName = { keywords: ["a"], reviewerContext: "y" }
 
     vi.mocked(fs.readdirSync).mockReturnValue(["a.json", "b.json"] as unknown as ReturnType<typeof fs.readdirSync>)
     vi.mocked(fs.readFileSync)

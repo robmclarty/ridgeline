@@ -5,6 +5,5 @@
     "website", "landing page", "SPA", "component library", "design system",
     "Tailwind", "React", "Vue", "Svelte"
   ],
-  "toolFamily": "web-visual",
-  "reviewerContext": "Check responsive behavior at mobile/tablet/desktop viewports. Verify interactive states. Evaluate whitespace and visual breathing room. Check color contrast ratios."
+"reviewerContext": "Check responsive behavior at mobile/tablet/desktop viewports. Verify interactive states. Evaluate whitespace and visual breathing room. Check color contrast ratios."
 }
