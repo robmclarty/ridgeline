@@ -35,7 +35,7 @@ A `recommendedSkills` field in flavour config that says "for best results with t
 
 ### How they connect at runtime
 
-```
+```text
 User selects flavour (e.g., web-game)
   → Flavour agents loaded (builder, reviewer, etc.)
   → Plugin dir passed to Claude CLI (--plugin-dir plugin/visual-tools)
@@ -54,7 +54,7 @@ Flavour agents are assertive — they say "capture screenshots at mobile, tablet
 
 Replace `plugin/web-visual/` with `plugin/visual-tools/`:
 
-```
+```text
 plugin/
   visual-tools/
     plugin.json
@@ -79,9 +79,9 @@ plugin/
 
 ### SKILL.md format
 
-Each skill follows the skills 2.0 spec (https://agentskills.io):
+Each skill follows the [skills 2.0 spec](https://agentskills.io):
 
-```markdown
+```yaml
 ---
 name: agent-browser
 description: Capture annotated browser screenshots with numbered element labels
@@ -107,36 +107,43 @@ Capture at standard viewports: ...
 Seven skills total:
 
 ### agent-browser
+
 - **Backing tool:** [agent-browser](https://github.com/vercel-labs/agent-browser)
 - **Used by:** web-ui, web-game, software-engineering
 - **Purpose:** Agent-first browser automation. Annotated screenshots with numbered element labels, DOM snapshots. 93% less context than Playwright. The primary "eyes" for web output.
 
 ### visual-diff
+
 - **Backing tool:** [pixelmatch](https://github.com/mapbox/pixelmatch)
 - **Used by:** web-ui, web-game, software-engineering
 - **Purpose:** Pixel-level screenshot comparison against reference images. Catches visual regressions.
 
 ### css-audit
+
 - **Backing tool:** [Project Wallace CLI](https://www.projectwallace.com/)
 - **Used by:** web-ui
 - **Purpose:** CSS statistics — specificity distribution, unused rules, selector complexity, color/font usage. Catches CSS bloat and inconsistency.
 
 ### a11y-audit
+
 - **Backing tool:** [axe-core](https://github.com/dequelabs/axe-core)
 - **Used by:** web-ui
 - **Purpose:** WCAG 2.1 AA compliance checks. Contrast ratios, ARIA usage, landmark structure, keyboard navigation.
 
 ### lighthouse
+
 - **Backing tool:** [Lighthouse CLI](https://github.com/GoogleChrome/lighthouse)
 - **Used by:** web-ui
 - **Purpose:** Performance, accessibility, best practices, SEO audits. Quantitative quality scores.
 
 ### canvas-screenshot
+
 - **Backing tool:** [agent-browser](https://github.com/vercel-labs/agent-browser) or headless Chrome
 - **Used by:** web-game
 - **Purpose:** Captures rendered canvas/WebGL frames. Handles requestAnimationFrame timing — waits for scene initialization and captures at a stable frame. Separate from agent-browser because the workflow differs (render loop awareness, frame stability).
 
 ### shader-validate
+
 - **Backing tool:** [naga-cli](https://crates.io/crates/naga-cli)
 - **Used by:** web-game
 - **Purpose:** Validates GLSL/WGSL shaders compile cleanly. Cross-compiles between shader languages. Catches syntax errors and type mismatches before runtime. Chosen over glslangValidator for speed (30x faster), WGSL support, and single-binary simplicity.
@@ -153,7 +160,7 @@ Seven skills total:
 
 Web application UI development. Builder knows semantic HTML, CSS architecture, responsive design, accessibility patterns. Reviewer checks visual quality, layout correctness, interactive states.
 
-```
+```text
 src/flavours/web-ui/
   core/
     builder.md
@@ -163,6 +170,7 @@ src/flavours/web-ui/
 ```
 
 Flavour config:
+
 ```json
 {
   "name": "web-ui",
@@ -184,7 +192,7 @@ Reviewer checks responsive behavior, color contrast, typography hierarchy, spaci
 
 Browser-based interactive and visual projects — PixiJS, Phaser, Three.js, raw canvas, or React apps with heavy visual/interactive elements. Builder knows game loops, state machines, sprite management, canvas/WebGL rendering, performance budgets. Reviewer checks frame rate, visual consistency, input handling, asset loading.
 
-```
+```text
 src/flavours/web-game/
   core/
     builder.md
@@ -194,6 +202,7 @@ src/flavours/web-game/
 ```
 
 Flavour config:
+
 ```json
 {
   "name": "web-game",
@@ -215,6 +224,7 @@ Reviewer checks rendering correctness, asset dimensions, color palette consisten
 The default flavour. Updated to be visually aware when the project involves user-facing interfaces, without leading with visual concerns.
 
 Flavour config adds:
+
 ```json
 {
   "name": "software-engineering",
@@ -238,16 +248,19 @@ Each flavour only provides agent files where the domain genuinely needs differen
 ## Pipeline Changes
 
 ### What stays
+
 - **Shape definitions** (`src/shapes/*.json`) — still used for design intake questions and reviewer heuristics (high-level domain guidance like "check responsive behavior at mobile/tablet/desktop").
 - **`matchedShapes` in state** — still used by the design command and specifier ensemble.
 - **Shape-specific reviewer context** — the high-level guidance about what to look for, injected by the pipeline. This is domain awareness, not tool instructions.
 
 ### What goes
+
 - **`toolFamily` field** in shape definitions — skills are discovered by Claude, not injected by the pipeline.
 - **`plugin/web-visual/tools/*.md`** — replaced by proper skills in `plugin/visual-tools/skills/`.
 - **Pipeline code that reads tool family markdown** and injects it into prompts — Claude handles tool usage through skill activation now.
 
 ### What changes
+
 - **Reviewer context injection** (`src/engine/pipeline/review.exec.ts`) — keeps domain heuristics but drops tool-specific instructions. The reviewer flavour agent + skills handle the tool side.
 - **Flavour config schema** — gains `recommendedSkills: string[]` field.
 - **Plugin discovery** — `plugin/visual-tools/` replaces `plugin/web-visual/`. Same discovery mechanism, new directory.
@@ -262,7 +275,7 @@ The pipeline does less bespoke tool wiring because Claude's skill system handles
 
 At project creation, ridgeline checks which recommended skills have their backing tools installed and shows an informational summary:
 
-```
+```text
 $ ridgeline create my-web-app --flavour web-ui
 
   ┌─────────────────────────────────────────────┐

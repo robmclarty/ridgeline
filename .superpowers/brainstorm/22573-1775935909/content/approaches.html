@@ -1,0 +1,56 @@
+<h2>Architecture Approaches</h2>
+<p class="subtitle">How to integrate design.md, concern detection, visual specialist, and tool families into the Ridgeline pipeline</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Layered Artifact + Plugin Toolkits</h3>
+      <p><strong>Recommended.</strong> Three interconnected systems that compose cleanly.</p>
+      <div style="margin-top: 12px; font-size: 14px; color: #ccc; line-height: 1.6;">
+        <strong style="color: #7eb8da;">Layer 1 — Concern Detection Engine</strong><br>
+        Extensible keyword→category registry scans shape.md. Categories: <code>web-visual</code>, <code>game-visual</code>, <code>print-layout</code>, etc. Each category maps to specialist activation + tool family. New categories added by dropping a config file.
+        <br><br>
+        <strong style="color: #7eb8da;">Layer 2 — Design Artifact Lifecycle</strong><br>
+        <code>ridgeline design</code> command creates project-level <code>.ridgeline/design.md</code> via interactive shaping (reuses shaper pattern). Specifier's visual specialist reads project design + shape, produces feature-level design section. Builder/reviewer inherit both layers.
+        <br><br>
+        <strong style="color: #7eb8da;">Layer 3 — Visual Tool Families (Plugin-based)</strong><br>
+        Each tool family is a Ridgeline plugin: <code>plugin/web-visual/</code> bundles Playwright, axe-core, CSS analyzers, pixelmatch. Future: <code>plugin/game-visual/</code> bundles asset validators, scene graph tools. Concern detection activates the right plugin. Reviewer invokes tools from the active plugin.
+      </div>
+      <div class="pros-cons" style="margin-top: 12px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Each system is independently useful and testable</li><li>New tool families don't touch core pipeline code</li><li>Concern categories are data, not code</li><li>Plugin architecture already exists in Ridgeline</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Three systems to build and coordinate</li><li>Plugin packaging adds complexity for tool dependencies (Playwright binary, etc.)</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Monolithic Visual Pipeline</h3>
+      <p>Single integrated system — concern detection, design artifact, and tools all built into core Ridgeline.</p>
+      <div style="margin-top: 12px; font-size: 14px; color: #ccc; line-height: 1.6;">
+        Everything lives in <code>src/</code>. Concern detection is a function in the pipeline. Design.md creation is a new command. Visual tools are bundled as npm dependencies of Ridgeline itself. The reviewer has hardcoded knowledge of which tools to run for which concerns.
+      </div>
+      <div class="pros-cons" style="margin-top: 12px;">
+        <div class="pros"><h4>Pros</h4><ul><li>Simpler to build initially</li><li>No plugin coordination overhead</li><li>Everything in one place</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Ridgeline's install size balloons (Playwright alone is ~300MB)</li><li>Adding game/print tools means modifying core code</li><li>Violates Ridgeline's existing plugin-based extensibility model</li><li>Not extensible without code changes</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Flavour-Driven (Everything in Flavours)</h3>
+      <p>Visual concerns handled entirely by domain flavours — no new core infrastructure.</p>
+      <div style="margin-top: 12px; font-size: 14px; color: #ccc; line-height: 1.6;">
+        Each flavour (game-dev, web-frontend) defines its own visual specialist, reviewer prompts, and tool integrations. No shared concern detection — each flavour decides internally. Design.md is a flavour convention, not a core feature.
+      </div>
+      <div class="pros-cons" style="margin-top: 12px;">
+        <div class="pros"><h4>Pros</h4><ul><li>No core changes needed</li><li>Each domain fully controls its experience</li><li>Simplest initial implementation</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Massive duplication — each flavour reimplements design.md handling</li><li>No shared design artifact lifecycle</li><li>Projects spanning domains (web game with print docs) can't compose</li><li>No way to detect concerns without choosing a flavour first</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>

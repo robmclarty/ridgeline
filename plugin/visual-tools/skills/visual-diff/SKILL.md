@@ -40,6 +40,7 @@ console.log(`Mismatched pixels: ${mismatchedPixels} (${mismatchPercent}%)`);
 ## Interpreting results
 
 - **< 1% mismatch**: Pass — sub-pixel rendering differences, antialiasing
+
 - **1–5% mismatch**: Review — may be intentional changes or minor regressions
 - **> 5% mismatch**: Likely regression — investigate the diff image
 
@@ -47,7 +48,7 @@ console.log(`Mismatched pixels: ${mismatchedPixels} (${mismatchPercent}%)`);
 
 Save a known-good screenshot as the reference. Store references alongside the test:
 
-```
+```text
 tests/visual/
   reference/
     homepage-mobile.png
@@ -62,5 +63,6 @@ tests/visual/
 ## Gotchas
 
 - Images must be the same dimensions. Resize first if viewports differ.
+
 - Font rendering varies across OS — set threshold to 0.1 or higher to account for antialiasing.
 - Dynamic content (timestamps, avatars) causes false positives. Mock or hide dynamic elements before capture.

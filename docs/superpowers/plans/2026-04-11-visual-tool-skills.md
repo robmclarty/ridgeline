@@ -10,9 +10,12 @@
 
 ---
 
+## Implementation Tasks
+
 ### Task 1: Create the visual-tools plugin directory and plugin.json
 
 **Files:**
+
 - Create: `plugin/visual-tools/plugin.json`
 
 - [ ] **Step 1: Create plugin directory structure**
@@ -44,6 +47,7 @@ git commit -m "feat: create visual-tools plugin directory"
 ### Task 2: Create the agent-browser skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/agent-browser/SKILL.md`
 - Create: `plugin/visual-tools/skills/agent-browser/references/viewports.md`
 
@@ -68,30 +72,38 @@ Agent-first browser automation CLI. Produces annotated screenshots with numbered
 ## Opening a page
 
 ```bash
+
 agent-browser open <url>
-```
+
+```text
 
 Opens the URL in a headless browser session. The session persists until explicitly closed.
 
 ## Taking screenshots
 
 ```bash
+
 agent-browser screenshot --annotate
-```
+
+```text
 
 Captures the current viewport with numbered labels on interactive elements. Each label maps to an element you can reference in subsequent commands.
 
 For a specific viewport width:
 
 ```bash
+
 agent-browser screenshot --annotate --viewport 375x812
-```
+
+```text
 
 ## Reading page structure
 
 ```bash
+
 agent-browser snapshot -i
-```
+
+```text
 
 Returns a compact text representation of the page's interactive elements and structure. Uses ~93% less context than raw HTML.
 
@@ -106,8 +118,10 @@ Capture at standard viewports to verify responsive behavior. See `references/vie
 ## Closing the session
 
 ```bash
+
 agent-browser close
-```
+
+```text
 ```
 
 - [ ] **Step 2: Write the viewports reference**
@@ -128,10 +142,12 @@ Use these viewport sizes for responsive verification:
 ## Usage
 
 ```bash
+
 agent-browser screenshot --annotate --viewport 375x812
 agent-browser screenshot --annotate --viewport 768x1024
 agent-browser screenshot --annotate --viewport 1440x900
-```
+
+```text
 ```
 
 - [ ] **Step 3: Commit**
@@ -146,6 +162,7 @@ git commit -m "feat: add agent-browser skill for visual verification"
 ### Task 3: Create the visual-diff skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/visual-diff/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -171,6 +188,7 @@ Pixel-level screenshot comparison using pixelmatch. Compares two PNG images and 
 Write and run a Node.js script:
 
 ```javascript
+
 const fs = require('fs');
 const { PNG } = require('pngjs');
 const pixelmatch = require('pixelmatch');
@@ -190,7 +208,8 @@ fs.writeFileSync('diff.png', PNG.sync.write(diff));
 const totalPixels = width * height;
 const mismatchPercent = ((mismatchedPixels / totalPixels) * 100).toFixed(2);
 console.log(`Mismatched pixels: ${mismatchedPixels} (${mismatchPercent}%)`);
-```
+
+```text
 
 ## Interpreting results
 
@@ -203,6 +222,7 @@ console.log(`Mismatched pixels: ${mismatchedPixels} (${mismatchPercent}%)`);
 Save a known-good screenshot as the reference. Store references alongside the test:
 
 ```
+
 tests/visual/
   reference/
     homepage-mobile.png
@@ -212,7 +232,8 @@ tests/visual/
     homepage-desktop.png
   diff/
     homepage-mobile.png
-```
+
+```text
 
 ## Gotchas
 
@@ -233,6 +254,7 @@ git commit -m "feat: add visual-diff skill for screenshot comparison"
 ### Task 4: Create the css-audit skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/css-audit/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -256,14 +278,18 @@ Analyze CSS statistics to detect design system drift, specificity issues, and bl
 ## Running an audit
 
 ```bash
+
 npx @projectwallace/css-analyzer ./path/to/styles.css
-```
+
+```text
 
 For multiple files, concatenate first:
 
 ```bash
+
 cat src/**/*.css | npx @projectwallace/css-analyzer --stdin
-```
+
+```text
 
 ## What to check
 
@@ -299,6 +325,7 @@ git commit -m "feat: add css-audit skill for CSS quality analysis"
 ### Task 5: Create the a11y-audit skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/a11y-audit/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -322,14 +349,18 @@ Run automated WCAG 2.1 AA compliance checks against a running web page.
 ## Running an audit
 
 ```bash
+
 npx @axe-core/cli <url>
-```
+
+```text
 
 Example:
 
 ```bash
+
 npx @axe-core/cli http://localhost:3000 --stdout
-```
+
+```text
 
 ## Common checks
 
@@ -374,6 +405,7 @@ git commit -m "feat: add a11y-audit skill for accessibility checks"
 ### Task 6: Create the lighthouse skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/lighthouse/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -397,20 +429,25 @@ Run Google Lighthouse for quantitative quality scores across performance, access
 ## Running an audit
 
 ```bash
+
 npx lighthouse <url> --output json --output-path ./lighthouse-report.json --only-categories=performance,accessibility,best-practices --chrome-flags="--headless=new --no-sandbox"
-```
+
+```text
 
 For a quick text summary:
 
 ```bash
+
 npx lighthouse <url> --output html --output-path ./lighthouse-report.html --only-categories=performance,accessibility,best-practices --chrome-flags="--headless=new --no-sandbox"
-```
+
+```text
 
 ## Reading results
 
 Parse the JSON output to extract category scores:
 
 ```bash
+
 node -e "
 const r = require('./lighthouse-report.json');
 const cats = r.categories;
@@ -418,7 +455,8 @@ console.log('Performance:', Math.round(cats.performance.score * 100));
 console.log('Accessibility:', Math.round(cats.accessibility.score * 100));
 console.log('Best Practices:', Math.round(cats['best-practices'].score * 100));
 "
-```
+
+```text
 
 ## Score thresholds
 
@@ -453,6 +491,7 @@ git commit -m "feat: add lighthouse skill for quality audits"
 ### Task 7: Create the canvas-screenshot skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/canvas-screenshot/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -476,27 +515,34 @@ Capture stable frames from canvas-based and WebGL applications. Unlike regular p
 ## With agent-browser (preferred)
 
 ```bash
+
 agent-browser open <url>
-```
+
+```text
 
 Wait for the canvas to render by checking for stability:
 
 ```bash
+
 agent-browser screenshot --annotate
-```
+
+```text
 
 If the canvas is still loading (black or empty), wait and retry:
 
 ```bash
+
 sleep 2
 agent-browser screenshot --annotate
-```
+
+```text
 
 ## With Playwright (fallback)
 
 Write and run a script when agent-browser is unavailable:
 
 ```javascript
+
 const { chromium } = require('playwright');
 
 (async () => {
@@ -516,7 +562,8 @@ const { chromium } = require('playwright');
 
   await browser.close();
 })();
-```
+
+```text
 
 ## Handling render loop timing
 
@@ -555,6 +602,7 @@ git commit -m "feat: add canvas-screenshot skill for game/WebGL capture"
 ### Task 8: Create the shader-validate skill
 
 **Files:**
+
 - Create: `plugin/visual-tools/skills/shader-validate/SKILL.md`
 
 - [ ] **Step 1: Write the SKILL.md**
@@ -578,10 +626,12 @@ Validate and cross-compile shaders using naga — a fast Rust-based shader trans
 ## Validating a shader
 
 ```bash
+
 naga my_shader.wgsl
 naga my_shader.frag
 naga my_shader.vert
-```
+
+```text
 
 Exit code 0 means the shader is valid. Non-zero prints error details with line numbers.
 
@@ -590,18 +640,24 @@ Exit code 0 means the shader is valid. Non-zero prints error details with line n
 Convert between shader languages by specifying input and output files:
 
 ```bash
+
 # WGSL to SPIR-V
+
 naga shader.wgsl shader.spv
 
 # GLSL to WGSL
+
 naga shader.frag shader.wgsl
 
 # SPIR-V to Metal
+
 naga shader.spv shader.metal
 
 # WGSL to GLSL (with profile)
+
 naga shader.wgsl shader.frag --profile es310
-```
+
+```text
 
 The output format is determined by file extension.
 
@@ -610,22 +666,28 @@ The output format is determined by file extension.
 For WebGL fragment shaders:
 
 ```bash
+
 naga my_effect.frag
-```
+
+```text
 
 For vertex shaders:
 
 ```bash
+
 naga my_mesh.vert
-```
+
+```text
 
 ## Batch validation
 
 Validate all shaders in a directory:
 
 ```bash
+
 find src/shaders -name '*.frag' -o -name '*.vert' -o -name '*.wgsl' | xargs -I {} naga {}
-```
+
+```text
 
 ## Common errors
 
@@ -655,6 +717,7 @@ git commit -m "feat: add shader-validate skill for GLSL/WGSL validation"
 The `plugin/` directory at the project root is not currently included in the npm build. The build script copies `src/agents` and `src/flavours` to `dist/` but not `plugin/`. Fix this so the visual-tools plugin ships with ridgeline.
 
 **Files:**
+
 - Modify: `package.json:10` (build script)
 
 - [ ] **Step 1: Write the failing test**
@@ -673,11 +736,13 @@ Expected: file not found (currently not copied).
 In `package.json`, update the `build` script to also copy `plugin/`:
 
 Change line 10 from:
+
 ```json
 "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/flavours && cp -r src/flavours dist/flavours",
 ```
 
 To:
+
 ```json
 "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/flavours && cp -r src/flavours dist/flavours && rm -rf dist/plugin && cp -r plugin dist/plugin",
 ```
@@ -706,6 +771,7 @@ git commit -m "build: include plugin directory in dist output"
 `discoverPluginDirs` currently only checks the user's `.ridgeline/plugin/` and `.ridgeline/builds/<name>/plugin/`. It needs to also discover ridgeline's own bundled `plugin/` directory (which ships inside the npm package at `dist/plugin/`).
 
 **Files:**
+
 - Modify: `src/engine/discovery/plugin.scan.ts:38-54`
 - Test: `src/engine/discovery/__tests__/plugin.scan.test.ts`
 
@@ -810,6 +876,7 @@ git commit -m "feat: discover bundled plugin directories shipped with ridgeline"
 Flavours currently have no config file — they're just directories of markdown agents. Add an optional `flavour.json` config with a `recommendedSkills` field. Create a loader function and tests.
 
 **Files:**
+
 - Create: `src/engine/discovery/flavour.config.ts`
 - Create: `src/engine/discovery/__tests__/flavour.config.test.ts`
 
@@ -940,6 +1007,7 @@ git commit -m "feat: add flavour.json config loader with recommendedSkills"
 ### Task 12: Create the web-ui flavour
 
 **Files:**
+
 - Create: `src/flavours/web-ui/flavour.json`
 - Create: `src/flavours/web-ui/core/builder.md`
 - Create: `src/flavours/web-ui/core/reviewer.md`
@@ -997,6 +1065,7 @@ git commit -m "feat: add web-ui flavour with builder and reviewer agents"
 ### Task 13: Create the web-game flavour
 
 **Files:**
+
 - Create: `src/flavours/web-game/flavour.json`
 - Create: `src/flavours/web-game/core/builder.md`
 - Create: `src/flavours/web-game/core/reviewer.md`
@@ -1050,6 +1119,7 @@ git commit -m "feat: add web-game flavour with builder and reviewer agents"
 ### Task 14: Enhance software-engineering flavour with visual awareness
 
 **Files:**
+
 - Create: `src/flavours/software-engineering/flavour.json`
 - Modify: `src/flavours/software-engineering/core/builder.md`
 - Modify: `src/flavours/software-engineering/core/reviewer.md`
@@ -1096,6 +1166,7 @@ git commit -m "feat: add visual awareness to software-engineering flavour"
 ### Task 15: Remove toolFamily from shape definitions
 
 **Files:**
+
 - Modify: `src/shapes/web-visual.json`
 - Modify: `src/shapes/game-visual.json`
 - Modify: `src/shapes/print-layout.json`
@@ -1119,6 +1190,7 @@ export type ShapeDefinition = {
 Remove the `toolFamily` field from each shape file.
 
 `src/shapes/web-visual.json`:
+
 ```json
 {
   "name": "web-visual",
@@ -1128,6 +1200,7 @@ Remove the `toolFamily` field from each shape file.
 ```
 
 `src/shapes/game-visual.json`:
+
 ```json
 {
   "name": "game-visual",
@@ -1137,6 +1210,7 @@ Remove the `toolFamily` field from each shape file.
 ```
 
 `src/shapes/print-layout.json`:
+
 ```json
 {
   "name": "print-layout",
@@ -1150,6 +1224,7 @@ Remove the `toolFamily` field from each shape file.
 In `src/shapes/__tests__/detect.test.ts`, remove `toolFamily` from all test fixtures:
 
 Change:
+
 ```typescript
 const webVisual = {
   name: "web-visual",
@@ -1174,6 +1249,7 @@ const printLayout = {
 ```
 
 To:
+
 ```typescript
 const webVisual = {
   name: "web-visual",
@@ -1197,12 +1273,14 @@ const printLayout = {
 Also update the `"skips files missing required fields"` test — remove the `toolFamily` from fixture objects that test for missing fields:
 
 Change:
+
 ```typescript
 const missingKeywords = { name: "incomplete", toolFamily: "x", reviewerContext: "y" }
 const missingName = { keywords: ["a"], toolFamily: "x", reviewerContext: "y" }
 ```
 
 To:
+
 ```typescript
 const missingKeywords = { name: "incomplete", reviewerContext: "y" }
 const missingName = { keywords: ["a"], reviewerContext: "y" }
@@ -1230,6 +1308,7 @@ git commit -m "refactor: remove toolFamily from shape definitions"
 The reviewer currently injects tool-usage instructions via shape `reviewerContext`. With skills handling tool usage, the reviewer context should focus on domain heuristics only. The "skipped tools" rule also goes away — there are no tool-family tools to skip anymore.
 
 **Files:**
+
 - Modify: `src/engine/pipeline/review.exec.ts:43-61`
 - Modify: `src/engine/pipeline/__tests__/review.exec.test.ts`
 
@@ -1242,6 +1321,7 @@ Read `src/engine/pipeline/__tests__/review.exec.test.ts` to understand the curre
 In `src/engine/pipeline/review.exec.ts`, simplify the shape context injection block. Remove the "skipped tools" rule since skills handle tools now:
 
 Change lines 43-61 from:
+
 ```typescript
   // Inject reviewer context from matched shapes
   const matchedShapeNames = getMatchedShapes(config.buildDir)
@@ -1267,6 +1347,7 @@ Change lines 43-61 from:
 ```
 
 To:
+
 ```typescript
   // Inject reviewer context from matched shapes
   const matchedShapeNames = getMatchedShapes(config.buildDir)
@@ -1316,6 +1397,7 @@ git commit -m "refactor: remove skipped-tools rule from reviewer context injecti
 ### Task 17: Add recommended tools check to the create command
 
 **Files:**
+
 - Create: `src/engine/discovery/skill.check.ts`
 - Create: `src/engine/discovery/__tests__/skill.check.test.ts`
 - Modify: `src/commands/create.ts`
@@ -1522,6 +1604,7 @@ Expected: PASS.
 In `src/commands/create.ts`, after the status table display and before starting the next stage, add the recommended skills check:
 
 Add imports at the top:
+
 ```typescript
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { loadFlavourConfig } from "../engine/discovery/flavour.config"
@@ -1564,6 +1647,7 @@ git commit -m "feat: show recommended tool availability at project creation"
 ### Task 18: Remove the old web-visual plugin
 
 **Files:**
+
 - Delete: `plugin/web-visual/` (entire directory)
 
 - [ ] **Step 1: Verify no code references plugin/web-visual/ by path**
@@ -1594,6 +1678,7 @@ git commit -m "chore: remove old web-visual plugin (replaced by visual-tools ski
 The `src/shapes/*.json` files are not currently copied to `dist/` by the build script. The `resolveShapesDir()` function handles this with fallback paths, but for consistency with how agents and flavours are handled, add an explicit copy.
 
 **Files:**
+
 - Modify: `package.json:10` (build script)
 
 - [ ] **Step 1: Update build script**
@@ -1601,6 +1686,7 @@ The `src/shapes/*.json` files are not currently copied to `dist/` by the build s
 In `package.json`, update the `build` script to also copy `src/shapes/`:
 
 Change from the current build script (which was updated in Task 9) to:
+
 ```json
 "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/flavours && cp -r src/flavours dist/flavours && rm -rf dist/plugin && cp -r plugin dist/plugin && rm -rf dist/shapes && cp -r src/shapes dist/shapes",
 ```
@@ -1673,11 +1759,13 @@ git commit -m "fix: resolve test and lint issues from visual-tools migration"
 ### Task 21: Update documentation
 
 **Files:**
+
 - Modify: `docs/flavours.md`
 
 - [ ] **Step 1: Add web-ui and web-game to flavours documentation**
 
 Read `docs/flavours.md` and add entries for the two new flavours in the appropriate section. Include:
+
 - `web-ui` — Web application UI development with visual verification tools
 - `web-game` — Browser-based interactive and visual projects (canvas, WebGL, game frameworks)
 
