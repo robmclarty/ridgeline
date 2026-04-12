@@ -23,6 +23,27 @@ catches these problems early -- before planning, not after building.
 
 ## Quick vs Deep Mode
 
+```mermaid
+flowchart TB
+    spec["spec.md +\nconstraints.md"] --> agenda["Agenda step\n(sonnet)"]
+
+    agenda --> quick_path
+    agenda --> deep_path
+
+    subgraph quick_path ["Quick Mode (default)"]
+        eco["Ecosystem\nspecialist"]
+    end
+
+    subgraph deep_path ["Deep Mode (--deep)"]
+        direction TB
+        acad["Academic"] ~~~ eco2["Ecosystem"] ~~~ comp["Competitive"]
+    end
+
+    quick_path --> synth["Synthesizer"]
+    deep_path --> synth
+    synth --> research_md["research.md"]
+```
+
 ### Quick mode (default)
 
 ```sh
@@ -103,9 +124,30 @@ ridgeline research my-feature --deep --auto 2  # deep + 2 iterations
 
 Auto mode chains research and refine into an iterative loop:
 
-```text
-iteration 1: agenda → research → refine (spec.md updated, spec.changelog.md written)
-iteration 2: agenda → research → refine (final spec.md, changelog updated)
+```mermaid
+flowchart TB
+    spec["spec.md"] --> iter1
+
+    subgraph iter1 ["Iteration 1"]
+        direction TB
+        a1["Agenda step\n(reads spec + gaps.md)"]
+        r1["Research ensemble\n(specialists)"]
+        ref1["Refine\n(rewrites spec.md)"]
+        a1 --> r1 --> ref1
+    end
+
+    iter1 --> spec2["Updated spec.md\n+ spec.changelog.md"]
+    spec2 --> iter2
+
+    subgraph iter2 ["Iteration 2"]
+        direction TB
+        a2["Agenda step\n(reads updated spec +\nexisting research.md)"]
+        r2["Research ensemble\n(new gaps only)"]
+        ref2["Refine\n(final spec.md)"]
+        a2 --> r2 --> ref2
+    end
+
+    iter2 --> final["Final spec.md\n+ accumulated research.md"]
 ```
 
 Each iteration generates an agenda, researches the current spec (which includes

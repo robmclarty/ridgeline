@@ -6,8 +6,28 @@ user sees, and where the user can intervene.
 
 ## Overview
 
-```text
-shape → spec → [research → refine] → plan → [build → review → retry/advance] × N phases → merge
+```mermaid
+flowchart TB
+    shape[Shape] --> spec[Spec]
+    spec --> research_decision{Research?}
+    research_decision -->|yes| research[Research]
+    research_decision -->|no| plan
+    research --> refine[Refine]
+    refine --> plan[Plan]
+    plan --> phase_loop
+
+    subgraph phase_loop ["For Each Phase"]
+        direction TB
+        build[Build] --> review[Review]
+        review -->|PASS| advance[Advance]
+        review -->|FAIL| retry{Retries\nleft?}
+        retry -->|yes| build
+        retry -->|no| halt[Halt]
+    end
+
+    advance --> done{More\nphases?}
+    done -->|yes| phase_loop
+    done -->|no| merge[Merge]
 ```
 
 Research and refine are optional. Skipping them goes straight from spec to
