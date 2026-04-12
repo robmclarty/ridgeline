@@ -36,6 +36,7 @@ type CategoryDefaults = {
 }
 
 const CATEGORY_DEFAULTS: Record<string, CategoryDefaults> = {
+  // Image categories
   characters:  { zLayer: "entity",     anchor: "bottom-center" },
   tiles:       { zLayer: "ground",     anchor: "top-left" },
   items:       { zLayer: "entity",     anchor: "center" },
@@ -43,6 +44,16 @@ const CATEGORY_DEFAULTS: Record<string, CategoryDefaults> = {
   backgrounds: { zLayer: "background", anchor: "top-left" },
   effects:     { zLayer: "foreground", anchor: "center" },
   layouts:     { zLayer: "ui",         anchor: "top-left" },
+  // Audio categories
+  music:       { zLayer: "background", anchor: "center" },
+  sfx:         { zLayer: "entity",     anchor: "center" },
+  ambience:    { zLayer: "background", anchor: "center" },
+  dialogue:    { zLayer: "entity",     anchor: "center" },
+  // Video categories
+  cinematics:  { zLayer: "foreground", anchor: "center" },
+  // Text/data categories
+  data:        { zLayer: "entity",     anchor: "center" },
+  docs:        { zLayer: "entity",     anchor: "center" },
 }
 
 const DEFAULT_FALLBACK: CategoryDefaults = { zLayer: "entity", anchor: "center" }
