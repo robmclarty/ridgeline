@@ -18,6 +18,7 @@ export type RidgelineConfig = {
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
   extraContext: string | null
   flavour: string | null
+  isDeepEnsemble: boolean
 }
 
 // Phase metadata parsed from filesystem
@@ -27,6 +28,7 @@ export type PhaseInfo = {
   slug: string       // "scaffold"
   filename: string   // "01-scaffold.md"
   filepath: string   // absolute path
+  dependsOn: string[] // phase IDs this depends on; empty = depends on previous phase
 }
 
 // Per-phase state persisted in state.json
@@ -122,6 +124,7 @@ export type SpecialistProposal = {
 export type EnsembleResult = {
   specialistNames: string[]
   specialistResults: ClaudeResult[]
+  annotationResults?: ClaudeResult[]
   synthesizerResult: ClaudeResult
   totalCostUsd: number
   totalDurationMs: number

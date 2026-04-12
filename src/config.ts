@@ -73,5 +73,6 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     networkAllowlist: resolveNetworkAllowlist(ridgelineDir),
     extraContext: (opts.context as string) ?? null,
     flavour: (opts.flavour as string) ?? loadSettings(ridgelineDir).flavour ?? null,
+    isDeepEnsemble: opts.deepEnsemble === true,
   }
 }
