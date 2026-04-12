@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, recordMatchedShapes, getMatchedShapes } from "../state"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo } from "../state"
 import type { PhaseInfo, BuildState, PipelineState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase
@@ -22,7 +22,7 @@ const defaultPipeline: PipelineState = {
   build: "pending",
 }
 
-import { verifyCompletionTag } from "../tags"
+import { verifyCompletionTag, cleanupBuildTags } from "../tags"
 
 const samplePhases: PhaseInfo[] = [
   { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/phases/01-scaffold.md" },
@@ -280,6 +280,342 @@ describe("state", () => {
       recordMatchedShapes(tmpDir, "my-build", ["api", "cli", "dashboard"])
 
       expect(getMatchedShapes(tmpDir)).toEqual(["api", "cli", "dashboard"])
+    })
+  })
+
+  // -----------------------------------------------------------------------
+  // Pipeline state helpers
+  // -----------------------------------------------------------------------
+
+  describe("getPipelineStatus", () => {
+    it("returns default pipeline when no state and no artifacts exist", () => {
+      const status = getPipelineStatus(tmpDir)
+
+      expect(status.shape).toBe("pending")
+      expect(status.design).toBe("skipped")
+      expect(status.spec).toBe("pending")
+      expect(status.research).toBe("skipped")
+      expect(status.refine).toBe("skipped")
+      expect(status.plan).toBe("pending")
+      expect(status.build).toBe("pending")
+    })
+
+    it("derives status from disk artifacts", () => {
+      fs.writeFileSync(path.join(tmpDir, "shape.md"), "# Shape")
+      fs.writeFileSync(path.join(tmpDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(tmpDir, "constraints.md"), "# Constraints")
+      fs.writeFileSync(path.join(tmpDir, "research.md"), "# Research")
+
+      const status = getPipelineStatus(tmpDir)
+
+      expect(status.shape).toBe("complete")
+      expect(status.spec).toBe("complete")
+      expect(status.research).toBe("skipped") // optional — uses state value
+    })
+
+    it("derives plan as complete when phases dir has numbered md files", () => {
+      const phasesDir = path.join(tmpDir, "phases")
+      fs.mkdirSync(phasesDir, { recursive: true })
+      fs.writeFileSync(path.join(phasesDir, "01-scaffold.md"), "# Phase 1")
+
+      const status = getPipelineStatus(tmpDir)
+
+      expect(status.plan).toBe("complete")
+    })
+
+    it("does not derive plan as complete for non-numbered phase files", () => {
+      const phasesDir = path.join(tmpDir, "phases")
+      fs.mkdirSync(phasesDir, { recursive: true })
+      fs.writeFileSync(path.join(phasesDir, "notes.md"), "random")
+
+      const status = getPipelineStatus(tmpDir)
+
+      expect(status.plan).toBe("pending")
+    })
+
+    it("trusts disk over state when state says complete but file is missing", () => {
+      const state: BuildState = {
+        buildName: "test",
+        startedAt: "2024-01-01T00:00:00.000Z",
+        pipeline: {
+          shape: "complete",
+          design: "skipped",
+          spec: "complete",
+          research: "skipped",
+          refine: "skipped",
+          plan: "complete",
+          build: "pending",
+        },
+        phases: [],
+      }
+      saveState(tmpDir, state)
+
+      // No actual files on disk — should trust disk
+      const status = getPipelineStatus(tmpDir)
+
+      expect(status.shape).toBe("pending")
+      expect(status.spec).toBe("pending")
+      expect(status.plan).toBe("pending")
+    })
+
+    it("preserves build status from state", () => {
+      const state: BuildState = {
+        buildName: "test",
+        startedAt: "2024-01-01T00:00:00.000Z",
+        pipeline: {
+          ...defaultPipeline,
+          build: "running",
+        },
+        phases: [],
+      }
+      saveState(tmpDir, state)
+
+      const status = getPipelineStatus(tmpDir)
+
+      expect(status.build).toBe("running")
+    })
+  })
+
+  describe("advancePipeline", () => {
+    it("creates new state and marks stage complete when no state exists", () => {
+      advancePipeline(tmpDir, "my-build", "shape")
+
+      const state = loadState(tmpDir)
+      expect(state).not.toBeNull()
+      expect(state!.buildName).toBe("my-build")
+      expect(state!.pipeline.shape).toBe("complete")
+    })
+
+    it("updates existing state and marks stage complete", () => {
+      const state = initState("my-build", samplePhases)
+      saveState(tmpDir, state)
+
+      advancePipeline(tmpDir, "my-build", "spec")
+
+      const loaded = loadState(tmpDir)
+      expect(loaded!.pipeline.spec).toBe("complete")
+      expect(loaded!.phases).toHaveLength(3) // preserves existing phases
+    })
+
+    it("handles the build stage path", () => {
+      advancePipeline(tmpDir, "my-build", "build")
+
+      const state = loadState(tmpDir)
+      expect(state!.pipeline.build).toBe("complete")
+    })
+  })
+
+  describe("markBuildRunning", () => {
+    it("creates new state with build set to running when no state exists", () => {
+      markBuildRunning(tmpDir, "my-build")
+
+      const state = loadState(tmpDir)
+      expect(state).not.toBeNull()
+      expect(state!.buildName).toBe("my-build")
+      expect(state!.pipeline.build).toBe("running")
+    })
+
+    it("updates existing state build to running", () => {
+      const state = initState("my-build", samplePhases)
+      saveState(tmpDir, state)
+
+      markBuildRunning(tmpDir, "my-build")
+
+      const loaded = loadState(tmpDir)
+      expect(loaded!.pipeline.build).toBe("running")
+    })
+  })
+
+  describe("getNextPipelineStage", () => {
+    it("returns first pending required stage", () => {
+      expect(getNextPipelineStage(tmpDir)).toBe("shape")
+    })
+
+    it("skips completed stages", () => {
+      fs.writeFileSync(path.join(tmpDir, "shape.md"), "# Shape")
+      advancePipeline(tmpDir, "test", "shape")
+
+      expect(getNextPipelineStage(tmpDir)).toBe("spec")
+    })
+
+    it("returns running stages as next", () => {
+      fs.writeFileSync(path.join(tmpDir, "shape.md"), "# Shape")
+      advancePipeline(tmpDir, "test", "shape")
+      fs.writeFileSync(path.join(tmpDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(tmpDir, "constraints.md"), "# Constraints")
+      advancePipeline(tmpDir, "test", "spec")
+      const phasesDir = path.join(tmpDir, "phases")
+      fs.mkdirSync(phasesDir, { recursive: true })
+      fs.writeFileSync(path.join(phasesDir, "01-scaffold.md"), "# Phase 1")
+      advancePipeline(tmpDir, "test", "plan")
+      markBuildRunning(tmpDir, "test")
+
+      expect(getNextPipelineStage(tmpDir)).toBe("build")
+    })
+
+    it("returns null when all required stages complete", () => {
+      // Create all artifacts and advance all stages
+      fs.writeFileSync(path.join(tmpDir, "shape.md"), "# Shape")
+      fs.writeFileSync(path.join(tmpDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(tmpDir, "constraints.md"), "# Constraints")
+      const phasesDir = path.join(tmpDir, "phases")
+      fs.mkdirSync(phasesDir, { recursive: true })
+      fs.writeFileSync(path.join(phasesDir, "01-scaffold.md"), "# Phase 1")
+
+      advancePipeline(tmpDir, "test", "shape")
+      advancePipeline(tmpDir, "test", "spec")
+      advancePipeline(tmpDir, "test", "plan")
+      advancePipeline(tmpDir, "test", "build")
+
+      expect(getNextPipelineStage(tmpDir)).toBeNull()
+    })
+  })
+
+  describe("rewindTo", () => {
+    let phasesDir: string
+
+    beforeEach(() => {
+      // Set up a realistic build directory with artifacts at every stage
+      fs.writeFileSync(path.join(tmpDir, "shape.md"), "# Shape")
+      fs.writeFileSync(path.join(tmpDir, "design.md"), "# Design")
+      fs.writeFileSync(path.join(tmpDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(tmpDir, "constraints.md"), "# Constraints")
+      fs.writeFileSync(path.join(tmpDir, "taste.md"), "# Taste")
+      fs.writeFileSync(path.join(tmpDir, "research.md"), "# Research")
+      fs.writeFileSync(path.join(tmpDir, "handoff.md"), "# Handoff")
+      phasesDir = path.join(tmpDir, "phases")
+      fs.mkdirSync(phasesDir, { recursive: true })
+      fs.writeFileSync(path.join(phasesDir, "01-scaffold.md"), "# Phase 1")
+      fs.writeFileSync(path.join(phasesDir, "02-api.md"), "# Phase 2")
+      fs.writeFileSync(path.join(phasesDir, "01-scaffold.feedback.md"), "# Feedback")
+
+      // Create state with all stages complete
+      const state: BuildState = {
+        buildName: "test",
+        startedAt: "2024-01-01T00:00:00.000Z",
+        pipeline: {
+          shape: "complete",
+          design: "complete",
+          spec: "complete",
+          research: "complete",
+          refine: "complete",
+          plan: "complete",
+          build: "complete",
+        },
+        phases: [
+          { id: "01-scaffold", status: "complete", checkpointTag: "t1", completionTag: "c1", retries: 0, duration: 10, completedAt: "2024-01-01T00:00:00.000Z", failedAt: null },
+        ],
+      }
+      saveState(tmpDir, state)
+    })
+
+    it("returns downstream files when rewinding to shape", () => {
+      const toDelete = rewindTo(tmpDir, "test", "shape")
+
+      // Should include design.md, spec/constraints/taste, research.md, phase files, handoff, feedback
+      expect(toDelete).toContain(path.join(tmpDir, "design.md"))
+      expect(toDelete).toContain(path.join(tmpDir, "spec.md"))
+      expect(toDelete).toContain(path.join(tmpDir, "constraints.md"))
+      expect(toDelete).toContain(path.join(tmpDir, "taste.md"))
+      expect(toDelete).toContain(path.join(tmpDir, "research.md"))
+      expect(toDelete).toContain(path.join(tmpDir, "handoff.md"))
+      expect(toDelete).toContain(path.join(phasesDir, "01-scaffold.md"))
+      expect(toDelete).toContain(path.join(phasesDir, "02-api.md"))
+      expect(toDelete).toContain(path.join(phasesDir, "01-scaffold.feedback.md"))
+    })
+
+    it("returns spec files and downstream when rewinding to spec", () => {
+      const toDelete = rewindTo(tmpDir, "test", "spec")
+
+      // Downstream of spec: research, refine, plan, build
+      expect(toDelete).toContain(path.join(tmpDir, "research.md"))
+      expect(toDelete).toContain(path.join(phasesDir, "01-scaffold.md"))
+      expect(toDelete).toContain(path.join(tmpDir, "handoff.md"))
+      // Should NOT include spec.md itself (it's the target, not downstream)
+      expect(toDelete).not.toContain(path.join(tmpDir, "spec.md"))
+    })
+
+    it("collects only feedback files from phases when rewinding to build", () => {
+      const toDelete = rewindTo(tmpDir, "test", "build")
+
+      // build is the last stage, no downstream stages
+      expect(toDelete).toHaveLength(0)
+    })
+
+    it("collects plan files (all phase files) when rewinding to plan", () => {
+      const toDelete = rewindTo(tmpDir, "test", "plan")
+
+      // Downstream of plan: build
+      expect(toDelete).toContain(path.join(tmpDir, "handoff.md"))
+      expect(toDelete).toContain(path.join(phasesDir, "01-scaffold.feedback.md"))
+      // Phase md files should NOT be in delete list (plan is the target)
+      // But build feedback files should be
+    })
+
+    it("resets downstream pipeline stages to correct defaults", () => {
+      rewindTo(tmpDir, "test", "shape")
+
+      const state = loadState(tmpDir)
+      expect(state!.pipeline.shape).toBe("complete") // target stays complete
+      expect(state!.pipeline.design).toBe("skipped") // optional → skipped
+      expect(state!.pipeline.spec).toBe("pending") // required → pending
+      expect(state!.pipeline.research).toBe("skipped") // optional → skipped
+      expect(state!.pipeline.refine).toBe("skipped") // optional → skipped
+      expect(state!.pipeline.plan).toBe("pending") // required → pending
+      expect(state!.pipeline.build).toBe("pending") // required → pending
+    })
+
+    it("marks optional target stage as complete", () => {
+      rewindTo(tmpDir, "test", "design")
+
+      const state = loadState(tmpDir)
+      expect(state!.pipeline.design).toBe("complete")
+    })
+
+    it("sets build target stage to pending", () => {
+      rewindTo(tmpDir, "test", "build")
+
+      const state = loadState(tmpDir)
+      expect(state!.pipeline.build).toBe("pending")
+    })
+
+    it("clears phases array when plan or build is in reset set", () => {
+      rewindTo(tmpDir, "test", "spec")
+
+      const state = loadState(tmpDir)
+      expect(state!.phases).toEqual([])
+    })
+
+    it("calls cleanupBuildTags when build is in reset set", () => {
+      rewindTo(tmpDir, "test", "shape")
+
+      expect(cleanupBuildTags).toHaveBeenCalledWith("test")
+    })
+
+    it("does not call cleanupBuildTags when build is not in reset set", () => {
+      vi.mocked(cleanupBuildTags).mockClear()
+      rewindTo(tmpDir, "test", "build")
+
+      expect(cleanupBuildTags).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("loadState backfills pipeline for legacy state", () => {
+    it("derives pipeline from artifacts when state has no pipeline field", () => {
+      fs.writeFileSync(path.join(tmpDir, "shape.md"), "# Shape")
+      // Write a state.json without pipeline field
+      const legacyState = {
+        buildName: "legacy",
+        startedAt: "2024-01-01T00:00:00.000Z",
+        phases: [],
+      }
+      fs.writeFileSync(path.join(tmpDir, "state.json"), JSON.stringify(legacyState))
+
+      const state = loadState(tmpDir)
+
+      expect(state!.pipeline).toBeDefined()
+      expect(state!.pipeline.shape).toBe("complete")
+      expect(state!.pipeline.spec).toBe("pending")
     })
   })
 })

@@ -34,6 +34,10 @@ vi.mock("../../stores/state", () => ({
   advancePipeline: vi.fn(),
 }))
 
+vi.mock("../../catalog/resolve-asset-dir", () => ({
+  resolveAssetDirSafe: vi.fn(() => null),
+}))
+
 vi.mock("../../ui/output", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
@@ -156,5 +160,126 @@ describe("commands/design", () => {
     const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
     expect(firstCall.userPrompt).toContain("Existing Design")
     expect(firstCall.userPrompt).toContain("Some pre-existing design context.")
+  })
+
+  describe("catalog context", () => {
+    const sampleCatalog = {
+      generatedAt: "2024-01-01T00:00:00.000Z",
+      assetDir: "/assets",
+      isDescribed: false,
+      visualIdentity: {
+        detectedStyle: "pixel-art",
+        detectedPalette: ["#FF0000", "#00FF00"],
+        detectedResolution: "32x32",
+        detectedScaling: "nearest-neighbor",
+      },
+      warnings: ["Missing alpha channel on bg.png"],
+      assets: [
+        { file: "hero.png", hash: "abc", category: "characters", name: "hero", subject: "hero", state: null, width: 32, height: 32, format: "png", hasAlpha: true, channels: 4, dominantColour: "#FF0000", palette: [] },
+        { file: "tree.png", hash: "def", category: "environment", name: "tree", subject: "tree", state: null, width: 32, height: 32, format: "png", hasAlpha: true, channels: 4, dominantColour: "#00FF00", palette: [] },
+        { file: "sword.png", hash: "ghi", category: "characters", name: "sword", subject: "sword", state: null, width: 16, height: 16, format: "png", hasAlpha: true, channels: 4, dominantColour: "#AAAAAA", palette: [] },
+      ],
+    }
+
+    it("includes catalog summary in prompt when asset-catalog.json exists in build dir", async () => {
+      const buildName = "my-build"
+      const buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
+      fs.mkdirSync(buildDir, { recursive: true })
+      fs.writeFileSync(path.join(buildDir, "asset-catalog.json"), JSON.stringify(sampleCatalog))
+
+      await runDesign(buildName, defaultOpts)
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).toContain("Asset Catalog Summary")
+      expect(firstCall.userPrompt).toContain("3 assets cataloged")
+      expect(firstCall.userPrompt).toContain("characters: 2")
+      expect(firstCall.userPrompt).toContain("environment: 1")
+    })
+
+    it("includes visual identity fields in catalog summary", async () => {
+      const buildName = "my-build"
+      const buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
+      fs.mkdirSync(buildDir, { recursive: true })
+      fs.writeFileSync(path.join(buildDir, "asset-catalog.json"), JSON.stringify(sampleCatalog))
+
+      await runDesign(buildName, defaultOpts)
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).toContain("Detected style: pixel-art")
+      expect(firstCall.userPrompt).toContain("Detected resolution: 32x32")
+      expect(firstCall.userPrompt).toContain("Detected palette: #FF0000, #00FF00")
+      expect(firstCall.userPrompt).toContain("Suggested scaling: nearest-neighbor")
+    })
+
+    it("includes warnings in catalog summary", async () => {
+      const buildName = "my-build"
+      const buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
+      fs.mkdirSync(buildDir, { recursive: true })
+      fs.writeFileSync(path.join(buildDir, "asset-catalog.json"), JSON.stringify(sampleCatalog))
+
+      await runDesign(buildName, defaultOpts)
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).toContain("Warnings:")
+      expect(firstCall.userPrompt).toContain("Missing alpha channel on bg.png")
+    })
+
+    it("handles malformed catalog JSON gracefully", async () => {
+      const buildName = "my-build"
+      const buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
+      fs.mkdirSync(buildDir, { recursive: true })
+      fs.writeFileSync(path.join(buildDir, "asset-catalog.json"), "{bad json{{{")
+
+      await runDesign(buildName, defaultOpts)
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).not.toContain("Asset Catalog Summary")
+    })
+
+    it("finds catalog in ridgeline dir when no build dir catalog", async () => {
+      const ridgelineDir = path.join(tmpDir, ".ridgeline")
+      fs.mkdirSync(ridgelineDir, { recursive: true })
+      fs.writeFileSync(path.join(ridgelineDir, "asset-catalog.json"), JSON.stringify(sampleCatalog))
+
+      await runDesign(null, defaultOpts)
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).toContain("Asset Catalog Summary")
+    })
+  })
+
+  describe("matched shapes context", () => {
+    it("includes matched shapes in prompt when provided", async () => {
+      const buildName = "my-build"
+      const buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
+      fs.mkdirSync(buildDir, { recursive: true })
+
+      await runDesign(buildName, { ...defaultOpts, matchedShapes: ["api", "dashboard"] })
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).toContain("Matched Shape Categories")
+      expect(firstCall.userPrompt).toContain("api, dashboard")
+    })
+
+    it("does not include matched shapes when empty", async () => {
+      const buildName = "my-build"
+      const buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
+      fs.mkdirSync(buildDir, { recursive: true })
+
+      await runDesign(buildName, { ...defaultOpts, matchedShapes: [] })
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).not.toContain("Matched Shape Categories")
+    })
+
+    it("does not include matched shapes when not provided", async () => {
+      const ridgelineDir = path.join(tmpDir, ".ridgeline")
+      fs.mkdirSync(ridgelineDir, { recursive: true })
+
+      await runDesign(null, defaultOpts)
+
+      const firstCall = vi.mocked(invokeClaude).mock.calls[0][0]
+      expect(firstCall.userPrompt).not.toContain("Matched Shape Categories")
+    })
   })
 })
