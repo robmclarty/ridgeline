@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { AssetCatalog, AssetEntry, CatalogOptions, VisualIdentity } from "./types"
+import { AssetCatalog, AssetEntry, CatalogOptions, MediaType, VisualIdentity } from "./types"
 import { parseConventions, inferDefaults, AUTO_DESCRIBE_CATEGORIES } from "./parse-conventions"
 import {
   extractImageMetadata,
@@ -8,20 +8,39 @@ import {
   detectSpritesheet,
   detectTileable,
   computeContentHash,
+  extractBasicMetadata,
 } from "./extract-metadata"
+import { classifyByHeuristics, classifyWithAI } from "./classify"
 
-const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".avif"])
+/** Map file extensions to media types. */
+const MEDIA_EXTENSIONS: Record<string, MediaType> = {
+  // images
+  ".png": "image", ".jpg": "image", ".jpeg": "image",
+  ".gif": "image", ".webp": "image", ".svg": "image", ".avif": "image",
+  // audio
+  ".mp3": "audio", ".wav": "audio", ".ogg": "audio",
+  ".flac": "audio", ".aac": "audio", ".m4a": "audio",
+  // video
+  ".mp4": "video", ".webm": "video", ".mov": "video", ".avi": "video",
+  // text
+  ".txt": "text", ".json": "text", ".csv": "text",
+  ".md": "text", ".yaml": "text", ".yml": "text",
+}
 
-/** Recursively walk a directory tree and return all image file paths (relative to root). */
-const walkImages = (dir: string, root?: string): string[] => {
+/** Detect media type from file extension. */
+const detectMediaType = (filePath: string): MediaType | null =>
+  MEDIA_EXTENSIONS[path.extname(filePath).toLowerCase()] ?? null
+
+/** Recursively walk a directory tree and return all asset file paths (relative to root). */
+const walkAssets = (dir: string, root?: string): string[] => {
   const base = root ?? dir
   const results: string[] = []
 
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name)
     if (entry.isDirectory()) {
-      results.push(...walkImages(fullPath, base))
-    } else if (IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+      results.push(...walkAssets(fullPath, base))
+    } else if (detectMediaType(entry.name) !== null) {
       results.push(path.relative(base, fullPath))
     }
   }
@@ -49,14 +68,15 @@ const buildHashIndex = (catalog: AssetCatalog | null): Map<string, AssetEntry> =
   return index
 }
 
-/** Detect the most common resolution among square or nearly-square assets. */
+/** Detect the most common resolution among square or nearly-square image assets. */
 const detectResolution = (assets: AssetEntry[]): string | null => {
   const sizes = new Map<string, number>()
   for (const a of assets) {
+    if (a.mediaType !== "image") continue
     if (a.isSpritesheet && a.frameSize) {
       const key = `${a.frameSize.w}x${a.frameSize.h}`
       sizes.set(key, (sizes.get(key) ?? 0) + 1)
-    } else if (a.width === a.height && a.width <= 256) {
+    } else if (a.width && a.height && a.width === a.height && a.width <= 256) {
       const key = `${a.width}x${a.height}`
       sizes.set(key, (sizes.get(key) ?? 0) + 1)
     }
@@ -65,10 +85,11 @@ const detectResolution = (assets: AssetEntry[]): string | null => {
   return [...sizes.entries()].sort((a, b) => b[1] - a[1])[0][0]
 }
 
-/** Build aggregate palette from all assets (top 8 most frequent colours). */
+/** Build aggregate palette from all image assets (top 8 most frequent colours). */
 const detectPalette = (assets: AssetEntry[]): string[] => {
   const freq = new Map<string, number>()
   for (const a of assets) {
+    if (!a.palette) continue
     for (const c of a.palette) {
       freq.set(c, (freq.get(c) ?? 0) + 1)
     }
@@ -79,20 +100,21 @@ const detectPalette = (assets: AssetEntry[]): string[] => {
     .map(([colour]) => colour)
 }
 
-/** Detect visual style from asset properties. */
+/** Detect visual style from image asset properties. */
 const detectStyle = (assets: AssetEntry[]): string | null => {
-  // If most assets are small and have few colours, likely pixel art
-  const smallAssets = assets.filter((a) => {
+  const imageAssets = assets.filter((a) => a.mediaType === "image")
+  if (imageAssets.length === 0) return null
+
+  const smallAssets = imageAssets.filter((a) => {
     const size = a.isSpritesheet && a.frameSize
       ? Math.max(a.frameSize.w, a.frameSize.h)
-      : Math.max(a.width, a.height)
+      : Math.max(a.width ?? 0, a.height ?? 0)
     return size <= 128
   })
-  if (smallAssets.length > assets.length * 0.6) return "pixel-art"
+  if (smallAssets.length > imageAssets.length * 0.6) return "pixel-art"
 
-  // Check for SVG format dominance
-  const svgCount = assets.filter((a) => a.format === "svg").length
-  if (svgCount > assets.length * 0.5) return "vector"
+  const svgCount = imageAssets.filter((a) => a.format === "svg").length
+  if (svgCount > imageAssets.length * 0.5) return "vector"
 
   return null
 }
@@ -112,7 +134,6 @@ const deriveVisualIdentity = (assets: AssetEntry[]): VisualIdentity => {
 const checkPaletteMismatches = (assets: AssetEntry[], buildDir: string, ridgelineDir: string): string[] => {
   const warnings: string[] = []
 
-  // Try to read design.md for palette comparison
   const designPaths = [
     path.join(buildDir, "design.md"),
     path.join(ridgelineDir, "design.md"),
@@ -128,7 +149,6 @@ const checkPaletteMismatches = (assets: AssetEntry[], buildDir: string, ridgelin
 
   if (!designContent) return warnings
 
-  // Extract hex colours from design.md
   const hexPattern = /#[0-9a-fA-F]{6}/g
   const designColours = new Set(
     [...designContent.matchAll(hexPattern)].map((m) => m[0].toLowerCase())
@@ -136,8 +156,8 @@ const checkPaletteMismatches = (assets: AssetEntry[], buildDir: string, ridgelin
 
   if (designColours.size === 0) return warnings
 
-  // Check each asset's palette for colours not in design.md
   for (const asset of assets) {
+    if (!asset.palette) continue
     const offPalette = asset.palette.filter((c) => !designColours.has(c.toLowerCase()))
     if (offPalette.length > 0) {
       warnings.push(
@@ -157,26 +177,29 @@ export type CatalogResult = {
     updated: number
     unchanged: number
     pruned: number
+    classified: number
   }
   /** Files in auto-describe categories that need vision enrichment. */
   needsVisionDescribe: string[]
 }
 
+type BuildCatalogOpts = Pick<CatalogOptions, "isForce" | "isClassify" | "model" | "timeout">
+
 /**
- * Build or update the asset catalog (Tier 1 — deterministic only).
- * Vision enrichment and sprite packing are handled separately.
+ * Build or update the asset catalog.
+ * Handles all media types. Vision enrichment and sprite packing are handled separately.
  */
 export const buildCatalog = async (
   assetDir: string,
   buildDir: string,
-  opts: Pick<CatalogOptions, "isForce">,
+  opts: BuildCatalogOpts,
 ): Promise<CatalogResult> => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const catalogPath = path.join(buildDir, "asset-catalog.json")
   const existing = loadExistingCatalog(catalogPath)
   const hashIndex = buildHashIndex(existing)
 
-  const imageFiles = walkImages(assetDir)
+  const assetFiles = walkAssets(assetDir)
   const existingFiles = new Set(hashIndex.keys())
 
   const assets: AssetEntry[] = []
@@ -184,8 +207,13 @@ export const buildCatalog = async (
   let added = 0
   let updated = 0
   let unchanged = 0
+  let classified = 0
 
-  for (const relPath of imageFiles) {
+  const timeoutMs = opts.timeout * 60 * 1000
+  const totalFiles = assetFiles.length
+  let processedCount = 0
+
+  for (const relPath of assetFiles) {
     const absPath = path.join(assetDir, relPath)
     const hash = computeContentHash(absPath)
     const prev = hashIndex.get(relPath)
@@ -197,47 +225,79 @@ export const buildCatalog = async (
       unchanged++
 
       // Still track if auto-describe category needs vision
-      const conv = parseConventions(relPath)
-      if (AUTO_DESCRIBE_CATEGORIES.has(conv.category) && !prev.description) {
-        needsVisionDescribe.push(relPath)
+      if (prev.mediaType === "image") {
+        const conv = parseConventions(relPath)
+        if (AUTO_DESCRIBE_CATEGORIES.has(conv.category) && !prev.description) {
+          needsVisionDescribe.push(relPath)
+        }
       }
       continue
     }
 
-    // Process new or changed file
+    processedCount++
+    const mediaType = detectMediaType(relPath)!
     const conventions = parseConventions(relPath)
-    const meta = await extractImageMetadata(absPath)
-    const palette = await extractPalette(absPath)
-    const spritesheet = detectSpritesheet(meta.width, meta.height)
-    const isTileable = await detectTileable(absPath, meta.width, meta.height)
-    const defaults = inferDefaults(conventions.category)
+    const basic = extractBasicMetadata(absPath)
 
+    // Build the entry — image-specific metadata only for images
     const entry: AssetEntry = {
       file: relPath,
       hash,
+      mediaType,
       category: conventions.category,
       name: conventions.name,
       subject: conventions.subject,
       state: conventions.state,
-      width: meta.width,
-      height: meta.height,
-      format: meta.format,
-      hasAlpha: meta.hasAlpha,
-      channels: meta.channels,
-      dominantColour: palette.dominantColour,
-      palette: palette.palette,
-      isSpritesheet: spritesheet.isSpritesheet,
-      frameCount: spritesheet.frameCount,
-      frameSize: spritesheet.frameSize,
-      frameDirection: spritesheet.frameDirection,
-      suggestedAnchor: defaults.anchor,
-      suggestedZLayer: defaults.zLayer,
-      isTileable,
+      fileSizeBytes: basic.fileSizeBytes,
+      extension: basic.extension,
+    }
+
+    if (mediaType === "image") {
+      const meta = await extractImageMetadata(absPath)
+      const palette = await extractPalette(absPath)
+      const spritesheet = detectSpritesheet(meta.width, meta.height)
+      const isTileable = await detectTileable(absPath, meta.width, meta.height)
+      const defaults = inferDefaults(conventions.category)
+
+      entry.width = meta.width
+      entry.height = meta.height
+      entry.format = meta.format
+      entry.hasAlpha = meta.hasAlpha
+      entry.channels = meta.channels
+      entry.dominantColour = palette.dominantColour
+      entry.palette = palette.palette
+      entry.isSpritesheet = spritesheet.isSpritesheet
+      entry.frameCount = spritesheet.frameCount
+      entry.frameSize = spritesheet.frameSize
+      entry.frameDirection = spritesheet.frameDirection
+      entry.suggestedAnchor = defaults.anchor
+      entry.suggestedZLayer = defaults.zLayer
+      entry.isTileable = isTileable
+    }
+
+    // Classify uncategorized files when --classify is set
+    if (conventions.category === "uncategorized" && opts.isClassify) {
+      process.stderr.write(`\x1b[90m  Classifying ${relPath} (${processedCount}/${totalFiles})...\x1b[0m\n`)
+
+      const result = classifyByHeuristics(relPath, basic.extension, mediaType)
+        ?? classifyWithAI(absPath, relPath, basic.extension, mediaType, opts.model, timeoutMs)
+
+      entry.category = result.category
+      entry.isClassified = true
+      entry.classificationConfidence = result.confidence
+      classified++
+
+      // Update anchor/zLayer defaults based on new category
+      if (mediaType === "image") {
+        const defaults = inferDefaults(entry.category)
+        entry.suggestedAnchor = defaults.anchor
+        entry.suggestedZLayer = defaults.zLayer
+      }
     }
 
     assets.push(entry)
 
-    if (AUTO_DESCRIBE_CATEGORIES.has(conventions.category)) {
+    if (mediaType === "image" && AUTO_DESCRIBE_CATEGORIES.has(entry.category)) {
       needsVisionDescribe.push(relPath)
     }
 
@@ -262,7 +322,7 @@ export const buildCatalog = async (
 
   return {
     catalog,
-    stats: { total: assets.length, added, updated, unchanged, pruned },
+    stats: { total: assets.length, added, updated, unchanged, pruned, classified },
     needsVisionDescribe,
   }
 }
