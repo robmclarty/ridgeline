@@ -42,6 +42,8 @@ Ridgeline ships with these built-in flavours:
 | `technical-writing` | Documentation, guides, API references |
 | `test-suite` | Test strategy, coverage, fixture design |
 | `translation` | Multilingual content, localization, cultural adaptation |
+| `web-game` | Browser-based games and interactive visual applications (canvas, WebGL, PixiJS, Phaser, Three.js) |
+| `web-ui` | Web application UI development with responsive layouts, CSS auditing, and accessibility |
 
 ## Using a flavour
 
@@ -110,6 +112,42 @@ might list rendering pipeline choices, physics engine tradeoffs, and
 platform-specific performance concerns. This focuses research on the
 questions that matter most in the domain.
 
+### flavour.json and recommended skills
+
+A flavour can optionally include a `flavour.json` file at its root. This file
+declares metadata about the flavour, including which Claude Code skills work
+best with it:
+
+```json
+{
+  "recommendedSkills": [
+    "visual-tools/screenshot",
+    "visual-tools/css-audit"
+  ]
+}
+```
+
+The `recommendedSkills` array lists skill names that complement the flavour.
+These are Claude Code skills (skills 2.0 format) that teach Claude how to use
+specific CLI tools. Skills in `plugin/visual-tools/skills/` are discovered
+automatically.
+
+When you run `ridgeline create` for a project that uses a flavour with
+`recommendedSkills`, ridgeline checks whether those skills are installed and
+displays a summary. For example:
+
+```text
+Recommended skills for web-ui:
+  ✓ visual-tools/screenshot  (installed)
+  ✗ visual-tools/css-audit   (not found)
+
+Missing skills won't block anything — install them whenever you're ready.
+```
+
+Missing skills are informational only. They do not prevent project creation,
+building, or any other pipeline command. The summary is a convenience to help
+you set up the best environment for the flavour upfront.
+
 ### Per-folder fallback
 
 You don't need to provide every subfolder. The agent registry resolves each
@@ -170,15 +208,19 @@ tradeoffs.
 
 The builder follows domain conventions. A game-dev builder understands scene
 graphs, component architecture, and asset loading. A mobile-app builder knows
-about navigation stacks, platform APIs, and responsive layout. The builder's
-constraints interpretation is filtered through domain expertise.
+about navigation stacks, platform APIs, and responsive layout. A `web-ui`
+builder takes responsive screenshots and runs CSS audits and accessibility
+checks against each viewport. A `web-game` builder captures canvas screenshots
+and validates shaders as it iterates. The builder's constraints interpretation
+is filtered through domain expertise.
 
 ### Review
 
 The reviewer applies domain-specific acceptance criteria. A game-dev reviewer
 checks framerate targets, collision accuracy, and input responsiveness. A
 security-audit reviewer checks for vulnerability classes, threat coverage, and
-compliance requirements.
+compliance requirements. A `web-ui` reviewer verifies visual quality across
+viewports. A `web-game` reviewer checks rendering quality and game feel.
 
 ## Custom flavours
 
