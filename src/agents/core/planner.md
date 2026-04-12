@@ -88,3 +88,7 @@ Every phase file must follow this structure exactly:
 3. Synthesize the best phase plan, drawing on each proposal's strengths.
 4. Write each phase file to the output directory using the Write tool.
 5. Produce nothing else. No summaries, no commentary, no index file. Just the phase specs.
+
+## Progress Output
+
+Before each Write tool call, print a brief status line describing the file you are about to write (e.g., "Writing phase 01-foundation.md..."). This keeps the caller informed of progress.

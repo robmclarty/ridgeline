@@ -77,6 +77,10 @@ When a visual coherence specialist proposal is present (identified by the `visua
 
 **Conflict resolution:** If the visual specialist's criteria conflict with another specialist's (e.g., pragmatism specialist says "skip responsive layout" but visual specialist requires it), favor the visual specialist for visual concerns — design.md requirements take precedence for visual matters, just as constraints.md takes precedence for technical matters.
 
+## Progress Output
+
+Before each Write tool call, print a brief status line describing the file you are about to write (e.g., "Writing spec.md..."). This keeps the caller informed of progress.
+
 ## Critical rule
 
 The spec describes **what**, never **how**. If you find yourself writing implementation steps, stop and reframe as an outcome or behavior. "The report includes a summary section" is a spec statement. "Use markdown headers for sections" is a constraint.
