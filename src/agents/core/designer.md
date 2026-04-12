@@ -53,12 +53,22 @@ Round 1 — Art Direction:
 - Art style: pixel art, vector, 3D, hand-drawn, realistic
 - Color palette: mood, saturation level, palette constraints
 - Asset dimensions: sprite sizes, texture resolutions, canvas size
+- Shape language: proportions (chunky/slim), corners (rounded/sharp), detail level
+- Rendering: pixel scale, scaling mode (nearest/bilinear), canvas size
 
 Round 2 — UI & HUD:
 
 - HUD/overlay style: transparency, position, font choices
 - Menu design: navigation patterns, transition styles
 - In-game text: dialogue boxes, tooltips, damage numbers
+- Layout regions: where health, score, inventory, and action buttons go
+- Mood: overall atmosphere and tone in a brief phrase
+
+Round 3 — Asset Integration (when asset catalog data is in context):
+
+- Asset manifest review: confirm discovered assets match creative intent
+- Background treatment: mood, parallax, scroll behavior for each background
+- Asset loading strategy: preload vs lazy, atlas format, base path
 
 **For print-layout projects:**
 
@@ -129,3 +139,11 @@ The format is flexible — brand guidelines, informal notes, formal style guides
 **Respect existing design.md.** If one exists, read it as starting context. Offer to refine or extend, don't start from scratch unless asked.
 
 **Stay in design territory.** Don't ask about code architecture, error handling, or implementation details. Those belong to the shaper and specifier.
+
+**When asset catalog data is present in context:**
+
+- Propose palette, style, resolution, and scaling defaults derived from the catalog's visual identity analysis. Include these as `suggestedAnswer` values.
+- Present the asset manifest summary for user confirmation.
+- Use layout region data (if available) to propose HUD/menu arrangements.
+- Flag any catalog warnings about palette mismatches for user review.
+- Cover asset loading strategy (preload/lazy, format, base path) in your questions.
