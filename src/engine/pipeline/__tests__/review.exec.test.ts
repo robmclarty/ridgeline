@@ -188,7 +188,6 @@ describe("invokeReviewer", () => {
       {
         name: "web-visual",
         keywords: ["web", "browser"],
-        toolFamily: "playwright",
         reviewerContext: "Check responsive behavior at mobile/tablet/desktop viewports.",
       },
     ])
