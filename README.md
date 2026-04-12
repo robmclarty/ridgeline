@@ -42,6 +42,8 @@ tracks costs, and supports resumable execution when things go wrong.
 npm install -g ridgeline
 ```
 
+**Platform:** macOS and Linux. Windows is not supported.
+
 Ridgeline requires the [Claude CLI](https://docs.anthropic.com/en/docs/claude-code)
 to be installed and authenticated.
 
