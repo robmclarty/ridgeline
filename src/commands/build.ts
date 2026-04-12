@@ -1,5 +1,6 @@
 import { RidgelineConfig } from "../types"
 import { printInfo, printError, printPhaseHeader } from "../ui/output"
+import { formatDuration, formatTokens } from "../ui/summary"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../stores/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
@@ -12,14 +13,6 @@ import { ensureGitRepo } from "../engine/worktree"
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-const formatDuration = (ms: number): string => {
-  const seconds = Math.round(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  const remaining = seconds % 60
-  return remaining > 0 ? `${minutes}m ${remaining.toString().padStart(2, "0")}s` : `${minutes}m`
-}
-
 const readSpecDescription = (buildDir: string): string | null => {
   const specPath = path.join(buildDir, "..", "spec.md")
   try {
@@ -29,12 +22,6 @@ const readSpecDescription = (buildDir: string): string | null => {
   } catch {
     return null
   }
-}
-
-const formatTokens = (count: number): string => {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`
-  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`
-  return String(count)
 }
 
 const printSummaryTable = (config: RidgelineConfig): void => {
