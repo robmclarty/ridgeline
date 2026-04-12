@@ -4,7 +4,6 @@ import * as path from "node:path"
 export type ShapeDefinition = {
   name: string
   keywords: string[]
-  toolFamily: string
   reviewerContext: string
 }
 
