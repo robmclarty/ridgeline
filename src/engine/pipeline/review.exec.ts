@@ -57,7 +57,6 @@ const assembleUserPrompt = (
       sections.push("**Review rules for design.md:**")
       sections.push("- Hard token violations (specific values with imperative language) → severity: blocking")
       sections.push("- Soft guidance deviations (directional language) → severity: suggestion")
-      sections.push("- Skipped tools → noted in verdict, never blocking")
       sections.push("")
     }
   }
