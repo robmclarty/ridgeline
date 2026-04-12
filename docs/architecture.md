@@ -3,7 +3,7 @@
 Ridgeline is a build harness for long-horizon software execution. It
 decomposes large software projects into phased builds using a multi-agent
 system -- shaper, specifier, researcher (optional), refiner (optional),
-planner, builder, reviewer -- driven by the Claude CLI. The harness manages
+planner, builder, reviewer -- driven by the Claude CLI.[^1] The harness manages
 state through git checkpoints, tracks costs, and supports resumable execution
 when things go wrong.
 
@@ -92,7 +92,7 @@ Each agent has a focused role and scoped tool access enforced by the Claude CLI.
 | **Reviewer** | Verifies phase output against acceptance criteria | Read, Bash, Glob, Grep, Agent | Read-only to project files; produces JSON verdict |
 
 The permission boundaries are enforced at invocation time via Claude CLI's
-`--allowedTools` flag, not just by prompt instruction.
+`--allowedTools` flag, not just by prompt instruction.[^3]
 
 ## Phase Lifecycle
 
@@ -190,7 +190,7 @@ graph TD
 
 - **state.json** -- tracks each phase's status (`pending`, `building`,
   `reviewing`, `complete`, `failed`), checkpoint and completion git tags, retry
-  count, and timestamps. Used by `ridgeline build` to resume from the last
+  count, and timestamps.[^2] Used by `ridgeline build` to resume from the last
   successful phase.
 
 - **budget.json** -- records every Claude invocation: phase, role (shaper,
@@ -305,3 +305,7 @@ auto-detects providers in preference order:
 
 Pass `--unsafe` to opt out of sandboxing. If no provider is found, the harness
 prints a warning and proceeds without a sandbox.
+
+[^1]: **Further reading:** [Multi-Agent Design Patterns](https://www.infoq.com/news/2026/01/multi-agent-design-patterns/) — Google's catalog of multi-agent design patterns, including the orchestrator-specialist decomposition Ridgeline uses.
+[^2]: **Further reading:** [Building Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — Anthropic's engineering guidance on state management, checkpointing, and resumability in agent harnesses.
+[^3]: **Further reading:** [OWASP Principle of Least Privilege](https://owasp.org/www-community/Access_Control#principle-of-least-privilege) — OWASP guidance on restricting each component to the minimum permissions required for its function.

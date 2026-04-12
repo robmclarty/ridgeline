@@ -3,7 +3,7 @@
 ## What is Spec-Driven Development
 
 Spec-driven development is the practice of describing software outcomes before
-implementation begins. The spec is the source of truth. Everything downstream
+implementation begins.[^1] The spec is the source of truth. Everything downstream
 -- phase decomposition, implementation, verification -- derives from it.
 
 In ridgeline, specs describe **what** the system does. Constraints describe
@@ -271,7 +271,7 @@ to /api/auth/login." The builder decides the implementation. The spec describes
 what the user experiences.
 
 **Make acceptance criteria verifiable.** "GET /api/users returns 200 with a JSON
-array" -- not "the user management system works." The reviewer needs to be able
+array" -- not "the user management system works."[^2] The reviewer needs to be able
 to run a command, check an output, or inspect a file to confirm each criterion.
 
 **Be specific about scope boundaries.** What is explicitly out of scope prevents
@@ -286,3 +286,6 @@ anyway, but explicit guidance prevents unnecessary divergence.
 **Let the specifier help.** The interactive Q&A surfaces gaps you might not
 think of. Even if you have a clear vision, running `ridgeline spec` can
 tighten the spec before the planner sees it.
+
+[^1]: **Further reading:** [Requirements Engineering: A Good Practice Guide](https://doi.org/10.1002/0470018984) — Sommerville and Sawyer's foundational text on why specifying requirements before implementation reduces rework and ambiguity in software projects.
+[^2]: **Further reading:** [Writing Good Requirements](https://doi.org/10.1109/ICRE.1997.566732) — IEEE study on requirements quality, finding that testability and unambiguity are the two strongest predictors of downstream implementation success.

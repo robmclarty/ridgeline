@@ -20,7 +20,7 @@ filesystem. But unconstrained access is a security risk: a builder could
 exfiltrate code, install malicious packages, or modify files outside the
 repository. Ridgeline's approach is layered defense with graceful degradation:
 use OS-level sandboxing when available, fall back to hook-based interception when
-not, and always isolate builds in git worktrees regardless. Each layer catches
+not, and always isolate builds in git worktrees regardless.[^1] Each layer catches
 what the layers above it miss.
 
 The goal is to close this gap with layered controls that:
@@ -482,7 +482,7 @@ need to modify, not the entire file") could reduce costs.
 **Source:** fellowship, quorum, sculpture
 
 When you need an agent to not do something, blocking the capability is more
-reliable than instructing against it. Fellowship measured 33% -> 95%+ compliance
+reliable than instructing against it.[^2] Fellowship measured 33% -> 95%+ compliance
 by switching from prompt-based to structural gates.
 
 **Application:** Ridgeline already uses `--allowedTools` (structural). The
@@ -521,3 +521,6 @@ The layered defense strategy has been implemented:
 
 See [SECURITY.md](../SECURITY.md) for the full threat model and security
 recommendations.
+
+[^1]: **Further reading:** [OWASP Sandbox Security Guidance](https://cheatsheetseries.owasp.org/cheatsheets/Microservices_Security_Cheat_Sheet.html#sandboxing) — OWASP's defense-in-depth approach to sandboxing, recommending layered isolation where each control mitigates failures in the others.
+[^2]: **Further reading:** [OWASP Principle of Least Privilege](https://owasp.org/www-community/Access_Control#principle-of-least-privilege) — Structural capability removal is more reliable than behavioral restriction, aligning with OWASP's guidance that access should be denied by default and granted only when explicitly required.

@@ -199,14 +199,14 @@ recorded.
 
 **Resumability.** Builds can be interrupted and resumed. Network outages, cost
 limits, manual intervention -- the harness picks up from the last checkpoint
-without re-executing completed work.
+without re-executing completed work.[^2]
 
 **Cost isolation.** Budget tracking is per-phase, per-role, per-attempt. If a
 phase is expensive, you can see exactly why. Cost limits halt the build at a
 defined threshold rather than letting it run unbounded.
 
 **Failure containment.** A failed phase doesn't corrupt the rest of the
-project. The checkpoint tag preserves the known-good state. The builder can
+project. The checkpoint tag preserves the known-good state.[^3] The builder can
 retry with targeted feedback or the user can intervene manually.
 
 ## Industry Trends
@@ -228,7 +228,7 @@ Phase-based decomposition with structured handoff is one of the cleaner
 solutions.
 
 **Separation of concerns** in agent systems (planner vs. builder vs. reviewer)
-mirrors established software engineering practices. The industry is learning
+mirrors established software engineering practices.[^1] The industry is learning
 that monolithic agents degrade under complexity, just as monolithic software
 does.
 
@@ -255,3 +255,7 @@ contexts (phases), structured context bridging (handoff), adversarial
 verification (reviewer), and recovery (git checkpoints). Each piece is simple
 and well-understood. Together they enable projects that exceed any single
 context window while maintaining coherence, auditability, and recoverability.
+
+[^1]: **Further reading:** [Building Managed Agents](https://www.anthropic.com/engineering/managed-agents) — Anthropic's engineering guidance on coordinating multi-agent systems with clear role separation and state handoff between agents.
+[^2]: **Further reading:** [Workflow Execution — Temporal](https://docs.temporal.io/workflow-execution) — Temporal's durable execution model, where workflow state persists across failures and restarts, enabling the same checkpoint-and-resume pattern Ridgeline uses.
+[^3]: **Further reading:** [Multi-Agent Design Patterns](https://www.infoq.com/news/2026/01/multi-agent-design-patterns/) — Google's multi-agent patterns paper discusses failure isolation as a key benefit of decomposing agent work into discrete, recoverable units.

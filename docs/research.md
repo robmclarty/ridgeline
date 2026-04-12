@@ -52,7 +52,7 @@ investigates through a different lens:
 | **Competitive** | How other tools solve the same problem | GitHub repos, product pages, developer discussions, Hacker News, Reddit |
 
 Use deep mode when the spec domain is unfamiliar, the architecture is complex,
-or you want competitive analysis to inform the design.
+or you want competitive analysis to inform the design.[^1]
 
 ### Research agenda pre-step
 
@@ -91,7 +91,7 @@ report with sourced findings and recommendations.
 
 The synthesizer (the `researcher` core agent) then merges the specialist
 reports into `research.md`, deduplicating findings, resolving conflicts, and
-ranking recommendations by impact.
+ranking recommendations by impact.[^2]
 
 ## Auto Mode
 
@@ -339,3 +339,6 @@ the build directory. Writes `spec.changelog.md` alongside `spec.md`.
 | `--model <name>` | `opus` | Model for refiner agent |
 | `--timeout <minutes>` | `10` | Max duration |
 | `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
+
+[^1]: **Further reading:** [Triangulation in Research](https://doi.org/10.1177/1558689806298224) — Methodological triangulation -- investigating the same question through multiple independent lenses -- is a well-established technique for reducing bias and improving validity in research.
+[^2]: **Further reading:** [Systematic Literature Reviews in Software Engineering](https://doi.org/10.1016/j.infsof.2008.09.009) — Kitchenham and Charters' guidelines on structured synthesis of multi-source research findings, the academic foundation for deduplication-and-ranking approaches to research aggregation.
