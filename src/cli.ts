@@ -274,4 +274,17 @@ program
     }
   })
 
+program
+  .command("check")
+  .description("Check recommended tools and prerequisites for a flavour")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .action((opts: Opts) => {
+    try {
+      const { runCheck } = require("./commands/check")
+      runCheck({ flavour: (opts.flavour as string) ?? undefined })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
 program.parse()
