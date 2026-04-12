@@ -20,6 +20,17 @@ const assembleUserPrompt = (
   appendDesign(sections, config)
   appendAssetCatalog(sections, config)
 
+  // Inject learnings from previous builds if available
+  const learningsPath = path.join(config.ridgelineDir, "learnings.md")
+  if (fs.existsSync(learningsPath)) {
+    const learnings = fs.readFileSync(learningsPath, "utf-8").trim()
+    if (learnings) {
+      sections.push("## Learnings from Previous Builds\n")
+      sections.push(learnings)
+      sections.push("")
+    }
+  }
+
   const handoff = readHandoff(config.buildDir)
   if (handoff) {
     sections.push("## handoff.md\n")
