@@ -3,6 +3,7 @@
 import { Command } from "commander"
 import { loadVersion, resolveConfig } from "./config"
 import { RidgelineConfig } from "./types"
+import { disableLogger } from "./ui/logger"
 import { askBuildName } from "./ui/prompt"
 import { runShape } from "./commands/shape"
 import { runDesign } from "./commands/design"
@@ -12,6 +13,7 @@ import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
 import { runCreate } from "./commands/create"
 import { runRewind } from "./commands/rewind"
+import { runRetrospective } from "./commands/retrospective"
 import { runResearch } from "./commands/research"
 import { runRefine } from "./commands/refine"
 import { runCatalog } from "./commands/catalog"
@@ -69,6 +71,7 @@ const parseBaseOpts = (opts: Opts) => ({
 const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
   async (buildName: string | undefined, opts: Opts) => {
     try {
+      if (opts.structuredLog === false) disableLogger()
       const config = resolveConfig(await requireBuildName(buildName), opts)
       await fn(config)
     } catch (err) {
@@ -250,6 +253,7 @@ const addPlanOptions = (cmd: Command) => cmd
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .option("--deep-ensemble", "Enable two-round cross-specialist annotation before synthesis")
 
 addPlanOptions(program
   .command("plan [build-name]")
@@ -275,6 +279,7 @@ program
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .option("--no-structured-log", "Disable structured logging to log.jsonl")
   .action(withConfig(runBuild))
 
 program
@@ -284,6 +289,24 @@ program
   .action((buildName: string, opts: Opts) => {
     try {
       runRewind(buildName, opts.to as string)
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+program
+  .command("retrospective [build-name]")
+  .description("Analyze a completed build and extract learnings for future builds")
+  .option("--model <name>", "Model for retrospective agent", "opus")
+  .option("--timeout <minutes>", "Max duration in minutes", "10")
+  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      await runRetrospective(await requireBuildName(buildName), {
+        model: (opts.model as string) ?? "opus",
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
+        flavour: (opts.flavour as string) ?? undefined,
+      })
     } catch (err) {
       handleCommandError(err)
     }

@@ -1,14 +1,17 @@
 import { RidgelineConfig } from "../types"
 import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { formatDuration, formatTokens } from "../ui/summary"
+import { initLogger } from "../ui/logger"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../stores/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
-import { loadState, saveState, initState, getNextIncompletePhase, resetRetries, markBuildRunning, advancePipeline } from "../stores/state"
+import { loadState, saveState, initState, resetRetries, markBuildRunning, advancePipeline } from "../stores/state"
+import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/pipeline/phase.graph"
 import { loadBudget } from "../stores/budget"
 import { cleanupBuildTags } from "../stores/tags"
 import { killAllClaudeSync } from "../engine/claude/claude.exec"
 import { runPlan } from "./plan"
+import { runRetrospective } from "./retrospective"
 import { ensureGitRepo } from "../engine/worktree"
 import * as fs from "node:fs"
 import * as path from "node:path"
@@ -159,6 +162,8 @@ const configureSandbox = (config: RidgelineConfig): void => {
 }
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
+  initLogger(config.buildDir)
+
   const phases = await ensurePhases(config)
 
   // Load or init state
@@ -189,33 +194,52 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   let completed = 0
   let failed = 0
 
+  // Build dependency graph for wave-based scheduling
+  const graph = buildPhaseGraph(phases)
+  validateGraph(graph)
+  const completedIds = new Set(
+    state.phases.filter((p) => p.status === "complete").map((p) => p.id),
+  )
+
+  if (hasParallelism(graph)) {
+    printInfo("Phase dependencies detected — using wave-based scheduling")
+  }
+
   try {
-    let nextPhaseState = getNextIncompletePhase(state)
-    while (nextPhaseState) {
-      const phase = phases.find((p) => p.id === nextPhaseState!.id)
-      if (!phase) {
-        printError(`Phase ${nextPhaseState.id} not found in filesystem`)
-        failed++
-        break
+    let isBudgetExceeded = false
+
+    while (!isBudgetExceeded) {
+      const readyPhases = getReadyPhases(graph, completedIds)
+      if (readyPhases.length === 0) break
+
+      // Execute ready phases. When multiple phases are ready (parallel wave),
+      // run them sequentially in the main working tree for now.
+      // Future: parallel execution with git worktrees.
+      if (readyPhases.length > 1) {
+        printInfo(`\nWave: ${readyPhases.length} phases ready (${readyPhases.map((p) => p.id).join(", ")})`)
       }
 
-      const phaseIndex = phases.findIndex((p) => p.id === nextPhaseState!.id) + 1
-      printPhaseHeader(phaseIndex, phases.length, phase.id)
+      for (const phase of readyPhases) {
+        const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+        printPhaseHeader(phaseIndex, phases.length, phase.id)
 
-      const result = await runPhase(phase, config, state)
-      if (result !== "passed") { failed++; break }
+        const result = await runPhase(phase, config, state)
+        if (result !== "passed") { failed++; break }
 
-      completed++
+        completedIds.add(phase.id)
+        completed++
 
-      if (config.maxBudgetUsd) {
-        const budget = loadBudget(config.buildDir)
-        if (budget.totalCostUsd > config.maxBudgetUsd) {
-          printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
-          break
+        if (config.maxBudgetUsd) {
+          const budget = loadBudget(config.buildDir)
+          if (budget.totalCostUsd > config.maxBudgetUsd) {
+            printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+            isBudgetExceeded = true
+            break
+          }
         }
       }
 
-      nextPhaseState = getNextIncompletePhase(state)
+      if (failed > 0) break
     }
 
   } catch (err) {
@@ -238,5 +262,16 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     console.log("")
     console.log("  All phases complete!")
     cleanupBuildTags(config.buildName)
+
+    // Auto-retrospective: extract learnings from the completed build
+    try {
+      await runRetrospective(config.buildName, {
+        model: config.model,
+        timeout: 10,
+        flavour: config.flavour ?? undefined,
+      })
+    } catch {
+      // Best-effort: don't fail the build if retrospective fails
+    }
   }
 }
