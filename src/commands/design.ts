@@ -6,6 +6,8 @@ import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { advancePipeline } from "../stores/state"
 import { runQAIntake, runOutputTurn } from "./qa-workflow"
+import { resolveAssetDirSafe } from "../catalog/resolve-asset-dir"
+import { AssetCatalog } from "../catalog/types"
 
 /** Determine where to write design.md. */
 const resolveDesignOutputPath = (
@@ -21,6 +23,87 @@ type DesignOptions = {
   timeout: number
   flavour?: string
   matchedShapes?: string[]
+}
+
+/** Summarize catalog for designer context. Returns null if no catalog exists. */
+const loadCatalogContext = async (
+  buildName: string | null,
+  buildDir: string | null,
+  ridgelineDir: string,
+  opts: DesignOptions,
+): Promise<string | null> => {
+  // Check for existing catalog
+  const catalogPaths = [
+    buildDir ? path.join(buildDir, "asset-catalog.json") : null,
+    path.join(ridgelineDir, "asset-catalog.json"),
+  ].filter(Boolean) as string[]
+
+  let catalogPath = catalogPaths.find((p) => fs.existsSync(p)) ?? null
+
+  // Auto-run catalog if assets exist but no catalog found
+  if (!catalogPath && buildName) {
+    const assetDir = resolveAssetDirSafe(buildName, undefined)
+    if (assetDir) {
+      printInfo("Assets found but no catalog exists. Running catalog...")
+      const { runCatalog } = await import("./catalog")
+      await runCatalog(buildName, {
+        model: opts.model,
+        timeout: opts.timeout,
+        isDescribe: false,
+        isForce: false,
+        isPack: false,
+        isBatch: false,
+      })
+      // Re-check for catalog
+      catalogPath = catalogPaths.find((p) => fs.existsSync(p)) ?? null
+    }
+  }
+
+  if (!catalogPath) return null
+
+  try {
+    const catalog: AssetCatalog = JSON.parse(fs.readFileSync(catalogPath, "utf-8"))
+    return summarizeCatalog(catalog)
+  } catch {
+    return null
+  }
+}
+
+/** Build a concise text summary of the catalog for the designer agent. */
+const summarizeCatalog = (catalog: AssetCatalog): string => {
+  const lines: string[] = ["## Asset Catalog Summary\n"]
+
+  lines.push(`${catalog.assets.length} assets cataloged.`)
+
+  // Counts by category
+  const counts = new Map<string, number>()
+  for (const a of catalog.assets) {
+    counts.set(a.category, (counts.get(a.category) ?? 0) + 1)
+  }
+  const catList = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, n]) => `  ${cat}: ${n}`)
+    .join("\n")
+  if (catList) lines.push(`\nBy category:\n${catList}`)
+
+  // Visual identity
+  const vi = catalog.visualIdentity
+  if (vi.detectedStyle) lines.push(`\nDetected style: ${vi.detectedStyle}`)
+  if (vi.detectedResolution) lines.push(`Detected resolution: ${vi.detectedResolution}`)
+  if (vi.detectedPalette.length > 0) {
+    lines.push(`Detected palette: ${vi.detectedPalette.join(", ")}`)
+  }
+  if (vi.detectedScaling) lines.push(`Suggested scaling: ${vi.detectedScaling}`)
+
+  // Warnings
+  if (catalog.warnings.length > 0) {
+    lines.push("\nWarnings:")
+    for (const w of catalog.warnings) {
+      lines.push(`  - ${w}`)
+    }
+  }
+
+  return lines.join("\n")
 }
 
 export const runDesign = async (
@@ -72,6 +155,13 @@ export const runDesign = async (
     if (opts.matchedShapes && opts.matchedShapes.length > 0) {
       contextParts.push("## Matched Shape Categories\n")
       contextParts.push(opts.matchedShapes.join(", "))
+      contextParts.push("")
+    }
+
+    // Inject asset catalog context if available
+    const catalogContext = await loadCatalogContext(buildName, buildDir, ridgelineDir, opts)
+    if (catalogContext) {
+      contextParts.push(catalogContext)
       contextParts.push("")
     }
 
