@@ -1,4 +1,4 @@
-import { RidgelineConfig } from "../types"
+import { RidgelineConfig, PhaseInfo } from "../types"
 import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { formatDuration, formatTokens } from "../ui/summary"
 import { initLogger } from "../ui/logger"
@@ -163,12 +163,109 @@ const configureSandbox = (config: RidgelineConfig): void => {
   }
 }
 
-export const runBuild = async (config: RidgelineConfig): Promise<void> => {
-  initLogger(config.buildDir)
+type WaveCounters = { completed: number; failed: number }
 
-  const phases = await ensurePhases(config)
+/** Run a parallel wave of phases using worktrees, with sequential fallback. */
+const runParallelWave = async (
+  readyPhases: PhaseInfo[],
+  phases: PhaseInfo[],
+  config: RidgelineConfig,
+  state: ReturnType<typeof initState>,
+  mainCwd: string,
+  completedIds: Set<string>,
+  runSequential: (phase: PhaseInfo) => Promise<boolean>,
+): Promise<WaveCounters> => {
+  let completed = 0
+  let failed = 0
 
-  // Load or init state (with trajectory fallback for missing/corrupt state.json)
+  printInfo(`\nWave: ${readyPhases.length} parallel phases (${readyPhases.map((p) => p.id).join(", ")})`)
+
+  const worktreePaths = new Map<string, string>()
+  let worktreesFailed = false
+
+  for (const phase of readyPhases) {
+    try {
+      const wtPath = createPhaseWorktree(config.buildName, phase.id, mainCwd)
+      worktreePaths.set(phase.id, wtPath)
+    } catch (err) {
+      printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : err}`)
+      worktreesFailed = true
+      break
+    }
+  }
+
+  if (worktreesFailed) {
+    for (const phase of readyPhases) {
+      removePhaseWorktree(config.buildName, phase.id, mainCwd)
+    }
+    printInfo("Falling back to sequential execution for this wave")
+    for (const phase of readyPhases) {
+      if (!await runSequential(phase)) { failed++; break }
+      completed++
+    }
+    return { completed, failed }
+  }
+
+  // Print headers for all parallel phases
+  for (const phase of readyPhases) {
+    const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+    printPhaseHeader(phaseIndex, phases.length, phase.id)
+  }
+
+  const results = await Promise.allSettled(
+    readyPhases.map(async (phase) => {
+      const wtCwd = worktreePaths.get(phase.id)!
+      return runPhase(phase, config, state, wtCwd)
+    }),
+  )
+
+  // Collect results
+  const phaseResults = new Map<string, "passed" | "failed" | "error">()
+  for (let i = 0; i < readyPhases.length; i++) {
+    const r = results[i]
+    if (r.status === "fulfilled") {
+      phaseResults.set(readyPhases[i].id, r.value)
+    } else {
+      phaseResults.set(readyPhases[i].id, "error")
+      printError(`Phase ${readyPhases[i].id} threw: ${r.reason}`)
+    }
+  }
+
+  // Merge successful phases sequentially in index order
+  const sortedPhases = [...readyPhases].sort((a, b) => a.index - b.index)
+  for (const phase of sortedPhases) {
+    const result = phaseResults.get(phase.id)
+    if (result !== "passed") {
+      failed++
+      removePhaseWorktree(config.buildName, phase.id, mainCwd)
+      continue
+    }
+
+    const merge = mergePhaseWorktree(config.buildName, phase.id, mainCwd)
+    if (!merge.isSuccess) {
+      printError(`Merge conflict for ${phase.id}: ${merge.conflictFiles?.join(", ")}`)
+      printInfo(`Branch preserved: ridgeline/${config.buildName}/${phase.id}`)
+      failed++
+      removePhaseWorktree(config.buildName, phase.id, mainCwd)
+      continue
+    }
+
+    completedIds.add(phase.id)
+    completed++
+    removePhaseWorktree(config.buildName, phase.id, mainCwd)
+  }
+
+  // Consolidate handoff fragments
+  const passedPhaseIds = sortedPhases
+    .filter((p) => phaseResults.get(p.id) === "passed")
+    .map((p) => p.id)
+  consolidateHandoffs(config.buildDir, passedPhaseIds)
+
+  return { completed, failed }
+}
+
+/** Load or initialize build state, resuming if possible. */
+const loadOrInitState = (config: RidgelineConfig, phases: PhaseInfo[]) => {
   let state = loadState(config.buildDir, config.buildName, phases)
   const isResume = state !== null && state.phases.length > 0
   if (!state || state.phases.length === 0) {
@@ -184,19 +281,15 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     printInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
   }
 
-  configureSandbox(config)
+  return state
+}
 
-  markBuildRunning(config.buildDir, config.buildName)
-  printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
-
-  if (ensureGitRepo(process.cwd())) {
-    printInfo("Initialised git repo with initial commit")
-  }
-
-  let completed = 0
-  let failed = 0
-
-  // Build dependency graph for wave-based scheduling
+/** Execute the wave-based build loop, returning fail count. */
+const executeWaveLoop = async (
+  config: RidgelineConfig,
+  phases: PhaseInfo[],
+  state: ReturnType<typeof initState>,
+): Promise<number> => {
   const graph = buildPhaseGraph(phases)
   validateGraph(graph)
   const completedIds = new Set(
@@ -207,136 +300,72 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     printInfo("Phase dependencies detected — using wave-based scheduling")
   }
 
-  try {
-    let isBudgetExceeded = false
-    const mainCwd = process.cwd()
+  let completed = 0
+  let failed = 0
+  let isBudgetExceeded = false
+  const mainCwd = process.cwd()
 
-    while (!isBudgetExceeded) {
-      const readyPhases = getReadyPhases(graph, completedIds)
-      if (readyPhases.length === 0) break
+  const runAndTrackPhase = async (phase: PhaseInfo): Promise<boolean> => {
+    const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+    printPhaseHeader(phaseIndex, phases.length, phase.id)
+    const result = await runPhase(phase, config, state)
+    if (result !== "passed") return false
+    completedIds.add(phase.id)
+    return true
+  }
 
-      if (readyPhases.length === 1) {
-        // Single phase: run in main working tree (no worktree overhead)
-        const phase = readyPhases[0]
-        const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
-        printPhaseHeader(phaseIndex, phases.length, phase.id)
+  while (!isBudgetExceeded) {
+    const readyPhases = getReadyPhases(graph, completedIds)
+    if (readyPhases.length === 0) break
 
-        const result = await runPhase(phase, config, state)
-        if (result !== "passed") { failed++; break }
-
-        completedIds.add(phase.id)
-        completed++
-      } else {
-        // Parallel wave: create worktrees and run concurrently
-        printInfo(`\nWave: ${readyPhases.length} parallel phases (${readyPhases.map((p) => p.id).join(", ")})`)
-
-        const worktreePaths = new Map<string, string>()
-        let worktreesFailed = false
-
-        // 1. Create worktrees for each phase
-        for (const phase of readyPhases) {
-          try {
-            const wtPath = createPhaseWorktree(config.buildName, phase.id, mainCwd)
-            worktreePaths.set(phase.id, wtPath)
-          } catch (err) {
-            printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : err}`)
-            worktreesFailed = true
-            break
-          }
-        }
-
-        // Fallback to sequential if worktree creation failed
-        if (worktreesFailed) {
-          for (const phase of readyPhases) {
-            removePhaseWorktree(config.buildName, phase.id, mainCwd)
-          }
-          printInfo("Falling back to sequential execution for this wave")
-          for (const phase of readyPhases) {
-            const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
-            printPhaseHeader(phaseIndex, phases.length, phase.id)
-            const result = await runPhase(phase, config, state)
-            if (result !== "passed") { failed++; break }
-            completedIds.add(phase.id)
-            completed++
-          }
-          if (failed > 0) break
-        } else {
-          // 2. Run phases in parallel
-          for (const phase of readyPhases) {
-            const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
-            printPhaseHeader(phaseIndex, phases.length, phase.id)
-          }
-
-          const results = await Promise.allSettled(
-            readyPhases.map(async (phase) => {
-              const wtCwd = worktreePaths.get(phase.id)!
-              return runPhase(phase, config, state, wtCwd)
-            }),
-          )
-
-          // 3. Collect results
-          const phaseResults = new Map<string, "passed" | "failed" | "error">()
-          for (let i = 0; i < readyPhases.length; i++) {
-            const r = results[i]
-            if (r.status === "fulfilled") {
-              phaseResults.set(readyPhases[i].id, r.value)
-            } else {
-              phaseResults.set(readyPhases[i].id, "error")
-              printError(`Phase ${readyPhases[i].id} threw: ${r.reason}`)
-            }
-          }
-
-          // 4. Merge successful phases sequentially in index order
-          const sortedPhases = [...readyPhases].sort((a, b) => a.index - b.index)
-          for (const phase of sortedPhases) {
-            const result = phaseResults.get(phase.id)
-            if (result !== "passed") {
-              failed++
-              removePhaseWorktree(config.buildName, phase.id, mainCwd)
-              continue
-            }
-
-            const merge = mergePhaseWorktree(config.buildName, phase.id, mainCwd)
-            if (!merge.isSuccess) {
-              printError(`Merge conflict for ${phase.id}: ${merge.conflictFiles?.join(", ")}`)
-              printInfo(`Branch preserved: ridgeline/${config.buildName}/${phase.id}`)
-              failed++
-              removePhaseWorktree(config.buildName, phase.id, mainCwd)
-              continue
-            }
-
-            completedIds.add(phase.id)
-            completed++
-            removePhaseWorktree(config.buildName, phase.id, mainCwd)
-          }
-
-          // 5. Consolidate handoff fragments
-          const passedPhaseIds = sortedPhases
-            .filter((p) => phaseResults.get(p.id) === "passed")
-            .map((p) => p.id)
-          consolidateHandoffs(config.buildDir, passedPhaseIds)
-        }
-      }
-
-      // Budget check after each wave
-      if (config.maxBudgetUsd) {
-        const budget = loadBudget(config.buildDir)
-        if (budget.totalCostUsd > config.maxBudgetUsd) {
-          printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
-          isBudgetExceeded = true
-        }
-      }
-
-      if (failed > 0) break
+    if (readyPhases.length === 1) {
+      if (!await runAndTrackPhase(readyPhases[0])) { failed++; break }
+      completed++
+    } else {
+      const wave = await runParallelWave(
+        readyPhases, phases, config, state, mainCwd, completedIds, runAndTrackPhase,
+      )
+      completed += wave.completed
+      failed += wave.failed
     }
 
+    if (config.maxBudgetUsd) {
+      const budget = loadBudget(config.buildDir)
+      if (budget.totalCostUsd > config.maxBudgetUsd) {
+        printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+        isBudgetExceeded = true
+      }
+    }
+
+    if (failed > 0) break
+  }
+
+  return failed
+}
+
+export const runBuild = async (config: RidgelineConfig): Promise<void> => {
+  initLogger(config.buildDir)
+
+  const phases = await ensurePhases(config)
+  const state = loadOrInitState(config, phases)
+
+  configureSandbox(config)
+  markBuildRunning(config.buildDir, config.buildName)
+  printInfo(`Starting build: ${config.buildName} (${phases.length} phases)\n`)
+
+  if (ensureGitRepo(process.cwd())) {
+    printInfo("Initialised git repo with initial commit")
+  }
+
+  let failed = 0
+  try {
+    failed = await executeWaveLoop(config, phases, state)
   } catch (err) {
     printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
     cleanupAllWorktrees(config.buildName)
     failed++
   }
 
-  // Summary — always printed, even on failure
   printSummaryTable(config)
 
   if (failed > 0) {
@@ -353,7 +382,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     console.log("  All phases complete!")
     cleanupBuildTags(config.buildName)
 
-    // Auto-retrospective: extract learnings from the completed build
     try {
       await runRetrospective(config.buildName, {
         model: config.model,
