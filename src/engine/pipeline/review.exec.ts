@@ -10,35 +10,28 @@ import { resolveFlavour } from "../discovery/flavour.resolve"
 import { prepareAgentsAndPlugins, commonInvokeOptions, appendDesign } from "./pipeline.shared"
 import { getMatchedShapes } from "../../stores/state"
 import { loadShapeDefinitions } from "../../shapes/detect"
+import { PromptDocument } from "./prompt.document"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
   phase: PhaseInfo,
-  checkpointTag: string
+  checkpointTag: string,
+  cwd?: string,
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
-  sections.push("## Phase Spec\n")
-  sections.push(fs.readFileSync(phase.filepath, "utf-8"))
-  sections.push("")
+  doc.data("Phase Spec", fs.readFileSync(phase.filepath, "utf-8"))
 
-  const diff = getDiff(checkpointTag)
-  sections.push("## Git Diff (checkpoint to HEAD)\n")
+  const diff = getDiff(checkpointTag, cwd)
   if (diff) {
-    sections.push("```diff")
-    sections.push(diff)
-    sections.push("```")
+    doc.dataFenced("Git Diff (checkpoint to HEAD)", diff, "diff")
   } else {
-    sections.push("No changes detected.")
+    doc.data("Git Diff (checkpoint to HEAD)", "No changes detected.")
   }
-  sections.push("")
 
-  sections.push("## constraints.md\n")
-  sections.push(fs.readFileSync(config.constraintsPath, "utf-8"))
-  sections.push("")
+  doc.data("constraints.md", fs.readFileSync(config.constraintsPath, "utf-8"))
 
-  // Inject design.md
-  appendDesign(sections, config)
+  appendDesign(doc, config)
 
   // Inject reviewer context from matched shapes
   const matchedShapeNames = getMatchedShapes(config.buildDir)
@@ -47,32 +40,33 @@ const assembleUserPrompt = (
     const matchedDefs = allDefs.filter((d) => matchedShapeNames.includes(d.name))
 
     if (matchedDefs.length > 0) {
-      sections.push("## Visual Design Review Context\n")
-      sections.push("The following visual design heuristics apply to this phase:\n")
+      const lines: string[] = []
+      lines.push("The following visual design heuristics apply to this phase:\n")
       for (const def of matchedDefs) {
-        sections.push(`### ${def.name}\n`)
-        sections.push(def.reviewerContext)
-        sections.push("")
+        lines.push(`### ${def.name}\n`)
+        lines.push(def.reviewerContext)
+        lines.push("")
       }
-      sections.push("**Review rules for design.md:**")
-      sections.push("- Hard token violations (specific values with imperative language) → severity: blocking")
-      sections.push("- Soft guidance deviations (directional language) → severity: suggestion")
-      sections.push("")
+      lines.push("**Review rules for design.md:**")
+      lines.push("- Hard token violations (specific values with imperative language) → severity: blocking")
+      lines.push("- Soft guidance deviations (directional language) → severity: suggestion")
+      doc.instruction("Visual Design Review Context", lines.join("\n"))
     }
   }
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 export const invokeReviewer = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
-  checkpointTag: string
+  checkpointTag: string,
+  cwd?: string,
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
   const systemPrompt = registry.getCorePrompt("reviewer.md")
-  const userPrompt = assembleUserPrompt(config, phase, checkpointTag)
-  const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: process.cwd() })
+  const userPrompt = assembleUserPrompt(config, phase, checkpointTag, cwd)
+  const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: cwd ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
   try {
@@ -81,7 +75,7 @@ export const invokeReviewer = async (
       userPrompt,
       model: config.model,
       allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent"],
-      ...commonInvokeOptions(config, prepared, onStdout),
+      ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
 
     const verdict = parseVerdict(result.result)

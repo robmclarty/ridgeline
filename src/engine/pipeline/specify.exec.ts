@@ -5,6 +5,7 @@ import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { formatProposalHeading } from "./pipeline.shared"
+import { PromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // JSON schema for structured spec specialist output
@@ -126,10 +127,9 @@ const assembleSpecialistUserPrompt = (
   shapeMd: string,
   config: SpecEnsembleConfig,
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
-  sections.push(`## shape.md\n\n${shapeMd}`)
-  sections.push("")
+  doc.data("shape.md", shapeMd)
 
   // Inject design.md for visual specialist context
   const ridgelineDir = path.join(config.buildDir, "..", "..")
@@ -137,26 +137,20 @@ const assembleSpecialistUserPrompt = (
   const featureDesignPath = path.join(config.buildDir, "design.md")
 
   if (fs.existsSync(projectDesignPath)) {
-    sections.push("## Project Design\n")
-    sections.push(fs.readFileSync(projectDesignPath, "utf-8"))
-    sections.push("")
+    doc.data("Project Design", fs.readFileSync(projectDesignPath, "utf-8"))
   }
 
   if (fs.existsSync(featureDesignPath)) {
-    sections.push("## Feature Design\n")
-    sections.push(fs.readFileSync(featureDesignPath, "utf-8"))
-    sections.push("")
+    doc.data("Feature Design", fs.readFileSync(featureDesignPath, "utf-8"))
   }
 
   if (config.matchedShapes.length > 0) {
-    sections.push("## Matched Visual Shape Categories\n")
-    sections.push(config.matchedShapes.join(", "))
-    sections.push("")
+    doc.data("Matched Visual Shape Categories", config.matchedShapes.join(", "))
   }
 
-  sections.push("IMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON.")
+  doc.instruction("Output Format", "IMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON.")
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 /** Format a single specialist draft into prompt sections. */
@@ -226,22 +220,22 @@ const assembleSynthesizerUserPrompt = (
   buildDir: string,
   drafts: { perspective: string; draft: SpecifierDraft }[],
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
-  sections.push("## shape.md\n")
-  sections.push(shapeMd)
-  sections.push("")
+  doc.data("shape.md", shapeMd)
 
-  sections.push("## Specialist Proposals\n")
+  const proposalLines: string[] = []
   for (const { perspective, draft } of drafts) {
-    formatDraftProposal(sections, perspective, draft)
+    formatDraftProposal(proposalLines, perspective, draft)
   }
+  doc.data("Specialist Proposals", proposalLines.join("\n"))
 
-  sections.push("## Output Directory\n")
-  sections.push(`Write spec.md, constraints.md, and optionally taste.md to: ${buildDir}/`)
-  sections.push("Use the Write tool to create each file.")
+  doc.instruction(
+    "Output Directory",
+    `Write spec.md, constraints.md, and optionally taste.md to: ${buildDir}/\nUse the Write tool to create each file.`,
+  )
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 // ---------------------------------------------------------------------------

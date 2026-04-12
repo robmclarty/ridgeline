@@ -7,7 +7,7 @@ import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { createStderrHandler } from "./pipeline.shared"
 import { SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
-import { assembleInputSections } from "./research.exec"
+import { PromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // Refine executor
@@ -32,25 +32,29 @@ export const invokeRefiner = async (
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
   const systemPrompt = registry.getCorePrompt("refiner.md")
 
-  const sections = assembleInputSections(specMd, constraintsMd, tasteMd)
+  const doc = new PromptDocument()
 
-  // Insert research.md after spec.md section
-  const constraintsIdx = sections.indexOf("## constraints.md\n")
-  sections.splice(constraintsIdx, 0, "## research.md\n", researchMd, "")
+  doc.data("spec.md", specMd)
+  doc.data("research.md", researchMd)
 
-  // Insert spec.changelog.md after research.md (if it exists)
   if (config.changelogMd) {
-    const newConstraintsIdx = sections.indexOf("## constraints.md\n")
-    sections.splice(newConstraintsIdx, 0, "## spec.changelog.md (your prior changes)\n", config.changelogMd, "")
+    doc.data("spec.changelog.md (your prior changes)", config.changelogMd)
   }
 
-  sections.push("## Output\n")
-  sections.push(`1. Rewrite the spec incorporating research findings. Write the revised spec to: ${config.buildDir}/spec.md`)
-  sections.push(`2. Document your changes. Write the changelog to: ${config.buildDir}/spec.changelog.md`)
-  sections.push(`   - ${config.changelogMd ? "Read the existing spec.changelog.md first, then prepend" : "Create"} a new ## Iteration ${config.iterationNumber} section.`)
-  sections.push("Use the Write tool for both files.")
+  doc.data("constraints.md", constraintsMd)
+  if (tasteMd) {
+    doc.data("taste.md", tasteMd)
+  }
 
-  const userPrompt = sections.join("\n")
+  doc.instruction(
+    "Output",
+    `1. Rewrite the spec incorporating research findings. Write the revised spec to: ${config.buildDir}/spec.md\n` +
+    `2. Document your changes. Write the changelog to: ${config.buildDir}/spec.changelog.md\n` +
+    `   - ${config.changelogMd ? "Read the existing spec.changelog.md first, then prepend" : "Create"} a new ## Iteration ${config.iterationNumber} section.\n` +
+    "Use the Write tool for both files.",
+  )
+
+  const userPrompt = doc.render()
 
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
 

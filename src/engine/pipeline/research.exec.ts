@@ -7,26 +7,19 @@ import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { createStderrHandler } from "./pipeline.shared"
 import { startSpinner } from "../../ui/spinner"
+import { PromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // Shared prompt helpers
 // ---------------------------------------------------------------------------
 
-/** Build the common spec + constraints + taste sections for research/refine prompts. */
-export const assembleInputSections = (specMd: string, constraintsMd: string, tasteMd: string | null): string[] => {
-  const sections: string[] = []
-  sections.push("## spec.md\n")
-  sections.push(specMd)
-  sections.push("")
-  sections.push("## constraints.md\n")
-  sections.push(constraintsMd)
-  sections.push("")
+/** Append the common spec + constraints + taste sections to a prompt document. */
+const appendInputSections = (doc: PromptDocument, specMd: string, constraintsMd: string, tasteMd: string | null): void => {
+  doc.data("spec.md", specMd)
+  doc.data("constraints.md", constraintsMd)
   if (tasteMd) {
-    sections.push("## taste.md\n")
-    sections.push(tasteMd)
-    sections.push("")
+    doc.data("taste.md", tasteMd)
   }
-  return sections
 }
 
 // ---------------------------------------------------------------------------
@@ -47,33 +40,25 @@ const buildAgendaUserPrompt = (
   existingResearchMd: string | null,
   changelogMd: string | null,
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
-  sections.push("## spec.md\n")
-  sections.push(specMd)
-  sections.push("")
+  doc.data("spec.md", specMd)
 
   if (gapsMd) {
-    sections.push("## Domain Gap Checklist\n")
-    sections.push(gapsMd)
-    sections.push("")
+    doc.data("Domain Gap Checklist", gapsMd)
   }
 
   if (existingResearchMd) {
-    sections.push("## Prior Research (already conducted)\n")
-    sections.push(existingResearchMd)
-    sections.push("")
+    doc.data("Prior Research (already conducted)", existingResearchMd)
   }
 
   if (changelogMd) {
-    sections.push("## Spec Changelog (recommendations already incorporated)\n")
-    sections.push(changelogMd)
-    sections.push("")
+    doc.data("Spec Changelog (recommendations already incorporated)", changelogMd)
   }
 
-  sections.push("Produce a focused research agenda identifying gaps and specific questions for specialists to investigate.")
+  doc.instruction("Task", "Produce a focused research agenda identifying gaps and specific questions for specialists to investigate.")
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 const buildResearchAgenda = async (
@@ -113,17 +98,18 @@ const assembleSpecialistUserPrompt = (
   tasteMd: string | null,
   agenda: string | null,
 ): string => {
-  const sections = assembleInputSections(specMd, constraintsMd, tasteMd)
+  const doc = new PromptDocument()
+  appendInputSections(doc, specMd, constraintsMd, tasteMd)
 
   if (agenda) {
-    sections.push("## Research Agenda\n")
-    sections.push("The following gaps and questions were identified. Focus your research on these areas:\n")
-    sections.push(agenda)
-    sections.push("")
+    doc.data(
+      "Research Agenda",
+      "The following gaps and questions were identified. Focus your research on these areas:\n\n" + agenda,
+    )
   }
 
-  sections.push("Research this spec thoroughly using your web tools. Produce a markdown research report as your response.")
-  return sections.join("\n")
+  doc.instruction("Task", "Research this spec thoroughly using your web tools. Produce a markdown research report as your response.")
+  return doc.render()
 }
 
 /** Assemble the user prompt for the research synthesizer. */
@@ -135,40 +121,34 @@ const assembleSynthesizerUserPrompt = (
   changelogMd: string | null,
   iterationNumber: number,
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
-  sections.push("## spec.md\n")
-  sections.push(specMd)
-  sections.push("")
+  doc.data("spec.md", specMd)
 
-  sections.push("## Specialist Research Reports\n")
+  const reportLines: string[] = []
   for (const { perspective, draft } of drafts) {
-    sections.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist Report\n`)
-    sections.push(draft)
-    sections.push("\n---\n")
+    reportLines.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist Report\n`)
+    reportLines.push(draft)
+    reportLines.push("\n---\n")
   }
+  doc.data("Specialist Research Reports", reportLines.join("\n"))
 
   if (existingResearchMd) {
-    sections.push("## Existing research.md (to be updated, not replaced)\n")
-    sections.push(existingResearchMd)
-    sections.push("")
+    doc.data("Existing research.md (to be updated, not replaced)", existingResearchMd)
   }
 
   if (changelogMd) {
-    sections.push("## spec.changelog.md (recommendations already acted on)\n")
-    sections.push(changelogMd)
-    sections.push("")
+    doc.data("spec.changelog.md (recommendations already acted on)", changelogMd)
   }
 
-  sections.push("## Current Iteration\n")
-  sections.push(`Iteration: ${iterationNumber}`)
-  sections.push("")
+  doc.data("Current Iteration", `Iteration: ${iterationNumber}`)
 
-  sections.push("## Output\n")
-  sections.push(`Write the ${existingResearchMd ? "updated" : "new"} research report to: ${buildDir}/research.md`)
-  sections.push("Use the Write tool to create the file.")
+  doc.instruction(
+    "Output",
+    `Write the ${existingResearchMd ? "updated" : "new"} research report to: ${buildDir}/research.md\nUse the Write tool to create the file.`,
+  )
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 // ---------------------------------------------------------------------------

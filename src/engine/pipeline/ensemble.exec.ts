@@ -6,8 +6,9 @@ import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
 import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
-import { assembleBaseUserPrompt } from "./plan.exec"
+import { appendBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
+import { PromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // Robust JSON extraction — handles markdown fences and surrounding text
@@ -394,7 +395,10 @@ const buildPlannerSpecialistPrompt = (context: string, overlay: string): string 
 
 /** Assemble the user prompt for a planner specialist (no output directory). */
 const assemblePlannerSpecialistUserPrompt = (config: RidgelineConfig): string => {
-  return assembleBaseUserPrompt(config) + "\n\nIMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON."
+  const doc = new PromptDocument()
+  appendBaseUserPrompt(doc, config)
+  doc.instruction("Output Format", "IMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON.")
+  return doc.render()
 }
 
 /** Assemble the user prompt for the planner synthesizer, including all proposals. */
@@ -402,38 +406,39 @@ const assemblePlannerSynthesizerUserPrompt = (
   config: RidgelineConfig,
   drafts: { perspective: string; draft: SpecialistProposal }[],
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
   // Include original inputs
-  sections.push(assembleBaseUserPrompt(config))
-  sections.push("")
+  appendBaseUserPrompt(doc, config)
 
   // Include each specialist proposal
-  sections.push("## Specialist Proposals\n")
+  const proposalLines: string[] = []
   for (const { perspective, draft } of drafts) {
-    formatProposalHeading(sections, perspective, draft.tradeoffs)
-    sections.push(`**Summary:** ${draft.summary}\n`)
-    sections.push(`**Phases (${draft.phases.length}):**\n`)
+    formatProposalHeading(proposalLines, perspective, draft.tradeoffs)
+    proposalLines.push(`**Summary:** ${draft.summary}\n`)
+    proposalLines.push(`**Phases (${draft.phases.length}):**\n`)
     for (let i = 0; i < draft.phases.length; i++) {
       const phase = draft.phases[i]
-      sections.push(`#### Phase ${i + 1}: ${phase.title} (\`${phase.slug}\`)`)
-      sections.push(`**Goal:** ${phase.goal}\n`)
-      sections.push("**Acceptance Criteria:**")
+      proposalLines.push(`#### Phase ${i + 1}: ${phase.title} (\`${phase.slug}\`)`)
+      proposalLines.push(`**Goal:** ${phase.goal}\n`)
+      proposalLines.push("**Acceptance Criteria:**")
       for (const criterion of phase.acceptanceCriteria) {
-        sections.push(`- ${criterion}`)
+        proposalLines.push(`- ${criterion}`)
       }
-      sections.push(`\n**Spec Reference:** ${phase.specReference}`)
-      sections.push(`**Rationale:** ${phase.rationale}\n`)
+      proposalLines.push(`\n**Spec Reference:** ${phase.specReference}`)
+      proposalLines.push(`**Rationale:** ${phase.rationale}\n`)
     }
-    sections.push("---\n")
+    proposalLines.push("---\n")
   }
+  doc.data("Specialist Proposals", proposalLines.join("\n"))
 
   // Output directory
-  sections.push("## Output Directory\n")
-  sections.push(`Write phase spec files to: ${config.phasesDir}`)
-  sections.push("Use the naming convention: 01-<slug>.md, 02-<slug>.md, etc.")
+  doc.instruction(
+    "Output Directory",
+    `Write phase spec files to: ${config.phasesDir}\nUse the naming convention: 01-<slug>.md, 02-<slug>.md, etc.`,
+  )
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 export const invokePlanner = async (

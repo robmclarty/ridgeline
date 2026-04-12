@@ -30,6 +30,7 @@ vi.mock("node:fs", async () => {
 })
 
 import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "../pipeline.shared"
+import { PromptDocument } from "../prompt.document"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan"
 import { printError } from "../../../ui/output"
@@ -134,52 +135,56 @@ describe("createStderrHandler", () => {
 describe("appendConstraintsAndTaste", () => {
   it("appends constraints section", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints content")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendConstraintsAndTaste(sections, makeConfig())
+    appendConstraintsAndTaste(doc, makeConfig())
 
-    expect(sections.join("\n")).toContain("## constraints.md")
-    expect(sections.join("\n")).toContain("constraints content")
+    const rendered = doc.render()
+    expect(rendered).toContain("## constraints.md")
+    expect(rendered).toContain("constraints content")
+    expect(doc.inspect()[0]).toMatchObject({ role: "data", heading: "constraints.md" })
   })
 
   it("appends taste section when tastePath is set", () => {
     vi.mocked(fs.readFileSync)
       .mockReturnValueOnce("constraints")
       .mockReturnValueOnce("taste content")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendConstraintsAndTaste(sections, makeConfig({ tastePath: "/tmp/taste.md" }))
+    appendConstraintsAndTaste(doc, makeConfig({ tastePath: "/tmp/taste.md" }))
 
-    expect(sections.join("\n")).toContain("## taste.md")
-    expect(sections.join("\n")).toContain("taste content")
+    const rendered = doc.render()
+    expect(rendered).toContain("## taste.md")
+    expect(rendered).toContain("taste content")
   })
 
   it("omits taste section when tastePath is null", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendConstraintsAndTaste(sections, makeConfig({ tastePath: null }))
+    appendConstraintsAndTaste(doc, makeConfig({ tastePath: null }))
 
-    expect(sections.join("\n")).not.toContain("## taste.md")
+    expect(doc.render()).not.toContain("## taste.md")
   })
 
   it("appends extra context when present", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendConstraintsAndTaste(sections, makeConfig({ extraContext: "additional info" }))
+    appendConstraintsAndTaste(doc, makeConfig({ extraContext: "additional info" }))
 
-    expect(sections.join("\n")).toContain("## Additional Context")
-    expect(sections.join("\n")).toContain("additional info")
+    const rendered = doc.render()
+    expect(rendered).toContain("## Additional Context")
+    expect(rendered).toContain("additional info")
   })
 
   it("omits extra context when null", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendConstraintsAndTaste(sections, makeConfig({ extraContext: null }))
+    appendConstraintsAndTaste(doc, makeConfig({ extraContext: null }))
 
-    expect(sections.join("\n")).not.toContain("## Additional Context")
+    expect(doc.render()).not.toContain("## Additional Context")
   })
 })
 
@@ -187,13 +192,13 @@ describe("appendDesign", () => {
   it("injects feature-level design.md when it exists", () => {
     vi.mocked(fs.existsSync).mockImplementation((p: any) => String(p).includes("/tmp/build"))
     vi.mocked(fs.readFileSync).mockReturnValue("feature design content")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendDesign(sections, makeConfig())
+    appendDesign(doc, makeConfig())
 
-    const joined = sections.join("\n")
-    expect(joined).toContain("## Feature Design")
-    expect(joined).toContain("feature design content")
+    const rendered = doc.render()
+    expect(rendered).toContain("## Feature Design")
+    expect(rendered).toContain("feature design content")
   })
 
   it("injects project-level design.md when it exists", () => {
@@ -202,13 +207,13 @@ describe("appendDesign", () => {
       return s.includes("ridgeline/design.md") && !s.includes("/tmp/build")
     })
     vi.mocked(fs.readFileSync).mockReturnValue("project design content")
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendDesign(sections, makeConfig())
+    appendDesign(doc, makeConfig())
 
-    const joined = sections.join("\n")
-    expect(joined).toContain("## Project Design")
-    expect(joined).toContain("project design content")
+    const rendered = doc.render()
+    expect(rendered).toContain("## Project Design")
+    expect(rendered).toContain("project design content")
   })
 
   it("injects both levels when both exist", () => {
@@ -217,22 +222,22 @@ describe("appendDesign", () => {
       if (String(p).includes("/tmp/build")) return "feature design"
       return "project design"
     })
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendDesign(sections, makeConfig())
+    appendDesign(doc, makeConfig())
 
-    const joined = sections.join("\n")
-    expect(joined).toContain("## Project Design")
-    expect(joined).toContain("## Feature Design")
+    const rendered = doc.render()
+    expect(rendered).toContain("## Project Design")
+    expect(rendered).toContain("## Feature Design")
   })
 
   it("does nothing when no design.md exists", () => {
     vi.mocked(fs.existsSync).mockReturnValue(false)
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendDesign(sections, makeConfig())
+    appendDesign(doc, makeConfig())
 
-    expect(sections).toHaveLength(0)
+    expect(doc.inspect()).toHaveLength(0)
   })
 })
 
@@ -241,14 +246,15 @@ describe("appendAssetCatalog", () => {
     vi.mocked(fs.existsSync).mockImplementation((p: any) =>
       String(p).includes("asset-catalog.json") && String(p).includes("/tmp/build")
     )
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendAssetCatalog(sections, makeConfig())
+    appendAssetCatalog(doc, makeConfig())
 
-    const joined = sections.join("\n")
-    expect(joined).toContain("## Available Assets")
-    expect(joined).toContain("asset-catalog.json")
-    expect(joined).toContain("suggested_anchor")
+    const rendered = doc.render()
+    expect(rendered).toContain("## Available Assets")
+    expect(rendered).toContain("asset-catalog.json")
+    expect(rendered).toContain("suggested_anchor")
+    expect(doc.inspect()[0]).toMatchObject({ role: "instruction" })
   })
 
   it("falls back to project-level catalog", () => {
@@ -256,21 +262,20 @@ describe("appendAssetCatalog", () => {
       const s = String(p)
       return s.includes("asset-catalog.json") && s.includes("ridgeline/asset-catalog") && !s.includes("/tmp/build")
     })
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendAssetCatalog(sections, makeConfig())
+    appendAssetCatalog(doc, makeConfig())
 
-    const joined = sections.join("\n")
-    expect(joined).toContain("## Available Assets")
+    expect(doc.render()).toContain("## Available Assets")
   })
 
   it("does nothing when no catalog exists", () => {
     vi.mocked(fs.existsSync).mockReturnValue(false)
-    const sections: string[] = []
+    const doc = new PromptDocument()
 
-    appendAssetCatalog(sections, makeConfig())
+    appendAssetCatalog(doc, makeConfig())
 
-    expect(sections).toHaveLength(0)
+    expect(doc.inspect()).toHaveLength(0)
   })
 })
 
