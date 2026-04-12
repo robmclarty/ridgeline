@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { SpecifierDraft, EnsembleResult } from "../../types"
-import { invokeEnsemble } from "./ensemble.exec"
+import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { formatProposalHeading } from "./pipeline.shared"
@@ -290,6 +290,7 @@ export const invokeSpecifier = async (
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,
     maxBudgetUsd: config.maxBudgetUsd,
+    stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
     verify: () => {
       const missing = ["spec.md", "constraints.md"]

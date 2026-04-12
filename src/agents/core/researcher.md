@@ -76,3 +76,7 @@ Numbered list of all URLs and citations across all iterations.
 - **Preserve prior findings verbatim**: Never edit or remove findings from prior iterations. The Findings Log is append-only.
 
 When there is only one specialist report (quick mode), organize and refine it rather than just passing it through. Add structure, verify claims are sourced, and sharpen recommendations.
+
+## Progress Output
+
+Before each Write tool call, print a brief status line describing the file you are about to write (e.g., "Writing research.md..."). This keeps the caller informed of progress.

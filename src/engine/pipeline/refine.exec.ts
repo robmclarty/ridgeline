@@ -6,6 +6,7 @@ import { createDisplayCallbacks } from "../claude/stream.display"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { createStderrHandler } from "./pipeline.shared"
+import { SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { assembleInputSections } from "./research.exec"
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,7 @@ export const invokeRefiner = async (
       allowedTools: ["Read", "Write"],
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
+      stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
       onStdout,
       onStderr: createStderrHandler("refiner"),
     })

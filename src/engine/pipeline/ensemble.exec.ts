@@ -52,6 +52,9 @@ export const extractJSON = (raw: string): unknown => {
   throw new Error("No valid JSON object found in output")
 }
 
+/** Synthesizers may go quiet during large Write calls; allow more headroom than the default 5 min. */
+export const SYNTHESIZER_STALL_TIMEOUT_MS = 8 * 60 * 1000
+
 // ---------------------------------------------------------------------------
 // Generic ensemble runner
 // ---------------------------------------------------------------------------
@@ -109,6 +112,9 @@ type EnsembleConfig<TDraft> = {
 
   /** Sandbox provider for specialist invocations */
   sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
+
+  /** Stall timeout override for the synthesizer invocation (ms). */
+  stallTimeoutMs?: number
 }
 
 export const invokeEnsemble = async <TDraft>(
@@ -215,6 +221,7 @@ export const invokeEnsemble = async <TDraft>(
       allowedTools: config.synthesizerTools,
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
+      stallTimeoutMs: config.stallTimeoutMs,
       onStdout,
       onStderr: createStderrHandler("synthesizer"),
     })
@@ -367,6 +374,7 @@ export const invokePlanner = async (
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,
     maxBudgetUsd: config.maxBudgetUsd,
+    stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
     verify: () => {
       if (scanPhases(config.phasesDir).length === 0) {

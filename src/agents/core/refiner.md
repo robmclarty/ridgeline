@@ -53,6 +53,10 @@ Include a "Skipped" line for any Active Recommendation you deliberately chose no
 - **Flag conflicts**: If research contradicts an existing spec decision, keep the original decision but add a note explaining the alternative and trade-offs.
 - **Don't repeat yourself**: Check spec.changelog.md for changes you already made in prior iterations. Don't re-apply the same change. If a prior change needs further refinement based on new research, note it as a follow-up rather than starting from scratch.
 
+## Progress Output
+
+Before each Write tool call, print a brief status line describing the file you are about to write (e.g., "Writing spec.md..."). This keeps the caller informed of progress.
+
 ## What NOT to do
 
 - Do not rewrite the spec from scratch — revise it.

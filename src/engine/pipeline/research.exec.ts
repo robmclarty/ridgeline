@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { EnsembleResult } from "../../types"
-import { invokeEnsemble } from "./ensemble.exec"
+import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
@@ -245,6 +245,7 @@ export const invokeResearcher = async (
     maxBudgetUsd: config.maxBudgetUsd,
     networkAllowlist: config.networkAllowlist,
     sandboxProvider: config.sandboxProvider,
+    stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
     verify: () => {
       if (!fs.existsSync(path.join(config.buildDir, "research.md"))) {
