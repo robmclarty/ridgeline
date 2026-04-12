@@ -1,7 +1,7 @@
 ---
 name: shader-validate
 description: Validate and cross-compile GLSL, WGSL, and SPIR-V shaders using naga. Use when writing shaders, checking shader compilation, debugging shader errors, converting between shader languages, or verifying WebGL/WebGPU shader code.
-compatibility: Requires naga-cli (cargo install naga-cli)
+compatibility: Requires naga (cargo install naga-cli)
 metadata:
   author: ridgeline
   version: "1.0"
