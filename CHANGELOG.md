@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.12
+
+- Fix agent-browser package name in skill compatibility docs (was @anthropic-ai/agent-browser, correct package is agent-browser)
+- Add documentation for design, catalog, retrospective, and check commands
+
 ## 0.7.11
 
 - Remove unused type exports (PhaseGraph, LogLevel) flagged by fallow dead-code analysis
