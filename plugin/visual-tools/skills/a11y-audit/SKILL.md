@@ -26,6 +26,7 @@ npx @axe-core/cli http://localhost:3000 --stdout
 ## Common checks
 
 axe-core tests for:
+
 - **Color contrast**: Text must meet WCAG AA contrast ratios (4.5:1 for normal text, 3:1 for large text)
 - **ARIA attributes**: Valid roles, required properties, correct state management
 - **Keyboard navigation**: All interactive elements focusable, logical tab order
@@ -37,6 +38,7 @@ axe-core tests for:
 ## Interpreting results
 
 axe categorizes violations by impact:
+
 - **Critical**: Blocks access for some users entirely (e.g., missing form labels, keyboard traps)
 - **Serious**: Significantly impairs usability (e.g., contrast failures, missing landmarks)
 - **Moderate**: Creates difficulty but doesn't block access
@@ -45,6 +47,7 @@ axe categorizes violations by impact:
 ## Severity mapping
 
 - Critical or serious violations → blocking
+
 - Moderate or minor violations → suggestion
 
 ## Gotchas

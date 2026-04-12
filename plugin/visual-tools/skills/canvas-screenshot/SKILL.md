@@ -61,6 +61,7 @@ const { chromium } = require('playwright');
 Canvas apps use `requestAnimationFrame` for rendering. A screenshot taken too early may capture a blank or partially-rendered frame.
 
 **Strategy:**
+
 1. Wait for the canvas element to exist in the DOM
 2. Wait 1–3 seconds for initial asset loading and first meaningful render
 3. Capture the frame
@@ -69,6 +70,7 @@ Canvas apps use `requestAnimationFrame` for rendering. A screenshot taken too ea
 ## Multiple scenes / states
 
 For games with multiple screens (menu, gameplay, pause):
+
 1. Capture the initial state (usually a menu or loading screen)
 2. Interact to reach the target state (click play, trigger a game event)
 3. Wait for the transition to complete
@@ -77,5 +79,6 @@ For games with multiple screens (menu, gameplay, pause):
 ## Gotchas
 
 - WebGL contexts may not render in headless mode without GPU flags. Use `--use-gl=angle --use-angle=swiftshader` if rendering is blank.
+
 - Canvas `toDataURL()` may be tainted by cross-origin images. Ensure assets are served from the same origin or with proper CORS headers.
 - High-DPI displays produce larger screenshots. Set `deviceScaleFactor: 1` for consistent results.
