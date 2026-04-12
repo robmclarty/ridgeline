@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-export type LogLevel = "debug" | "info" | "warn" | "error"
+type LogLevel = "debug" | "info" | "warn" | "error"
 
 type LogEntry = {
   timestamp: string

@@ -6,7 +6,7 @@ import { PhaseInfo } from "../../types"
  * (backward-compatible sequential behavior).
  */
 
-export type PhaseGraph = {
+type PhaseGraph = {
   phases: PhaseInfo[]
   /** Map from phase ID to the set of phase IDs it depends on. */
   dependencies: Map<string, Set<string>>
