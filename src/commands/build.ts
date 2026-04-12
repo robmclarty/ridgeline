@@ -10,6 +10,8 @@ import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "
 import { loadBudget } from "../stores/budget"
 import { cleanupBuildTags } from "../stores/tags"
 import { killAllClaudeSync } from "../engine/claude/claude.exec"
+import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../engine/pipeline/worktree.parallel"
+import { consolidateHandoffs } from "../stores/handoff"
 import { runPlan } from "./plan"
 import { runRetrospective } from "./retrospective"
 import { ensureGitRepo } from "../engine/worktree"
@@ -166,8 +168,8 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   const phases = await ensurePhases(config)
 
-  // Load or init state
-  let state = loadState(config.buildDir)
+  // Load or init state (with trajectory fallback for missing/corrupt state.json)
+  let state = loadState(config.buildDir, config.buildName, phases)
   const isResume = state !== null && state.phases.length > 0
   if (!state || state.phases.length === 0) {
     const pipeline = state?.pipeline
@@ -207,19 +209,15 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   try {
     let isBudgetExceeded = false
+    const mainCwd = process.cwd()
 
     while (!isBudgetExceeded) {
       const readyPhases = getReadyPhases(graph, completedIds)
       if (readyPhases.length === 0) break
 
-      // Execute ready phases. When multiple phases are ready (parallel wave),
-      // run them sequentially in the main working tree for now.
-      // Future: parallel execution with git worktrees.
-      if (readyPhases.length > 1) {
-        printInfo(`\nWave: ${readyPhases.length} phases ready (${readyPhases.map((p) => p.id).join(", ")})`)
-      }
-
-      for (const phase of readyPhases) {
+      if (readyPhases.length === 1) {
+        // Single phase: run in main working tree (no worktree overhead)
+        const phase = readyPhases[0]
         const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
         printPhaseHeader(phaseIndex, phases.length, phase.id)
 
@@ -228,14 +226,104 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
         completedIds.add(phase.id)
         completed++
+      } else {
+        // Parallel wave: create worktrees and run concurrently
+        printInfo(`\nWave: ${readyPhases.length} parallel phases (${readyPhases.map((p) => p.id).join(", ")})`)
 
-        if (config.maxBudgetUsd) {
-          const budget = loadBudget(config.buildDir)
-          if (budget.totalCostUsd > config.maxBudgetUsd) {
-            printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
-            isBudgetExceeded = true
+        const worktreePaths = new Map<string, string>()
+        let worktreesFailed = false
+
+        // 1. Create worktrees for each phase
+        for (const phase of readyPhases) {
+          try {
+            const wtPath = createPhaseWorktree(config.buildName, phase.id, mainCwd)
+            worktreePaths.set(phase.id, wtPath)
+          } catch (err) {
+            printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : err}`)
+            worktreesFailed = true
             break
           }
+        }
+
+        // Fallback to sequential if worktree creation failed
+        if (worktreesFailed) {
+          for (const phase of readyPhases) {
+            removePhaseWorktree(config.buildName, phase.id, mainCwd)
+          }
+          printInfo("Falling back to sequential execution for this wave")
+          for (const phase of readyPhases) {
+            const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+            printPhaseHeader(phaseIndex, phases.length, phase.id)
+            const result = await runPhase(phase, config, state)
+            if (result !== "passed") { failed++; break }
+            completedIds.add(phase.id)
+            completed++
+          }
+          if (failed > 0) break
+        } else {
+          // 2. Run phases in parallel
+          for (const phase of readyPhases) {
+            const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+            printPhaseHeader(phaseIndex, phases.length, phase.id)
+          }
+
+          const results = await Promise.allSettled(
+            readyPhases.map(async (phase) => {
+              const wtCwd = worktreePaths.get(phase.id)!
+              return runPhase(phase, config, state, wtCwd)
+            }),
+          )
+
+          // 3. Collect results
+          const phaseResults = new Map<string, "passed" | "failed" | "error">()
+          for (let i = 0; i < readyPhases.length; i++) {
+            const r = results[i]
+            if (r.status === "fulfilled") {
+              phaseResults.set(readyPhases[i].id, r.value)
+            } else {
+              phaseResults.set(readyPhases[i].id, "error")
+              printError(`Phase ${readyPhases[i].id} threw: ${r.reason}`)
+            }
+          }
+
+          // 4. Merge successful phases sequentially in index order
+          const sortedPhases = [...readyPhases].sort((a, b) => a.index - b.index)
+          for (const phase of sortedPhases) {
+            const result = phaseResults.get(phase.id)
+            if (result !== "passed") {
+              failed++
+              removePhaseWorktree(config.buildName, phase.id, mainCwd)
+              continue
+            }
+
+            const merge = mergePhaseWorktree(config.buildName, phase.id, mainCwd)
+            if (!merge.isSuccess) {
+              printError(`Merge conflict for ${phase.id}: ${merge.conflictFiles?.join(", ")}`)
+              printInfo(`Branch preserved: ridgeline/${config.buildName}/${phase.id}`)
+              failed++
+              removePhaseWorktree(config.buildName, phase.id, mainCwd)
+              continue
+            }
+
+            completedIds.add(phase.id)
+            completed++
+            removePhaseWorktree(config.buildName, phase.id, mainCwd)
+          }
+
+          // 5. Consolidate handoff fragments
+          const passedPhaseIds = sortedPhases
+            .filter((p) => phaseResults.get(p.id) === "passed")
+            .map((p) => p.id)
+          consolidateHandoffs(config.buildDir, passedPhaseIds)
+        }
+      }
+
+      // Budget check after each wave
+      if (config.maxBudgetUsd) {
+        const budget = loadBudget(config.buildDir)
+        if (budget.totalCostUsd > config.maxBudgetUsd) {
+          printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+          isBudgetExceeded = true
         }
       }
 
@@ -244,6 +332,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
 
   } catch (err) {
     printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
+    cleanupAllWorktrees(config.buildName)
     failed++
   }
 
@@ -251,6 +340,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   printSummaryTable(config)
 
   if (failed > 0) {
+    cleanupAllWorktrees(config.buildName)
     killAllClaudeSync()
     process.exit(1)
   }

@@ -78,13 +78,14 @@ const executeBuild = async (
   attempt: number,
   feedbackFilePath: string | null,
   sandboxNote: string,
+  cwd?: string,
 ): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean }> => {
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
 
   const wallStart = Date.now()
-  const result = await invokeBuilder(config, phase, feedbackFilePath)
+  const result = await invokeBuilder(config, phase, feedbackFilePath, cwd)
   result.durationMs = Date.now() - wallStart
 
   logTrajectory(config.buildDir, "build_complete", phase.id, "Build complete", {
@@ -96,8 +97,8 @@ const executeBuild = async (
   const budget = recordCost(config.buildDir, phase.id, "builder", attempt, result)
 
   // Commit builder work so the reviewer can see the diff
-  if (isWorkingTreeDirty()) {
-    commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`)
+  if (isWorkingTreeDirty(cwd)) {
+    commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`, cwd)
   }
 
   return { result, isBudgetExceeded: isBudgetExceeded(budget.totalCostUsd, config, phase, state) }
@@ -110,13 +111,14 @@ const executeReview = async (
   attempt: number,
   checkpointTag: string,
   sandboxNote: string,
+  cwd?: string,
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   printPhase(phase.id, "Reviewing...")
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
   logTrajectory(config.buildDir, "review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`)
 
   const wallStart = Date.now()
-  const { result, verdict } = await invokeReviewer(config, phase, checkpointTag)
+  const { result, verdict } = await invokeReviewer(config, phase, checkpointTag, cwd)
   result.durationMs = Date.now() - wallStart
 
   logTrajectory(config.buildDir, "review_complete", phase.id, verdict.summary, {
@@ -162,7 +164,8 @@ const handleExhaustion = (
 export const runPhase = async (
   phase: PhaseInfo,
   config: RidgelineConfig,
-  state: BuildState
+  state: BuildState,
+  cwd?: string,
 ): Promise<"passed" | "failed"> => {
   const phaseState = state.phases.find((p) => p.id === phase.id)
   if (!phaseState) throw new Error(`Phase ${phase.id} not found in state`)
@@ -170,7 +173,7 @@ export const runPhase = async (
   const checkpointTag = phaseState.checkpointTag
   const startTime = Date.now()
 
-  createCheckpoint(checkpointTag, phase.id)
+  createCheckpoint(checkpointTag, phase.id, cwd)
   ensureHandoffExists(config.buildDir)
 
   let attempt = phaseState.retries
@@ -183,7 +186,7 @@ export const runPhase = async (
       : null
 
     try {
-      const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote)
+      const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd)
       if (build.isBudgetExceeded) return "failed"
     } catch (err) {
       if (handleInvokeError(err, "build", phase, config, state) === "fatal") return "failed"
@@ -196,7 +199,7 @@ export const runPhase = async (
 
     let verdict: ReviewVerdict
     try {
-      const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote)
+      const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote, cwd)
       verdict = review.verdict
     } catch (err) {
       if (handleInvokeError(err, "review", phase, config, state) === "fatal") return "failed"
@@ -209,7 +212,7 @@ export const runPhase = async (
 
     if (verdict.passed) {
       const duration = Date.now() - startTime
-      const completionTag = createCompletionTag(config.buildName, phase.id)
+      const completionTag = createCompletionTag(config.buildName, phase.id, cwd)
 
       updatePhaseStatus(config.buildDir, state, phase.id, {
         status: "complete",
