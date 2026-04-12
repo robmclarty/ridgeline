@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.2
+
+- Add crash-safety handlers (`uncaughtException`, `unhandledRejection`, `exit`) to kill orphaned Claude subprocesses when Node crashes
+- Introduce atomic writes for `state.json` and `budget.json` via write-to-temp + rename to prevent corruption from mid-write crashes
+- Add unit tests for shape, research, refine, rewind, and create commands
+- Add troubleshooting guide (`docs/troubleshooting.md`) covering 9 common failure scenarios
+- Add step-by-step custom flavour creation walkthrough to `docs/flavours.md`
+
 ## 0.7.1
 
 - Replace bespoke tool family pipeline with Claude skills 2.0 adapters in `plugin/visual-tools/` — 7 skills: agent-browser, visual-diff, css-audit, a11y-audit, lighthouse, canvas-screenshot, shader-validate
