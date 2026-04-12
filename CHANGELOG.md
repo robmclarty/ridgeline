@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.5
+
+- Fix synthesizer stall-kill during large Write tool calls (e.g., research on iteration 3+) by prompting synthesizers to emit a status line before each Write and bumping their stall timeout from 5 to 8 minutes
+
 ## 0.7.4
 
 - Default research command now runs all 3 specialists (academic, ecosystem, competitive); add `--quick` flag for single random specialist (replaces `--deep`)
