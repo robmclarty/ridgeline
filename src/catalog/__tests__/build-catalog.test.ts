@@ -5,6 +5,8 @@ import sharp from "sharp"
 import { makeTempDir } from "../../../test/setup"
 import { buildCatalog } from "../build-catalog"
 
+const defaultOpts = { isForce: false, isClassify: false, model: "", timeout: 5 } as const
+
 let tmpDir: string
 let assetDir: string
 let buildDir: string
@@ -46,7 +48,7 @@ describe("buildCatalog", () => {
   it("catalogs a single image with correct metadata", async () => {
     await createTestImage(assetDir, "characters/hero-idle.png", 32, 32)
 
-    const result = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const result = await buildCatalog(assetDir, buildDir, defaultOpts)
 
     expect(result.stats.total).toBe(1)
     expect(result.stats.added).toBe(1)
@@ -70,7 +72,7 @@ describe("buildCatalog", () => {
   it("detects horizontal spritesheet", async () => {
     await createTestImage(assetDir, "characters/hero-walk.png", 128, 32)
 
-    const result = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const result = await buildCatalog(assetDir, buildDir, defaultOpts)
     const entry = result.catalog.assets[0]
 
     expect(entry.isSpritesheet).toBe(true)
@@ -84,7 +86,7 @@ describe("buildCatalog", () => {
     await createTestImage(assetDir, "tiles/ground-stone.png", 16, 16, { r: 128, g: 128, b: 128 })
     await createTestImage(assetDir, "backgrounds/sky.png", 640, 480, { r: 100, g: 150, b: 255 })
 
-    const result = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const result = await buildCatalog(assetDir, buildDir, defaultOpts)
 
     expect(result.stats.total).toBe(3)
     expect(result.stats.added).toBe(3)
@@ -102,7 +104,7 @@ describe("buildCatalog", () => {
     await createTestImage(assetDir, "characters/hero-idle.png", 32, 32)
 
     // First run
-    const first = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const first = await buildCatalog(assetDir, buildDir, defaultOpts)
     expect(first.stats.added).toBe(1)
 
     // Write catalog to disk (simulate persistence)
@@ -110,14 +112,14 @@ describe("buildCatalog", () => {
     fs.writeFileSync(catalogPath, JSON.stringify(first.catalog, null, 2))
 
     // Second run — same files
-    const second = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const second = await buildCatalog(assetDir, buildDir, defaultOpts)
     expect(second.stats.unchanged).toBe(1)
     expect(second.stats.added).toBe(0)
   })
 
   it("re-processes changed files", async () => {
     await createTestImage(assetDir, "characters/hero-idle.png", 32, 32)
-    const first = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const first = await buildCatalog(assetDir, buildDir, defaultOpts)
     fs.writeFileSync(
       path.join(buildDir, "asset-catalog.json"),
       JSON.stringify(first.catalog, null, 2),
@@ -126,7 +128,7 @@ describe("buildCatalog", () => {
     // Modify the image
     await createTestImage(assetDir, "characters/hero-idle.png", 64, 64, { r: 0, g: 255, b: 0 })
 
-    const second = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const second = await buildCatalog(assetDir, buildDir, defaultOpts)
     expect(second.stats.updated).toBe(1)
     expect(second.catalog.assets[0].width).toBe(64)
   })
@@ -135,7 +137,7 @@ describe("buildCatalog", () => {
     await createTestImage(assetDir, "characters/hero-idle.png", 32, 32)
     await createTestImage(assetDir, "characters/hero-walk.png", 128, 32)
 
-    const first = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const first = await buildCatalog(assetDir, buildDir, defaultOpts)
     fs.writeFileSync(
       path.join(buildDir, "asset-catalog.json"),
       JSON.stringify(first.catalog, null, 2),
@@ -145,7 +147,7 @@ describe("buildCatalog", () => {
     // Delete one file
     fs.unlinkSync(path.join(assetDir, "characters/hero-walk.png"))
 
-    const second = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const second = await buildCatalog(assetDir, buildDir, defaultOpts)
     expect(second.stats.total).toBe(1)
     expect(second.stats.pruned).toBe(1)
   })
@@ -153,13 +155,13 @@ describe("buildCatalog", () => {
   it("re-processes all files with --force", async () => {
     await createTestImage(assetDir, "characters/hero-idle.png", 32, 32)
 
-    const first = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const first = await buildCatalog(assetDir, buildDir, defaultOpts)
     fs.writeFileSync(
       path.join(buildDir, "asset-catalog.json"),
       JSON.stringify(first.catalog, null, 2),
     )
 
-    const forced = await buildCatalog(assetDir, buildDir, { isForce: true })
+    const forced = await buildCatalog(assetDir, buildDir, { ...defaultOpts, isForce: true })
     // File existed in prior catalog, so it counts as updated (not added) even with --force
     expect(forced.stats.updated).toBe(1)
     expect(forced.stats.unchanged).toBe(0)
@@ -168,7 +170,7 @@ describe("buildCatalog", () => {
   it("flags ui assets for auto-describe", async () => {
     await createTestImage(assetDir, "ui/button-primary.png", 64, 32)
 
-    const result = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const result = await buildCatalog(assetDir, buildDir, defaultOpts)
     expect(result.needsVisionDescribe).toContain("ui/button-primary.png")
   })
 
@@ -178,7 +180,7 @@ describe("buildCatalog", () => {
       await createTestImage(assetDir, `characters/char${i}-idle.png`, 32, 32)
     }
 
-    const result = await buildCatalog(assetDir, buildDir, { isForce: false })
+    const result = await buildCatalog(assetDir, buildDir, defaultOpts)
     expect(result.catalog.visualIdentity.detectedStyle).toBe("pixel-art")
     expect(result.catalog.visualIdentity.detectedResolution).toBe("32x32")
     expect(result.catalog.visualIdentity.detectedScaling).toBe("nearest")
