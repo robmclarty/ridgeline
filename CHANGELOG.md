@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.7.1
+
+- Replace bespoke tool family pipeline with Claude skills 2.0 adapters in `plugin/visual-tools/` — 7 skills: agent-browser, visual-diff, css-audit, a11y-audit, lighthouse, canvas-screenshot, shader-validate
+- Add `web-ui` flavour for web application UI development with responsive screenshots, CSS audit, and accessibility checks
+- Add `web-game` flavour for browser-based games and interactive visual apps (canvas, WebGL, PixiJS, Phaser, Three.js)
+- Enhance `software-engineering` flavour with visual awareness for projects that include UI
+- Add `flavour.json` config with `recommendedSkills` — flavours declare which tool skills work best with them
+- Show recommended tool availability at project creation (`ridgeline create`) with install commands for missing tools
+- Discover bundled plugins shipped with ridgeline via `getBundledPluginDir()`
+- Remove `toolFamily` from shape definitions — skills handle tool discovery via Claude's native skill matching
+- Extract shared QA workflow module (`qa-workflow.ts`) from design and shape commands, eliminating duplication
+- Simplify `logTrajectory` API by inlining `makeTrajectoryEntry`
+- Split `feedback.verdict.ts` into `feedback.parse.ts` and `feedback.format.ts`
+- Extract `stream.types.ts` for shared stream parsing types
+- Resolve all fallow lint failures: 0 dead code, 0 duplication, 0 above health threshold
+
 ## 0.7.0
 
 - Add visual design system: shape detection engine scans shape.md against keyword registries to identify visual concerns (web-visual, game-visual, print-layout)
