@@ -25,9 +25,9 @@ const defaultPipeline: PipelineState = {
 import { verifyCompletionTag, cleanupBuildTags } from "../tags"
 
 const samplePhases: PhaseInfo[] = [
-  { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/phases/01-scaffold.md" },
-  { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/phases/02-api.md" },
-  { id: "03-ui", index: 3, slug: "ui", filename: "03-ui.md", filepath: "/phases/03-ui.md" },
+  { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/phases/01-scaffold.md", dependsOn: [] },
+  { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/phases/02-api.md", dependsOn: [] },
+  { id: "03-ui", index: 3, slug: "ui", filename: "03-ui.md", filepath: "/phases/03-ui.md", dependsOn: [] },
 ]
 
 describe("state", () => {

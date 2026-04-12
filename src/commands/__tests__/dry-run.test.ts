@@ -66,6 +66,7 @@ describe("commands/dry-run", () => {
       networkAllowlist: [],
       extraContext: null,
       flavour: null,
+      isDeepEnsemble: false,
     }
   })
 
@@ -78,7 +79,7 @@ describe("commands/dry-run", () => {
     fs.writeFileSync(phaseFile, "# Scaffold Project\n\n## Goal\nSet up the project structure.\n\n## Acceptance Criteria\n- Directory exists\n- Config files present\n")
 
     vi.mocked(scanPhases).mockReturnValue([
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: phaseFile },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: phaseFile, dependsOn: [] },
     ])
 
     await runDryRun(config)

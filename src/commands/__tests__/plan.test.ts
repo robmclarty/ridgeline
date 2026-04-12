@@ -71,6 +71,7 @@ describe("commands/plan", () => {
       networkAllowlist: [],
       extraContext: null,
       flavour: null,
+      isDeepEnsemble: false,
     }
   })
 
@@ -95,7 +96,7 @@ describe("commands/plan", () => {
     fs.writeFileSync(config.constraintsPath, "constraints")
 
     const phases: PhaseInfo[] = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: path.join(config.phasesDir, "01-scaffold.md") },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: path.join(config.phasesDir, "01-scaffold.md"), dependsOn: [] },
     ]
 
     // Create the phase file so readFileSync in the summary works

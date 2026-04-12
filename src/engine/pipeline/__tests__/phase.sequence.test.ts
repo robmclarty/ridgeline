@@ -111,6 +111,7 @@ const config: RidgelineConfig = {
   networkAllowlist: [],
   extraContext: null,
   flavour: null,
+  isDeepEnsemble: false,
 }
 
 const phase: PhaseInfo = {
