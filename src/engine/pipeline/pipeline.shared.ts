@@ -5,6 +5,7 @@ import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { discoverPluginDirs, getCorePluginDir, PluginDir } from "../discovery/plugin.scan"
 import { printError } from "../../ui/output"
+import { PromptDocument } from "./prompt.document"
 
 /**
  * Discover agents and plugins, including the core hooks plugin in unsafe mode.
@@ -63,48 +64,35 @@ const pluginDirPaths = (dirs: PluginDir[]): string[] | undefined =>
   dirs.length > 0 ? dirs.map((p) => p.dir) : undefined
 
 /**
- * Append constraints.md and optional taste.md sections to a prompt sections array.
+ * Append constraints.md and optional taste.md sections to a prompt document.
  */
-export const appendConstraintsAndTaste = (sections: string[], config: RidgelineConfig): void => {
-  sections.push("## constraints.md\n")
-  sections.push(fs.readFileSync(config.constraintsPath, "utf-8"))
-  sections.push("")
+export const appendConstraintsAndTaste = (doc: PromptDocument, config: RidgelineConfig): void => {
+  doc.data("constraints.md", fs.readFileSync(config.constraintsPath, "utf-8"))
 
   if (config.tastePath) {
-    sections.push("## taste.md\n")
-    sections.push(fs.readFileSync(config.tastePath, "utf-8"))
-    sections.push("")
+    doc.data("taste.md", fs.readFileSync(config.tastePath, "utf-8"))
   }
 
   if (config.extraContext) {
-    sections.push("## Additional Context\n")
-    sections.push(config.extraContext)
-    sections.push("")
+    doc.data("Additional Context", config.extraContext)
   }
 }
 
 /**
- * Append design.md sections to a prompt sections array.
+ * Append design.md sections to a prompt document.
  * Checks both project-level (.ridgeline/design.md) and feature-level (buildDir/design.md).
  * Both can coexist — injected as separate labeled sections.
  */
-export const appendDesign = (sections: string[], config: RidgelineConfig): void => {
+export const appendDesign = (doc: PromptDocument, config: RidgelineConfig): void => {
   const projectDesignPath = path.join(config.ridgelineDir, "design.md")
   const featureDesignPath = path.join(config.buildDir, "design.md")
 
-  const hasProject = fs.existsSync(projectDesignPath)
-  const hasFeature = fs.existsSync(featureDesignPath)
-
-  if (hasProject) {
-    sections.push("## Project Design\n")
-    sections.push(fs.readFileSync(projectDesignPath, "utf-8"))
-    sections.push("")
+  if (fs.existsSync(projectDesignPath)) {
+    doc.data("Project Design", fs.readFileSync(projectDesignPath, "utf-8"))
   }
 
-  if (hasFeature) {
-    sections.push("## Feature Design\n")
-    sections.push(fs.readFileSync(featureDesignPath, "utf-8"))
-    sections.push("")
+  if (fs.existsSync(featureDesignPath)) {
+    doc.data("Feature Design", fs.readFileSync(featureDesignPath, "utf-8"))
   }
 }
 
@@ -125,11 +113,11 @@ const ASSET_USAGE_INSTRUCTIONS = `Key rules for using assets:
   These are informational only. Trust the user's asset files as provided.`
 
 /**
- * Append asset catalog reference to a prompt sections array.
+ * Append asset catalog reference to a prompt document.
  * Checks both build-level and project-level catalog paths.
  * Injects by file path reference (not inlined) to keep prompts lean.
  */
-export const appendAssetCatalog = (sections: string[], config: RidgelineConfig): void => {
+export const appendAssetCatalog = (doc: PromptDocument, config: RidgelineConfig): void => {
   const buildCatalogPath = path.join(config.buildDir, "asset-catalog.json")
   const projectCatalogPath = path.join(config.ridgelineDir, "asset-catalog.json")
   const catalogPath = fs.existsSync(buildCatalogPath)
@@ -140,14 +128,13 @@ export const appendAssetCatalog = (sections: string[], config: RidgelineConfig):
 
   if (!catalogPath) return
 
-  sections.push("## Available Assets\n")
-  sections.push(
+  doc.instruction(
+    "Available Assets",
     `Read the asset catalog at ${catalogPath} to understand what visual assets are available and how to use them. ` +
     "Do NOT attempt to interpret image files directly. The catalog contains visual descriptions, dimensions, " +
-    "animation metadata, and usage hints for every asset.\n"
+    "animation metadata, and usage hints for every asset.\n\n" +
+    ASSET_USAGE_INSTRUCTIONS,
   )
-  sections.push(ASSET_USAGE_INSTRUCTIONS)
-  sections.push("")
 }
 
 /**
@@ -156,11 +143,12 @@ export const appendAssetCatalog = (sections: string[], config: RidgelineConfig):
 export const commonInvokeOptions = (
   config: RidgelineConfig,
   prepared: { agents: ReturnType<typeof prepareAgentsAndPlugins>["agents"]; pluginDirs: PluginDir[] },
-  onStdout: (chunk: string) => void
+  onStdout: (chunk: string) => void,
+  cwd?: string,
 ) => ({
   agents: prepared.agents,
   pluginDirs: pluginDirPaths(prepared.pluginDirs),
-  cwd: process.cwd(),
+  cwd: cwd ?? process.cwd(),
   timeoutMs: config.timeoutMinutes * 60 * 1000,
   onStdout,
   onStderr: createStderrHandler(),

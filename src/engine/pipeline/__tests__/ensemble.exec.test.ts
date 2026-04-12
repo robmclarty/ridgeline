@@ -42,7 +42,7 @@ vi.mock("../../../ui/spinner", () => ({
 }))
 
 vi.mock("../plan.exec", () => ({
-  assembleBaseUserPrompt: vi.fn(() => "base user prompt"),
+  appendBaseUserPrompt: vi.fn(),
 }))
 
 vi.mock("../pipeline.shared", async (importOriginal) => {

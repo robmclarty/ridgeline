@@ -8,74 +8,67 @@ import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
+import { PromptDocument } from "./prompt.document"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
   phase: PhaseInfo,
   feedbackPath: string | null
 ): string => {
-  const sections: string[] = []
+  const doc = new PromptDocument()
 
-  appendConstraintsAndTaste(sections, config)
-  appendDesign(sections, config)
-  appendAssetCatalog(sections, config)
+  appendConstraintsAndTaste(doc, config)
+  appendDesign(doc, config)
+  appendAssetCatalog(doc, config)
 
   // Inject learnings from previous builds if available
   const learningsPath = path.join(config.ridgelineDir, "learnings.md")
   if (fs.existsSync(learningsPath)) {
     const learnings = fs.readFileSync(learningsPath, "utf-8").trim()
     if (learnings) {
-      sections.push("## Learnings from Previous Builds\n")
-      sections.push(learnings)
-      sections.push("")
+      doc.data("Learnings from Previous Builds", learnings)
     }
   }
 
   const handoff = readHandoff(config.buildDir)
   if (handoff) {
-    sections.push("## handoff.md\n")
-    sections.push(handoff)
-    sections.push("")
+    doc.data("handoff.md", handoff)
   }
 
-  sections.push("## Phase Spec\n")
-  sections.push(fs.readFileSync(phase.filepath, "utf-8"))
-  sections.push("")
+  doc.data("Phase Spec", fs.readFileSync(phase.filepath, "utf-8"))
 
   if (config.checkCommand) {
-    sections.push("## Check Command\n")
-    sections.push("Run this command after making changes to verify correctness:\n")
-    sections.push("```")
-    sections.push(config.checkCommand)
-    sections.push("```")
-    sections.push("")
+    doc.instruction(
+      "Check Command",
+      `Run this command after making changes to verify correctness:\n\n\`\`\`\n${config.checkCommand}\n\`\`\``,
+    )
   }
 
   // Handoff file path for the builder to append to
-  sections.push("## Handoff File\n")
-  sections.push(`Append your handoff notes to: ${path.join(config.buildDir, "handoff.md")}`)
-  sections.push("")
+  doc.instruction("Handoff File", `Append your handoff notes to: ${path.join(config.buildDir, "handoff.md")}`)
 
   if (feedbackPath && fs.existsSync(feedbackPath)) {
-    sections.push("## Reviewer Feedback (RETRY)\n")
-    sections.push("This is a retry. The reviewer found issues with your previous attempt.")
-    sections.push("Focus on fixing these issues. Do not redo work that already passed.\n")
-    sections.push(fs.readFileSync(feedbackPath, "utf-8"))
-    sections.push("")
+    doc.data(
+      "Reviewer Feedback (RETRY)",
+      "This is a retry. The reviewer found issues with your previous attempt.\n" +
+      "Focus on fixing these issues. Do not redo work that already passed.\n\n" +
+      fs.readFileSync(feedbackPath, "utf-8"),
+    )
   }
 
-  return sections.join("\n")
+  return doc.render()
 }
 
 export const invokeBuilder = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
-  feedbackPath: string | null
+  feedbackPath: string | null,
+  cwd?: string,
 ): Promise<ClaudeResult> => {
   const registry = buildAgentRegistry(resolveFlavour(config.flavour))
   const systemPrompt = registry.getCorePrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
+  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: cwd ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
   try {
@@ -84,7 +77,7 @@ export const invokeBuilder = async (
       userPrompt,
       model: config.model,
       allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
-      ...commonInvokeOptions(config, prepared, onStdout),
+      ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
 
     return result

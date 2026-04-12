@@ -178,7 +178,8 @@ describe("invokeReviewer", () => {
     const config = makeConfig()
     await invokeReviewer(config, makePhase(), "checkpoint-tag")
 
-    expect(appendDesign).toHaveBeenCalledWith(expect.any(Array), config)
+    const { PromptDocument } = await import("../prompt.document")
+    expect(appendDesign).toHaveBeenCalledWith(expect.any(PromptDocument), config)
   })
 
   it("includes visual review context when shapes matched", async () => {
