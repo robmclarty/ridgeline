@@ -7,29 +7,30 @@ import { describeAssets } from "../catalog/vision-describe"
 import { packAtlases } from "../catalog/pack-sprites"
 import { printInfo } from "../ui/output"
 
-/** Summarize asset counts by category. */
-const summarizeByCategory = (result: CatalogResult): string => {
+/** Count items by a string field and format as an indented list. */
+export const countByField = (
+  items: { [k: string]: unknown }[],
+  field: string,
+  indent = "    ",
+): string => {
   const counts = new Map<string, number>()
-  for (const a of result.catalog.assets) {
-    counts.set(a.category, (counts.get(a.category) ?? 0) + 1)
+  for (const item of items) {
+    const key = String(item[field])
+    counts.set(key, (counts.get(key) ?? 0) + 1)
   }
   return [...counts.entries()]
     .sort((a, b) => b[1] - a[1])
-    .map(([cat, n]) => `    ${cat}: ${n}`)
+    .map(([key, n]) => `${indent}${key}: ${n}`)
     .join("\n")
 }
 
+/** Summarize asset counts by category. */
+const summarizeByCategory = (result: CatalogResult): string =>
+  countByField(result.catalog.assets, "category")
+
 /** Summarize asset counts by media type. */
-const summarizeByMediaType = (result: CatalogResult): string => {
-  const counts = new Map<string, number>()
-  for (const a of result.catalog.assets) {
-    counts.set(a.mediaType, (counts.get(a.mediaType) ?? 0) + 1)
-  }
-  return [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([type, n]) => `    ${type}: ${n}`)
-    .join("\n")
-}
+const summarizeByMediaType = (result: CatalogResult): string =>
+  countByField(result.catalog.assets, "mediaType")
 
 export const runCatalog = async (buildName: string, opts: CatalogOptions): Promise<void> => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")

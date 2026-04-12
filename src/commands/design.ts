@@ -8,6 +8,7 @@ import { advancePipeline } from "../stores/state"
 import { runQAIntake, runOutputTurn } from "./qa-workflow"
 import { resolveAssetDirSafe } from "../catalog/resolve-asset-dir"
 import { AssetCatalog } from "../catalog/types"
+import { countByField } from "./catalog"
 
 /** Determine where to write design.md. */
 const resolveDesignOutputPath = (
@@ -77,14 +78,7 @@ const summarizeCatalog = (catalog: AssetCatalog): string => {
   lines.push(`${catalog.assets.length} assets cataloged.`)
 
   // Counts by category
-  const counts = new Map<string, number>()
-  for (const a of catalog.assets) {
-    counts.set(a.category, (counts.get(a.category) ?? 0) + 1)
-  }
-  const catList = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .map(([cat, n]) => `  ${cat}: ${n}`)
-    .join("\n")
+  const catList = countByField(catalog.assets, "category", "  ")
   if (catList) lines.push(`\nBy category:\n${catList}`)
 
   // Visual identity
