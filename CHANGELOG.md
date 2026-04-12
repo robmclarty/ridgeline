@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.8
+
+- Add DAG-based phase scheduling with dependency declarations (`depends_on` frontmatter, parallel wave detection, cycle/missing-dep validation)
+- Add two-round cross-specialist ensemble communication (`--deep-ensemble` flag for annotated synthesis)
+- Add compound learning via retrospective stage (`ridgeline retrospective <build>`, auto-invoked after successful builds)
+- Add structured JSONL logging on by default (`.ridgeline/builds/<build>/log.jsonl`, disable with `--no-structured-log`)
+- Add exponential backoff with jitter and error classification to retries (transient vs fatal short-circuit)
+- Cache agent registry by flavour path for process lifetime (perf improvement)
+- Replace `as any` casts in state.ts with typed `setPipelineStage` helper
+- Add warning logging to silent git tag operations
+- Add architecture rationale and stakeholder guide documentation with academic citations
+
 ## 0.7.7
 
 - Add 48 tests covering pipeline state helpers, flavour resolution, QA clarification loop, and design catalog context — overall statement coverage rises from 83.8% to 90.2%
