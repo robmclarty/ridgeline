@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.9
+
+- Add `PromptDocument` class separating trusted instructions from injected data across all prompt assembly (7 exec files migrated)
+- Add trajectory-based state recovery: `loadState()` reconstructs `BuildState` from `trajectory.jsonl` when `state.json` is missing or corrupt
+- Add git worktree-based parallel phase execution for DAG waves with `Promise.allSettled()` and sequential merge
+- Add filesystem locking (`withFileLock`) on `budget.json` and `state.json` for concurrent write safety
+- Add per-phase handoff fragments with post-wave consolidation for parallel builds
+- Thread optional `cwd` parameter through the full phase execution stack for worktree isolation
+
 ## 0.7.8
 
 - Add DAG-based phase scheduling with dependency declarations (`depends_on` frontmatter, parallel wave detection, cycle/missing-dep validation)
