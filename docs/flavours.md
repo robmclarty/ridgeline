@@ -282,6 +282,133 @@ Evaluate every decision through the lens of financial regulation. Flag anything
 that could create compliance exposure...
 ```
 
+## Step-by-step: creating a custom flavour
+
+This walkthrough builds a project-local fintech flavour from scratch.
+
+### 1. Choose your scope
+
+Start minimal. A flavour only needs `core/builder.md` and `core/reviewer.md` to
+work. Everything else falls back to ridgeline's defaults. Start with just these
+two and expand only when the defaults don't fit.
+
+### 2. Create the directory structure
+
+Create a project-local custom flavour directory:
+
+```sh
+mkdir -p .ridgeline/flavours/fintech/core
+```
+
+Ridgeline resolves custom flavours from three locations:
+
+- **Project-local:** `.ridgeline/flavours/` in your project root.
+- **User-global:** `~/.ridgeline/flavours/` for flavours shared across projects.
+- **Filesystem path:** any absolute or relative path passed to `--flavour`.
+
+### 3. Add flavour.json
+
+Create a `flavour.json` at the flavour root. This file is optional but useful
+for declaring recommended skills:
+
+```json
+{
+  "recommendedSkills": []
+}
+```
+
+See the [flavour.json and recommended skills](#flavourjson-and-recommended-skills)
+section above for details on what this file supports.
+
+### 4. Write core/builder.md
+
+Create `core/builder.md` with YAML frontmatter and domain-specific instructions:
+
+```markdown
+---
+name: builder
+description: Implements a single phase spec for fintech — transactions, ledgers, compliance
+model: opus
+---
+
+You are a fintech developer specializing in financial systems. You receive a single phase spec and implement it.
+
+Focus on:
+- Transaction integrity and atomicity
+- Ledger accuracy and audit trails
+- Regulatory compliance (PCI-DSS, SOX where applicable)
+- Secure handling of financial data
+
+## Your inputs
+
+1. **Phase spec** — your assignment.
+2. **constraints.md** — non-negotiable technical guardrails.
+3. **taste.md** (optional) — style preferences.
+4. **handoff.md** — accumulated state from prior phases.
+5. **feedback file** (retry only) — reviewer feedback on what failed.
+```
+
+Study the built-in flavours in `src/flavours/` for the full prompt structure
+each role expects. The example above is a starting point -- production flavours
+typically include more detailed instructions for tool use, output format, and
+domain conventions.
+
+### 5. Write core/reviewer.md
+
+Create `core/reviewer.md` with domain-specific acceptance criteria:
+
+```markdown
+---
+name: reviewer
+description: Reviews builds for fintech correctness — transaction safety, compliance, audit trails
+model: opus
+---
+
+You are a fintech code reviewer. Evaluate the builder's work against the phase spec and constraints.
+
+Pay special attention to:
+- Transaction boundaries and rollback safety
+- Data integrity across ledger operations
+- Input validation on financial amounts
+- Compliance with regulatory requirements in constraints.md
+```
+
+### 6. Add specialists (optional)
+
+You can add `specifiers/`, `planners/`, and `researchers/` directories with
+specialist agents that use the `perspective` frontmatter field. See
+[Writing a specialist](#writing-a-specialist) above for the format. Only add
+these when the default specialists don't bring enough domain judgment to the
+stage.
+
+### 7. Test your flavour
+
+Run any pipeline command with your custom flavour path:
+
+```sh
+ridgeline shape my-project --flavour .ridgeline/flavours/fintech
+```
+
+Or set it as the default in `.ridgeline/settings.json` so it applies to all
+commands:
+
+```json
+{
+  "flavour": ".ridgeline/flavours/fintech"
+}
+```
+
+### 8. Iterate
+
+Use `ridgeline dry-run` to preview plans without building. Check that the
+planner decomposes work with domain-appropriate phase boundaries -- for fintech,
+you'd expect phases around transaction processing, ledger reconciliation, and
+compliance validation rather than generic frontend/backend splits.
+
+Review the generated specs and plans to confirm the domain vocabulary is present
+and the acceptance criteria match your expectations. Adjust your core agent
+prompts and add specialists as gaps surface.
+
 ## Flavours vs. plugins
 
 Flavours and plugins serve different purposes:

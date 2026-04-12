@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { BuildState, PhaseState, PhaseInfo, PipelineState, PipelineStage } from "../types"
 import { checkpointTagName, verifyCompletionTag, cleanupBuildTags } from "./tags"
+import { atomicWriteSync } from "../utils/atomic-write"
 
 const statePath = (buildDir: string): string =>
   path.join(buildDir, "state.json")
@@ -30,7 +31,7 @@ export const loadState = (buildDir: string): BuildState | null => {
 }
 
 export const saveState = (buildDir: string, state: BuildState): void => {
-  fs.writeFileSync(statePath(buildDir), JSON.stringify(state, null, 2) + "\n")
+  atomicWriteSync(statePath(buildDir), JSON.stringify(state, null, 2) + "\n")
 }
 
 export const initState = (buildName: string, phases: PhaseInfo[]): BuildState => ({

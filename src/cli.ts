@@ -14,12 +14,33 @@ import { runCreate } from "./commands/create"
 import { runRewind } from "./commands/rewind"
 import { runResearch } from "./commands/research"
 import { runRefine } from "./commands/refine"
-import { killAllClaude } from "./engine/claude/claude.exec"
+import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 
 // Kill all Claude subprocesses on Ctrl+C before exiting
 process.on("SIGINT", () => {
   killAllClaude()
   setTimeout(() => process.exit(130), 2500)
+})
+
+// Kill Claude subprocesses on unhandled errors before crashing
+process.on("uncaughtException", (err) => {
+  killAllClaudeSync()
+  console.error("Fatal error:", err.message)
+  process.exit(1)
+})
+
+process.on("unhandledRejection", (reason) => {
+  killAllClaudeSync()
+  console.error(
+    "Unhandled rejection:",
+    reason instanceof Error ? reason.message : String(reason),
+  )
+  process.exit(1)
+})
+
+// Belt-and-suspenders: clean up any remaining subprocesses on exit
+process.on("exit", () => {
+  killAllClaudeSync()
 })
 
 type Opts = Record<string, string | boolean | undefined>
