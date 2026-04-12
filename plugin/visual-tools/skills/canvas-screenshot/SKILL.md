@@ -1,7 +1,7 @@
 ---
 name: canvas-screenshot
 description: Capture rendered canvas and WebGL frames from browser-based games and visual applications. Use when verifying canvas rendering, checking WebGL output, capturing game screenshots, or validating visual output from PixiJS, Phaser, Three.js, or raw canvas apps.
-compatibility: Requires agent-browser CLI (npm i -g @anthropic-ai/agent-browser) or Playwright (npm i -g playwright)
+compatibility: Requires agent-browser CLI (npm i -g agent-browser) or Playwright (npm i -g playwright)
 metadata:
   author: ridgeline
   version: "1.0"

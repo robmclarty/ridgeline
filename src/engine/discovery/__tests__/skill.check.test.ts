@@ -7,13 +7,13 @@ describe("parseSkillCompatibility", () => {
     const content = `---
 name: agent-browser
 description: Some skill
-compatibility: Requires agent-browser CLI (npm i -g @anthropic-ai/agent-browser)
+compatibility: Requires agent-browser CLI (npm i -g agent-browser)
 ---
 
 # Agent Browser
 `
     expect(parseSkillCompatibility(content)).toBe(
-      "Requires agent-browser CLI (npm i -g @anthropic-ai/agent-browser)"
+      "Requires agent-browser CLI (npm i -g agent-browser)"
     )
   })
 
