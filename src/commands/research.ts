@@ -6,6 +6,7 @@ import { advancePipeline } from "../stores/state"
 import { logTrajectory } from "../stores/trajectory"
 import { recordCost } from "../stores/budget"
 import { resolveResearchAllowlist } from "../stores/settings"
+import { printResearchSummary } from "../ui/summary"
 import { runRefine } from "./refine"
 
 type ResearchOptions = {
@@ -13,7 +14,7 @@ type ResearchOptions = {
   timeout: number
   maxBudgetUsd?: number
   flavour?: string
-  isDeep: boolean
+  isQuick: boolean
   auto: number | null
 }
 
@@ -60,7 +61,7 @@ const runSingleResearch = async (
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     flavour: opts.flavour ?? null,
-    isDeep: opts.isDeep,
+    isQuick: opts.isQuick,
     networkAllowlist: resolveResearchAllowlist(ridgelineDir),
     existingResearchMd,
     changelogMd,
@@ -68,7 +69,7 @@ const runSingleResearch = async (
   }
 
   logTrajectory(buildDir, "research_start", null,
-    `Research started (${opts.isDeep ? "deep" : "quick"} mode, iteration ${iteration})`)
+    `Research started (${opts.isQuick ? "quick" : "full"} mode, iteration ${iteration})`)
 
   const result = await invokeResearcher(specMd, constraintsMd, tasteMd, config)
 
@@ -90,9 +91,15 @@ const runSingleResearch = async (
 
   advancePipeline(buildDir, buildName, "research")
 
-  printInfo(`\nResearch complete: ${result.specialistResults.length} specialist(s) + synthesizer (iteration ${iteration})`)
-  printInfo(`Cost: $${result.totalCostUsd.toFixed(2)}`)
-  printInfo(`Output: ${path.join(buildDir, "research.md")}`)
+  printResearchSummary({
+    buildName,
+    buildDir,
+    iteration,
+    specialistNames: result.specialistNames,
+    specialistResults: result.specialistResults,
+    synthesizerResult: result.synthesizerResult,
+    totalCostUsd: result.totalCostUsd,
+  })
 }
 
 const runSingleRefine = async (
@@ -120,7 +127,7 @@ export const runResearch = async (buildName: string, opts: ResearchOptions): Pro
   if (opts.auto !== null) {
     // Auto mode: research → refine → research → refine ... for N iterations
     const iterations = opts.auto
-    printInfo(`Auto-research: ${iterations} iteration(s) (${opts.isDeep ? "deep" : "quick"} mode)\n`)
+    printInfo(`Auto-research: ${iterations} iteration(s) (${opts.isQuick ? "quick" : "full"} mode)\n`)
 
     for (let i = 1; i <= iterations; i++) {
       printInfo(`--- Iteration ${i} of ${iterations} ---\n`)

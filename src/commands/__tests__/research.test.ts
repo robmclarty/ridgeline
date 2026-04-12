@@ -49,6 +49,7 @@ const makeResult = () => ({
 })
 
 const makeEnsembleResult = () => ({
+  specialistNames: ["academic", "ecosystem"],
   specialistResults: [makeResult(), makeResult()],
   synthesizerResult: makeResult(),
   totalCostUsd: 1.50,
@@ -58,7 +59,7 @@ const makeEnsembleResult = () => ({
 const defaultOpts = {
   model: "opus",
   timeout: 15,
-  isDeep: false,
+  isQuick: false,
   auto: null as number | null,
 }
 

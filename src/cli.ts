@@ -178,7 +178,7 @@ program
   .option("--model <name>", "Model for research agents", "opus")
   .option("--timeout <minutes>", "Max duration per agent in minutes", "15")
   .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
-  .option("--deep", "Run full ensemble (3 specialists) instead of quick single-agent research")
+  .option("--quick", "Run a single random specialist instead of the full ensemble")
   .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 2)")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
@@ -195,7 +195,7 @@ program
         timeout: parseInt(String(opts.timeout ?? "15"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         flavour: (opts.flavour as string) ?? undefined,
-        isDeep: opts.deep === true,
+        isQuick: opts.quick === true,
         auto,
       })
     } catch (err) {
