@@ -1,6 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { BudgetState, BudgetEntry, ClaudeResult } from "../types"
+import { atomicWriteSync } from "../utils/atomic-write"
 
 const budgetPath = (buildDir: string): string =>
   path.join(buildDir, "budget.json")
@@ -14,7 +15,7 @@ export const loadBudget = (buildDir: string): BudgetState => {
 }
 
 export const saveBudget = (buildDir: string, budget: BudgetState): void => {
-  fs.writeFileSync(budgetPath(buildDir), JSON.stringify(budget, null, 2) + "\n")
+  atomicWriteSync(budgetPath(buildDir), JSON.stringify(budget, null, 2) + "\n")
 }
 
 export const recordCost = (
