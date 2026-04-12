@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types"
 
 // Mock all external dependencies
@@ -61,7 +61,7 @@ vi.mock("../../../git", () => ({
   commitAll: vi.fn(),
 }))
 
-import { runPhase } from "../phase.sequence"
+import { runPhase, backoffMs } from "../phase.sequence"
 import { invokeBuilder } from "../build.exec"
 import { invokeReviewer } from "../review.exec"
 import { createCheckpoint, createCompletionTag } from "../../../stores/tags"
@@ -119,6 +119,7 @@ const phase: PhaseInfo = {
   slug: "scaffold",
   filename: "01-scaffold.md",
   filepath: "/tmp/build/phases/01-scaffold.md",
+  dependsOn: [],
 }
 
 const makeState = (): BuildState => ({
@@ -142,7 +143,12 @@ const makeState = (): BuildState => ({
 describe("phaseRunner", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     vi.spyOn(console, "log").mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   describe("runPhase", () => {
@@ -213,6 +219,14 @@ describe("phaseRunner", () => {
       expect(result).toBe("failed")
     })
 
+    it("returns 'failed' immediately on authentication error without retrying", async () => {
+      vi.mocked(invokeBuilder).mockRejectedValue(new Error("Authentication failed. Refresh your OAuth token."))
+
+      const result = await runPhase(phase, config, makeState())
+      expect(result).toBe("failed")
+      expect(invokeBuilder).toHaveBeenCalledTimes(1)
+    })
+
     it("throws when phase not found in state", async () => {
       const state = makeState()
       state.phases = []
@@ -271,5 +285,35 @@ describe("phaseRunner", () => {
         expect.objectContaining({ status: "complete" })
       )
     })
+  })
+})
+
+describe("backoffMs", () => {
+  it("returns a value in the expected range for attempt 0", () => {
+    const delay = backoffMs(0)
+    // base = 1000, jitter = 0..500, so range [1000, 1500]
+    expect(delay).toBeGreaterThanOrEqual(1000)
+    expect(delay).toBeLessThanOrEqual(1500)
+  })
+
+  it("doubles the base per attempt", () => {
+    // Run many samples to check the range
+    for (let i = 0; i < 20; i++) {
+      const d1 = backoffMs(1) // base 2000
+      expect(d1).toBeGreaterThanOrEqual(2000)
+      expect(d1).toBeLessThanOrEqual(3000)
+
+      const d2 = backoffMs(2) // base 4000
+      expect(d2).toBeGreaterThanOrEqual(4000)
+      expect(d2).toBeLessThanOrEqual(6000)
+    }
+  })
+
+  it("caps at 60 seconds regardless of attempt number", () => {
+    for (let i = 0; i < 20; i++) {
+      const delay = backoffMs(10) // base = min(1024000, 60000) = 60000
+      expect(delay).toBeGreaterThanOrEqual(60_000)
+      expect(delay).toBeLessThanOrEqual(90_000)
+    }
   })
 })
