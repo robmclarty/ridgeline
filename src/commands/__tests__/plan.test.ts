@@ -98,6 +98,7 @@ describe("commands/plan", () => {
 
     const synthResult = makeResult()
     const ensemble: EnsembleResult = {
+      specialistNames: ["incremental", "vertical-slice", "risk-first"],
       specialistResults: [makeResult(), makeResult(), makeResult()],
       synthesizerResult: synthResult,
       totalCostUsd: 2.00,

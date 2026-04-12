@@ -24,6 +24,7 @@ import { runSpec } from "../spec"
 const defaultOpts = { model: "opus", timeout: 10 }
 
 const makeEnsembleResult = () => ({
+  specialistNames: ["completeness", "clarity"],
   specialistResults: [
     { success: true, result: "", durationMs: 1000, costUsd: 0.01, usage: { inputTokens: 100, outputTokens: 50, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 }, sessionId: "s1" },
     { success: true, result: "", durationMs: 1000, costUsd: 0.01, usage: { inputTokens: 100, outputTokens: 50, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 }, sessionId: "s2" },

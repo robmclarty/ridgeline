@@ -120,6 +120,7 @@ export type SpecialistProposal = {
 
 // Aggregate result from an ensemble stage (specifiers or planners)
 export type EnsembleResult = {
+  specialistNames: string[]
   specialistResults: ClaudeResult[]
   synthesizerResult: ClaudeResult
   totalCostUsd: number
