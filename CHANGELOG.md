@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.13
+
+- Fix shader-validate tool detection (binary is `naga`, not `naga-cli`)
+
 ## 0.7.12
 
 - Fix agent-browser package name in skill compatibility docs (was @anthropic-ai/agent-browser, correct package is agent-browser)
