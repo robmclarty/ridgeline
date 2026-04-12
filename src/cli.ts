@@ -14,6 +14,7 @@ import { runCreate } from "./commands/create"
 import { runRewind } from "./commands/rewind"
 import { runResearch } from "./commands/research"
 import { runRefine } from "./commands/refine"
+import { runCatalog } from "./commands/catalog"
 import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 
 // Kill all Claude subprocesses on Ctrl+C before exiting
@@ -212,6 +213,32 @@ program
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runRefine(await requireBuildName(buildName), parseBaseOpts(opts))
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+program
+  .command("catalog [build-name]")
+  .description("Process image assets into asset-catalog.json")
+  .option("--asset-dir <path>", "Path to asset directory")
+  .option("--describe", "Add vision-based descriptions for all assets")
+  .option("--force", "Re-process all assets ignoring content hash")
+  .option("--pack", "Generate sprite atlases after cataloging")
+  .option("--batch", "Batch multiple images per vision call")
+  .option("--model <name>", "Model for vision descriptions", "opus")
+  .option("--timeout <minutes>", "Max duration per vision call in minutes", "5")
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      await runCatalog(await requireBuildName(buildName), {
+        assetDir: opts.assetDir as string | undefined,
+        isDescribe: opts.describe === true,
+        isForce: opts.force === true,
+        isPack: opts.pack === true,
+        isBatch: opts.batch === true,
+        model: (opts.model as string) ?? "opus",
+        timeout: parseInt(String(opts.timeout ?? "5"), 10),
+      })
     } catch (err) {
       handleCommandError(err)
     }
