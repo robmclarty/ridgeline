@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.10
+
+- Extend asset catalog to support all media types (audio, video, text) alongside images
+- Add `--classify` flag to catalog command for AI-based category assignment of uncategorized files
+- Add filename heuristic classification (e.g., `bgm_*` → music, `sfx_*` → sfx) with Claude AI fallback
+- Add `mediaType`, `fileSizeBytes`, `extension`, `isClassified`, and `classificationConfidence` fields to `AssetEntry`
+- Add category defaults for audio (music, sfx, ambience, dialogue), video (cinematics), and text (data, docs)
+- Add mermaid diagrams to 7 docs: build-lifecycle, review-and-feedback, constraints-and-taste, research, flavours, sandboxing, shaping, and architecture (asset catalog flow)
+
 ## 0.7.9
 
 - Add `PromptDocument` class separating trusted instructions from injected data across all prompt assembly (7 exec files migrated)
