@@ -65,6 +65,38 @@ Every phase file must follow this structure exactly:
 <Relevant sections of spec.md for this phase, quoted or summarized.>
 ```
 
+## Phase Dependencies (Parallel Execution)
+
+Phases can declare dependencies to enable parallel execution. When a phase depends only on a subset of prior phases (not the immediately preceding one), add YAML frontmatter:
+
+```markdown
+---
+depends_on: [01-scaffold]
+---
+# Phase 3: API Endpoints
+...
+```
+
+**Rules for dependencies:**
+
+- Phases without frontmatter automatically depend on the immediately preceding phase (sequential execution).
+- A phase can only depend on phases with a lower index number.
+- If a phase reads or modifies files created by another phase, it must depend on that phase.
+- Phase 01 never has dependencies (it is the root).
+- Use dependencies to enable parallelism when phases work on independent parts of the codebase.
+- When in doubt, omit the frontmatter. False parallelism is worse than false sequentiality.
+
+**Example: fan-out pattern**
+
+```text
+01-scaffold       (no deps — root)
+02-api            depends_on: [01-scaffold]
+03-ui             depends_on: [01-scaffold]
+04-integration    depends_on: [02-api, 03-ui]
+```
+
+Phases 02 and 03 run in parallel after 01 completes. Phase 04 waits for both.
+
 ## Rules
 
 **No implementation details.** Do not specify creation order, internal structure, sub-agent assignments, implementation patterns, or approach. The builder decides all of this. You describe the destination, not the route.

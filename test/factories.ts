@@ -27,6 +27,7 @@ export const makePhase = (overrides?: Partial<PhaseInfo>): PhaseInfo => ({
   slug: "scaffold",
   filename: "01-scaffold.md",
   filepath: "/tmp/build/phases/01-scaffold.md",
+  dependsOn: [],
   ...overrides,
 })
 

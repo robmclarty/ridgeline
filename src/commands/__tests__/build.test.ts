@@ -49,7 +49,6 @@ vi.mock("../../stores/state", () => ({
       failedAt: null,
     })),
   })),
-  getNextIncompletePhase: vi.fn(),
   resetRetries: vi.fn(),
   markBuildRunning: vi.fn(),
   advancePipeline: vi.fn(),
@@ -78,7 +77,7 @@ vi.mock("../../engine/worktree", () => ({
 import { runBuild } from "../build"
 import { scanPhases } from "../../stores/phases"
 import { runPhase } from "../../engine/pipeline/phase.sequence"
-import { getNextIncompletePhase, loadState, resetRetries } from "../../stores/state"
+import { loadState, resetRetries } from "../../stores/state"
 import { loadBudget } from "../../stores/budget"
 import { detectSandbox } from "../../engine/claude/sandbox"
 import { printInfo } from "../../ui/output"
@@ -111,6 +110,7 @@ describe("commands/run", () => {
       networkAllowlist: [],
       extraContext: null,
       flavour: null,
+      isDeepEnsemble: false,
     }
 
     // Mock process.exit to throw instead of exiting
@@ -131,18 +131,12 @@ describe("commands/run", () => {
 
   it("runs phases sequentially until all complete", async () => {
     const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
-      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md" },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },
+      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md", dependsOn: [] },
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("passed")
-
-    // Simulate getNextIncompletePhase returning each phase then null
-    vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce(null)
 
     await runBuild(config)
     expect(runPhase).toHaveBeenCalledTimes(2)
@@ -150,14 +144,12 @@ describe("commands/run", () => {
 
   it("halts on first phase failure", async () => {
     const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
-      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md" },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },
+      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md", dependsOn: [] },
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("failed")
-    vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
 
     try {
       await runBuild(config)
@@ -170,7 +162,7 @@ describe("commands/run", () => {
 
   it("calls resetRetries and prints resume message when state exists", async () => {
     const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
@@ -181,9 +173,6 @@ describe("commands/run", () => {
       phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
     })
     vi.mocked(runPhase).mockResolvedValue("passed")
-    vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce(null)
 
     await runBuild(config)
 
@@ -193,16 +182,12 @@ describe("commands/run", () => {
 
   it("breaks when budget is exceeded", async () => {
     const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
-      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md" },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },
+      { id: "02-api", index: 2, slug: "api", filename: "02-api.md", filepath: "/p/02-api.md", dependsOn: [] },
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("passed")
-    vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce({ id: "02-api", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce(null)
 
     // After first phase, budget exceeds limit
     vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 15.00 })
@@ -217,14 +202,11 @@ describe("commands/run", () => {
 
   it("skips sandbox detection when unsafe is true", async () => {
     const phases = [
-      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md" },
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
     vi.mocked(runPhase).mockResolvedValue("passed")
-    vi.mocked(getNextIncompletePhase)
-      .mockReturnValueOnce({ id: "01-scaffold", status: "pending", checkpointTag: "", completionTag: null, retries: 0, duration: null, completedAt: null, failedAt: null })
-      .mockReturnValueOnce(null)
     vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
 
     config.unsafe = true
