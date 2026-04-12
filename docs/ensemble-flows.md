@@ -353,7 +353,7 @@ directory. If missing, the run fails immediately.
 No single agent holds all viewpoints. A simplicity-focused agent will not
 think about edge cases. A thoroughness-focused agent will not think about time
 to first demo. A velocity-focused agent will not think about long-term
-robustness. The ensemble ensures all lenses are applied.
+robustness. The ensemble ensures all lenses are applied.[^1]
 
 ```mermaid
 flowchart TB
@@ -399,7 +399,7 @@ synthesizer reads the rationale behind each proposal and decides in context.
 A concern raised by only one specialist can override consensus from the other
 two if the reasoning is compelling -- a security risk from the thoroughness
 planner, for example, should not be dismissed because simplicity and velocity
-did not mention it.
+did not mention it.[^2]
 
 The value is not in averaging perspectives. It is in ensuring nothing important
 is missed.
@@ -492,3 +492,6 @@ All three ensembles are designed to be extended without code changes:
   can be reused for any future pipeline stage that benefits from multi-
   perspective reasoning. Supply a config object and a draft type, and the
   engine handles the rest.
+
+[^1]: **Further reading:** [7 Ensemble AI Patterns for Reliable LLM Systems](https://dev.to/atanasster/7-ensemble-ai-patterns-for-reliable-llm-systems-200l) — Catalogues ensemble patterns including specialist diversity and synthesis strategies for improving LLM output quality.
+[^2]: **Further reading:** [The AI Code Agent Orchestra](https://addyosmani.com/blog/code-agent-orchestra/) — Addy Osmani's analysis of multi-agent orchestration, including how synthesis-over-voting produces better outcomes than mechanical aggregation.

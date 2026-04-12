@@ -123,7 +123,7 @@ Why structured over prose? Three reasons. First, the harness can parse it
 mechanically to decide pass/fail, generate feedback files, and update state.
 Second, the builder on retry gets actionable information -- specific criteria,
 specific files, specific required states -- rather than a wall of text to
-interpret. Third, the structured format is auditable: the trajectory log records
+interpret.[^1] Third, the structured format is auditable: the trajectory log records
 each verdict, making it possible to trace exactly why a phase passed or failed.
 
 ## Acceptance Criteria as the Only Gate
@@ -183,7 +183,7 @@ constraints, and re-run `ridgeline build` to resume.
 The cap prevents infinite loops where the builder and reviewer disagree about
 how to satisfy a criterion. This can happen when acceptance criteria are
 ambiguous or when the criterion requires capabilities the builder does not have.
-The right fix is usually in the spec, not in more retries.
+The right fix is usually in the spec, not in more retries.[^2]
 
 ## When Review Breaks Down
 
@@ -214,4 +214,8 @@ rather than relying on the reviewer to test the integration directly.
 The general principle: when review breaks down, the solution is better criteria,
 not a smarter reviewer. The reviewer is a verification engine. Feed it
 verifiable inputs and it works well. Feed it ambiguity and it struggles -- just
-as any verification system would.
+as any verification system would.[^3]
+
+[^1]: **Further reading:** [Code Review Effectiveness](https://www.microsoft.com/en-us/research/publication/code-reviewing-in-the-trenches-understanding-challenges-best-practices-and-tool-needs/) — Microsoft Research study on code review practices, finding that structured, specific feedback significantly improves defect detection over unstructured prose reviews.
+[^2]: **Further reading:** [Expectations, Outcomes, and Challenges of Modern Code Review](https://sback.it/publications/icse2013.pdf) — Bacchelli and Bird's foundational study showing that the primary value of code review is finding defects early, and that clear criteria are the strongest predictor of review effectiveness.
+[^3]: **Further reading:** [Modern Code Review: A Case Study at Google](https://research.google/pubs/modern-code-review-a-case-study-at-google/) — Google's analysis of code review at scale, confirming that mechanically verifiable criteria produce more consistent review outcomes than subjective assessments.

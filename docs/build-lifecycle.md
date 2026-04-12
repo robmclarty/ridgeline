@@ -199,7 +199,7 @@ When a phase fails review, the harness writes a feedback file
 fresh context window containing the same inputs plus this feedback. The feedback
 targets the builder's attention on what specifically needs fixing.
 
-Retries are capped (default: 2, configurable via `--max-retries`). If all
+Retries are capped (default: 2, configurable via `--max-retries`).[^1] If all
 retries are exhausted:
 
 - The phase is marked as `failed` in state.json.
@@ -208,7 +208,7 @@ retries are exhausted:
 - The user receives recovery instructions.
 
 The user can then inspect the code, edit the phase spec or constraints, and
-re-run `ridgeline build my-feature`. The harness resumes from the failed phase.
+re-run `ridgeline build my-feature`. The harness resumes from the failed phase.[^2]
 
 ## Step 9: Completion
 
@@ -261,4 +261,8 @@ phases that are not converging.
 
 **After completion.** Inspect the merged result on your branch. Review the git
 history (each phase's commits are preserved). Check budget.json for cost
-analysis. Read trajectory.jsonl for the full event log.
+analysis. Read trajectory.jsonl for the full event log.[^3]
+
+[^1]: **Further reading:** [Timeouts, Retries, and Backoff with Jitter](https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/) — AWS builders' library on retry strategies, including why capping retries and adding structured backoff prevents cascading failures.
+[^2]: **Further reading:** [Event Sourcing Pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing) — The checkpoint-and-resume model mirrors event sourcing, where state is reconstructed from an append-only log of events rather than mutable snapshots.
+[^3]: **Further reading:** [Building Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — Anthropic's guidance on trajectory logging and cost attribution as essential observability for agent harnesses.
