@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.4
+
+- Default research command now runs all 3 specialists (academic, ecosystem, competitive); add `--quick` flag for single random specialist (replaces `--deep`)
+- Show spinner during research agenda-building phase instead of silent pause
+- Render ensemble synthesizer streaming text in dim grey to match other command output
+- Add structured summary table for research command with per-specialist duration, cost, and token breakdown
+- Extract shared `formatDuration`/`formatTokens` into `src/ui/summary.ts`
+
 ## 0.7.3
 
 - Add full agent coverage for web-game and web-ui flavours (40 new agents: core, planners, researchers, specialists, specifiers)
