@@ -37,7 +37,7 @@ vi.mock("../../stores/state", () => ({
   initState: vi.fn((name, phases) => ({
     buildName: name,
     startedAt: "2024-01-01T00:00:00.000Z",
-    pipeline: { shape: "pending", spec: "pending", plan: "pending", build: "pending" },
+    pipeline: { shape: "pending", design: "pending", spec: "pending", research: "pending", refine: "pending", plan: "pending", build: "pending" },
     phases: phases.map((p: any) => ({
       id: p.id,
       status: "pending",
@@ -110,6 +110,7 @@ describe("commands/run", () => {
       unsafe: false,
       networkAllowlist: [],
       extraContext: null,
+      flavour: null,
     }
 
     // Mock process.exit to throw instead of exiting
@@ -176,7 +177,7 @@ describe("commands/run", () => {
     vi.mocked(loadState).mockReturnValue({
       buildName: "test",
       startedAt: "2024-01-01T00:00:00.000Z",
-      pipeline: { shape: "complete", spec: "complete", plan: "complete", build: "pending" },
+      pipeline: { shape: "complete", design: "skipped", spec: "complete", research: "skipped", refine: "skipped", plan: "complete", build: "pending" },
       phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
     })
     vi.mocked(runPhase).mockResolvedValue("passed")

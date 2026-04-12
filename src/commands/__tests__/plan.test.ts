@@ -55,6 +55,7 @@ describe("commands/plan", () => {
 
     config = {
       buildName: "test",
+      ridgelineDir: tmpDir,
       buildDir,
       constraintsPath: path.join(tmpDir, "constraints.md"),
       tastePath: null,
@@ -66,6 +67,10 @@ describe("commands/plan", () => {
       checkTimeoutSeconds: 1200,
       checkCommand: null,
       maxBudgetUsd: null,
+      unsafe: false,
+      networkAllowlist: [],
+      extraContext: null,
+      flavour: null,
     }
   })
 

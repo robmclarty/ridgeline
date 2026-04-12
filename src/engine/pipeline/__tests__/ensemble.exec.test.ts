@@ -319,7 +319,9 @@ describe("invokePlanner", () => {
     vi.mocked(buildAgentRegistry).mockReturnValueOnce({
       getCorePrompt: vi.fn(() => "synthesizer prompt"),
       getSpecialists: vi.fn(() => [{ perspective: "velocity", overlay: "Build fast" }]),
+      getSpecialist: vi.fn(() => null),
       getContext: vi.fn(() => "planner context"),
+      getGaps: vi.fn(() => null),
       getSubAgents: vi.fn(() => []),
       getAgentsFlag: vi.fn(() => ({})),
     })
@@ -358,7 +360,9 @@ describe("invokePlanner", () => {
     vi.mocked(buildAgentRegistry).mockReturnValueOnce({
       getCorePrompt: vi.fn(() => "synthesizer prompt"),
       getSpecialists: vi.fn(() => [{ perspective: "speed", overlay: "Build fast" }]),
+      getSpecialist: vi.fn(() => null),
       getContext: vi.fn(() => "planner context"),
+      getGaps: vi.fn(() => null),
       getSubAgents: vi.fn(() => []),
       getAgentsFlag: vi.fn(() => ({})),
     })

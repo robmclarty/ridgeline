@@ -43,7 +43,9 @@ describe("prepareAgentsAndPlugins", () => {
     const mockRegistry = {
       getCorePrompt: vi.fn(() => ""),
       getSpecialists: vi.fn(() => []),
+      getSpecialist: vi.fn(() => null),
       getContext: vi.fn(() => null),
+      getGaps: vi.fn(() => null),
       getSubAgents: vi.fn(() => []),
       getAgentsFlag: vi.fn(() => agents),
     }
@@ -61,7 +63,9 @@ describe("prepareAgentsAndPlugins", () => {
     const mockRegistry = {
       getCorePrompt: vi.fn(() => ""),
       getSpecialists: vi.fn(() => []),
+      getSpecialist: vi.fn(() => null),
       getContext: vi.fn(() => null),
+      getGaps: vi.fn(() => null),
       getSubAgents: vi.fn(() => []),
       getAgentsFlag: vi.fn(() => ({})),
     }
@@ -82,7 +86,7 @@ describe("prepareAgentsAndPlugins", () => {
   it("does not append core plugin dir when sandbox is set", () => {
     vi.mocked(discoverPluginDirs).mockReturnValue([])
 
-    const provider = { name: "bwrap", command: "bwrap", checkReady: () => null, buildArgs: () => [] }
+    const provider = { name: "bwrap" as const, command: "bwrap", checkReady: () => null, buildArgs: () => [] as string[] }
     const result = prepareAgentsAndPlugins(makeConfig({ unsafe: true, sandboxProvider: provider }))
     expect(result.pluginDirs).toEqual([])
   })
@@ -300,7 +304,7 @@ describe("commonInvokeOptions", () => {
   })
 
   it("passes through sandbox and network config", () => {
-    const provider = { name: "bwrap", command: "bwrap", checkReady: () => null, buildArgs: () => [] }
+    const provider = { name: "bwrap" as const, command: "bwrap", checkReady: () => null, buildArgs: () => [] as string[] }
     const prepared = { agents: undefined, pluginDirs: [] as { dir: string; createdPluginJson: boolean }[] }
 
     const result = commonInvokeOptions(

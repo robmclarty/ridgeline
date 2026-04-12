@@ -50,10 +50,10 @@ describe("commands/dry-run", () => {
 
     config = {
       buildName: "test",
+      ridgelineDir: tmpDir,
       buildDir: tmpDir,
       constraintsPath: path.join(tmpDir, "constraints.md"),
       tastePath: null,
-
       handoffPath: path.join(tmpDir, "handoff.md"),
       phasesDir,
       model: "opus",
@@ -62,6 +62,10 @@ describe("commands/dry-run", () => {
       checkTimeoutSeconds: 1200,
       checkCommand: null,
       maxBudgetUsd: null,
+      unsafe: false,
+      networkAllowlist: [],
+      extraContext: null,
+      flavour: null,
     }
   })
 
