@@ -1,7 +1,7 @@
 ---
 name: agent-browser
 description: Capture annotated browser screenshots with numbered element labels for visual verification. Use when building or reviewing web UIs, verifying responsive layouts, checking visual output of canvas/WebGL content, or inspecting rendered pages. Trigger when asked to screenshot, verify layout, check rendering, or visually inspect a running web app.
-compatibility: Requires agent-browser CLI (npm i -g @anthropic-ai/agent-browser)
+compatibility: Requires agent-browser CLI (npm i -g agent-browser)
 metadata:
   author: ridgeline
   version: "1.0"
