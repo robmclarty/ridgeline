@@ -6,6 +6,9 @@ import { runSpec, SpecOptions } from "./spec"
 import { resolveBuildDir, resolveConfig } from "../config"
 import { runPlan } from "./plan"
 import { runBuild } from "./build"
+import { resolveFlavour } from "../engine/discovery/flavour.resolve"
+import { loadFlavourConfig } from "../engine/discovery/flavour.config"
+import { checkRecommendedSkills, formatSkillAvailability } from "../engine/discovery/skill.check"
 
 type CreateOptions = {
   model: string
@@ -55,6 +58,18 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
     console.log(`  ${label.padEnd(16)} ${icon}`)
   }
   console.log("")
+
+  // Show recommended tools for the flavour
+  const flavourDir = resolveFlavour(opts.flavour ?? null)
+  const flavourConfig = loadFlavourConfig(flavourDir)
+  if (flavourConfig.recommendedSkills.length > 0) {
+    const availability = checkRecommendedSkills(flavourConfig.recommendedSkills)
+    const display = formatSkillAvailability(availability)
+    if (display) {
+      console.log(display)
+      console.log("")
+    }
+  }
 
   if (!nextStage) {
     printInfo("All stages complete.")
