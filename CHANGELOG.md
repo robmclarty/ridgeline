@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.3
+
+- Add full agent coverage for web-game and web-ui flavours (40 new agents: core, planners, researchers, specialists, specifiers)
+- Add domain gap checklists for web-game (browser compatibility, WebGL, audio autoplay) and web-ui (design system, responsive, a11y)
+- Add `flavour.json` with `recommendedSkills` for all 12 remaining flavours
+- Add `ridgeline check` command for flavour tool prerequisites
+
 ## 0.7.2
 
 - Add crash-safety handlers (`uncaughtException`, `unhandledRejection`, `exit`) to kill orphaned Claude subprocesses when Node crashes
