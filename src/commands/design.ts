@@ -53,6 +53,7 @@ const loadCatalogContext = async (
         isForce: false,
         isPack: false,
         isBatch: false,
+        isClassify: false,
       })
       // Re-check for catalog
       catalogPath = catalogPaths.find((p) => fs.existsSync(p)) ?? null

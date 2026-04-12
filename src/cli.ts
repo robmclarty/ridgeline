@@ -223,19 +223,21 @@ program
 
 program
   .command("catalog [build-name]")
-  .description("Process image assets into asset-catalog.json")
+  .description("Catalog media assets into asset-catalog.json")
   .option("--asset-dir <path>", "Path to asset directory")
   .option("--describe", "Add vision-based descriptions for all assets")
+  .option("--classify", "AI-classify uncategorized files into categories")
   .option("--force", "Re-process all assets ignoring content hash")
   .option("--pack", "Generate sprite atlases after cataloging")
   .option("--batch", "Batch multiple images per vision call")
-  .option("--model <name>", "Model for vision descriptions", "opus")
-  .option("--timeout <minutes>", "Max duration per vision call in minutes", "5")
+  .option("--model <name>", "Model for vision and classification", "opus")
+  .option("--timeout <minutes>", "Max duration per AI call in minutes", "5")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runCatalog(await requireBuildName(buildName), {
         assetDir: opts.assetDir as string | undefined,
         isDescribe: opts.describe === true,
+        isClassify: opts.classify === true,
         isForce: opts.force === true,
         isPack: opts.pack === true,
         isBatch: opts.batch === true,
