@@ -24,7 +24,7 @@ tracks costs, and supports resumable execution when things go wrong.
    ecosystem, competitive) investigates the spec using web sources, then a
    synthesizer merges findings into `research.md`. A gap analysis agenda step
    runs before specialist dispatch to focus research on spec gaps. Findings
-   accumulate across iterations rather than being overwritten. A quick
+   accumulate across iterations rather than being overwritten. A `--quick`
    single-agent mode is also available. See [Research and Refine](docs/research.md).
 5. **Refine** (optional) -- the refiner agent rewrites `spec.md` incorporating
    research findings and writes `spec.changelog.md` documenting what changed.
@@ -71,7 +71,7 @@ ridgeline my-feature "Build a REST API for task management"
 ridgeline shape my-feature "Build a REST API for task management"
 ridgeline design my-feature            # optional: establish visual design system
 ridgeline spec my-feature
-ridgeline research my-feature --deep   # optional: enrich spec with web research
+ridgeline research my-feature           # optional: enrich spec with web research
 ridgeline refine my-feature            # optional: merge research into spec
 ridgeline plan my-feature
 ridgeline dry-run my-feature   # preview before committing
@@ -148,7 +148,7 @@ directory. Optional step between `spec` and `plan`. See
 | `--model <name>` | `opus` | Model for research agents |
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
-| `--deep` | off | Run full ensemble (3 specialists) instead of quick single-agent |
+| `--quick` | off | Run a single random specialist instead of the full ensemble |
 | `--auto [iterations]` | off | Auto-loop: research + refine for N iterations (default 2) |
 | `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
