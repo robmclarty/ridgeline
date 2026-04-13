@@ -21,46 +21,33 @@ prevents costly mistakes downstream. A builder that implements a deprecated API
 or misses a built-in framework feature wastes phases and budget. Research
 catches these problems early -- before planning, not after building.
 
-## Quick vs Deep Mode
+## Full vs Quick Mode
 
 ```mermaid
 flowchart TB
     spec["spec.md +\nconstraints.md"] --> agenda["Agenda step\n(sonnet)"]
 
+    agenda --> full_path
     agenda --> quick_path
-    agenda --> deep_path
 
-    subgraph quick_path ["Quick Mode (default)"]
-        eco["Ecosystem\nspecialist"]
-    end
-
-    subgraph deep_path ["Deep Mode (--deep)"]
+    subgraph full_path ["Full Mode (default)"]
         direction TB
         acad["Academic"] ~~~ eco2["Ecosystem"] ~~~ comp["Competitive"]
     end
 
-    quick_path --> synth["Synthesizer"]
-    deep_path --> synth
+    subgraph quick_path ["Quick Mode (--quick)"]
+        eco["Ecosystem\nspecialist"]
+    end
+
+    full_path --> synth["Synthesizer"]
+    quick_path --> synth
     synth --> research_md["research.md"]
 ```
 
-### Quick mode (default)
+### Full mode (default)
 
 ```sh
 ridgeline research my-feature
-```
-
-Runs one specialist (ecosystem) plus a synthesizer. Fast and focused on the
-technologies mentioned in `constraints.md` -- latest docs, recent releases,
-migration guides, built-in features you might not know about.
-
-Use quick mode when the tech stack is familiar and you just want a sanity check
-against the latest documentation.
-
-### Deep mode
-
-```sh
-ridgeline research my-feature --deep
 ```
 
 Runs three specialists in parallel plus a synthesizer. Each specialist
@@ -72,8 +59,21 @@ investigates through a different lens:
 | **Ecosystem** | Framework docs, library features, version updates | Official docs, release notes, changelogs, GitHub repos, package registries |
 | **Competitive** | How other tools solve the same problem | GitHub repos, product pages, developer discussions, Hacker News, Reddit |
 
-Use deep mode when the spec domain is unfamiliar, the architecture is complex,
+Use full mode when the spec domain is unfamiliar, the architecture is complex,
 or you want competitive analysis to inform the design.[^1]
+
+### Quick mode
+
+```sh
+ridgeline research my-feature --quick
+```
+
+Runs one specialist (ecosystem) plus a synthesizer. Fast and focused on the
+technologies mentioned in `constraints.md` -- latest docs, recent releases,
+migration guides, built-in features you might not know about.
+
+Use quick mode when the tech stack is familiar and you just want a sanity check
+against the latest documentation.
 
 ### Research agenda pre-step
 
@@ -119,7 +119,7 @@ ranking recommendations by impact.[^2]
 ```sh
 ridgeline research my-feature --auto        # 2 iterations (default)
 ridgeline research my-feature --auto 5      # 5 iterations
-ridgeline research my-feature --deep --auto 2  # deep + 2 iterations
+ridgeline research my-feature --auto 2          # 2 iterations
 ```
 
 Auto mode chains research and refine into an iterative loop:
@@ -289,7 +289,7 @@ Run each step separately, reviewing and editing between them:
 
 ```sh
 ridgeline spec my-feature
-ridgeline research my-feature --deep   # produces research.md
+ridgeline research my-feature           # produces research.md
 # Review and edit research.md -- remove noise, add notes
 ridgeline refine my-feature            # rewrites spec.md, writes spec.changelog.md
 # Review the updated spec.md and spec.changelog.md
@@ -344,11 +344,11 @@ agenda step (1 sonnet call):
 
 | Configuration | Claude calls | Approximate cost profile |
 |---------------|-------------|--------------------------|
-| Quick research | 3 (1 agenda + 1 specialist + 1 synthesizer) | Low |
-| Deep research | 5 (1 agenda + 3 specialists + 1 synthesizer) | Moderate |
+| Full research (default) | 5 (1 agenda + 3 specialists + 1 synthesizer) | Moderate |
+| Quick research (`--quick`) | 3 (1 agenda + 1 specialist + 1 synthesizer) | Low |
 | Refine | 1 | Low |
-| `--auto 2` (quick) | 7 (2 x (1 agenda + 1 specialist + 1 synthesizer) + 2 x refine) | Low-Moderate |
-| `--auto 2 --deep` | 11 (2 x (1 agenda + 3 specialists + 1 synthesizer) + 2 x refine) | Moderate |
+| `--auto 2` | 11 (2 x (1 agenda + 3 specialists + 1 synthesizer) + 2 x refine) | Moderate |
+| `--auto 2 --quick` | 7 (2 x (1 agenda + 1 specialist + 1 synthesizer) + 2 x refine) | Low-Moderate |
 
 `--auto 2` is the default when `--auto` is passed without a number.
 
@@ -367,7 +367,7 @@ directory.
 | `--model <name>` | `opus` | Model for research agents |
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
-| `--deep` | off | Run full ensemble (3 specialists) instead of quick single-agent |
+| `--quick` | off | Run a single random specialist instead of the full ensemble |
 | `--auto [iterations]` | off | Auto-loop: research + refine for N iterations (default 2 if no number given) |
 | `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
