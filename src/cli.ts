@@ -157,19 +157,24 @@ program
   })
 
 program
-  .command("spec [build-name]")
-  .description("Generate spec.md, constraints.md, and taste.md from shape.md via ensemble")
+  .command("spec [build-name] [input]")
+  .description(
+    "Generate spec.md, constraints.md, and taste.md from shape.md via ensemble. " +
+      "Optionally pass an input: path to a file (convention: idea.md) or raw text " +
+      "treated as authoritative source material the synthesizer preserves alongside shape.md.",
+  )
   .option("--model <name>", "Model for specialists and synthesizer", "opus")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
-  .action(async (buildName: string | undefined, opts: Opts) => {
+  .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runSpec(await requireBuildName(buildName), {
         model: (opts.model as string) ?? "opus",
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         flavour: (opts.flavour as string) ?? undefined,
+        input,
       })
     } catch (err) {
       handleCommandError(err)

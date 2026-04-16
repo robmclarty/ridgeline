@@ -131,6 +131,19 @@ const assembleSpecialistUserPrompt = (
 
   doc.data("shape.md", shapeMd)
 
+  if (config.userInput) {
+    doc.data("User-Provided Spec Draft", config.userInput)
+    doc.instruction(
+      "Authority of User Input",
+      [
+        "The user has provided an existing spec draft (above) as authoritative source material.",
+        "Treat its content as higher priority than your own defaults: preserve its detail, features, acceptance criteria, constraints, and taste preferences where they do not directly contradict shape.md.",
+        "Your job is to sharpen, enrich, and fill gaps — not to replace the user's draft with a rewrite.",
+        "If a detail in the user draft conflicts with shape.md, note the conflict in `concerns` and defer to shape.md's declared scope.",
+      ].join(" "),
+    )
+  }
+
   // Inject design.md for visual specialist context
   const ridgelineDir = path.join(config.buildDir, "..", "..")
   const projectDesignPath = path.join(ridgelineDir, "design.md")
@@ -219,10 +232,24 @@ const assembleSynthesizerUserPrompt = (
   shapeMd: string,
   buildDir: string,
   drafts: { perspective: string; draft: SpecifierDraft }[],
+  userInput: string | null,
 ): string => {
   const doc = new PromptDocument()
 
   doc.data("shape.md", shapeMd)
+
+  if (userInput) {
+    doc.data("User-Provided Spec Draft", userInput)
+    doc.instruction(
+      "Authority of User Input",
+      [
+        "The user has provided an existing spec draft (above) as authoritative source material.",
+        "Treat it as higher priority than the specialist proposals: preserve the user's detail, features, acceptance criteria, constraints, and taste preferences wherever they do not contradict shape.md.",
+        "Use the specialist proposals to sharpen, enrich, and fill gaps — do not replace the user's draft with a rewrite.",
+        "If specialists and the user draft disagree on a non-conflicting detail, favor the user draft.",
+      ].join(" "),
+    )
+  }
 
   const proposalLines: string[] = []
   for (const { perspective, draft } of drafts) {
@@ -249,6 +276,8 @@ export type SpecEnsembleConfig = {
   buildDir: string
   flavour: string | null
   matchedShapes: string[]
+  /** Optional user-authored spec content treated as authoritative source material. */
+  userInput: string | null
 }
 
 export const invokeSpecifier = async (
@@ -278,7 +307,7 @@ export const invokeSpecifier = async (
 
     synthesizerPrompt: registry.getCorePrompt("specifier.md"),
     buildSynthesizerUserPrompt: (drafts) =>
-      assembleSynthesizerUserPrompt(shapeMd, config.buildDir, drafts),
+      assembleSynthesizerUserPrompt(shapeMd, config.buildDir, drafts, config.userInput),
     synthesizerTools: ["Write"],
 
     model: config.model,

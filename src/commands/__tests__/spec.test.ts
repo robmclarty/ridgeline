@@ -96,4 +96,75 @@ describe("commands/spec", () => {
 
     await expect(runSpec("my-build", defaultOpts)).rejects.toThrow("required files")
   })
+
+  it("reads input from file when input option is a file path", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+    fs.mkdirSync(buildDir, { recursive: true })
+    fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
+
+    const inputFile = path.join(tmpDir, "idea.md")
+    fs.writeFileSync(inputFile, "# My hand-authored spec\n\nDetailed feature A.")
+
+    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+      fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      return makeEnsembleResult()
+    })
+
+    await runSpec("my-build", { ...defaultOpts, input: inputFile })
+
+    expect(invokeSpecifier).toHaveBeenCalledTimes(1)
+    const [, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    expect(config.userInput).toContain("hand-authored spec")
+    expect(config.userInput).toContain("Detailed feature A")
+  })
+
+  it("passes inline text as userInput when input is not a file", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+    fs.mkdirSync(buildDir, { recursive: true })
+    fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
+
+    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+      fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      return makeEnsembleResult()
+    })
+
+    await runSpec("my-build", { ...defaultOpts, input: "must use postgres 16" })
+
+    const [, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    expect(config.userInput).toBe("must use postgres 16")
+  })
+
+  it("passes null userInput when no input option is provided", async () => {
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+    fs.mkdirSync(buildDir, { recursive: true })
+    fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
+
+    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+      fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
+      fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
+      return makeEnsembleResult()
+    })
+
+    await runSpec("my-build", defaultOpts)
+
+    const [, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    expect(config.userInput).toBeNull()
+  })
+
+  it("aborts without calling ensemble when spec.md already exists (non-TTY)", async () => {
+    // vitest runs without a TTY, so confirmOverwrite short-circuits to abort.
+    const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
+    fs.mkdirSync(buildDir, { recursive: true })
+    fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
+    fs.writeFileSync(path.join(buildDir, "spec.md"), "# Existing detailed spec")
+
+    await runSpec("my-build", defaultOpts)
+
+    expect(invokeSpecifier).not.toHaveBeenCalled()
+    // Original content untouched
+    expect(fs.readFileSync(path.join(buildDir, "spec.md"), "utf-8"))
+      .toBe("# Existing detailed spec")
+  })
 })
