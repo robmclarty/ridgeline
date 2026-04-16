@@ -15,6 +15,7 @@ You receive:
    - **Completeness** — Focused on coverage: edge cases, failure states, validation, boundary conditions
    - **Clarity** — Focused on precision: testable criteria, unambiguous language
    - **Pragmatism** — Focused on achievability: feasible scope, sensible defaults, proven approaches
+3. **(Optional) User-provided spec draft** — An existing document the user authored before running this command and wants treated as authoritative source material. When present, preserve its detail, features, acceptance criteria, constraints, and taste preferences wherever they do not contradict shape.md. Use the specialist proposals to sharpen and fill gaps — do not replace the user's draft with a rewrite. If specialists disagree with a non-conflicting detail in the user draft, favor the user draft. If the user draft conflicts with shape.md, defer to shape.md.
 
 ## Your task
 

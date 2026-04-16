@@ -9,6 +9,7 @@ import { resolveBuildDir } from "../config"
 import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
 import { runDesign } from "./design"
 import { askQuestion, runQAIntake, runOutputTurn } from "./qa-workflow"
+import { resolveInput } from "./input"
 
 const SHAPE_OUTPUT_SCHEMA = JSON.stringify({
   type: "object",
@@ -77,17 +78,6 @@ export type ShapeOptions = {
   timeout: number
   flavour?: string
   input?: string
-}
-
-const resolveInput = (input: string): { type: "file"; path: string; content: string } | { type: "text"; content: string } => {
-  const looksLikeFile = /\.\w+$/.test(input) || input.startsWith("/") || input.startsWith("./") || input.startsWith("../") || input.includes(path.sep)
-  if (looksLikeFile) {
-    const resolved = path.resolve(input)
-    if (fs.existsSync(resolved)) {
-      return { type: "file", path: resolved, content: fs.readFileSync(resolved, "utf-8") }
-    }
-  }
-  return { type: "text", content: input }
 }
 
 const resolveInputContext = async (
