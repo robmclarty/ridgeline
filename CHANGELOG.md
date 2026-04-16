@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.14
+
+- Add optional `[input]` argument to `spec` command — pass a file path (e.g. `idea.md`) or raw text to seed the spec ensemble with authoritative user-authored guidance that the synthesizer preserves alongside shape.md
+- Warn before overwriting existing `spec.md`/`constraints.md`/`taste.md` (aborts in non-interactive sessions)
+- Extract shared `resolveInput` helper for file-or-text argument resolution across commands
+- Update research docs to reflect inverted ensemble default (ensemble is now default, `--quick` is the opt-out)
+- Add architecture and redesign planning documents
+
 ## 0.7.13
 
 - Fix shader-validate tool detection (binary is `naga`, not `naga-cli`)
