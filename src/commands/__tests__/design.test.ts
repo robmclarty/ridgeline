@@ -72,7 +72,7 @@ const intakeResult = makeClaudeResult({ ready: true, summary: "Got it" })
 const designContent = "# Design System\n\n## Colors\n\nPrimary: #2563EB"
 const designResult = makeClaudeResult(designContent)
 
-const defaultOpts = { model: "claude-opus-4-5", timeout: 10 }
+const defaultOpts = { model: "opus", timeout: 10 }
 
 describe("commands/design", () => {
   let origCwd: string
