@@ -86,7 +86,7 @@ export const runRetrospective = async (
       systemPrompt,
       userPrompt,
       model: opts.model,
-      allowedTools: ["Read", "Write", "Glob", "Grep"],
+      allowedTools: ["Read", "Write", "Glob", "Grep", "Skill"],
       cwd: process.cwd(),
       timeoutMs: opts.timeout * 60 * 1000,
       onStdout,

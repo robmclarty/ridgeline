@@ -96,7 +96,7 @@ describe("invokeReviewer", () => {
     expect(invokeClaude).toHaveBeenCalledWith(
       expect.objectContaining({
         systemPrompt: "reviewer system prompt",
-        allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent"],
+        allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent", "Skill"],
       }),
     )
   })

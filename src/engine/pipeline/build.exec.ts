@@ -76,7 +76,7 @@ export const invokeBuilder = async (
       systemPrompt,
       userPrompt,
       model: config.model,
-      allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
+      allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "Skill"],
       ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
 

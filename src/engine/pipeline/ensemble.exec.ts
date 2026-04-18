@@ -480,7 +480,7 @@ export const invokePlanner = async (
     synthesizerPrompt: registry.getCorePrompt("planner.md"),
     buildSynthesizerUserPrompt: (drafts) =>
       assemblePlannerSynthesizerUserPrompt(config, drafts),
-    synthesizerTools: ["Write"],
+    synthesizerTools: ["Write", "Skill"],
 
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,
