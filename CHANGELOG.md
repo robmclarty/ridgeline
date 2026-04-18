@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.15
+
+- Switch spawned claude subprocesses from `--system-prompt` to `--append-system-prompt` so Claude Code's default harness (skill discovery, built-in reminders) is preserved alongside ridgeline's flavour prompts
+- Pass `--setting-sources project,local` so target repos' `.claude/settings.json` and `.claude/settings.local.json` — including project-defined skills, permissions, and hooks — load in every subprocess
+- Add `Skill` to `allowedTools` for builder, reviewer, planner synthesizer, researcher specialists and synthesizer, and retrospective
+
 ## 0.7.14
 
 - Add optional `[input]` argument to `spec` command — pass a file path (e.g. `idea.md`) or raw text to seed the spec ensemble with authoritative user-authored guidance that the synthesizer preserves alongside shape.md
