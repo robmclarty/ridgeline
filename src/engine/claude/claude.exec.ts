@@ -71,6 +71,7 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
       "--output-format", "stream-json",
       "--model", opts.model,
       "--verbose",
+      "--setting-sources", "project,local",
     ]
 
     if (opts.allowedTools && opts.allowedTools.length > 0) {
