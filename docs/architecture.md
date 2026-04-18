@@ -329,7 +329,7 @@ Ridgeline does not call model APIs directly. It spawns the Claude CLI as a
 child process:
 
 ```text
-claude -p --output-format stream-json --model <name> --system-prompt <prompt> \
+claude -p --output-format stream-json --model <name> --append-system-prompt <prompt> \
   --allowedTools <tools> [--agents <json>] [--plugin-dir <path>] [--verbose]
 ```
 

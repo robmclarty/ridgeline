@@ -81,7 +81,7 @@ describe("invokeBuilder", () => {
     expect(invokeClaude).toHaveBeenCalledWith(
       expect.objectContaining({
         systemPrompt: "builder system prompt",
-        allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent"],
+        allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "Skill"],
       }),
     )
   })

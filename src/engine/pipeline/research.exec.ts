@@ -206,7 +206,7 @@ export const invokeResearcher = async (
     buildSpecialistPrompt: (overlay) => buildResearchSpecialistPrompt(context, overlay),
     specialistUserPrompt: assembleSpecialistUserPrompt(specMd, constraintsMd, tasteMd, agenda || null),
     specialistSchema: "", // unused when isStructured is false
-    specialistTools: ["WebFetch", "WebSearch", "Bash"],
+    specialistTools: ["WebFetch", "WebSearch", "Bash", "Skill"],
 
     synthesizerPrompt: registry.getCorePrompt("researcher.md"),
     buildSynthesizerUserPrompt: (drafts) =>
@@ -218,7 +218,7 @@ export const invokeResearcher = async (
         config.changelogMd,
         config.iterationNumber,
       ),
-    synthesizerTools: ["Write"],
+    synthesizerTools: ["Write", "Skill"],
 
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,

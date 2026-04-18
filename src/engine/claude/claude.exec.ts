@@ -95,8 +95,10 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
       args.push("--json-schema", opts.jsonSchema)
     }
 
-    // System prompt passed via --system-prompt flag
-    args.push("--system-prompt", opts.systemPrompt)
+    // Append to Claude Code's default system prompt so harness-level context
+    // (skill discovery, built-in reminders) is preserved alongside ridgeline's
+    // flavour prompts.
+    args.push("--append-system-prompt", opts.systemPrompt)
 
     const spawnCmd = provider ? provider.command : "claude"
     const spawnArgs = provider

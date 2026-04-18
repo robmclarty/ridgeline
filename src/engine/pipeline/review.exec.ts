@@ -74,7 +74,7 @@ export const invokeReviewer = async (
       systemPrompt,
       userPrompt,
       model: config.model,
-      allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent"],
+      allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent", "Skill"],
       ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
 
