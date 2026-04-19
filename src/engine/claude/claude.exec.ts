@@ -110,6 +110,7 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
       cwd: opts.cwd,
       stdio: ["pipe", "pipe", "pipe"],
       detached: true,
+      env: provider?.env ? { ...process.env, ...provider.env() } : process.env,
     })
     liveProcs.add(proc)
 
