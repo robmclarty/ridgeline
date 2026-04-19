@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.16
+
+- Redirect pnpm/npm user-config to `/dev/null` in the greywall sandbox via a new optional `env()` contribution on `SandboxProvider`, so `pnpm exec <tool>` invocations (typecheck, lint, test, etc.) no longer exit 254 on the seatbelt denial of `~/.npmrc` — registry tokens stay inaccessible to the agent
+- Gitignore `.worktrees/`
+
 ## 0.7.15
 
 - Switch spawned claude subprocesses from `--system-prompt` to `--append-system-prompt` so Claude Code's default harness (skill discovery, built-in reminders) is preserved alongside ridgeline's flavour prompts
