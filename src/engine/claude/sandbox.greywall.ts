@@ -87,4 +87,13 @@ export const greywallProvider: SandboxProvider = {
 
     return ["--auto-profile", "--no-credential-protection", "--settings", settingsPath, "--"]
   },
+  env(): Record<string, string> {
+    // pnpm/npm read ~/.npmrc on every invocation; seatbelt's auto-profile denies
+    // reads to credential-bearing dotfiles, so pnpm exits 254 before running.
+    // Point user-config at /dev/null (empty) so script execution works without
+    // exposing registry tokens to the agent.
+    return {
+      NPM_CONFIG_USERCONFIG: "/dev/null",
+    }
+  },
 }
