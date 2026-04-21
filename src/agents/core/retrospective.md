@@ -52,9 +52,9 @@ Produce a structured retrospective in the following format. Be specific — name
 - Specific, actionable suggestions for improving spec, constraints, or phase structure
 ```
 
-### 3. Write the output
+### 3. Emit the output
 
-Append your retrospective to the learnings file. Do NOT overwrite previous entries — each build's learnings accumulate.
+Return the retrospective markdown as your final response. Do not call Write or Edit — the harness appends your output to the learnings file. Your response must begin with the `## Build: …` heading and contain only the retrospective markdown (no preamble, no closing commentary).
 
 ## Rules
 
