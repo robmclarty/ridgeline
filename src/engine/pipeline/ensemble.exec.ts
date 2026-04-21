@@ -4,6 +4,7 @@ import { createDisplayCallbacks } from "../claude/stream.display"
 import { scanPhases } from "../../stores/phases"
 import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
+import { appendTranscript } from "../../ui/transcript"
 import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
 import { resolveFlavour } from "../discovery/flavour.resolve"
 import { appendBaseUserPrompt } from "./plan.exec"
@@ -164,7 +165,9 @@ const runAnnotationPass = async <TDraft>(
       onStderr: createStderrHandler(`${perspective}-annotate`),
     }).then((result) => {
       const elapsed = formatElapsed(Date.now() - startTime)
-      annotationSpinner.printAbove(`  ${perspective.padEnd(14)} annotated (${elapsed}, $${result.costUsd.toFixed(2)})`)
+      const line = `  ${perspective.padEnd(14)} annotated (${elapsed}, $${result.costUsd.toFixed(2)})`
+      annotationSpinner.printAbove(line)
+      appendTranscript(line)
       return { perspective, annotation: result.result, result }
     })
   })
@@ -238,7 +241,9 @@ export const invokeEnsemble = async <TDraft>(
       sandboxProvider: config.sandboxProvider,
     }).then((result) => {
       const elapsed = formatElapsed(Date.now() - startTime)
-      spinner.printAbove(`  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`)
+      const line = `  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`
+      spinner.printAbove(line)
+      appendTranscript(line)
       return { perspective, result }
     })
   })

@@ -1,5 +1,6 @@
 import { createStreamHandler } from "./stream.parse"
 import { startSpinner } from "../../ui/spinner"
+import { appendTranscript } from "../../ui/transcript"
 
 interface DisplayCallbackOptions {
   /** Suppress fenced JSON blocks (```json ... ```) from display output. */
@@ -62,6 +63,7 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
       process.stdout.write("\n")
     }
     process.stdout.write(opts?.dimText ? `\x1b[90m${text}\x1b[0m` : text)
+    appendTranscript(text)
     lastCharWasNewline = text.endsWith("\n")
   }
 
@@ -88,6 +90,7 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
         ? `[${event.tool}] ${summary}`
         : `[${event.tool}]`
       spinner.printAbove(line)
+      appendTranscript(line)
       lastEventWasTool = true
     }
   })
