@@ -171,7 +171,7 @@ Base prompts use `{{OVERLAY:slot}}` markers. Overlay files use `## slot` section
 
 ### System Layers
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │                   CLI / Web UI                   │
 │         (commands, spinner, monitoring)          │
@@ -228,6 +228,7 @@ function compilePipeline(
 ### Mastra Step Types
 
 #### Single Agent Step
+
 ```typescript
 const shapeStep = createStep({
   id: 'shape',
@@ -244,6 +245,7 @@ const shapeStep = createStep({
 ```
 
 #### Ensemble Step
+
 ```typescript
 const specStep = createStep({
   id: 'spec',
@@ -270,6 +272,7 @@ const specStep = createStep({
 ```
 
 #### Phase-Loop Step (Build)
+
 ```typescript
 const buildStep = createStep({
   id: 'build',
@@ -379,7 +382,7 @@ Flavours declare which tools they need in the manifest. The runtime checks avail
 2. Configure TypeScript, ESLint (carry over current lint setup)
 3. Set up the directory structure:
 
-```
+```text
 ridgeline-next/
   src/
     cli/                    # CLI entry point (commander.js, same UX)
@@ -431,6 +434,7 @@ Port each pipeline stage as a Mastra step:
 7. **Design step** — interactive Q&A (conditional)
 
 Each step is a standalone module that:
+
 - Declares its input/output schema (Zod)
 - Reads config from Mastra runtimeContext
 - Uses assembled prompts from the prompt engine
@@ -573,6 +577,7 @@ This is a from-scratch build, not a refactor. Migration approach:
 5. Keep the current system as reference/fallback
 
 **What carries over directly:**
+
 - All prompt content (base templates + overlays — identical to refactor plan)
 - CLI UX patterns (spinner, grey text, phase headers)
 - Pipeline step logic (shape, spec, research, plan, build — same algorithms, new framework)
@@ -580,6 +585,7 @@ This is a from-scratch build, not a refactor. Migration approach:
 - Ensemble mechanics (same pattern, Mastra execution)
 
 **What gets replaced:**
+
 - `state.json` → Mastra workflow state
 - `handoff.md` threading → Mastra step state
 - `agent.registry.ts` → Pipeline compiler + Mastra agents
@@ -588,6 +594,7 @@ This is a from-scratch build, not a refactor. Migration approach:
 - Checkpoint/resume system → Mastra suspend/resume
 
 **What's new:**
+
 - Pipeline YAML DSL
 - Pipeline compiler
 - Mastra Studio integration

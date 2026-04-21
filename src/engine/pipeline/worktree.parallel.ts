@@ -36,7 +36,7 @@ export const mergePhaseWorktree = (
   try {
     run(`git merge --no-ff "${branch}" -m "ridgeline: merge ${phaseId}"`, cwd)
     return { isSuccess: true }
-  } catch (err) {
+  } catch {
     // Collect conflict file list before aborting
     let conflictFiles: string[] = []
     try {

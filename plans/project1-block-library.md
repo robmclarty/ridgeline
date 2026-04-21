@@ -23,7 +23,7 @@ Flavour/domain configuration flows through Mastra's `runtimeContext`, set once a
 
 ### How Blocks Compose
 
-```
+```text
 Top-level workflow (set runtimeContext: flavour overlays, model, tools)
   │
   ├── shapeIntake (step)
@@ -83,6 +83,7 @@ No special propagation mechanism. Mastra's runtimeContext inherits through neste
 Each step invokes a single agent with an assembled prompt.
 
 #### `shapeIntake`
+
 - **Purpose**: Interactive Q&A to extract project intent, scope, constraints
 - **Input**: `{ intent: string, codebasePath: string }`
 - **Output**: `{ shapeMd: string }`
@@ -90,36 +91,42 @@ Each step invokes a single agent with an assembled prompt.
 - **Mode**: Interactive (requires user input via Mastra's suspend/resume or streaming)
 
 #### `refine`
+
 - **Purpose**: Merge research findings into an existing spec
 - **Input**: `{ specMd: string, researchMd: string }`
 - **Output**: `{ specMd: string, changelogMd: string }`
 - **Overlay slots**: `role`, `merge_strategy`
 
 #### `designIntake`
+
 - **Purpose**: Interactive Q&A for visual/design decisions
 - **Input**: `{ shapeMd: string }`
 - **Output**: `{ designMd: string }`
 - **Overlay slots**: `role`, `questions`, `design_dimensions`
 
 #### `buildPhase`
+
 - **Purpose**: Implement a single phase spec using an AI agent
 - **Input**: `{ phaseSpec: string, constraintsMd: string, tasteMd?: string, designMd?: string, handoff: string }`
 - **Output**: `{ handoffSection: string, success: boolean }`
 - **Overlay slots**: `role`, `orient`, `build_strategy`, `verify`, `handoff`, `additional_inputs`, `build_constraints`
 
 #### `reviewPhase`
+
 - **Purpose**: Validate a completed phase against acceptance criteria
 - **Input**: `{ phaseSpec: string, constraintsMd: string }`
 - **Output**: `{ isPassed: boolean, feedback: string }`
 - **Overlay slots**: `role`, `criteria_interpretation`, `evidence_requirements`
 
 #### `specialist`
+
 - **Purpose**: Generic specialist agent that produces a structured draft from a given perspective
 - **Input**: `{ prompt: string, perspective: string }`
 - **Output**: `{ draft: object }` (JSON matching a provided schema)
 - **Overlay slots**: inherited from parent ensemble's runtimeContext
 
 #### `synthesizer`
+
 - **Purpose**: Generic synthesizer that merges multiple specialist drafts
 - **Input**: `{ drafts: object[] }`
 - **Output**: depends on context (spec.md, phases, research.md, etc.)
@@ -130,6 +137,7 @@ Each step invokes a single agent with an assembled prompt.
 Each workflow composes steps and/or other workflows using Mastra primitives.
 
 #### `ensemble`
+
 - **Purpose**: Run N specialists in parallel, feed results to a synthesizer
 - **Composition**: `.parallel([ specialist × N ]) .then(synthesizer)`
 - **Input**: `{ prompt: string, specialistConfigs: SpecialistConfig[] }`
@@ -138,6 +146,7 @@ Each workflow composes steps and/or other workflows using Mastra primitives.
 - **Options via runtimeContext**: `isTwoRound` (if true, adds annotation pass between specialist and synthesizer rounds)
 
 #### `ensembleWithAnnotation`
+
 - **Purpose**: Two-round ensemble — specialists draft, then review each other, then synthesize
 - **Composition**: `.parallel([ specialist × N ]) .then(annotationRound) .then(synthesizer)`
 - **Input**: same as `ensemble`
@@ -145,18 +154,21 @@ Each workflow composes steps and/or other workflows using Mastra primitives.
 - **When to use**: deeper analysis where cross-specialist critique improves output (planning, complex specs)
 
 #### `buildWithReview`
+
 - **Purpose**: Build a single phase, review it, retry on failure
 - **Composition**: `buildPhase .then(reviewPhase)` with retry loop (Mastra `.until()`)
 - **Input**: `{ phaseSpec, constraintsMd, tasteMd?, designMd?, handoff, maxRetries }`
 - **Output**: `{ handoffSection, success, attempts }`
 
 #### `buildAllPhases`
+
 - **Purpose**: Execute all phases sequentially with handoff accumulation
 - **Composition**: iterates `buildWithReview` for each phase, accumulating handoff state
 - **Input**: `{ phases: PhaseSpec[], constraintsMd, tasteMd?, designMd? }`
 - **Output**: `{ handoff: string, success: boolean, phaseResults: PhaseResult[] }`
 
 #### `researchLoop`
+
 - **Purpose**: Run research ensemble, optionally iterate multiple times
 - **Composition**: `ensemble` wrapped in a loop (Mastra `.until()` or `.while()`)
 - **Input**: `{ specMd, constraintsMd, maxIterations? }`
@@ -180,7 +192,7 @@ function assemblePrompt(baseName: string, overlayPath?: string): string
 
 The library ships with base templates for each agent role:
 
-```
+```text
 prompts/
   builder.base.md       # structural skeleton for implementation agents
   planner.base.md       # structural skeleton for phase-planning agents
@@ -218,7 +230,7 @@ These live in the consumer's project, not in the library.
 
 ## Package Structure
 
-```
+```text
 @ridgeline/blocks/           # or whatever name
   src/
     steps/
@@ -270,6 +282,7 @@ Implement each step as a Mastra `createStep()`:
 7. `designIntake` — visual/design Q&A
 
 For each step:
+
 - Define Zod input/output schemas
 - Read overlays from `runtimeContext.get('flavour')`
 - Call `assemblePrompt()` to build system prompt
@@ -289,6 +302,7 @@ Build workflows from the steps:
 5. `researchLoop` — `ensemble` in a `.while()` / `.until()` loop
 
 For each workflow:
+
 - Verify Mastra's `.parallel()`, `.then()`, `.until()` express the pattern without custom orchestration
 - Test with 2-3 specialists to verify parallel execution and output collection
 - Test nested composition (e.g., `researchLoop` uses `ensemble` internally)

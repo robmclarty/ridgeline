@@ -26,7 +26,7 @@ Replace the 15-flavour fork model (346 near-duplicate files) with a composable l
 
 ### File Structure (After)
 
-```
+```text
 src/
   agents/
     base/                          # structural skeletons
@@ -221,6 +221,7 @@ function assemblePrompt(
 ```
 
 Key behaviors:
+
 - Empty slots produce clean output (no leftover markers)
 - Overlay sections can be multi-paragraph prose
 - Frontmatter merge allows overlay to override model, description
@@ -313,6 +314,7 @@ For each of the remaining 14 flavours:
 4. Delete the full agent copies from the flavour directory
 
 Order by complexity (most divergent first to catch missing slots early):
+
 1. web-game (done in Phase 2)
 2. game-dev
 3. novel-writing
