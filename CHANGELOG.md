@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.17
+
+- Capture a plain-text build transcript (`<buildDir>/transcript.log`) with all human-facing output (printInfo/Warn/Error/Phase, Claude stream text, tool events, ensemble completion lines); ANSI escapes stripped so the file stays readable
+- Fix retrospective silent-failure: the agent was told to append to `.ridgeline/learnings.md` but only had `Write`, so it often emitted the retrospective as text and never called a tool while the harness logged success unconditionally; the agent now returns the markdown as its response and the harness validates and `appendFileSync`s it, warning on empty or malformed output
+- Lint cleanup across code, markdown, and fallow (drop unused `err` in `mergePhaseWorktree`, exclude `.worktrees/**` from markdownlint, whitelist intentional full-interface exports, auto-fix heading/list/fence spacing in `plans/*.md`)
+
 ## 0.7.16
 
 - Redirect pnpm/npm user-config to `/dev/null` in the greywall sandbox via a new optional `env()` contribution on `SandboxProvider`, so `pnpm exec <tool>` invocations (typecheck, lint, test, etc.) no longer exit 254 on the seatbelt denial of `~/.npmrc` — registry tokens stay inaccessible to the agent
