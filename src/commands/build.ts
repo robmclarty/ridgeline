@@ -2,6 +2,7 @@ import { RidgelineConfig, PhaseInfo } from "../types"
 import { printInfo, printError, printPhaseHeader } from "../ui/output"
 import { formatDuration, formatTokens } from "../ui/summary"
 import { initLogger } from "../ui/logger"
+import { initTranscript } from "../ui/transcript"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../stores/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
@@ -345,6 +346,7 @@ const executeWaveLoop = async (
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   initLogger(config.buildDir)
+  initTranscript(config.buildDir)
 
   const phases = await ensurePhases(config)
   const state = loadOrInitState(config, phases)
