@@ -14,7 +14,7 @@ Each package is its own project: own dependencies, own tools, own overlays, own 
 
 ## Structure
 
-```
+```text
 ridgeline/
   packages/
     cli/                          # shared CLI UX (spinner, output, phase display)
@@ -35,7 +35,7 @@ ridgeline/
 
 The shared terminal UX layer. Every workflow package depends on this.
 
-```
+```text
 packages/cli/
   src/
     spinner.ts            # cylon-eye bouncing bar animation
@@ -54,7 +54,7 @@ This package knows nothing about Mastra. It exports functions that workflow pack
 
 Shared tools that multiple workflows use but are too specific for the block library.
 
-```
+```text
 packages/tools/
   src/
     visual-diff.ts        # compare screenshots
@@ -67,7 +67,7 @@ packages/tools/
 
 The "default" ridgeline experience — full code generation pipeline.
 
-```
+```text
 packages/software-engineering/
   src/
     workflow.ts           # Mastra workflow: shape → spec → research → plan → build
@@ -85,6 +85,7 @@ packages/software-engineering/
 ```
 
 **`workflow.ts`**:
+
 ```typescript
 import { createWorkflow } from '@mastra/core';
 import {
@@ -116,6 +117,7 @@ export const softwareEngineeringWorkflow = createWorkflow({
 ```
 
 **`flavour.ts`**:
+
 ```typescript
 import type { FlavourConfig } from '@ridgeline/blocks';
 
@@ -139,6 +141,7 @@ export const softwareEngineeringFlavour: FlavourConfig = {
 ```
 
 **`cli.ts`**:
+
 ```typescript
 import { softwareEngineeringWorkflow } from './workflow';
 import { softwareEngineeringFlavour } from './flavour';
@@ -161,7 +164,7 @@ await run.start(
 
 The most complex workflow — demonstrates how a domain-specific package diverges.
 
-```
+```text
 packages/web-game/
   src/
     workflow.ts           # Mastra workflow: shape → design → spec → research → plan → build
@@ -182,6 +185,7 @@ packages/web-game/
 **Key differences from software-engineering:**
 
 1. **Workflow shape is different** — includes `designIntake` step that software-engineering skips:
+
 ```typescript
 export const webGameWorkflow = createWorkflow({ ... })
   .then(shapeIntake)
@@ -194,16 +198,16 @@ export const webGameWorkflow = createWorkflow({ ... })
   .commit();
 ```
 
-2. **Extra specialist** — spec ensemble includes a visual-coherence specialist
-3. **Extra tools** — canvas-screenshot, shader-validate in package.json
-4. **Richer overlays** — builder overlay has paragraphs about game loop construction, renderer ordering, scene/state architecture
-5. **Own dependencies** — could depend on puppeteer, playwright, etc. without affecting other packages
+1. **Extra specialist** — spec ensemble includes a visual-coherence specialist
+2. **Extra tools** — canvas-screenshot, shader-validate in package.json
+3. **Richer overlays** — builder overlay has paragraphs about game loop construction, renderer ordering, scene/state architecture
+4. **Own dependencies** — could depend on puppeteer, playwright, etc. without affecting other packages
 
 ### `packages/web-ui`
 
 Similar to software-engineering but with visual concerns:
 
-```
+```text
 packages/web-ui/
   src/
     workflow.ts           # includes designIntake, visual-coherence
