@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.19
+
+- Fix software-engineering planner prompts that claimed `opus (~1M tokens)` and `sonnet (~200K tokens)`: with settings.json now able to pin `claude-opus-4-7` (200K window), the stale "opus = 1M" estimate was causing the synthesizer to collapse plans into fewer, oversized phases. Replace the model-keyed bullets in `core/planner.md` and `planners/context.md` with a single line stating the real 200K window and a ~100K target per phase
+
 ## 0.7.18
 
 - Resolve model from `.ridgeline/settings.json` via a new `resolveModel(optModel, ridgelineDir)` helper (CLI opt > `settings.json` > `"opus"`); drop the hardcoded `"opus"` default from every commander `--model` option so the settings.json value can win, and thread the helper through `resolveConfig` plus all commands that read `opts.model` directly (shape, spec, research, refine, design, catalog, retrospective, create) — lets users pin a specific model (e.g. `claude-opus-4-7`) without passing `--model` every time
