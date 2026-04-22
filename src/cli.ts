@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+import * as path from "node:path"
 import { Command } from "commander"
 import { loadVersion, resolveConfig } from "./config"
+import { resolveModel } from "./stores/settings"
 import { RidgelineConfig } from "./types"
 import { disableLogger } from "./ui/logger"
 import { askBuildName } from "./ui/prompt"
@@ -62,8 +64,10 @@ const handleCommandError = (err: unknown): never => {
   process.exit(1)
 }
 
+const ridgelineDirFromCwd = (): string => path.join(process.cwd(), ".ridgeline")
+
 const parseBaseOpts = (opts: Opts) => ({
-  model: (opts.model as string) ?? "opus",
+  model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
   timeout: parseInt(String(opts.timeout ?? "10"), 10),
   flavour: (opts.flavour as string) ?? undefined,
 })
@@ -91,7 +95,7 @@ program
 program
   .argument("[build-name]", "Build name")
   .argument("[input]", "Description text or path to input file")
-  .option("--model <name>", "Model for all stages", "opus")
+  .option("--model <name>", "Model for all stages (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")
@@ -105,7 +109,7 @@ program
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runCreate(await requireBuildName(buildName), {
-        model: (opts.model as string) ?? "opus",
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: String(opts.timeout ?? "10"),
         maxBudgetUsd: opts.maxBudgetUsd as string | undefined,
         maxRetries: opts.maxRetries as string | undefined,
@@ -126,13 +130,13 @@ program
 program
   .command("shape [build-name] [input]")
   .description("Gather project context and produce shape.md")
-  .option("--model <name>", "Model for shaper agent", "opus")
+  .option("--model <name>", "Model for shaper agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runShape(await requireBuildName(buildName), {
-        model: (opts.model as string) ?? "opus",
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         flavour: (opts.flavour as string) ?? undefined,
         input,
@@ -145,7 +149,7 @@ program
 program
   .command("design [build-name]")
   .description("Establish or update visual design system (design.md)")
-  .option("--model <name>", "Model for designer agent", "opus")
+  .option("--model <name>", "Model for designer agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
@@ -163,14 +167,14 @@ program
       "Optionally pass an input: path to a file (convention: idea.md) or raw text " +
       "treated as authoritative source material the synthesizer preserves alongside shape.md.",
   )
-  .option("--model <name>", "Model for specialists and synthesizer", "opus")
+  .option("--model <name>", "Model for specialists and synthesizer (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runSpec(await requireBuildName(buildName), {
-        model: (opts.model as string) ?? "opus",
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         flavour: (opts.flavour as string) ?? undefined,
@@ -184,7 +188,7 @@ program
 program
   .command("research [build-name]")
   .description("Research the spec using web sources to find improvements (optional step between spec and plan)")
-  .option("--model <name>", "Model for research agents", "opus")
+  .option("--model <name>", "Model for research agents (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per agent in minutes", "15")
   .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
   .option("--quick", "Run a single random specialist instead of the full ensemble")
@@ -200,7 +204,7 @@ program
       }
 
       await runResearch(await requireBuildName(buildName), {
-        model: (opts.model as string) ?? "opus",
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "15"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         flavour: (opts.flavour as string) ?? undefined,
@@ -215,7 +219,7 @@ program
 program
   .command("refine [build-name]")
   .description("Merge research.md findings into spec.md")
-  .option("--model <name>", "Model for refiner agent", "opus")
+  .option("--model <name>", "Model for refiner agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
@@ -235,7 +239,7 @@ program
   .option("--force", "Re-process all assets ignoring content hash")
   .option("--pack", "Generate sprite atlases after cataloging")
   .option("--batch", "Batch multiple images per vision call")
-  .option("--model <name>", "Model for vision and classification", "opus")
+  .option("--model <name>", "Model for vision and classification (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per AI call in minutes", "5")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
@@ -246,7 +250,7 @@ program
         isForce: opts.force === true,
         isPack: opts.pack === true,
         isBatch: opts.batch === true,
-        model: (opts.model as string) ?? "opus",
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "5"), 10),
       })
     } catch (err) {
@@ -255,7 +259,7 @@ program
   })
 
 const addPlanOptions = (cmd: Command) => cmd
-  .option("--model <name>", "Model for planner", "opus")
+  .option("--model <name>", "Model for planner (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
@@ -279,7 +283,7 @@ program
   .option("--check-timeout <seconds>", "Max duration for check command in seconds", "1200")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")
   .option("--check <command>", "Baseline check command (overrides constraints.md)")
-  .option("--model <name>", "Model for builder and reviewer", "opus")
+  .option("--model <name>", "Model for builder and reviewer (defaults to settings.json model, or 'opus')")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
@@ -304,13 +308,13 @@ program
 program
   .command("retrospective [build-name]")
   .description("Analyze a completed build and extract learnings for future builds")
-  .option("--model <name>", "Model for retrospective agent", "opus")
+  .option("--model <name>", "Model for retrospective agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")
   .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runRetrospective(await requireBuildName(buildName), {
-        model: (opts.model as string) ?? "opus",
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         flavour: (opts.flavour as string) ?? undefined,
       })
