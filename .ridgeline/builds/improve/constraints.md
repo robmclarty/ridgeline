@@ -4,7 +4,7 @@
 
 - TypeScript 5.9 in strict mode; no implicit `any`; all new public functions have explicit return types.
 - Existing `tsconfig.json` is preserved.
-- Runtime: Node.js, matching the existing `engines` field in `package.json` (unchanged).
+- Runtime: Node.js 20+. `package.json` gains `"engines": { "node": ">=20.0.0" }` in 0.8.0 — the field is currently absent. The floor is set by Playwright's active-support baseline (1.57 deprecates Node 18) and matches the existing `@types/node@22` dev-time baseline.
 - Claude CLI subprocess substrate preserved; authentication via the user's Claude subscription OAuth (not API key).
 
 ## Framework

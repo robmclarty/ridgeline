@@ -1,44 +1,41 @@
-# ridgeline 0.8.0 — Flavour Collapse, Always-On Sensors, Lean Ensembles
+# ridgeline 0.8.0 — Flavour Removal, Always-On Sensors, Lean Ensembles
 
 ## Overview
 
 Ship a breaking 0.8.0 release on a dedicated branch that eliminates three concrete pains the sole user hits when building downstream Node/TS apps: flavour-flag complexity that makes "forgot a flag → wasted build" a real failure mode, a builder agent blind to visual output, and ensemble orchestration that burns 12+ Claude calls before a single phase builds.
 
-The release collapses `src/flavours/` from fifteen directories to one (`software-engineering`), removes the capability-pack abstraction entirely, ships Playwright / Claude vision / axe-core / WCAG-contrast as always-available builder tools, adds project-signal auto-detection with a preflight summary, halves default ensemble size with an explicit `--thorough` escape hatch, caches stable stage inputs across invocations, skips synthesis when structured specialist verdicts agree, and introduces an opt-in `ridgeline ui` localhost dashboard. Old 0.7.x builds are not migrated; behavior is surfaced via the preflight rather than changed silently. Durable infrastructure (git checkpoints, Greywall/bwrap sandboxing, worktree isolation, state/budget/trajectory stores, linter stack, vitest suite) is preserved.
+The release deletes `src/flavours/` entirely (all 15 directories) — the canonical agent set already lives in `src/agents/` and the per-flavour prose variants weren't earning their keep. Different project types (software-engineering, game-dev, mobile-app, technical-writing, test-suite, web-game, web-ui) are now served by detection-driven tool selection, not prompt variants. The release also ships Playwright / Claude vision / axe-core / WCAG-contrast as always-available builder tools (selected per-build by detection, no intermediate "capability-pack" abstraction), adds project-signal auto-detection with a preflight summary, halves default ensemble size with an explicit `--thorough` escape hatch, caches stable stage inputs across invocations, skips synthesis when structured specialist verdicts agree, and introduces an opt-in `ridgeline ui` localhost dashboard. Old 0.7.x builds are not migrated; behavior is surfaced via the preflight rather than changed silently. Durable infrastructure (git checkpoints, Greywall/bwrap sandboxing, worktree isolation, state/budget/trajectory stores, linter stack, vitest suite) is preserved.
 
 ## Features
 
-### Flavour collapse to 'software' only
+### Flavour concept removal
 
-Delete the eight non-software flavour directories under `src/flavours/` and retain only `src/flavours/software-engineering/`. `flavour.resolve.ts` and `flavour.config.ts` are simplified for the single-flavour case. Requests for removed flavours error immediately with a redirect message; no silent fallback.
+Delete `src/flavours/` and every subdirectory under it (all 15: `data-analysis`, `game-dev`, `legal-drafting`, `machine-learning`, `mobile-app`, `music-composition`, `novel-writing`, `screenwriting`, `security-audit`, `software-engineering`, `technical-writing`, `test-suite`, `translation`, `web-game`, `web-ui`). The canonical agent set already lives in `src/agents/` (core, planners, researchers, specialists, specifiers) — the flavour tree was a near-duplicate whose prose variants did not earn their cost. Project-type differences are now expressed as *tool selection* driven by detection, not as *prompt variants*.
+
+The `--flavour` CLI flag is removed entirely. Supplying it errors immediately with a migration hint; no silent fallback. `flavour.resolve.ts`, `flavour.config.ts`, and `flavour.json` are deleted. The `state.json` `flavour` field is removed (existing 0.7.x state files are not migrated — the preflight surfaces this).
 
 Acceptance criteria:
 
-- Directories `src/flavours/novel-writing`, `src/flavours/screenwriting`, `src/flavours/legal-drafting`, `src/flavours/music-composition`, `src/flavours/translation`, `src/flavours/data-analysis`, `src/flavours/machine-learning`, and `src/flavours/security-audit` do not exist after the change.
-- `src/flavours/software-engineering/` exists and contains all agent prompt files required by the pipeline (builder, planner, researcher, specifier, reviewer).
-- Running `ridgeline <name> 'intent' --flavour novel-writing` (and each of the other seven removed names) exits non-zero with stderr containing the literal substrings `"removed in 0.8.0"` and `"remove the --flavour flag"`.
-- Running `ridgeline <name> 'intent'` with no `--flavour` flag resolves to the software flavour without prompt or warning (verified by `state.json` containing `"flavour": "software"`).
-- Running `ridgeline <name> 'intent' --flavour software` or `--flavour software-engineering` is accepted and resolves identically to the no-flag case.
-- `ridgeline --help` text contains no references to removed flavour names.
+- Directory `src/flavours/` does not exist after the change (verified by `fs.existsSync` returning false in a vitest).
+- `src/agents/core/` contains `builder.md`, `planner.md`, `researcher.md`, `specifier.md`, `reviewer.md`, `refiner.md`, `shaper.md`, `designer.md`, `retrospective.md` (already present today; verified as unchanged baseline).
+- `src/agents/{planners,researchers,specialists,specifiers}/` remain the canonical locations for ensemble specialists (unchanged).
+- `src/engine/discovery/flavour.resolve.ts` and `src/engine/discovery/flavour.config.ts` are deleted; `agent.registry.ts` resolves agent prompts directly from `src/agents/` with no flavour-dir intermediary.
+- Running `ridgeline <cmd> 'intent' --flavour <anything>` exits non-zero with stderr containing the literal substrings `"removed in 0.8.0"` and `"drop the --flavour flag"`. The `--flavour` option is not registered on any command (verified by `ridgeline --help` containing zero occurrences of the word `flavour`/`flavor`).
+- Running `ridgeline <cmd> 'intent'` with no flag resolves the canonical agent set and writes no `flavour` key to `state.json`.
+- `ridgeline --help` text contains no references to flavour names or the `--flavour` flag.
+- No file under `src/` contains the identifiers `Flavour`, `flavour`, `flavor`, or `Flavor` after the change, except where they appear inside string literals emitting the deprecation error (verified by ripgrep).
+- No file under `src/` contains the identifier `CapabilityPack` or the string `capability-pack` (grep already returns zero matches today; no capability-pack abstraction is introduced in 0.8.0). Detection maps project signals directly to concrete sensor names — see *Project-signal auto-detection* — with no intermediate pack/group type.
+- `ridgeline check` does not warn about missing flavours or packs.
 - `fallow` passes on the surviving tree (no dangling imports or dead exports from deleted flavour modules).
-- `agnix` passes on the surviving software flavour prompts.
-- A single parameterised vitest covers all eight removed-flavour error paths.
-
-### Capability-pack removal
-
-Remove the capability-pack abstraction entirely. Any code paths that looked up packs, loaded pack manifests, or gated tool availability on pack membership are deleted. Playwright, Claude vision, axe-core, and WCAG-contrast are declared directly in the software flavour's tool registry as always-available builder tools.
-
-Acceptance criteria:
-
-- No file under `src/` contains the identifier `CapabilityPack` or the string `capability-pack` (verified by ripgrep returning zero matches).
-- The software flavour declares the four sensors as builder tools unconditionally.
-- Tests covering pack loading are removed; new tests assert tools are always available in the builder tool list.
-- `ridgeline check` does not warn about missing packs.
-- `fallow` passes with no dead exports from the former pack module.
+- `agnix` passes on the agent prompts under `src/agents/`.
+- A single parameterised vitest covers the `--flavour` removal error across all pipeline-entry commands (`shape`, `design`, `spec`, `research`, `refine`, `plan`, `build`, `rewind`, `retrospective`, `create`).
+- Tests exercising `src/flavours/software-engineering/` as a file source are deleted; equivalent tests against `src/agents/` replace them where coverage is lost.
+- `docs/` references to flavours, `--flavour`, and named flavour types are removed or rewritten to reference the detection flow.
+- `package.json` `build` script no longer copies `src/flavours/` into `dist/` (the `rm -rf dist/flavours && cp -r src/flavours dist/flavours` segment is deleted).
 
 ### Always-on builder sensors
 
-New `src/sensors/` module exporting four tool adapters the builder invokes directly: Playwright (screenshot + DOM evaluation — the browser substrate), Claude vision (image analysis via the existing Claude CLI path), axe-core (accessibility audit run against a Playwright `Page`), and `wcag-contrast` (contrast ratio checks on design-token hex pairs — independent of Playwright). Each adapter emits `SensorFinding` records. The software flavour's builder prompt instructs the agent to self-verify with these sensors when the project has a visual surface. All sensor failures are non-fatal warnings — the builder continues blind.
+New `src/sensors/` module exporting four tool adapters the builder invokes directly: Playwright (screenshot + DOM evaluation — the browser substrate), Claude vision (image analysis via the existing Claude CLI path), axe-core (accessibility audit run against a Playwright `Page`), and `wcag-contrast` (contrast ratio checks on design-token hex pairs — independent of Playwright). Each adapter emits `SensorFinding` records. The builder prompt (`src/agents/core/builder.md`) instructs the agent to self-verify with these sensors when the detection report indicates a visual surface. All sensor failures are non-fatal warnings — the builder continues blind.
 
 Per research Rec 2 (axe-core requires a browser DOM; JSDOM drops the `color-contrast` rule), `a11y.ts` and `vision.ts` are consumers of the Playwright sensor's browser `Page`, not peers. When the `playwright` peer dependency is unresolvable or its browser binaries are missing, those two sensors emit a warning `SensorFinding` with the install hint rather than falling back to JSDOM. The contrast sensor stays independent of Playwright (it scores static hex pairs).
 
@@ -47,7 +44,7 @@ Acceptance criteria:
 - `src/sensors/` exists and contains exactly four sensor modules (`playwright.ts`, `vision.ts`, `a11y.ts`, `contrast.ts`) plus an `index.ts`.
 - Each sensor module default-exports an adapter object with at minimum `{ name: string, run(input): Promise<SensorFinding[]> }` and an explicit TypeScript return type.
 - `SensorFinding` interface is exported and has exactly the shape `{ kind: 'screenshot' | 'a11y' | 'contrast' | 'vision', path?: string, summary: string, severity: 'info' | 'warning' | 'error' }`.
-- The software flavour's builder prompt markdown references all four sensors by name and describes the visual self-verification pattern.
+- `src/agents/core/builder.md` references all four sensors by name and describes the visual self-verification pattern; the builder tool registry declares the four sensors unconditionally (availability at runtime is gated by detection + peer-dependency resolvability, not by an opt-in flag).
 - When a sensor throws, the builder phase logs a single `warn`-level line containing the sensor name and continues; the phase does not abort (verified by a vitest that stubs a sensor to reject and asserts phase success).
 - `package.json` declares `playwright` under `peerDependencies` with version range `">=1.57.0 <2.0.0"` and `peerDependenciesMeta: { "playwright": { "optional": true } }`; `axe-core` and `wcag-contrast` are declared under `dependencies`.
 - axe-core is injected into the Playwright `Page` via `page.addScriptTag({ path: require.resolve('axe-core') })` rather than depending on `@axe-core/playwright` (which tracks axe-core's `major.minor` non-SemVer-compatibly — see research Rec 2). This keeps the dep tree flat and version-pinned.
@@ -233,34 +230,35 @@ Bump `package.json` `version` to `0.8.0` on the 0.8.0 branch. Update `CHANGELOG.
 Acceptance criteria:
 
 - `package.json` `version` reads exactly `0.8.0` at the tip of the 0.8.0 branch.
-- `package.json` gains an `engines` field: `"engines": { "node": ">=20.0.0" }` (per research Rec 8 — Playwright deprecates Node 18 as of 1.54 and `@types/node@22` is the dev baseline; Node 20 is LTS through mid-2026). Note: constraints.md states the `engines` field is "unchanged," but it is currently absent — this adds the field rather than modifying one, and the requirement is derived from the Playwright peer dependency. Flag the addition explicitly in the CHANGELOG Breaking section.
+- `package.json` gains an `engines` field: `"engines": { "node": ">=20.0.0" }` (per research Rec 8 — Playwright deprecates Node 18 as of 1.54 and `@types/node@22` is the dev baseline; Node 20 is LTS through mid-2026). The field is currently absent — this adds it; `constraints.md` in this build has been updated to reflect the addition. Flag the addition explicitly in the CHANGELOG Breaking section.
 - `package.json` declares the `playwright` peer dependency with range `">=1.57.0 <2.0.0"` and `peerDependenciesMeta: { "playwright": { "optional": true } }` — 1.57 is where Chrome-for-Testing landed and where `page.accessibility` was removed in favor of axe-core (per research Rec 7).
 - `CHANGELOG.md` contains an entry with heading `## 0.8.0` containing Added / Changed / Removed / Breaking sections.
-- Breaking section explicitly lists: removal of 8 non-software flavours, removal of the capability-pack abstraction, removal of `--deep-ensemble` (mapped to `--thorough` with deprecation notice), no migration for 0.7.x builds, and the new `engines.node: ">=20.0.0"` floor.
+- Breaking section explicitly lists: deletion of `src/flavours/` and the `--flavour` flag, removal of the `state.json` `flavour` field, removal of `--deep-ensemble` (mapped to `--thorough` with deprecation notice), no migration for 0.7.x builds, and the new `engines.node: ">=20.0.0"` floor. The entry notes that no capability-pack abstraction is introduced — tool selection is driven by detection.
 - Added section enumerates at minimum: always-on sensors, preflight detection, default-2 ensembles, `--thorough`, prompt caching, `ridgeline ui`.
-- `docs/` references to removed flavours and `--deep-ensemble` are updated or removed; content under `plans/` is untouched.
+- `docs/` references to `--flavour`, named flavour types, and `--deep-ensemble` are updated or removed; content under `plans/` is untouched.
 - The 0.8.0 branch builds cleanly with `npm run lint && npm test && npx tsc --noEmit` (all exit 0) before cutover.
 - Cutover to main is done via fast-forward or merge; no force-push to main is used.
 
 ### Vitest coverage for new code paths
 
-Extend (not rewrite) the existing vitest suite. Tests for removed flavours are deleted in the same change. New tests cover sensor adapters, detection, preflight, ensemble reduction, structured-verdict agreement, removed-flavour errors, `--thorough` wiring, prompt assembly order, and dashboard smoke tests.
+Extend (not rewrite) the existing vitest suite. Tests that exercise the deleted `src/flavours/` tree are removed in the same change. New tests cover sensor adapters, detection, preflight, ensemble reduction, structured-verdict agreement, `--flavour` removal errors, `--thorough` wiring, prompt assembly order, and dashboard smoke tests.
 
 Acceptance criteria:
 
-- At least one vitest file exercises each of: (a) each of the eight removed-flavour error paths (parameterised); (b) `DetectionReport` field population for five or more fixture projects (React+Vite with design.md, pure Node, pure HTML, Vue+Vite, monorepo root-only); (c) preflight TTY block vs `--yes` vs non-TTY pass-through; (d) specialist call count of 2 without `--thorough` and 3 with; (e) structured-verdict agreement skip, disagreement synthesis, and malformed-output fallback; (f) each of the four sensor adapters with stubbed I/O; (g) prompt assembly order snapshot and cache-boundary marker placement; (h) dashboard server smoke test (starts, serves HTML, SSE endpoint responds).
+- At least one vitest file exercises each of: (a) the `--flavour` removal error on every pipeline-entry command (parameterised); (b) `DetectionReport` field population for five or more fixture projects (React+Vite with design.md, pure Node, pure HTML, Vue+Vite, monorepo root-only); (c) preflight TTY block vs `--yes` vs non-TTY pass-through; (d) specialist call count of 2 without `--thorough` and 3 with; (e) structured-verdict agreement skip, disagreement synthesis, and malformed-output fallback; (f) each of the four sensor adapters with stubbed I/O; (g) prompt assembly order snapshot and cache-boundary marker placement; (h) dashboard server smoke test (starts, serves HTML, SSE endpoint responds).
 - Dashboard tests include snapshot or DOM-assertion coverage for empty, running, failed, and disconnected states.
 - Contrast-verification test loads each accent/fill pair and asserts ≥4.5:1 via `wcag-contrast`.
 - Reduced-motion test simulates the media query and asserts no active animations on the running pill.
 - Offline test loads the dashboard with outbound network blocked and asserts all requests are same-origin.
 - `npm test` exits 0 on the 0.8.0 branch.
-- No existing test file is deleted except those for removed flavours.
+- No existing test file is deleted except those that import from `src/flavours/` or exercise flavour-resolution paths.
 
 ## In Scope
 
-- Delete the eight non-software flavour directories from disk (not renamed to `legacy/`).
-- Single surviving flavour: `src/flavours/software-engineering/` with updated builder prompt referencing all four sensors and the visual self-verification pattern.
-- Remove the capability-pack abstraction entirely.
+- Delete `src/flavours/` entirely (all 15 directories) from disk; do not rename to `legacy/`.
+- Treat `src/agents/` as the single canonical agent set; update `src/agents/core/builder.md` to reference all four sensors and the visual self-verification pattern.
+- Remove the `--flavour` CLI flag from every command; `flavour.resolve.ts`, `flavour.config.ts`, and `flavour.json` are deleted.
+- No capability-pack abstraction is introduced; detection maps signals directly to concrete sensor names.
 - `src/sensors/` with `playwright.ts`, `vision.ts`, `a11y.ts`, `contrast.ts`, and `index.ts`; each adapter returns `SensorFinding[]`.
 - `playwright` in `peerDependencies`; `axe-core` and `wcag-contrast` in `dependencies`.
 - `src/engine/detect/` producing `DetectionReport` with the exact field set above.
@@ -278,20 +276,21 @@ Acceptance criteria:
 - Dev-server port: `shape.md` override or probe `5173`, `3000`, `8080`, `4321`.
 - Terminal semantic color helper consolidates usage across UI modules.
 - Version bump to 0.8.0 with CHANGELOG entry; cutover to main via fast-forward or merge.
-- Extend existing vitest suite; delete only tests for removed flavours.
-- `docs/` updated for new flags, removed flags, and flavour collapse.
+- Extend existing vitest suite; delete only tests that import from `src/flavours/` or exercise flavour-resolution paths.
+- `docs/` updated for new flags, removed flags (`--flavour`, `--deep-ensemble`), and the flavour-concept removal.
 - `npm run lint` passes after each task per `CLAUDE.md`.
 
 ## Out of Scope
 
 - Mastra migration, block library extraction, monorepo split.
-- Base+overlay composable-layer flavour refactor.
+- Base+overlay composable-layer refactor of the agent prompt tree.
 - Multi-model abstraction or lifting the Claude CLI subprocess dependency.
 - Visual pipeline / node-graph editor for wiring agents.
 - Tldraw / canvas workspaces.
 - Migration scripts for 0.7.x `.ridgeline/builds/*` artifacts.
-- Keeping removed flavours under `legacy/` or as dormant config.
-- Restoring or extending non-software domains (novel-writing, screenwriting, legal-drafting, music-composition, translation, data-analysis, machine-learning, security-audit).
+- Keeping any `src/flavours/` directory under `legacy/` or as dormant config.
+- Restoring the `--flavour` flag, per-flavour prompt variants, or flavour-specific prose customization (software-engineering, game-dev, mobile-app, technical-writing, test-suite, web-game, web-ui differences are served by tool selection and detection, not prose).
+- Reintroducing a capability-pack / tool-group abstraction; detection picks sensors directly.
 - Game-specific, mobile-specific, or audio-specific sensors beyond the four named.
 - Touching catalog dependencies (`sharp`, `colorthief`, `free-tex-packer-core`) or catalog behavior.
 - Replacing the linter stack (`oxlint`, `markdownlint`, `agnix`, `fallow`).
