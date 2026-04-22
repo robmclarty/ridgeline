@@ -1,0 +1,53 @@
+{
+  "entries": [
+    {
+      "phase": "research",
+      "role": "researcher",
+      "attempt": 0,
+      "costUsd": 1.6514728499999998,
+      "inputTokens": 8503,
+      "outputTokens": 13107,
+      "cacheReadInputTokens": 293925,
+      "cacheCreationInputTokens": 101677,
+      "durationMs": 244135,
+      "timestamp": "2026-04-22T05:47:46.732Z"
+    },
+    {
+      "phase": "research",
+      "role": "researcher",
+      "attempt": 1,
+      "costUsd": 1.7389955499999998,
+      "inputTokens": 6584,
+      "outputTokens": 13612,
+      "cacheReadInputTokens": 287587,
+      "cacheCreationInputTokens": 102368,
+      "durationMs": 254874,
+      "timestamp": "2026-04-22T05:47:46.733Z"
+    },
+    {
+      "phase": "research",
+      "role": "researcher",
+      "attempt": 2,
+      "costUsd": 1.736505,
+      "inputTokens": 7419,
+      "outputTokens": 13238,
+      "cacheReadInputTokens": 494077,
+      "cacheCreationInputTokens": 93249,
+      "durationMs": 270115,
+      "timestamp": "2026-04-22T05:47:46.733Z"
+    },
+    {
+      "phase": "research",
+      "role": "synthesizer",
+      "attempt": 0,
+      "costUsd": 0.684158,
+      "inputTokens": 7,
+      "outputTokens": 10733,
+      "cacheReadInputTokens": 77900,
+      "cacheCreationInputTokens": 56116,
+      "durationMs": 173364,
+      "timestamp": "2026-04-22T05:47:46.734Z"
+    }
+  ],
+  "totalCostUsd": 5.8111314
+}

@@ -1,0 +1,5 @@
+{"timestamp":"2026-04-22T05:39:10.734Z","type":"research_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Research started (full mode, iteration 1)"}
+{"timestamp":"2026-04-22T05:47:46.734Z","type":"research_complete","phaseId":null,"duration":443479,"tokens":{"input":22513,"output":50690},"costUsd":5.8111314,"summary":"Research complete (3 specialists, iteration 1)"}
+{"timestamp":"2026-04-22T05:53:07.558Z","type":"refine_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Refine started (iteration 1)"}
+{"timestamp":"2026-04-22T06:07:39.680Z","type":"refine_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Refine started (iteration 1)"}
+{"timestamp":"2026-04-22T17:00:00.000Z","type":"refine_complete","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Refine complete (iteration 1, completed manually after harness context-window crash)"}

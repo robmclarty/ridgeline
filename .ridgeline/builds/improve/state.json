@@ -1,0 +1,19 @@
+{
+  "buildName": "improve",
+  "startedAt": "2026-04-22T05:10:32.678Z",
+  "pipeline": {
+    "shape": "complete",
+    "design": "complete",
+    "spec": "complete",
+    "research": "complete",
+    "refine": "complete",
+    "plan": "pending",
+    "build": "pending"
+  },
+  "phases": [],
+  "matchedShapes": [
+    "game-visual",
+    "print-layout",
+    "web-visual"
+  ]
+}
