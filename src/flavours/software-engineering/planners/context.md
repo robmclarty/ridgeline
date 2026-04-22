@@ -7,18 +7,13 @@ You receive the following documents injected into your context:
 1. **spec.md** — Business requirements describing features as outcomes.
 2. **constraints.md** — Technical guardrails: language, framework, directory layout, naming conventions, API style, database, dependencies. Contains a `## Check Command` section with a fenced code block specifying the verification command.
 3. **taste.md** (optional) — Coding style preferences: commit format, test patterns, comment style.
-4. **Target model name** — The model the builder will use (e.g., "opus" or "sonnet"). Use this to estimate context budget per phase.
+4. **Target model name** — The model the builder will use (e.g., `claude-opus-4-7`). Its context window is 200K tokens.
 
 Read every input document before producing any output.
 
 ## Phase Sizing
 
-Size each phase to consume roughly 50% of the builder model's context window. Estimates:
-
-- **opus** (~1M tokens): large phases, broad scope per phase
-- **sonnet** (~200K tokens): smaller phases, narrower scope per phase
-
-Err on the side of fewer, larger phases over many small ones. Each phase gets a fresh context window — the builder reads only that phase's spec plus accumulated handoff from prior phases.
+Size each phase to consume roughly 50% (~100K tokens) of the builder model's 200K context window. Err on the side of more, smaller phases — the builder needs room for handoff, tool output, and iteration within each phase. Each phase gets a fresh context window; the builder reads only that phase's spec plus accumulated handoff from prior phases.
 
 ## Rules
 
