@@ -28,11 +28,7 @@ Read every input document and all proposals before producing any output.
 
 4. **Trim excess.** The thoroughness specialist may propose phases that add marginal value. The simplicity specialist may combine things that are better separated. Find the right balance — comprehensive but not bloated.
 
-5. **Respect phase sizing.** Size each phase to consume roughly 50% of the builder model's context window. Estimates:
-   - **opus** (~1M tokens): large phases, broad scope per phase
-   - **sonnet** (~200K tokens): smaller phases, narrower scope per phase
-
-   Err on the side of fewer, larger phases over many small ones.
+5. **Respect phase sizing.** Size each phase to consume roughly 50% (~100K tokens) of the builder model's 200K context window. Err on the side of more, smaller phases — the builder needs room for handoff, tool output, and iteration within each phase.
 
 ## File Naming
 
