@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "./types"
 import { resolveFile, parseCheckCommand } from "./stores/inputs"
-import { resolveNetworkAllowlist, loadSettings } from "./stores/settings"
+import { resolveNetworkAllowlist, loadSettings, resolveModel } from "./stores/settings"
 
 // Load version from package.json at runtime
 export const loadVersion = (): string => {
@@ -63,7 +63,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     tastePath,
     handoffPath: path.join(buildDir, "handoff.md"),
     phasesDir,
-    model: (opts.model as string) ?? "opus",
+    model: resolveModel(opts.model as string | undefined, ridgelineDir),
     maxRetries: parseInt(String(opts.maxRetries ?? "2"), 10),
     timeoutMinutes: parseInt(String(opts.timeout ?? "120"), 10),
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),

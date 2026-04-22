@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadSettings, resolveNetworkAllowlist, DEFAULT_NETWORK_ALLOWLIST, CLAUDE_REQUIRED_DOMAINS } from "../settings"
+import { loadSettings, resolveNetworkAllowlist, resolveModel, DEFAULT_NETWORK_ALLOWLIST, CLAUDE_REQUIRED_DOMAINS } from "../settings"
 
 describe("settings", () => {
   let tmpDir: string
@@ -71,6 +71,22 @@ describe("settings", () => {
       )
       const allowlist = resolveNetworkAllowlist(tmpDir)
       expect(allowlist).toEqual(DEFAULT_NETWORK_ALLOWLIST)
+    })
+  })
+
+  describe("resolveModel", () => {
+    it("prefers the CLI opt when provided", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({ model: "claude-opus-4-7" }))
+      expect(resolveModel("sonnet", tmpDir)).toBe("sonnet")
+    })
+
+    it("falls back to settings.json model when CLI opt is undefined", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({ model: "claude-opus-4-7" }))
+      expect(resolveModel(undefined, tmpDir)).toBe("claude-opus-4-7")
+    })
+
+    it("falls back to 'opus' when neither is set", () => {
+      expect(resolveModel(undefined, tmpDir)).toBe("opus")
     })
   })
 
