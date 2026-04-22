@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.18
+
+- Resolve model from `.ridgeline/settings.json` via a new `resolveModel(optModel, ridgelineDir)` helper (CLI opt > `settings.json` > `"opus"`); drop the hardcoded `"opus"` default from every commander `--model` option so the settings.json value can win, and thread the helper through `resolveConfig` plus all commands that read `opts.model` directly (shape, spec, research, refine, design, catalog, retrospective, create) — lets users pin a specific model (e.g. `claude-opus-4-7`) without passing `--model` every time
+
 ## 0.7.17
 
 - Capture a plain-text build transcript (`<buildDir>/transcript.log`) with all human-facing output (printInfo/Warn/Error/Phase, Claude stream text, tool events, ensemble completion lines); ANSI escapes stripped so the file stays readable
