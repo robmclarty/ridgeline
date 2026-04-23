@@ -54,7 +54,7 @@ describe("formatSkillAvailability", () => {
       { name: "lighthouse", isAvailable: false, compatibility: null },
     ]
     const output = formatSkillAvailability(results)
-    expect(output).toContain("Recommended tools for this flavour:")
+    expect(output).toContain("Recommended tools:")
     expect(output).toContain("✓ agent-browser")
     expect(output).toContain("(found)")
     expect(output).toContain("✗ lighthouse")

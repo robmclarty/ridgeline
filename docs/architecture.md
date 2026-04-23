@@ -237,7 +237,6 @@ flags with hardcoded defaults:
 | `--max-retries` | `2` |
 | `--max-budget-usd` | none (unlimited) |
 | `--unsafe` | off (sandbox auto-detected) |
-| `--flavour` | none (use core agents) |
 
 ## Build Directory Structure
 

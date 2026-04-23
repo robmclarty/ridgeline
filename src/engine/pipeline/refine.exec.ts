@@ -16,7 +16,6 @@ export type RefineConfig = {
   model: string
   timeoutMinutes: number
   buildDir: string
-  flavour: string | null
   changelogMd: string | null
   iterationNumber: number
 }

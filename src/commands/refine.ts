@@ -9,7 +9,6 @@ import { recordCost } from "../stores/budget"
 type RefineOptions = {
   model: string
   timeout: number
-  flavour?: string
   iterationNumber?: number
 }
 
@@ -59,7 +58,6 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
     model: opts.model,
     timeoutMinutes: opts.timeout,
     buildDir,
-    flavour: opts.flavour ?? null,
     changelogMd,
     iterationNumber,
   }

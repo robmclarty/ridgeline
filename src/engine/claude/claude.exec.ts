@@ -98,7 +98,7 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
 
     // Append to Claude Code's default system prompt so harness-level context
     // (skill discovery, built-in reminders) is preserved alongside ridgeline's
-    // flavour prompts.
+    // agent prompts.
     args.push("--append-system-prompt", opts.systemPrompt)
 
     const spawnCmd = provider ? provider.command : "claude"

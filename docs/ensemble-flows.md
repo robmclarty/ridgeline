@@ -298,8 +298,8 @@ competitive landscape.
 ### Agenda Pre-step
 
 Before dispatching specialists, the researcher ensemble runs a gap analysis
-agenda step using a sonnet call. The agenda step reads the current spec,
-the flavour's `gaps.md` (a domain-specific gap checklist), and any existing
+agenda step using a sonnet call. The agenda step reads the current spec, the
+shared `src/agents/researchers/gaps.md` checklist, and any existing
 `research.md` from prior iterations. It produces a focused research agenda
 that tells each specialist exactly which gaps to investigate, avoiding
 redundant work and directing effort toward areas not yet covered.

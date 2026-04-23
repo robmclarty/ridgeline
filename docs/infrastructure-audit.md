@@ -66,9 +66,9 @@ concurrent builds on the same repo could collide.
 ## Model-Agnostic Abstraction (Planned)
 
 The next major release abstracts away specific model calls so that Claude becomes
-one of many configuration options. Agents and flavours can be defined with
-multi-model setups where different local or remote models handle different parts
-of the pipeline based on their specializations.
+one of many configuration options. Agents can be defined with multi-model
+setups where different local or remote models handle different parts of the
+pipeline based on their specializations.
 
 This converts ridgeline from a Claude CLI wrapper into a portable orchestration
 harness. The risk profile changes substantially.
@@ -158,7 +158,7 @@ that sits below any single provider's orchestration layer.
 workflow, not a generic orchestration primitive. Platform tools will likely ship
 lower-level building blocks (spawn agent, coordinate agents, share context).
 They won't ship ridgeline's decomposition philosophy, ensemble-of-specialists
-pattern, phased handoff model, or flavour system.
+pattern, or phased handoff model.
 
 **Inspectable, git-native state.** Ridgeline's state model is designed for
 developer workflows -- inspectable, diffable, resumable via git. Platform

@@ -75,7 +75,6 @@ type ShapeOutput = {
 export type ShapeOptions = {
   model: string
   timeout: number
-  flavour?: string
   input?: string
 }
 
@@ -256,7 +255,6 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
       await runDesign(buildName, {
         model: opts.model,
         timeout: opts.timeout,
-        flavour: opts.flavour,
         matchedShapes: matchedNames,
       })
     } else {

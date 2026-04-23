@@ -159,7 +159,6 @@ export type ResearchConfig = {
   timeoutMinutes: number
   maxBudgetUsd: number | null
   buildDir: string
-  flavour: string | null
   isQuick: boolean
   networkAllowlist: string[]
   sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]

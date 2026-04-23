@@ -5,14 +5,12 @@ vi.mock("../../discovery/agent.registry", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: vi.fn(() => ""),
     getSpecialists: vi.fn(() => []),
+    getSpecialist: vi.fn(() => null),
     getContext: vi.fn(() => null),
+    getGaps: vi.fn(() => null),
     getSubAgents: vi.fn(() => []),
     getAgentsFlag: vi.fn(() => ({})),
   })),
-}))
-
-vi.mock("../../discovery/flavour.resolve", () => ({
-  resolveFlavour: vi.fn(() => null),
 }))
 
 vi.mock("../../discovery/plugin.scan", () => ({
@@ -244,7 +242,7 @@ describe("appendDesign", () => {
 describe("appendAssetCatalog", () => {
   it("injects asset catalog reference when build-level catalog exists", () => {
     vi.mocked(fs.existsSync).mockImplementation((p: any) =>
-      String(p).includes("asset-catalog.json") && String(p).includes("/tmp/build")
+      String(p).includes("asset-catalog.json") && String(p).includes("/tmp/build"),
     )
     const doc = new PromptDocument()
 

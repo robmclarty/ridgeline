@@ -43,7 +43,6 @@ type RidgelineSettings = {
   network?: {
     allowlist?: string[]
   }
-  flavour?: string
   assetDir?: string
   model?: string
 }

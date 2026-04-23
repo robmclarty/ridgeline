@@ -11,7 +11,6 @@ import { loadState } from "../stores/state"
 type RetrospectiveOpts = {
   model: string
   timeout: number
-  flavour?: string
 }
 
 const assembleUserPrompt = (buildDir: string, buildName: string): string => {

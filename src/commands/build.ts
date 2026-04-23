@@ -393,7 +393,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
       await runRetrospective(config.buildName, {
         model: config.model,
         timeout: 10,
-        flavour: config.flavour ?? undefined,
       })
     } catch {
       // Best-effort: don't fail the build if retrospective fails

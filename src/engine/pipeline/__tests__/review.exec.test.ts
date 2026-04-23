@@ -9,14 +9,12 @@ vi.mock("../../discovery/agent.registry", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: vi.fn(() => "reviewer system prompt"),
     getSpecialists: vi.fn(() => []),
+    getSpecialist: vi.fn(() => null),
     getContext: vi.fn(() => null),
+    getGaps: vi.fn(() => null),
     getSubAgents: vi.fn(() => []),
     getAgentsFlag: vi.fn(() => ({})),
   })),
-}))
-
-vi.mock("../../discovery/flavour.resolve", () => ({
-  resolveFlavour: vi.fn(() => null),
 }))
 
 vi.mock("../../claude/stream.display", () => ({

@@ -125,24 +125,6 @@ the last successful phase. No work is repeated, no cost is duplicated.
 Run `ridgeline build my-feature` again and it picks up exactly where it
 stopped.
 
-### Domain Expertise
-
-> Pre-configured for 15 domains, from web apps to legal drafting.
-
-Ridgeline ships with 15 built-in **flavours** -- domain-specific agent
-configurations that tune prompts, constraints, and review criteria for
-particular use cases:
-
-| Category         | Flavours                                            |
-|------------------|-----------------------------------------------------|
-| Software         | software-engineering, web-ui, mobile-app, web-game, game-dev |
-| Data & ML        | data-analysis, machine-learning                     |
-| Security         | security-audit, test-suite                          |
-| Content          | novel-writing, screenwriting, technical-writing     |
-| Specialized      | legal-drafting, translation, music-composition      |
-
-Custom flavours can be created by pointing to a directory of agent prompt files.
-
 ### Parallel Execution
 
 > Independent phases run concurrently, cutting build time.
@@ -237,7 +219,6 @@ handles this scheduling automatically.
 | **Git-native checkpointing**     | Every phase tagged in git         | No version control integration    | Git-based but no phase checkpoints| No built-in checkpointing         |
 | **Resumable builds**             | Resume from last checkpoint       | Restart from beginning            | Restart from beginning            | Must build manually               |
 | **Sandbox security**             | Greywall + bubblewrap auto-detect | Varies by integration             | GitHub-hosted runners             | No built-in sandboxing            |
-| **Domain flavours**              | 15 built-in, extensible           | None                              | None                              | None                              |
 | **Phase dependency scheduling**  | DAG-based parallel execution      | Sequential only                   | Workflow-defined                  | Graph-defined (manual)            |
 | **Setup complexity**             | `npm install -g ridgeline`        | Platform account + config         | GitHub Actions YAML               | SDK integration + custom code     |
 | **Long-horizon builds**          | Purpose-built                     | Task-level orchestration          | CI/CD-oriented                    | General-purpose framework         |
@@ -289,11 +270,6 @@ agent can access. Network requests are limited to an allowlist, and filesystem
 access is confined to the project directory. Prevents accidental or malicious
 side effects.
 
-**Flavour** -- A domain-specific configuration that tunes agent prompts,
-constraints, and review criteria for a particular type of work (e.g.,
-web-ui, legal-drafting, machine-learning). Ridgeline ships with 15 built-in
-flavours and supports custom ones.
-
 **Retrospective** -- A post-build analysis that captures what went well, what
 failed, and what could be improved. Findings accumulate across builds to enable
 compound learning.
@@ -305,6 +281,4 @@ complete.
 
 ---
 
-*For technical architecture details, see [architecture.md](architecture.md).
-For information on extending Ridgeline with custom flavours, see
-[flavours.md](flavours.md).*
+*For technical architecture details, see [architecture.md](architecture.md).*

@@ -273,7 +273,6 @@ export type SpecEnsembleConfig = {
   timeoutMinutes: number
   maxBudgetUsd: number | null
   buildDir: string
-  flavour: string | null
   matchedShapes: string[]
   /** Optional user-authored spec content treated as authoritative source material. */
   userInput: string | null

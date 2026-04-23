@@ -5,7 +5,7 @@ beforeEach(() => {
   clearRegistryCache()
 })
 
-describe("buildAgentRegistry — pipeline-entry resolution (no flavour)", () => {
+describe("buildAgentRegistry — pipeline-entry resolution from src/agents/", () => {
   // Map each pipeline-entry command to the canonical core agent prompt(s) it resolves.
   const COMMAND_TO_CORE_PROMPTS: Record<string, string[]> = {
     shape: ["shaper.md"],

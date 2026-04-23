@@ -319,28 +319,6 @@ You can also rewind to an earlier stage if something needs reworking:
 ridgeline rewind my-api --to spec
 ```
 
-## Domain Specialization with Flavours
-
-Different kinds of projects ask different questions. A game has art style,
-engine, and platform considerations. A novel has genre, point of view, and
-narrative structure. Ridgeline supports **flavours** -- domain-specific agent
-sets that customize the shaping conversation and every downstream stage.
-
-```sh
-ridgeline shape my-game "Build a 2D platformer" --flavour game-dev
-```
-
-Built-in flavours include software engineering, game development, mobile apps,
-novel writing, screenwriting, music composition, data analysis, machine
-learning, legal drafting, technical writing, security auditing, test suites,
-and translation.
-
-The shaping conversation adapts to the flavour. A game-dev shaper asks about
-engine, platform, and art style. A novel-writing shaper asks about genre,
-audience, and narrative arc. The rest of the pipeline follows suit -- spec
-specialists, plan specialists, builder, and reviewer all bring domain
-expertise.
-
 ## Tips for Good Shapes
 
 **Start wherever you are.** A single sentence is a valid starting point. The

@@ -51,9 +51,9 @@ const isToolAvailable = (toolName: string): boolean => {
 }
 
 /**
- * Check availability of recommended skills for a flavour.
- * Reads SKILL.md files from the bundled plugin directory,
- * extracts compatibility info, and checks tool availability.
+ * Check availability of recommended skills against the bundled plugin
+ * directory. Reads SKILL.md files, extracts compatibility info, and verifies
+ * that the underlying CLI tool is on PATH.
  */
 export const checkRecommendedSkills = (skillNames: string[]): SkillAvailability[] => {
   if (skillNames.length === 0) return []
@@ -97,7 +97,7 @@ export const formatSkillAvailability = (results: SkillAvailability[]): string =>
   if (results.length === 0) return ""
 
   const lines: string[] = []
-  lines.push("  Recommended tools for this flavour:")
+  lines.push("  Recommended tools:")
 
   for (const { name, isAvailable } of results) {
     const icon = isAvailable ? "✓" : "✗"
