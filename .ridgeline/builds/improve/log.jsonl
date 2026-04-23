@@ -3,3 +3,6 @@
 {"timestamp":"2026-04-23T03:32:46.191Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
 {"timestamp":"2026-04-23T03:32:46.191Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"Phase 1/7: 01a-flavour-removal-and-metadata"}
 {"timestamp":"2026-04-23T03:32:46.336Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"Building..."}
+{"timestamp":"2026-04-23T04:10:14.420Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"Reviewing..."}
+{"timestamp":"2026-04-23T04:16:59.940Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"PASSED (2654s)"}
+{"timestamp":"2026-04-23T04:16:59.941Z","level":"info","phase":"01b-detection-preflight-color","message":"Phase 2/7: 01b-detection-preflight-color"}
