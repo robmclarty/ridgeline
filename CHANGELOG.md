@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.7.21 — 2026-04-22
+
+### Changed
+
+- `/version` skill now prints the drafted CHANGELOG section back to the user as a fenced markdown block before prepending it to `CHANGELOG.md` and committing, giving a chance to interrupt if the prose needs changes
+
+### Fixed
+
+- `build --resume` against a mutated `phases/` directory (e.g. a sub-phase split between runs) no longer throws "Phase {id} not found in state"; `loadOrInitState` now reconciles `state.phases` against disk on resume — preserving completed entries, appending new files as pending, and dropping entries whose files are gone
+
+### Internal
+
+- Add `scripts/**` to `.fallowrc.json` entry list so `bump-version.mjs` isn't flagged as dead (it's invoked by the `/version` preflight, not imported from code)
+
 ## v0.7.20 — 2026-04-22
 
 ### Added
