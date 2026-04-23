@@ -6,7 +6,6 @@ import { getDiff } from "../../git"
 import { parseVerdict } from "../../stores/feedback.verdict"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { prepareAgentsAndPlugins, commonInvokeOptions, appendDesign } from "./pipeline.shared"
 import { getMatchedShapes } from "../../stores/state"
 import { loadShapeDefinitions } from "../../shapes/detect"
@@ -63,7 +62,7 @@ export const invokeReviewer = async (
   checkpointTag: string,
   cwd?: string,
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag, cwd)
   const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: cwd ?? process.cwd() })

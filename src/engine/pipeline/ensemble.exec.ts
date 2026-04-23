@@ -6,7 +6,6 @@ import { printInfo, printError } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
 import { appendTranscript } from "../../ui/transcript"
 import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { appendBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
 import { PromptDocument } from "./prompt.document"
@@ -471,7 +470,7 @@ const assemblePlannerSynthesizerUserPrompt = (
 export const invokePlanner = async (
   config: RidgelineConfig
 ): Promise<{ result: ClaudeResult; phases: PhaseInfo[]; ensemble: EnsembleResult }> => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
   const context = registry.getContext("planners") ?? ""
 
   const ensemble = await invokeEnsemble<SpecialistProposal>({

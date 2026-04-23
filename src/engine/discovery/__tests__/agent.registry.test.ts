@@ -50,7 +50,7 @@ describe("getSpecialist", () => {
     })
     vi.mocked(fs.readFileSync).mockReturnValue(fileContent)
 
-    const registry = buildAgentRegistry(null)
+    const registry = buildAgentRegistry()
     const result = registry.getSpecialist("specifiers", "my-specialist.md")
 
     expect(result).not.toBeNull()
@@ -70,7 +70,7 @@ describe("getSpecialist", () => {
       return { isDirectory: () => isDir } as any
     })
 
-    const registry = buildAgentRegistry(null)
+    const registry = buildAgentRegistry()
     const result = registry.getSpecialist("specifiers", "nonexistent.md")
 
     expect(result).toBeNull()
@@ -90,7 +90,7 @@ describe("getSpecialist", () => {
     })
     vi.mocked(fs.readFileSync).mockReturnValue(fileContent)
 
-    const registry = buildAgentRegistry(null)
+    const registry = buildAgentRegistry()
     const result = registry.getSpecialist("specifiers", "no-fm.md")
 
     expect(result).toBeNull()
@@ -140,7 +140,7 @@ describe("getSpecialists", () => {
       return validContent
     })
 
-    const registry = buildAgentRegistry(null)
+    const registry = buildAgentRegistry()
     const specialists = registry.getSpecialists("specifiers")
 
     const names = specialists.map((s) => s.perspective)

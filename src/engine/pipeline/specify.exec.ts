@@ -3,7 +3,6 @@ import * as path from "node:path"
 import { SpecifierDraft, EnsembleResult } from "../../types"
 import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { formatProposalHeading } from "./pipeline.shared"
 import { PromptDocument } from "./prompt.document"
 
@@ -284,7 +283,7 @@ export const invokeSpecifier = async (
   shapeMd: string,
   config: SpecEnsembleConfig,
 ): Promise<EnsembleResult> => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
 
   // Get standard specialists
   let specialists = registry.getSpecialists("specifiers")

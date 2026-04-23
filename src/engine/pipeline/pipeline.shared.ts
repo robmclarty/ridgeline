@@ -2,7 +2,6 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "../../types"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { discoverPluginDirs, getCorePluginDir, PluginDir } from "../discovery/plugin.scan"
 import { printError } from "../../ui/output"
 import { PromptDocument } from "./prompt.document"
@@ -14,7 +13,7 @@ export const prepareAgentsAndPlugins = (config: RidgelineConfig): {
   agents: Record<string, { description: string; prompt: string; model?: string }> | undefined
   pluginDirs: PluginDir[]
 } => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
   const agents = registry.getAgentsFlag()
   const pluginDirs = discoverPluginDirs(config)
 

@@ -3,7 +3,6 @@ import * as path from "node:path"
 import * as readline from "node:readline"
 import { printInfo, printError } from "../ui/output"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { advancePipeline, recordMatchedShapes } from "../stores/state"
 import { resolveBuildDir } from "../config"
 import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
@@ -175,7 +174,7 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
   const buildDir = resolveBuildDir(buildName, { ensure: true })
   printInfo(`Build directory: ${buildDir}`)
 
-  const registry = buildAgentRegistry(resolveFlavour(opts.flavour ?? null))
+  const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("shaper.md")
   const timeoutMs = opts.timeout * 60 * 1000
 
