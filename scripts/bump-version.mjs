@@ -24,8 +24,11 @@
  * range. If no prior release exists, `since` is null.
  *
  * Exit codes:
- *   0  bump succeeded
- *   1  expected failure (dirty_tree, usage) — JSON still on stdout
+ *   0  script ran to completion — includes expected failures (dirty_tree,
+ *      usage). The JSON's `mode` field signals success vs. failure, so the
+ *      skill can read it. Non-zero would make the slash-command preflight
+ *      swallow stdout and never hand control to the skill body, hiding the
+ *      error from the user.
  *   2  unexpected runtime crash — JSON still on stdout if possible
  */
 
@@ -44,7 +47,7 @@ function emit(obj) {
 
 function emit_error(error_type, message) {
   emit({ mode: 'error', error_type, message });
-  process.exit(1);
+  process.exit(0);
 }
 
 function parse_args(argv) {
