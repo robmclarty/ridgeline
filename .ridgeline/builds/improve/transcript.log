@@ -2307,3 +2307,8 @@ Re-running lint to confirm the handoff edit didn't regress markdownlint.
 Clean. Now committing Phase 5 work.
 [TodoWrite]
 [Bash] git add CHANGELOG.md docs/build-lifecycle.md docs/ensemble-flows.md docs/help.md docs/research.md docs/shaping.md docs/spec-driven-development.md docs/preflight-and-sensors.md src/ui/dashboard/__test…
+[Bash] git commit -m "$(cat <<'EOF'
+[TodoWrite]
+[05-release-polish] DONE
+
+Phase 5 work was already in place from a prior context — verified each acceptance criterion against actual files, fixed one MD012 markdown-lint regression in handoff.md (two consecutive blank lines between phase 3b and phase 5 sections), then committed as `029e1f3`. Final state: lint and tsc green; vitest 917 passing / 28 failing (all 28 are the documented pre-existing greywall sandbox `git init` issue across the same three files every prior phase has flagged; zero phase-5 regressions). Branch `improve1` is ready for the user-driven cutover to main per criterion 20.

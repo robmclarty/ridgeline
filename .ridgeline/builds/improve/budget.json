@@ -251,7 +251,19 @@
       "cacheCreationInputTokens": 90947,
       "durationMs": 314664,
       "timestamp": "2026-04-23T23:17:23.368Z"
+    },
+    {
+      "phase": "05-release-polish",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 2.7760297499999997,
+      "inputTokens": 40,
+      "outputTokens": 10457,
+      "cacheReadInputTokens": 2805543,
+      "cacheCreationInputTokens": 171629,
+      "durationMs": 228936,
+      "timestamp": "2026-04-23T23:45:19.860Z"
     }
   ],
-  "totalCostUsd": 151.94809560000002
+  "totalCostUsd": 154.72412535
 }

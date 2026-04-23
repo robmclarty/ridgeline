@@ -51,3 +51,4 @@
 {"timestamp":"2026-04-23T23:17:23.549Z","type":"build_start","phaseId":"05-release-polish","duration":null,"tokens":null,"costUsd":null,"summary":"Build attempt 1 [sandbox: greywall]"}
 {"timestamp":"2026-04-23T23:41:29.811Z","type":"build_complete","phaseId":"05-release-polish","duration":null,"tokens":null,"costUsd":null,"summary":"Build error (transient): Error: Claude invocation stalled: No output received for 300s (stall timeout)"}
 {"timestamp":"2026-04-23T23:41:30.922Z","type":"build_start","phaseId":"05-release-polish","duration":null,"tokens":null,"costUsd":null,"summary":"Build attempt 2 [sandbox: greywall]"}
+{"timestamp":"2026-04-23T23:45:19.859Z","type":"build_complete","phaseId":"05-release-polish","duration":228936,"tokens":{"input":40,"output":10457},"costUsd":2.7760297499999997,"summary":"Build complete"}
