@@ -21,6 +21,8 @@ import { runRefine } from "./commands/refine"
 import { runCatalog } from "./commands/catalog"
 import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 import { enforceFlavourRemoved } from "./utils/flavour-removed"
+import { detect } from "./engine/detect"
+import { runPreflight } from "./ui/preflight"
 
 enforceFlavourRemoved(process.argv.slice(2))
 
@@ -69,6 +71,27 @@ const handleCommandError = (err: unknown): never => {
 
 const ridgelineDirFromCwd = (): string => path.join(process.cwd(), ".ridgeline")
 
+const detectPreflightFlags = (): { isThorough: boolean; isYes: boolean } => {
+  const argv = process.argv.slice(2)
+  return {
+    isThorough: argv.includes("--thorough"),
+    isYes: argv.includes("--yes") || argv.includes("-y"),
+  }
+}
+
+const runPreflightGuard = async (): Promise<void> => {
+  const { isThorough, isYes } = detectPreflightFlags()
+  const report = await detect(process.cwd(), { isThorough })
+  await runPreflight(report, {
+    yes: isYes,
+    isTTY: Boolean(process.stdin.isTTY),
+  })
+}
+
+const addPreflightOptions = (cmd: Command): Command => cmd
+  .option("--thorough", "Use a 3-specialist ensemble (default: 2)")
+  .option("-y, --yes", "Skip the preflight confirmation prompt")
+
 const parseBaseOpts = (opts: Opts) => ({
   model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
   timeout: parseInt(String(opts.timeout ?? "10"), 10),
@@ -85,6 +108,18 @@ const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
     }
   }
 
+const withConfigAndPreflight = (fn: (config: RidgelineConfig) => Promise<void>) =>
+  async (buildName: string | undefined, opts: Opts) => {
+    try {
+      if (opts.structuredLog === false) disableLogger()
+      await runPreflightGuard()
+      const config = resolveConfig(await requireBuildName(buildName), opts)
+      await fn(config)
+    } catch (err) {
+      handleCommandError(err)
+    }
+  }
+
 const program = new Command()
 
 program
@@ -94,7 +129,7 @@ program
 
 // Default command: `ridgeline <build-name> [input]`
 // Dispatches to the next incomplete pipeline stage
-program
+addPreflightOptions(program
   .argument("[build-name]", "Build name")
   .argument("[input]", "Description text or path to input file")
   .option("--model <name>", "Model for all stages (defaults to settings.json model, or 'opus')")
@@ -106,9 +141,10 @@ program
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
-  .option("--unsafe", "Disable sandbox auto-detection")
+  .option("--unsafe", "Disable sandbox auto-detection"))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       await runCreate(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: String(opts.timeout ?? "10"),
@@ -127,13 +163,14 @@ program
     }
   })
 
-program
+addPreflightOptions(program
   .command("shape [build-name] [input]")
   .description("Gather project context and produce shape.md")
   .option("--model <name>", "Model for shaper agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10"))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       await runShape(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
@@ -144,20 +181,21 @@ program
     }
   })
 
-program
+addPreflightOptions(program
   .command("design [build-name]")
   .description("Establish or update visual design system (design.md)")
   .option("--model <name>", "Model for designer agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10"))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       await runDesign(buildName ? await requireBuildName(buildName) : null, parseBaseOpts(opts))
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-program
+addPreflightOptions(program
   .command("spec [build-name] [input]")
   .description(
     "Generate spec.md, constraints.md, and taste.md from shape.md via ensemble. " +
@@ -166,9 +204,10 @@ program
   )
   .option("--model <name>", "Model for specialists and synthesizer (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
+  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount"))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       await runSpec(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
@@ -180,16 +219,17 @@ program
     }
   })
 
-program
+addPreflightOptions(program
   .command("research [build-name]")
   .description("Research the spec using web sources to find improvements (optional step between spec and plan)")
   .option("--model <name>", "Model for research agents (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per agent in minutes", "15")
   .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
   .option("--quick", "Run a single random specialist instead of the full ensemble")
-  .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 2)")
+  .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 2)"))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       const autoRaw = opts.auto
       let auto: number | null = null
       if (autoRaw !== undefined) {
@@ -209,13 +249,14 @@ program
     }
   })
 
-program
+addPreflightOptions(program
   .command("refine [build-name]")
   .description("Merge research.md findings into spec.md")
   .option("--model <name>", "Model for refiner agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration in minutes", "10")
+  .option("--timeout <minutes>", "Max duration in minutes", "10"))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       await runRefine(await requireBuildName(buildName), parseBaseOpts(opts))
     } catch (err) {
       handleCommandError(err)
@@ -250,24 +291,24 @@ program
     }
   })
 
-const addPlanOptions = (cmd: Command) => cmd
+const addPlanOptions = (cmd: Command): Command => cmd
   .option("--model <name>", "Model for planner (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--deep-ensemble", "Enable two-round cross-specialist annotation before synthesis")
 
-addPlanOptions(program
+addPreflightOptions(addPlanOptions(program
   .command("plan [build-name]")
-  .description("Generate phase specs from spec.md and constraints.md"))
-  .action(withConfig(runPlan))
+  .description("Generate phase specs from spec.md and constraints.md")))
+  .action(withConfigAndPreflight(runPlan))
 
 addPlanOptions(program
   .command("dry-run [build-name]")
   .description("Display the plan without executing"))
   .action(withConfig(runDryRun))
 
-program
+addPreflightOptions(program
   .command("build [build-name]")
   .description("Execute the build pipeline (automatically resumes from last successful phase)")
   .option("--timeout <minutes>", "Max duration per phase in minutes", "120")
@@ -280,28 +321,30 @@ program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
-  .option("--no-structured-log", "Disable structured logging to log.jsonl")
-  .action(withConfig(runBuild))
+  .option("--no-structured-log", "Disable structured logging to log.jsonl"))
+  .action(withConfigAndPreflight(runBuild))
 
-program
+addPreflightOptions(program
   .command("rewind <build-name>")
   .description("Reset pipeline state to a given stage and clean up downstream artifacts")
-  .requiredOption("--to <stage>", "Stage to rewind to (shape, spec, research, refine, plan)")
-  .action((buildName: string, opts: Opts) => {
+  .requiredOption("--to <stage>", "Stage to rewind to (shape, spec, research, refine, plan)"))
+  .action(async (buildName: string, opts: Opts) => {
     try {
+      await runPreflightGuard()
       runRewind(buildName, opts.to as string)
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-program
+addPreflightOptions(program
   .command("retrospective [build-name]")
   .description("Analyze a completed build and extract learnings for future builds")
   .option("--model <name>", "Model for retrospective agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration in minutes", "10")
+  .option("--timeout <minutes>", "Max duration in minutes", "10"))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
+      await runPreflightGuard()
       await runRetrospective(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
