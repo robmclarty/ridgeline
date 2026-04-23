@@ -3,7 +3,6 @@ import * as path from "node:path"
 import * as readline from "node:readline"
 import { printInfo } from "../ui/output"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { advancePipeline } from "../stores/state"
 import { runQAIntake, runOutputTurn } from "./qa-workflow"
 import { resolveAssetDirSafe } from "../catalog/resolve-asset-dir"
@@ -115,7 +114,7 @@ export const runDesign = async (
 
   printInfo(buildDir ? `Build directory: ${buildDir}` : "Project-level design")
 
-  const registry = buildAgentRegistry(resolveFlavour(opts.flavour ?? null))
+  const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("designer.md")
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })

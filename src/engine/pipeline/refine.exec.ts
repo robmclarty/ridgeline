@@ -4,7 +4,6 @@ import { ClaudeResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.display"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { createStderrHandler } from "./pipeline.shared"
 import { SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { PromptDocument } from "./prompt.document"
@@ -29,7 +28,7 @@ export const invokeRefiner = async (
   tasteMd: string | null,
   config: RefineConfig,
 ): Promise<ClaudeResult> => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("refiner.md")
 
   const doc = new PromptDocument()

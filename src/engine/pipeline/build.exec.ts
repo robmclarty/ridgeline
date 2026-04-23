@@ -6,7 +6,6 @@ import { createDisplayCallbacks } from "../claude/stream.display"
 import { readHandoff } from "../../stores/handoff"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
 import { PromptDocument } from "./prompt.document"
 
@@ -65,7 +64,7 @@ export const invokeBuilder = async (
   feedbackPath: string | null,
   cwd?: string,
 ): Promise<ClaudeResult> => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("builder.md")
   const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: cwd ?? process.cwd() })

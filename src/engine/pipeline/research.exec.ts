@@ -4,7 +4,6 @@ import { EnsembleResult } from "../../types"
 import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { resolveFlavour } from "../discovery/flavour.resolve"
 import { createStderrHandler } from "./pipeline.shared"
 import { startSpinner } from "../../ui/spinner"
 import { PromptDocument } from "./prompt.document"
@@ -175,7 +174,7 @@ export const invokeResearcher = async (
   tasteMd: string | null,
   config: ResearchConfig,
 ): Promise<EnsembleResult> => {
-  const registry = buildAgentRegistry(resolveFlavour(config.flavour))
+  const registry = buildAgentRegistry()
   const context = registry.getContext("researchers") ?? ""
   const gapsMd = registry.getGaps("researchers")
   const allSpecialists = registry.getSpecialists("researchers")

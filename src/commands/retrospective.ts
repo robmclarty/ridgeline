@@ -4,7 +4,6 @@ import { printInfo, printError, printWarn } from "../ui/output"
 import { invokeClaude } from "../engine/claude/claude.exec"
 import { createDisplayCallbacks } from "../engine/claude/stream.display"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { resolveFlavour } from "../engine/discovery/flavour.resolve"
 import { loadBudget } from "../stores/budget"
 import { readTrajectory } from "../stores/trajectory"
 import { loadState } from "../stores/state"
@@ -73,7 +72,7 @@ export const runRetrospective = async (
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const learningsPath = path.join(ridgelineDir, "learnings.md")
 
-  const registry = buildAgentRegistry(resolveFlavour(opts.flavour ?? null))
+  const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("retrospective.md")
   const userPrompt = assembleUserPrompt(buildDir, buildName)
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
