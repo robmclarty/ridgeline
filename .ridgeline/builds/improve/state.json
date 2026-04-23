@@ -13,12 +13,12 @@
   "phases": [
     {
       "id": "01a-flavour-removal-and-metadata",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/improve/01a-flavour-removal-and-metadata",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/improve/01a-flavour-removal-and-metadata",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 2653692,
+      "completedAt": "2026-04-23T04:16:59.940Z",
       "failedAt": null
     },
     {
