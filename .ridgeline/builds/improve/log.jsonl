@@ -60,3 +60,4 @@
 {"timestamp":"2026-04-23T23:08:24.414Z","level":"info","phase":null,"message":"Starting build: improve (7 phases)\n"}
 {"timestamp":"2026-04-23T23:08:24.472Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
 {"timestamp":"2026-04-23T23:08:24.473Z","level":"info","phase":"03b-prompt-caching","message":"Phase 5/7: 03b-prompt-caching"}
+{"timestamp":"2026-04-23T23:08:24.607Z","level":"info","phase":"03b-prompt-caching","message":"Building..."}

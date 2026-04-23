@@ -227,7 +227,19 @@
       "cacheCreationInputTokens": 320587,
       "durationMs": 1293904,
       "timestamp": "2026-04-23T22:15:14.000Z"
+    },
+    {
+      "phase": "03b-prompt-caching",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 3.2205127500000006,
+      "inputTokens": 44,
+      "outputTokens": 10563,
+      "cacheReadInputTokens": 3289418,
+      "cacheCreationInputTokens": 204407,
+      "durationMs": 223990,
+      "timestamp": "2026-04-23T23:12:08.598Z"
     }
   ],
-  "totalCostUsd": 146.56836660000002
+  "totalCostUsd": 149.78887935000003
 }

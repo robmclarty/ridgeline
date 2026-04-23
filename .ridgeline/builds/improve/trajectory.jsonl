@@ -44,3 +44,5 @@
 {"timestamp":"2026-04-23T22:15:20.630Z","type":"review_complete","phaseId":"03b-prompt-caching","duration":null,"tokens":null,"costUsd":null,"summary":"Review error (transient): Error: claude exited with code 143: "}
 {"timestamp":"2026-04-23T22:15:22.001Z","type":"build_start","phaseId":"03b-prompt-caching","duration":null,"tokens":null,"costUsd":null,"summary":"Build attempt 2 [sandbox: greywall]"}
 {"timestamp":"2026-04-23T22:15:22.367Z","type":"build_complete","phaseId":"03b-prompt-caching","duration":null,"tokens":null,"costUsd":null,"summary":"Build error (transient): Error: claude exited with code null: "}
+{"timestamp":"2026-04-23T23:08:24.607Z","type":"build_start","phaseId":"03b-prompt-caching","duration":null,"tokens":null,"costUsd":null,"summary":"Build attempt 1 [sandbox: greywall]"}
+{"timestamp":"2026-04-23T23:12:08.597Z","type":"build_complete","phaseId":"03b-prompt-caching","duration":223990,"tokens":{"input":44,"output":10563},"costUsd":3.2205127500000006,"summary":"Build complete"}
