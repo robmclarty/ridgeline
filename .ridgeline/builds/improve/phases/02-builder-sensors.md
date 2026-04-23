@@ -1,5 +1,5 @@
 ---
-depends_on: [01-foundations-and-preflight]
+depends_on: [01b-detection-preflight-color]
 ---
 # Phase 2: Always-on builder sensors and dev-server port convention
 
@@ -7,13 +7,13 @@ depends_on: [01-foundations-and-preflight]
 
 Give the builder agent eyes. Ship `src/sensors/` as four uniform adapters — Playwright (screenshot + DOM evaluation, the browser substrate), Claude vision (image analysis via the existing Claude CLI path), axe-core (accessibility audit run against a Playwright `Page`), and `wcag-contrast` (contrast ratio checks on static design-token hex pairs, independent of Playwright). Wire the builder prompt (`src/agents/core/builder.md`) to reference all four sensors and describe the visual self-verification pattern. Add the `shape.md` `## Runtime` dev-server-port convention the Playwright sensor reads.
 
-When the phase completes: the builder tool registry declares all four sensors unconditionally; runtime availability is gated by the `DetectionReport.suggestedSensors` (from phase 1) plus peer-dependency resolvability. Sensor failures are non-fatal warnings — the builder continues blind. When Playwright is unresolvable or Chromium is missing, `a11y` and `vision` emit a warning with the one-command install hint and return; the contrast sensor stays independent of Playwright. Sandbox compatibility is handled explicitly (Chromium launch args, 10 s timeout, `sandbox-incompatible` warning). Dev-server discovery either reads the `## Runtime` section of `shape.md` or probes `5173`, `3000`, `8080`, `4321` in order with a 250 ms per-probe cap and 1 s overall cap.
+When the phase completes: the builder tool registry declares all four sensors unconditionally; runtime availability is gated by the `DetectionReport.suggestedSensors` (from phase 1b) plus peer-dependency resolvability. Sensor failures are non-fatal warnings — the builder continues blind. When Playwright is unresolvable or Chromium is missing, `a11y` and `vision` emit a warning with the one-command install hint and return; the contrast sensor stays independent of Playwright. Sandbox compatibility is handled explicitly (Chromium launch args, 10 s timeout, `sandbox-incompatible` warning). Dev-server discovery either reads the `## Runtime` section of `shape.md` or probes `5173`, `3000`, `8080`, `4321` in order with a 250 ms per-probe cap and 1 s overall cap.
 
 This is a self-contained surface — none of the orchestration / verdict / caching changes (phase 3) depend on the sensors except through the `SensorFinding` type, which this phase exports.
 
 ## Context
 
-Phase 1 deleted `src/flavours/`, declared `playwright` as an optional peer dependency, added `axe-core` and `wcag-contrast` as direct dependencies, bumped to `0.8.0` with `engines.node: ">=20.0.0"`, and shipped the project-signal scanner (`detect`) plus `runPreflight`. Phase 1 did NOT yet add the conditional Playwright install hint to preflight; that is added here so it can be tested alongside the resolution probe.
+Phase 1a deleted `src/flavours/`, rewired `agent.registry.ts` to resolve from `src/agents/` only, declared `playwright` as an optional peer dependency, added `axe-core` and `wcag-contrast` as direct dependencies, and bumped to `0.8.0` with `engines.node: ">=20.0.0"`. Phase 1b shipped the project-signal scanner (`detect`), `runPreflight`, and the semantic color helper. Neither phase 1a nor 1b added the conditional Playwright install hint to preflight; that is added here so it can be tested alongside the resolution probe.
 
 `src/agents/core/builder.md` exists and currently makes no reference to sensors. `src/commands/shape.ts` defines `SHAPE_OUTPUT_SCHEMA` and `formatShapeMd` at lines 14–172; `shape.md` has no YAML front matter today, so this phase uses a dedicated `## Runtime` section matching the existing bullet style, not a top-level YAML key.
 
@@ -55,7 +55,7 @@ The reviewer's structured verdict gains a `sensorFindings: SensorFinding[]` fiel
 
 ### Preflight install-hint integration
 
-15. When `DetectionReport.isVisualSurface === true` and `require.resolve('playwright')` throws, preflight stdout (from phase 1's `runPreflight`) contains the literal substring `npm install --save-dev playwright && npx playwright install chromium` (both halves on the same line) and the reason phrase `visual surface detected`. A vitest covers this with `playwright` stubbed as unresolvable.
+15. When `DetectionReport.isVisualSurface === true` and `require.resolve('playwright')` throws, preflight stdout (from phase 1b's `runPreflight`) contains the literal substring `npm install --save-dev playwright && npx playwright install chromium` (both halves on the same line) and the reason phrase `visual surface detected`. A vitest covers this with `playwright` stubbed as unresolvable.
 
 ### shape.md `## Runtime` convention
 
@@ -95,4 +95,4 @@ Drawn from `spec.md`:
 Drawn from `constraints.md`:
 
 - Sandboxing and Security
-- Dependencies (the `playwright` peer dep and `axe-core` / `wcag-contrast` direct deps were declared in phase 1; this phase wires them up)
+- Dependencies (the `playwright` peer dep and `axe-core` / `wcag-contrast` direct deps were declared in phase 1a; this phase wires them up)

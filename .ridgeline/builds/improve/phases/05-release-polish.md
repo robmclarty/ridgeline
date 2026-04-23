@@ -7,15 +7,16 @@ depends_on: [03b-prompt-caching, 04-dashboard]
 
 Close out 0.8.0. Author the `CHANGELOG.md` 0.8.0 entry with Added / Changed / Removed / Breaking subsections that explicitly enumerate every breaking change the earlier phases shipped. Rewrite any remaining `docs/` references to `--flavour`, named flavour types, or `--deep-ensemble` so they point at the detection-driven flow and the new `--thorough` / `--yes` / `--port` flags. Fill any remaining gaps in the test matrix called out in the spec's "Vitest coverage for new code paths" section. Run the full check command — `npm run lint && npm test && npx tsc --noEmit` — and confirm the 0.8.0 branch is ready for fast-forward or merge cutover to main.
 
-This phase does NOT bump `package.json` (already done in phase 1 — version is `0.8.0`, `engines.node` is `>=20.0.0`, `playwright` is declared as an optional peer dep, `axe-core` and `wcag-contrast` are direct deps). It does NOT perform the actual git merge to main — the user drives that step.
+This phase does NOT bump `package.json` (already done in phase 1a — version is `0.8.0`, `engines.node` is `>=20.0.0`, `playwright` is declared as an optional peer dep, `axe-core` and `wcag-contrast` are direct deps). It does NOT perform the actual git merge to main — the user drives that step.
 
 A dedicated polish phase prevents two common release hazards: (1) docs/CHANGELOG drift accumulating across earlier phases that each focused on code; (2) cross-phase test regressions where one phase's deletion shadow-removed coverage another phase implicitly relied on. A fresh context running the full suite end-to-end catches both.
 
 ## Context
 
-Phases 1–4 have shipped the features:
+Phases 1a–4 have shipped the features:
 
-- Phase 1: flavour removal, detection, preflight, color helper, package metadata (version, engines, deps).
+- Phase 1a: flavour removal, `agent.registry.ts` rewire to `src/agents/` only, package metadata (version, engines, peer dep, direct deps), test pruning with coverage floor.
+- Phase 1b: project-signal detection, preflight TTY gate, semantic color helper and six-file UI refactor.
 - Phase 2: four sensor adapters, builder integration, shape.md `## Runtime` convention, preflight install hint.
 - Phase 3: lean ensembles, structured verdicts, prompt caching, reviewer `sensorFindings` field.
 - Phase 4: `ridgeline ui` localhost dashboard with SSE, contrast helper, a11y/offline tests.
@@ -48,7 +49,7 @@ Phases 1–4 have shipped the features:
 
 ### Test matrix gap-fill
 
-9. At least one vitest file exercises each of the following — failing-fast on any gap left by phases 1–4:
+9. At least one vitest file exercises each of the following — failing-fast on any gap left by phases 1a–4:
    - (a) `--flavour` removal error parameterised across every pipeline-entry command (`shape`, `design`, `spec`, `research`, `refine`, `plan`, `build`, `rewind`, `retrospective`, `create`).
    - (b) `DetectionReport` field population for at least five fixture projects (React+Vite with `design.md`, pure Node, pure HTML, Vue+Vite, monorepo root-only).
    - (c) Preflight TTY block vs `--yes` vs non-TTY pass-through.
@@ -85,7 +86,7 @@ Phases 1–4 have shipped the features:
 
 Drawn from `spec.md`:
 
-- **Version bump and branch cutover** — only the CHANGELOG, docs, and final-check / cutover-readiness criteria; the version bump itself was completed in phase 1.
+- **Version bump and branch cutover** — only the CHANGELOG, docs, and final-check / cutover-readiness criteria; the version bump itself was completed in phase 1a.
 - **Vitest coverage for new code paths** (entire section — this phase fills any remaining gaps from earlier phases and verifies the full matrix is present).
 
 Drawn from `constraints.md`:

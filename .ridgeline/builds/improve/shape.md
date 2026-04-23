@@ -2,7 +2,7 @@
 
 ## Intent
 
-Ship a v0.8.0 iteration of ridgeline on a new branch (replacing main on completion) that eliminates three pains the sole user hits when using ridgeline to build downstream node/TS apps for web/games/mobile: flavour-system complexity that makes "forgot a flag → wasted build" a real failure mode, a builder agent that is blind to visual output on projects with a visual surface, and ensemble orchestration that burns 12+ Claude calls before a single phase builds. The goal is simplicity over abstraction: fewer flavours, fewer flags, fewer packs, more always-on sensors, smarter defaults, and a preflight step that shows what ridgeline inferred before any money is spent.
+Ship a v0.8.0 iteration of ridgeline on a new branch (replacing main on completion) that eliminates three pains the sole user hits when using ridgeline to build downstream node/TS apps for web/games/mobile: flavour-flag complexity that makes "forgot a flag → wasted build" a real failure mode, a builder agent that is blind to visual output on projects with a visual surface, and ensemble orchestration that burns 12+ Claude calls before a single phase builds. The goal is simplicity over abstraction: no flavours, fewer flags, no packs, more always-on sensors, smarter defaults, and a preflight step that shows what ridgeline inferred before any money is spent.
 
 ## Scope
 
@@ -12,8 +12,8 @@ Boundaries:
 
 **In scope:**
 
-- Collapse src/flavours/ to a single 'software' flavour; delete novel-writing, screenwriting, legal-drafting, music-composition, translation, data-analysis, machine-learning, security-audit (8 dirs)
-- Remove the capability-pack abstraction entirely; ship Playwright, Claude vision, pa11y/axe-core, and contrast/WCAG checks as always-available builder tools in the software core
+- Delete src/flavours/ entirely (all 15 directories); the canonical agent set already lives in src/agents/ and per-flavour prose variants were not earning their cost. Project-type differences are now served by detection-driven tool selection, not prompt variants
+- No capability-pack abstraction; ship Playwright, Claude vision, axe-core, and wcag-contrast as always-available builder tools selected per-build by detection
 - Playwright shipped as a peerDependency; auto-prompt install at preflight when a visual-surface project is detected
 - Project-signal auto-detection at startup (package.json deps like react/vite/three/phaser, design.md presence, file types .html/.css/.tsx, .ridgeline/ contents)
 - Preflight step that prints 'Detected: X → enabling Y' and blocks on Enter unless --yes or non-TTY; in CI, prints and proceeds
@@ -23,21 +23,22 @@ Boundaries:
 - Prompt caching of unchanged stage inputs (spec.md, constraints.md, taste.md) across invocations
 - New `ridgeline ui` command that attaches a local-port dashboard to a live or completed build (phase graph + cost meter), opt-in and separate from core runs
 - `--flavour <removed-name>` errors immediately with a clear redirect message (no silent fallback)
-- Builder prompt instructs 'if the project has a visual surface, self-verify with Playwright + vision + pa11y + contrast'; sensor failures warn and continue blind
+- Builder prompt instructs 'if the project has a visual surface, self-verify with Playwright + Claude vision + axe-core + wcag-contrast'; sensor failures warn and continue blind
 - Version bump to 0.8.0 from the new branch when ready; branch replaces main on cutover
 - Extend existing vitest suite for new code paths (sensor invocation, preflight detection, ensemble reduction, removed-flavour errors, --thorough wiring)
 
 **Out of scope:**
 
 - Mastra migration, block library extraction, monorepo split
-- Base+overlay composable-layer flavour refactor (replaced by aggressive collapse)
+- Base+overlay composable-layer flavour refactor (replaced by full flavour deletion)
 - Multi-model abstraction / lifting the Claude CLI subprocess dependency
 - Visual pipeline or node-graph editor for wiring agents
 - Tldraw/canvas workspaces for design stages
 - Migration scripts for 0.7.x .ridgeline/builds/* artifacts (clean break; old builds stay on 0.7.x)
-- Keeping removed flavours in a legacy/ directory or as dormant config
-- Restoring or extending non-software domains (novel-writing, screenwriting, legal, music, translation, data-analysis, ML, security-audit)
-- Game-specific, mobile-specific, or audio-specific sensors beyond the four named (Playwright, vision, pa11y, contrast)
+- Keeping any src/flavours/ directory under legacy/ or as dormant config
+- Restoring the --flavour flag, per-flavour prompt variants, or flavour-specific prose customization (software-engineering, game-dev, mobile-app, technical-writing, test-suite, web-game, web-ui differences are served by tool selection and detection, not prose)
+- Reintroducing a capability-pack / tool-group abstraction; detection picks sensors directly
+- Game-specific, mobile-specific, or audio-specific sensors beyond the four named (Playwright, Claude vision, axe-core, wcag-contrast)
 - Touching catalog-related dependencies (sharp, colorthief, free-tex-packer-core) or catalog behavior
 - Replacing the linter stack (oxlint, markdownlint, agnix, fallow)
 - Rewriting the existing test suite
@@ -53,13 +54,13 @@ A breaking-but-streamlined 0.8.0 release. Developed on a new branch, cut over to
 Primary workflow:
 
 1. User runs `ridgeline my-build 'intent text'` (no --flavour). Ridgeline scans package.json, .ridgeline/, and project files to detect project signals.
-2. Preflight prints a detection summary — e.g. 'Detected: react + vite + design.md → enabling Playwright, vision, pa11y; ensemble: 2 specialists; prompt caching on'. User presses Enter (or auto-proceeds in CI / with --yes).
+2. Preflight prints a detection summary — e.g. 'Detected: react + vite + design.md → enabling Playwright, vision, a11y, contrast; ensemble: 2 specialists; prompt caching on'. User presses Enter (or auto-proceeds in CI / with --yes).
 3. Pipeline runs shape → spec → plan → build → review. Spec and plan default to 2 specialists; structured verdicts enable synthesis skip when specialists agree (audit note logged). Prompt caching hits on unchanged constraints.md/spec.md across stages.
-4. In build, the builder has Playwright, Claude vision, pa11y/axe-core, and contrast/WCAG checks always available. If a visual surface is detected, the builder self-verifies by screenshotting and evaluating. Playwright failures warn but don't abort the phase.
+4. In build, the builder has Playwright, Claude vision, axe-core, and wcag-contrast always available. If a visual surface is detected, the builder self-verifies by screenshotting and evaluating. Sensor failures warn but don't abort the phase.
 5. Separately, `ridgeline ui` attaches a local-port dashboard to any running or completed build for phase-graph and cost-meter viewing.
 6. `--thorough` bumps specialist count and enables two-round cross-specialist annotation across all ensembles. `--deep-ensemble` is removed with a deprecation message.
 
-Shape of the codebase change: flavour count drops from 15 to 1; a new src/engine/detect/ module owns project-signal detection; a new src/sensors/ module wraps Playwright/vision/pa11y/contrast as builder tool adapters; src/engine/pipeline/ensemble.exec.ts gains default-2/opt-in-3 logic plus structured-agreement synthesis skip; src/engine/claude/agent.prompt.ts reshapes prompt assembly for cache-boundary hits; src/cli.ts adds preflight step and --thorough flag; a new src/commands/ui.ts + src/ui/dashboard.* powers the dashboard. Removed-flavour-name errors live in flavour.resolve.ts.
+Shape of the codebase change: src/flavours/ is deleted entirely (all 15 directories); src/agents/ becomes the single canonical agent set. A new src/engine/detect/ module owns project-signal detection; a new src/sensors/ module wraps Playwright/vision/axe-core/wcag-contrast as builder tool adapters; src/engine/pipeline/ensemble.exec.ts gains default-2/opt-in-3 logic plus structured-agreement synthesis skip; src/engine/claude/agent.prompt.ts reshapes prompt assembly for cache-boundary hits; src/cli.ts adds preflight step and --thorough flag; a new src/commands/ui.ts + src/ui/dashboard.* powers the dashboard. Supplying the removed --flavour flag errors at the CLI entry point with a migration hint; flavour.resolve.ts and flavour.config.ts are deleted.
 
 ## Risks & Complexities
 
@@ -68,7 +69,7 @@ Shape of the codebase change: flavour count drops from 15 to 1; a new src/engine
 - Structured-output agreement detection requires reshaping specialist prompts to emit a parseable skeleton. Malformed output must fall back to always-synthesize. Conservative diff threshold needed so real divergence is never hidden.
 - Prompt caching effectiveness depends on exact prompt assembly order. May require refactoring agent.prompt.ts to put stable content (constraints.md, taste.md) before volatile content (per-phase handoff) to hit cache boundaries.
 - `ridgeline ui` scope creep risk — must ship as a local-port dashboard only, not a full web app with auth, routing, or external state. Strict cap on surface area.
-- Deleting 8 flavours means the sole surviving software flavour absorbs all non-overlay behavior. Overlays that only existed in deleted flavours (e.g., screenwriting-specific planner bullets) are gone for good — acceptable per user confirmation but worth explicit acknowledgment.
+- Deleting all 15 flavours means any prose variant that existed only in a flavour overlay (e.g., screenwriting-specific planner bullets, web-ui-specific builder notes) is gone for good. The canonical agent set in src/agents/ was already the substrate; detection-driven tool selection handles project-type differences going forward. Acceptable per user confirmation but worth explicit acknowledgment.
 - Reviewer verdict schema may need to understand new sensor outputs (visual-diff results, a11y violations, contrast failures). Scope creep risk if the schema expansion grows — cap at a single 'sensorFindings' array in the existing verdict.
 - Dev server coordination for Playwright — the builder needs to know when a dev server is running and on which port. Needs a simple convention (check common ports, or declare in shape.md), not a complex discovery protocol.
 - Removing `--deep-ensemble` is a breaking CLI change. User is sole consumer and approved clean break, but any scripts or docs that reference it must be updated in the same change.
@@ -79,7 +80,7 @@ Shape of the codebase change: flavour count drops from 15 to 1; a new src/engine
 
 ## Existing Landscape
 
-TypeScript 5.9 CLI, ~5,160 LOC in src/, single runtime dep on commander@13 (plus catalog-only sharp/colorthief/free-tex-packer-core). Layered structure: src/cli.ts (Commander entry) → src/commands/ (one file per pipeline stage: shape, design, spec, research, refine, plan, build, dry-run, catalog, check, clean, rewind, retrospective, create) → src/engine/{claude,discovery,pipeline} (subprocess/stream, flavour/agent discovery, ensemble + DAG phase orchestration) → src/stores/ (state.json, budget.json, trajectory.jsonl, handoff, phases, settings, feedback.parse/format/io, tags — all with atomic writes and file locks) → src/ui/ (terminal: spinner, logger, output, prompt, summary, transcript) → src/flavours/ (15 subdirs × ~23 agent md files = ~346 near-duplicate files) → src/agents/ (core/planners/researchers/specialists/specifiers prompt templates) → src/catalog/ (asset indexing, tangential to this build). Build pipeline runs inside a git worktree under .worktrees/; completed phases merge back. Greywall/bwrap sandbox adapters live in src/engine/claude/sandbox.*. Vitest unit + e2e tests. Linters: oxlint, markdownlint, agnix (agent prompts), fallow (dead-code). Current version 0.7.19. Recent CHANGELOG shows active tuning (model resolution from settings.json, planner phase sizing, transcript capture, sandbox env shim).
+TypeScript 5.9 CLI, ~5,160 LOC in src/, single runtime dep on commander@13 (plus catalog-only sharp/colorthief/free-tex-packer-core). Layered structure: src/cli.ts (Commander entry) → src/commands/ (one file per pipeline stage: shape, design, spec, research, refine, plan, build, dry-run, catalog, check, clean, rewind, retrospective, create) → src/engine/{claude,discovery,pipeline} (subprocess/stream, flavour/agent discovery, ensemble + DAG phase orchestration) → src/stores/ (state.json, budget.json, trajectory.jsonl, handoff, phases, settings, feedback.parse/format/io, tags — all with atomic writes and file locks) → src/ui/ (terminal: spinner, logger, output, prompt, summary, transcript) → src/flavours/ (15 subdirs × ~23 agent md files = ~346 near-duplicate files — DELETED in 0.8.0) → src/agents/ (core/planners/researchers/specialists/specifiers prompt templates — the canonical set in 0.8.0) → src/catalog/ (asset indexing, tangential to this build). Build pipeline runs inside a git worktree under .worktrees/; completed phases merge back. Greywall/bwrap sandbox adapters live in src/engine/claude/sandbox.*. Vitest unit + e2e tests. Linters: oxlint, markdownlint, agnix (agent prompts), fallow (dead-code). Current version 0.7.19. Recent CHANGELOG shows active tuning (model resolution from settings.json, planner phase sizing, transcript capture, sandbox env shim).
 
 **External dependencies:**
 
@@ -90,9 +91,9 @@ TypeScript 5.9 CLI, ~5,160 LOC in src/, single runtime dep on commander@13 (plus
 - bubblewrap/bwrap (Linux sandbox provider — preserved)
 - Node.js (runtime — preserved)
 - Git (checkpoints, worktrees — preserved)
-- NEW: Playwright (peerDependency — visual sensor, auto-prompted at preflight when needed)
-- NEW: axe-core or pa11y-core (a11y audits — direct dep, lightweight)
-- NEW: a WCAG contrast utility (e.g. wcag-contrast — direct dep, lightweight)
+- NEW: Playwright (peerDependency, optional, range `">=1.57.0 <2.0.0"` — visual sensor, auto-prompted at preflight when needed)
+- NEW: axe-core (a11y audits — direct dep; runs against a Playwright Page; wrapper @axe-core/playwright intentionally not used)
+- NEW: wcag-contrast (contrast-ratio utility — direct dep; used by the contrast sensor and the dashboard's build-time contrast verification)
 - Dev tooling (unchanged): typescript@5.9, vitest@4.1, oxlint@1.58, markdownlint-cli2@0.21, agnix@0.17, fallow@2.13
 
 **Data structures:**
@@ -106,9 +107,10 @@ TypeScript 5.9 CLI, ~5,160 LOC in src/, single runtime dep on commander@13 (plus
 
 **Relevant modules:**
 
-- src/flavours/software-engineering/ — the sole surviving flavour; gets new sensor tool declarations and a rewritten builder overlay mentioning the visual self-verification pattern
-- src/flavours/{novel-writing,screenwriting,legal-drafting,music-composition,translation,data-analysis,machine-learning,security-audit}/ — DELETED
-- src/engine/discovery/flavour.resolve.ts + flavour.config.ts — simplifies drastically; adds removed-flavour error path
+- src/flavours/ (all 15 directories) — DELETED
+- src/agents/core/builder.md — gets a rewritten section describing the visual self-verification pattern and referencing the four sensors by name; other src/agents/core/*.md and src/agents/{planners,researchers,specialists,specifiers}/ prompts remain the canonical set
+- src/engine/discovery/flavour.resolve.ts + flavour.config.ts — DELETED; --flavour flag removed from all commands, supplying it errors with a migration hint at CLI entry
+- src/engine/discovery/agent.registry.ts — resolves agent prompts directly from src/agents/ with no flavour-dir intermediary or fallback
 - src/engine/pipeline/ensemble.exec.ts — default-2 logic, structured-verdict collection, diff-based agreement detection, synthesis skip with audit note
 - src/engine/pipeline/{specify,plan,research}.exec.ts — wire --thorough; drop --deep-ensemble
 - src/engine/claude/agent.prompt.ts — prompt assembly reshaped for cache-boundary hits (stable content first)
@@ -128,5 +130,5 @@ TypeScript 5.9 CLI, ~5,160 LOC in src/, single runtime dep on commander@13 (plus
 - **Error handling:** Visual sensor failures are non-fatal warnings — the builder continues blind ('an un-seen build is still a build'). `--flavour <removed-name>` errors immediately with a clear redirect message, never silently falls back. Preflight ambiguity prompts the user only when detection is genuinely ambiguous; otherwise picks the narrower option silently. In CI / non-TTY, preflight prints detection and proceeds without blocking. Ensemble quorum behavior preserved (if too many specialists fail, halt). Malformed structured-verdict output falls back to always-synthesize rather than skip. Playwright browser-spawn failure degrades the sensor, not the phase. Removed flags (--deep-ensemble) print a one-line deprecation and map to --thorough for the current run, then error cleanly in a future minor.
 - **Performance:** Primary lever is ensemble-call reduction: default 2 specialists halves cost immediately across spec/plan/research without quality-detection machinery. Secondary lever is prompt caching of stable stage inputs (constraints.md, taste.md, spec.md) across invocations; achieved by ordering prompt assembly to put stable content first. Tertiary lever is agreement-based synthesis skip when structured verdicts are near-identical; strictly opt-in via structured-output diff (not prose diff), with an audit note preserved. No specific cost-reduction percentage is a hard requirement — measurable reduction on a reference software build is the outcome, not the constraint. Do not add caching complexity that isn't a direct win on real runs.
 - **Security:** Sandboxing (Greywall on macOS, bwrap on Linux) preserved unchanged — visual sensors run inside the sandbox or degrade gracefully if incompatible. Playwright browser process must be constrained to localhost / the dev server port; no general network access granted. pa11y and axe-core run locally against the project's own rendered output; no external reporting. Claude vision sends screenshot content to Anthropic via the existing Claude CLI path (same trust boundary as all other agent calls). No telemetry, no third-party analytics, no cloud state. Settings.json remains the sole project-local configuration surface; no new secrets required. User's Claude subscription OAuth (not API key) remains the auth model.
-- **Trade-offs:** Simplicity over abstraction — explicit and repeatedly confirmed by the user. Always-on tools over opt-in packs. One knob (--thorough) over many (--deep-ensemble and cousins). Fewer flavours (1 vs 15) over DRY-via-overlays. Clean break on behavior over migration compatibility (sole user; 0.7.x builds stay on 0.7.x). Preserve what works (git checkpoints, sandboxing, worktree isolation, state stores, linters, test suite) and rewrite only what obstructs the goals. Bias toward deletion — when a feature could go either way, remove it. Breaking CLI changes are acceptable at the 0.8.0 boundary; silent behavior changes are not (preflight surfaces them).
-- **Style:** TypeScript strict, existing conventions preserved. File/module layout follows the established src/{cli,commands,engine,stores,ui,flavours,agents,catalog,utils} pattern; new modules (detect, sensors, ui dashboard) slot in without relocating existing ones. Boolean naming uses is/has/should prefixes (per user preference: isVisualSurface, hasDesignMd, shouldRunPreflight). Linter stack unchanged — oxlint for code, markdownlint for docs, agnix for agent prompts, fallow for dead-code analysis. Vitest tests extended per new code path; not rewritten. Comments single-line by default and only where the WHY is non-obvious; no multi-paragraph docstrings. Error messages user-facing and actionable (e.g. 'Flavour "novel-writing" removed in 0.8.0. Non-software flavours are no longer supported; remove the --flavour flag to use the default software flavour.'). Pre/post-commit: `npm run lint` after each task per CLAUDE.md.
+- **Trade-offs:** Simplicity over abstraction — explicit and repeatedly confirmed by the user. Always-on tools over opt-in packs. One knob (--thorough) over many (--deep-ensemble and cousins). Zero flavours (src/agents/ as the single canonical set) over DRY-via-overlays (15 near-duplicate trees). Clean break on behavior over migration compatibility (sole user; 0.7.x builds stay on 0.7.x). Preserve what works (git checkpoints, sandboxing, worktree isolation, state stores, linters, test suite) and rewrite only what obstructs the goals. Bias toward deletion — when a feature could go either way, remove it. Breaking CLI changes are acceptable at the 0.8.0 boundary; silent behavior changes are not (preflight surfaces them).
+- **Style:** TypeScript strict, existing conventions preserved. File/module layout follows the established src/{cli,commands,engine,stores,ui,agents,catalog,utils} pattern (src/flavours/ removed); new modules (detect, sensors, ui dashboard) slot in without relocating existing ones. Boolean naming uses is/has/should prefixes (per user preference: isVisualSurface, hasDesignMd, shouldRunPreflight). Linter stack unchanged — oxlint for code, markdownlint for docs, agnix for agent prompts, fallow for dead-code analysis. Vitest tests extended per new code path; not rewritten. Comments single-line by default and only where the WHY is non-obvious; no multi-paragraph docstrings. Error messages user-facing and actionable (e.g. 'The --flavour flag was removed in 0.8.0. Drop the --flavour flag — detection now selects tools automatically per project.'). Pre/post-commit: `npm run lint` after each task per CLAUDE.md.

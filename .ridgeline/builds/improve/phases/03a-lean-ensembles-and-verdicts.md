@@ -13,7 +13,7 @@ Prompt assembly rework (stable-block caching) is deferred to phase 3b to isolate
 
 ## Context
 
-Phase 1 deleted `src/flavours/` and shipped `src/ui/color.ts`, `runPreflight`, and the `DetectionReport`. Phase 2 shipped `src/sensors/` with the `SensorFinding` interface and integrated sensors into the builder loop; collected findings need to flow into the reviewer here.
+Phase 1a deleted `src/flavours/` and rewired `agent.registry.ts` to `src/agents/` only; phase 1b shipped `src/ui/color.ts`, `runPreflight`, and the `DetectionReport`. Phase 2 shipped `src/sensors/` with the `SensorFinding` interface and integrated sensors into the builder loop; collected findings need to flow into the reviewer here.
 
 The current code path: `src/engine/claude/ensemble.exec.ts` orchestrates specialist calls and synthesizer invocation; `src/engine/claude/claude.exec.ts` already implements SIGTERM→SIGKILL escalation with startup/stall/global timeouts (per spec). Specialist prompts under `src/agents/specialists/` produce prose verdicts today with no structured skeleton.
 
