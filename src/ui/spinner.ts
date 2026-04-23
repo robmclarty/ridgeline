@@ -102,11 +102,31 @@ export const formatElapsed = (ms: number): string => {
  * The spinner writes to stderr so it never contaminates captured stdout.
  * Calling `stop()` clears the line and restores the cursor.
  */
+// Only one live spinner per process at a time. Parallel-wave builds create
+// concurrent spinners that would otherwise fight for ownership of stderr.
+let spinnerActive = false
+const noopSpinner: Spinner = {
+  stop() {},
+  pause() {},
+  resume() {},
+  setDetail() {},
+  printAbove() {},
+}
+
 export const startSpinner = (verb?: string): Spinner => {
   // If stderr is not a TTY (e.g. piped to a file), skip animation entirely.
   if (!process.stderr.isTTY) {
-    return { stop() {}, pause() {}, resume() {}, setDetail() {}, printAbove() {} }
+    return noopSpinner
   }
+  // Explicit opt-out for debugging or CI.
+  if (process.env.RIDGELINE_NO_SPINNER === "1") {
+    return noopSpinner
+  }
+  // Another spinner already owns stderr — silently yield so we don't trample it.
+  if (spinnerActive) {
+    return noopSpinner
+  }
+  spinnerActive = true
 
   let frameIndex = 0
   let direction = 1
@@ -150,6 +170,7 @@ export const startSpinner = (verb?: string): Spinner => {
         timer = null
       }
       clearLine()
+      spinnerActive = false
     },
     pause() {
       if (stopped || !timer) return

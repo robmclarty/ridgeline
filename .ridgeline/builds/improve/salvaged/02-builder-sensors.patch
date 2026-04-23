@@ -1,0 +1,871 @@
+diff --git a/src/agents/core/builder.md b/src/agents/core/builder.md
+index ae54ab2..f2a2856 100644
+--- a/src/agents/core/builder.md
++++ b/src/agents/core/builder.md
+@@ -96,6 +96,15 @@ If a feedback file is present, this is a retry. Read the feedback carefully. Fix
+ 
+ **Verification is the quality gate.** Run the check command if one exists. Use the verifier agent for intelligent verification. If checks pass, your work is presumed correct. If they fail, your work is not done.
+ 
++**Visual self-verification.** When the project is a visual surface (React, Vue, Vite, Next, etc.), four sensors are available to you and should be consulted after any UI-affecting change:
++
++- `playwright` — launches Chromium and screenshots the running dev server. The dev-server port is read from `shape.md` `## Runtime` section (e.g. `- **Dev server port:** 5173`); if absent, 5173, 3000, 8080, and 4321 are probed in order. The screenshot is written under the build's `sensors/` directory.
++- `vision` — sends the most recent screenshot through Claude vision (the same Claude CLI subprocess path used elsewhere) and returns a structured description plus any regressions it notices.
++- `a11y` — injects axe-core into the rendered page via `page.addScriptTag({ path: require.resolve('axe-core') })` and reports WCAG violations. No external network requests.
++- `contrast` — scores design-token hex pairs via `wcag-contrast` and flags any pair below WCAG AA (4.5:1 normal, 3:1 large).
++
++The pattern: after editing UI code, take a screenshot with `playwright`, run `vision` against the screenshot, and run `a11y` + `contrast` to catch accessibility and design-token regressions. Sensor failures are non-fatal warnings — continue the phase even if a sensor emits a warning. If playwright is unresolvable, `a11y` and `vision` will emit a single warning with an install hint; act on it once and move on.
++
+ **Use the Agent tool sparingly.** Do the work yourself. Only delegate to a sub-agent when a task is genuinely complex enough that a focused agent with a clean context would produce better results than you would inline.
+ 
+ **Specialist agents may be available.** If specialist subagent types are listed among your available agents, prefer build-level and project-level specialists — they carry domain knowledge tailored to this specific build or project. Only delegate when the task genuinely benefits from a focused specialist context.
+diff --git a/src/commands/shape.ts b/src/commands/shape.ts
+index b07a4ce..4afd0f5 100644
+--- a/src/commands/shape.ts
++++ b/src/commands/shape.ts
+@@ -47,11 +47,17 @@ const SHAPE_OUTPUT_SCHEMA = JSON.stringify({
+       },
+       required: ["errorHandling", "performance", "security", "tradeoffs", "style"],
+     },
++    runtime: {
++      type: "object",
++      properties: {
++        devServerPort: { type: "integer", minimum: 1, maximum: 65535 },
++      },
++    },
+   },
+   required: ["projectName", "intent", "scope", "solutionShape", "risksAndComplexities", "existingLandscape", "technicalPreferences"],
+ })
+ 
+-type ShapeOutput = {
++export type ShapeOutput = {
+   projectName: string
+   intent: string
+   scope: { size: string; inScope: string[]; outOfScope: string[] }
+@@ -70,6 +76,9 @@ type ShapeOutput = {
+     tradeoffs: string
+     style: string
+   }
++  runtime?: {
++    devServerPort?: number
++  }
+ }
+ 
+ export type ShapeOptions = {
+@@ -95,7 +104,7 @@ const resolveInputContext = async (
+ }
+ 
+ /** Format the structured shape output as shape.md markdown. */
+-const formatShapeMd = (shape: ShapeOutput): string => {
++export const formatShapeMd = (shape: ShapeOutput): string => {
+   const lines: string[] = []
+ 
+   lines.push(`# ${shape.projectName}`)
+@@ -166,6 +175,13 @@ const formatShapeMd = (shape: ShapeOutput): string => {
+   lines.push(`- **Style:** ${shape.technicalPreferences.style}`)
+   lines.push("")
+ 
++  if (shape.runtime && typeof shape.runtime.devServerPort === "number") {
++    lines.push("## Runtime")
++    lines.push("")
++    lines.push(`- **Dev server port:** ${shape.runtime.devServerPort}`)
++    lines.push("")
++  }
++
+   return lines.join("\n")
+ }
+ 
+diff --git a/src/engine/pipeline/build.exec.ts b/src/engine/pipeline/build.exec.ts
+index a8b1779..0f593be 100644
+--- a/src/engine/pipeline/build.exec.ts
++++ b/src/engine/pipeline/build.exec.ts
+@@ -8,6 +8,15 @@ import { cleanupPluginDirs } from "../discovery/plugin.scan"
+ import { buildAgentRegistry } from "../discovery/agent.registry"
+ import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
+ import { PromptDocument } from "./prompt.document"
++import type { DetectionReport, SensorName } from "../detect"
++import type { SensorAdapter, SensorFinding } from "../../sensors"
++import {
++  playwrightSensor,
++  a11ySensor,
++  visionSensor,
++  contrastSensor,
++} from "../../sensors"
++import { printWarn } from "../../ui/output"
+ 
+ const assembleUserPrompt = (
+   config: RidgelineConfig,
+@@ -58,6 +67,90 @@ const assembleUserPrompt = (
+   return doc.render()
+ }
+ 
++export type SensorRegistry = Record<SensorName, SensorAdapter<unknown>>
++
++export const getBuilderSensorRegistry = (): SensorRegistry => ({
++  playwright: playwrightSensor as SensorAdapter<unknown>,
++  vision: visionSensor as SensorAdapter<unknown>,
++  a11y: a11ySensor as SensorAdapter<unknown>,
++  contrast: contrastSensor as SensorAdapter<unknown>,
++})
++
++export interface SensorRunContext {
++  cwd: string
++  buildDir: string
++  phaseId: string
++}
++
++export interface RunBuilderSensorsOptions {
++  registry?: SensorRegistry
++  warn?: (msg: string) => void
++}
++
++const buildSensorInput = (
++  name: SensorName,
++  context: SensorRunContext,
++  lastScreenshot: string | null,
++): unknown => {
++  if (name === "playwright") {
++    return { cwd: context.cwd, buildDir: context.buildDir }
++  }
++  if (name === "a11y") {
++    return { cwd: context.cwd, buildDir: context.buildDir, url: "http://127.0.0.1:5173/" }
++  }
++  if (name === "vision") {
++    return {
++      cwd: context.cwd,
++      buildDir: context.buildDir,
++      screenshotPath: lastScreenshot ?? "",
++    }
++  }
++  // contrast
++  return { pairs: [] }
++}
++
++export const runBuilderSensors = async (
++  detection: DetectionReport,
++  context: SensorRunContext,
++  opts: RunBuilderSensorsOptions = {},
++): Promise<SensorFinding[]> => {
++  const findings: SensorFinding[] = []
++  if (detection.suggestedSensors.length === 0) return findings
++
++  const registry = opts.registry ?? getBuilderSensorRegistry()
++  const warn = opts.warn ?? ((msg: string) => printWarn(msg))
++
++  let lastScreenshot: string | null = null
++  for (const name of detection.suggestedSensors) {
++    const sensor = registry[name]
++    if (!sensor) continue
++    const input = buildSensorInput(name, context, lastScreenshot)
++    try {
++      const results = await sensor.run(input)
++      for (const r of results) {
++        findings.push(r)
++        if (r.kind === "screenshot" && r.path) lastScreenshot = r.path
++      }
++    } catch (err) {
++      const msg = err instanceof Error ? err.message : String(err)
++      warn(`sensor ${name} failed: ${msg}`)
++    }
++  }
++  return findings
++}
++
++export const writeSensorFindings = (
++  buildDir: string,
++  phaseId: string,
++  findings: SensorFinding[],
++): string => {
++  const dir = path.join(buildDir, "phases", phaseId)
++  fs.mkdirSync(dir, { recursive: true })
++  const filePath = path.join(dir, "sensors.json")
++  fs.writeFileSync(filePath, JSON.stringify(findings, null, 2) + "\n")
++  return filePath
++}
++
+ export const invokeBuilder = async (
+   config: RidgelineConfig,
+   phase: PhaseInfo,
+diff --git a/src/sensors/a11y.ts b/src/sensors/a11y.ts
+new file mode 100644
+index 0000000..85279a4
+--- /dev/null
++++ b/src/sensors/a11y.ts
+@@ -0,0 +1,122 @@
++import type { SensorAdapter, SensorFinding, ResolveFn } from "./index"
++import { PLAYWRIGHT_INSTALL_HINT, canResolvePlaywright, isSandboxed } from "./index"
++
++const LAUNCH_TIMEOUT_MS = 10_000
++
++export interface A11ySensorInput {
++  cwd: string
++  buildDir: string
++  url: string
++}
++
++export interface AxeViolation {
++  id: string
++  impact: string | null
++  description: string
++  nodes: { target: string[] }[]
++}
++
++export interface AxeResult {
++  violations: AxeViolation[]
++}
++
++export type RunAxeFn = (url: string, args: string[], timeoutMs: number) => Promise<AxeResult>
++
++interface PlaywrightLike {
++  chromium: {
++    launch(opts: { args: string[]; timeout: number }): Promise<PlaywrightBrowser>
++  }
++}
++
++interface PlaywrightBrowser {
++  newPage(): Promise<PlaywrightPage>
++  close(): Promise<void>
++}
++
++interface PlaywrightPage {
++  goto(url: string, opts: { waitUntil: string; timeout: number }): Promise<unknown>
++  addScriptTag(opts: { path: string }): Promise<unknown>
++  evaluate<T>(fn: () => T | Promise<T>): Promise<T>
++}
++
++const defaultRunAxe: RunAxeFn = async (url, args, timeoutMs) => {
++  // eslint-disable-next-line @typescript-eslint/no-require-imports
++  const playwright = require("playwright") as PlaywrightLike
++  const axePath = require.resolve("axe-core")
++  const browser = await playwright.chromium.launch({ args, timeout: timeoutMs })
++  try {
++    const page = await browser.newPage()
++    await page.goto(url, { waitUntil: "load", timeout: timeoutMs })
++    await page.addScriptTag({ path: axePath })
++    const result = await page.evaluate<AxeResult>(() => {
++      const axe = (globalThis as unknown as { axe: { run: () => Promise<AxeResult> } }).axe
++      return axe.run()
++    })
++    return result
++  } finally {
++    await browser.close()
++  }
++}
++
++export interface A11ySensorDeps {
++  resolve?: ResolveFn
++  runAxe?: RunAxeFn
++  sandboxed?: () => boolean
++}
++
++export const createA11ySensor = (
++  deps: A11ySensorDeps = {},
++): SensorAdapter<A11ySensorInput> => {
++  const resolveFn = deps.resolve
++  const runAxe = deps.runAxe ?? defaultRunAxe
++  const sandboxed = deps.sandboxed ?? isSandboxed
++
++  return {
++    name: "a11y",
++    async run(input: A11ySensorInput): Promise<SensorFinding[]> {
++      if (!canResolvePlaywright(resolveFn)) {
++        return [{
++          kind: "a11y",
++          summary: `playwright not resolvable; install with: ${PLAYWRIGHT_INSTALL_HINT}`,
++          severity: "warning",
++        }]
++      }
++
++      const args = sandboxed() ? ["--no-sandbox", "--disable-setuid-sandbox"] : []
++
++      try {
++        const result = await runAxe(input.url, args, LAUNCH_TIMEOUT_MS)
++        if (result.violations.length === 0) {
++          return [{
++            kind: "a11y",
++            summary: `axe-core: no WCAG violations on ${input.url}`,
++            severity: "info",
++          }]
++        }
++        return result.violations.map((v): SensorFinding => ({
++          kind: "a11y",
++          summary: `${v.id} (${v.impact ?? "unknown"}): ${v.description} [${v.nodes.length} node(s)]`,
++          severity: v.impact === "critical" || v.impact === "serious" ? "error" : "warning",
++        }))
++      } catch (err) {
++        const msg = err instanceof Error ? err.message : String(err)
++        if (/browser\s*not\s*found|executable\s*doesn't\s*exist/i.test(msg)) {
++          return [{
++            kind: "a11y",
++            summary: `chromium binary missing (${msg}); install with: ${PLAYWRIGHT_INSTALL_HINT}`,
++            severity: "warning",
++          }]
++        }
++        return [{
++          kind: "a11y",
++          summary: `sandbox-incompatible: axe-core run failed (${msg})`,
++          severity: "warning",
++        }]
++      }
++    },
++  }
++}
++
++export const a11ySensor: SensorAdapter<A11ySensorInput> = createA11ySensor()
++
++export default a11ySensor
+diff --git a/src/sensors/contrast.ts b/src/sensors/contrast.ts
+new file mode 100644
+index 0000000..c9764e9
+--- /dev/null
++++ b/src/sensors/contrast.ts
+@@ -0,0 +1,77 @@
++import { hex as wcagHex } from "wcag-contrast"
++import type { SensorAdapter, SensorFinding } from "./index"
++
++export interface HexPair {
++  label: string
++  foreground: string
++  background: string
++  largeText?: boolean
++}
++
++export interface ContrastSensorInput {
++  pairs: HexPair[]
++}
++
++export type ContrastFn = (fg: string, bg: string) => number
++
++export interface ContrastSensorDeps {
++  contrast?: ContrastFn
++}
++
++const AA_NORMAL = 4.5
++const AA_LARGE = 3.0
++
++export const createContrastSensor = (
++  deps: ContrastSensorDeps = {},
++): SensorAdapter<ContrastSensorInput> => {
++  const contrast = deps.contrast ?? ((fg: string, bg: string): number => wcagHex(fg, bg))
++
++  return {
++    name: "contrast",
++    async run(input: ContrastSensorInput): Promise<SensorFinding[]> {
++      if (input.pairs.length === 0) {
++        return [{
++          kind: "contrast",
++          summary: "no color pairs provided",
++          severity: "info",
++        }]
++      }
++
++      const findings: SensorFinding[] = []
++      for (const pair of input.pairs) {
++        let ratio: number
++        try {
++          ratio = contrast(pair.foreground, pair.background)
++        } catch (err) {
++          const msg = err instanceof Error ? err.message : String(err)
++          findings.push({
++            kind: "contrast",
++            summary: `${pair.label}: failed to compute (${msg})`,
++            severity: "warning",
++          })
++          continue
++        }
++        const threshold = pair.largeText ? AA_LARGE : AA_NORMAL
++        const rounded = Math.round(ratio * 100) / 100
++        if (ratio < threshold) {
++          findings.push({
++            kind: "contrast",
++            summary: `${pair.label}: ${pair.foreground} on ${pair.background} = ${rounded}:1 (below WCAG AA ${threshold}:1)`,
++            severity: "error",
++          })
++        } else {
++          findings.push({
++            kind: "contrast",
++            summary: `${pair.label}: ${pair.foreground} on ${pair.background} = ${rounded}:1`,
++            severity: "info",
++          })
++        }
++      }
++      return findings
++    },
++  }
++}
++
++export const contrastSensor: SensorAdapter<ContrastSensorInput> = createContrastSensor()
++
++export default contrastSensor
+diff --git a/src/sensors/index.ts b/src/sensors/index.ts
+new file mode 100644
+index 0000000..f37a21a
+--- /dev/null
++++ b/src/sensors/index.ts
+@@ -0,0 +1,46 @@
++export interface SensorFinding {
++  kind: "screenshot" | "a11y" | "contrast" | "vision"
++  path?: string
++  summary: string
++  severity: "info" | "warning" | "error"
++}
++
++export interface SensorAdapter<Input = unknown> {
++  name: string
++  run(input: Input): Promise<SensorFinding[]>
++}
++
++export const PLAYWRIGHT_INSTALL_HINT =
++  "npm install --save-dev playwright && npx playwright install chromium"
++
++export type ResolveFn = (id: string) => string
++
++export const canResolvePlaywright = (
++  resolveFn: ResolveFn = (id) => require.resolve(id),
++): boolean => {
++  try {
++    resolveFn("playwright")
++    return true
++  } catch {
++    return false
++  }
++}
++
++export const isSandboxed = (env: NodeJS.ProcessEnv = process.env): boolean =>
++  Boolean(
++    env.GREYWALL ||
++      env.GREYWALL_ACTIVE ||
++      env.GREYWALL_SESSION ||
++      env.BWRAP_DETECTED ||
++      env.BWRAP_ACTIVE ||
++      env.RIDGELINE_SANDBOX,
++  )
++
++export { playwrightSensor, createPlaywrightSensor } from "./playwright"
++export type { PlaywrightSensorInput, PlaywrightSensorDeps, HttpProbeFn } from "./playwright"
++export { a11ySensor, createA11ySensor } from "./a11y"
++export type { A11ySensorInput, A11ySensorDeps } from "./a11y"
++export { visionSensor, createVisionSensor } from "./vision"
++export type { VisionSensorInput, VisionSensorDeps } from "./vision"
++export { contrastSensor, createContrastSensor } from "./contrast"
++export type { ContrastSensorInput, ContrastSensorDeps, HexPair } from "./contrast"
+diff --git a/src/sensors/playwright.ts b/src/sensors/playwright.ts
+new file mode 100644
+index 0000000..755c989
+--- /dev/null
++++ b/src/sensors/playwright.ts
+@@ -0,0 +1,247 @@
++import * as fs from "node:fs"
++import * as http from "node:http"
++import * as path from "node:path"
++import type { SensorAdapter, SensorFinding, ResolveFn } from "./index"
++import { PLAYWRIGHT_INSTALL_HINT, canResolvePlaywright, isSandboxed } from "./index"
++
++export const PROBE_PORTS: readonly number[] = [5173, 3000, 8080, 4321]
++export const PROBE_TIMEOUT_MS = 250
++export const PROBE_OVERALL_CAP_MS = 1000
++export const LAUNCH_TIMEOUT_MS = 10_000
++
++export interface PlaywrightSensorInput {
++  cwd: string
++  buildDir: string
++  shapeMdPath?: string
++  outputDir?: string
++  url?: string
++}
++
++export interface ParsedPort {
++  port: number | null
++  parseError: string | null
++}
++
++export const PORT_LINE_RE = /^\s*-\s*\*\*Dev server port:\*\*\s+(\d+)\s*$/m
++
++export const parsePortFromShape = (content: string): ParsedPort => {
++  const headingRe = /^##\s+Runtime\s*$/gm
++  const headingStarts: number[] = []
++  let match: RegExpExecArray | null
++  while ((match = headingRe.exec(content)) !== null) {
++    headingStarts.push(match.index)
++  }
++  if (headingStarts.length === 0) return { port: null, parseError: null }
++  if (headingStarts.length > 1) {
++    return { port: null, parseError: "multiple ## Runtime sections" }
++  }
++  const afterHeading = content.slice(headingStarts[0])
++  const nextHeadingOffset = afterHeading.slice(1).search(/^##\s/m)
++  const runtimeBlock = nextHeadingOffset >= 0
++    ? afterHeading.slice(0, nextHeadingOffset + 1)
++    : afterHeading
++  const portMatch = runtimeBlock.match(PORT_LINE_RE)
++  if (!portMatch) return { port: null, parseError: null }
++  const raw = portMatch[1]
++  const port = Number(raw)
++  if (!Number.isInteger(port) || port < 1 || port > 65535) {
++    return { port: null, parseError: `port out of range [1, 65535]: ${raw}` }
++  }
++  return { port, parseError: null }
++}
++
++export type HttpProbeFn = (url: string, timeoutMs: number) => Promise<boolean>
++
++const defaultHttpProbe: HttpProbeFn = (url, timeoutMs) =>
++  new Promise((resolve) => {
++    let settled = false
++    const done = (ok: boolean): void => {
++      if (settled) return
++      settled = true
++      clearTimeout(timer)
++      resolve(ok)
++    }
++    const timer = setTimeout(() => {
++      req.destroy()
++      done(false)
++    }, timeoutMs)
++    const req = http.request(url, { method: "HEAD", timeout: timeoutMs }, (res) => {
++      res.resume()
++      done(typeof res.statusCode === "number")
++    })
++    req.on("error", () => done(false))
++    req.end()
++  })
++
++export interface ProbeResult {
++  port: number | null
++  callOrder: number[]
++}
++
++export const probeDevServerPorts = async (
++  ports: readonly number[] = PROBE_PORTS,
++  probe: HttpProbeFn = defaultHttpProbe,
++  overallCapMs: number = PROBE_OVERALL_CAP_MS,
++  now: () => number = Date.now,
++): Promise<ProbeResult> => {
++  const start = now()
++  const callOrder: number[] = []
++  for (const p of ports) {
++    if (now() - start >= overallCapMs) break
++    callOrder.push(p)
++    const remaining = overallCapMs - (now() - start)
++    const ok = await probe(`http://127.0.0.1:${p}/`, Math.min(PROBE_TIMEOUT_MS, remaining))
++    if (ok) return { port: p, callOrder }
++  }
++  return { port: null, callOrder }
++}
++
++export interface LaunchResult {
++  screenshotPath: string
++}
++
++export type LaunchFn = (
++  url: string,
++  args: string[],
++  outputDir: string,
++  timeoutMs: number,
++) => Promise<LaunchResult>
++
++interface PlaywrightLike {
++  chromium: {
++    launch(opts: { args: string[]; timeout: number }): Promise<PlaywrightBrowser>
++  }
++}
++
++interface PlaywrightBrowser {
++  newPage(): Promise<PlaywrightPage>
++  close(): Promise<void>
++}
++
++interface PlaywrightPage {
++  goto(url: string, opts: { waitUntil: string; timeout: number }): Promise<unknown>
++  screenshot(opts: { path: string; fullPage: boolean }): Promise<unknown>
++  addScriptTag(opts: { path: string }): Promise<unknown>
++  evaluate<T>(fn: () => T | Promise<T>): Promise<T>
++}
++
++const defaultLaunch: LaunchFn = async (url, args, outputDir, timeoutMs) => {
++  // eslint-disable-next-line @typescript-eslint/no-require-imports
++  const playwright = require("playwright") as PlaywrightLike
++  const browser = await playwright.chromium.launch({ args, timeout: timeoutMs })
++  try {
++    const page = await browser.newPage()
++    await page.goto(url, { waitUntil: "load", timeout: timeoutMs })
++    fs.mkdirSync(outputDir, { recursive: true })
++    const shotPath = path.join(outputDir, `playwright-${Date.now()}.png`)
++    await page.screenshot({ path: shotPath, fullPage: true })
++    return { screenshotPath: shotPath }
++  } finally {
++    await browser.close()
++  }
++}
++
++const withTimeout = async <T>(p: Promise<T>, ms: number, label: string): Promise<T> =>
++  Promise.race<T>([
++    p,
++    new Promise<T>((_, reject) =>
++      setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms),
++    ),
++  ])
++
++export interface PlaywrightSensorDeps {
++  resolve?: ResolveFn
++  probe?: HttpProbeFn
++  launch?: LaunchFn
++  sandboxed?: () => boolean
++  warn?: (msg: string) => void
++}
++
++const installHintFinding = (reason: string): SensorFinding => ({
++  kind: "screenshot",
++  summary: `${reason}; install with: ${PLAYWRIGHT_INSTALL_HINT}`,
++  severity: "warning",
++})
++
++export const createPlaywrightSensor = (
++  deps: PlaywrightSensorDeps = {},
++): SensorAdapter<PlaywrightSensorInput> => {
++  const resolveFn = deps.resolve
++  const probe = deps.probe
++  const launch = deps.launch ?? defaultLaunch
++  const sandboxed = deps.sandboxed ?? isSandboxed
++  const warn = deps.warn ?? ((msg: string) => {
++    process.stderr.write(`[ridgeline] WARN: ${msg}\n`)
++  })
++
++  return {
++    name: "playwright",
++    async run(input: PlaywrightSensorInput): Promise<SensorFinding[]> {
++      if (!canResolvePlaywright(resolveFn)) {
++        return [installHintFinding("playwright not resolvable")]
++      }
++
++      let url = input.url ?? null
++      if (!url) {
++        let port: number | null = null
++        const shapePath = input.shapeMdPath ?? path.join(input.buildDir, "shape.md")
++        if (fs.existsSync(shapePath)) {
++          try {
++            const content = fs.readFileSync(shapePath, "utf-8")
++            const parsed = parsePortFromShape(content)
++            if (parsed.parseError) {
++              warn(`shape.md ## Runtime ${parsed.parseError}; falling back to port probing`)
++            } else if (parsed.port !== null) {
++              port = parsed.port
++            }
++          } catch {
++            // fall through to probing
++          }
++        }
++        if (port === null) {
++          const probed = await probeDevServerPorts(PROBE_PORTS, probe)
++          if (probed.port === null) {
++            return [{
++              kind: "screenshot",
++              summary: `no dev server detected on ${PROBE_PORTS.join(", ")}`,
++              severity: "warning",
++            }]
++          }
++          port = probed.port
++        }
++        url = `http://127.0.0.1:${port}/`
++      }
++
++      const args = sandboxed() ? ["--no-sandbox", "--disable-setuid-sandbox"] : []
++      const outputDir = input.outputDir ?? path.join(input.buildDir, "sensors")
++
++      try {
++        const result = await withTimeout(
++          launch(url, args, outputDir, LAUNCH_TIMEOUT_MS),
++          LAUNCH_TIMEOUT_MS,
++          "chromium launch",
++        )
++        return [{
++          kind: "screenshot",
++          path: result.screenshotPath,
++          summary: `captured ${url}`,
++          severity: "info",
++        }]
++      } catch (err) {
++        const msg = err instanceof Error ? err.message : String(err)
++        if (/browser\s*not\s*found|executable\s*doesn't\s*exist/i.test(msg)) {
++          return [installHintFinding(`chromium binary missing (${msg})`)]
++        }
++        return [{
++          kind: "screenshot",
++          summary: `sandbox-incompatible: chromium launch failed (${msg})`,
++          severity: "warning",
++        }]
++      }
++    },
++  }
++}
++
++export const playwrightSensor: SensorAdapter<PlaywrightSensorInput> = createPlaywrightSensor()
++
++export default playwrightSensor
+diff --git a/src/sensors/vision.ts b/src/sensors/vision.ts
+new file mode 100644
+index 0000000..63c69aa
+--- /dev/null
++++ b/src/sensors/vision.ts
+@@ -0,0 +1,93 @@
++import { execFileSync } from "node:child_process"
++import * as fs from "node:fs"
++import type { SensorAdapter, SensorFinding, ResolveFn } from "./index"
++import { PLAYWRIGHT_INSTALL_HINT, canResolvePlaywright } from "./index"
++
++export interface VisionSensorInput {
++  cwd: string
++  buildDir: string
++  screenshotPath: string
++  prompt?: string
++  model?: string
++  timeoutMs?: number
++}
++
++export type InvokeVisionFn = (
++  imagePath: string,
++  prompt: string,
++  model: string,
++  timeoutMs: number,
++) => string
++
++const defaultInvokeVision: InvokeVisionFn = (imagePath, prompt, model, timeoutMs) => {
++  const output = execFileSync(
++    "claude",
++    ["-p", "--model", model, "--output-format", "json", prompt, "--file", imagePath],
++    { timeout: timeoutMs, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
++  )
++  const parsed = JSON.parse(output) as { result?: unknown }
++  const text = parsed.result ?? parsed
++  return typeof text === "string" ? text : JSON.stringify(text)
++}
++
++export interface VisionSensorDeps {
++  resolve?: ResolveFn
++  invokeVision?: InvokeVisionFn
++}
++
++const DEFAULT_PROMPT =
++  "Describe this screenshot of a web UI. Focus on layout issues, visual regressions, " +
++  "contrast problems, and any rendering glitches. Respond with 1-3 sentences."
++
++export const createVisionSensor = (
++  deps: VisionSensorDeps = {},
++): SensorAdapter<VisionSensorInput> => {
++  const resolveFn = deps.resolve
++  const invokeVision = deps.invokeVision ?? defaultInvokeVision
++
++  return {
++    name: "vision",
++    async run(input: VisionSensorInput): Promise<SensorFinding[]> {
++      if (!canResolvePlaywright(resolveFn)) {
++        return [{
++          kind: "vision",
++          summary: `playwright not resolvable; install with: ${PLAYWRIGHT_INSTALL_HINT}`,
++          severity: "warning",
++        }]
++      }
++
++      if (!fs.existsSync(input.screenshotPath)) {
++        return [{
++          kind: "vision",
++          summary: `screenshot not found at ${input.screenshotPath}`,
++          severity: "warning",
++        }]
++      }
++
++      const prompt = input.prompt ?? DEFAULT_PROMPT
++      const model = input.model ?? "opus"
++      const timeoutMs = input.timeoutMs ?? 60_000
++
++      try {
++        const summary = invokeVision(input.screenshotPath, prompt, model, timeoutMs).trim()
++        return [{
++          kind: "vision",
++          path: input.screenshotPath,
++          summary: summary || "(no description)",
++          severity: "info",
++        }]
++      } catch (err) {
++        const msg = err instanceof Error ? err.message : String(err)
++        return [{
++          kind: "vision",
++          summary: `claude vision call failed: ${msg}`,
++          severity: "warning",
++        }]
++      }
++    },
++  }
++}
++
++export const visionSensor: SensorAdapter<VisionSensorInput> = createVisionSensor()
++
++export default visionSensor
+diff --git a/src/types/wcag-contrast.d.ts b/src/types/wcag-contrast.d.ts
+new file mode 100644
+index 0000000..64c817a
+--- /dev/null
++++ b/src/types/wcag-contrast.d.ts
+@@ -0,0 +1,6 @@
++declare module "wcag-contrast" {
++  export function hex(a: string, b: string): number
++  export function rgb(a: [number, number, number], b: [number, number, number]): number
++  export function luminance(a: number, b: number): number
++  export function score(ratio: number): string
++}
+diff --git a/src/ui/preflight.ts b/src/ui/preflight.ts
+index 752478b..d3cbb58 100644
+--- a/src/ui/preflight.ts
++++ b/src/ui/preflight.ts
+@@ -1,5 +1,7 @@
+ import * as readline from "node:readline"
+ import type { DetectionReport, SensorName } from "../engine/detect"
++import { canResolvePlaywright, PLAYWRIGHT_INSTALL_HINT } from "../sensors"
++import type { ResolveFn } from "../sensors"
+ import { bold, dimInfo, hint } from "./color"
+ 
+ export interface PreflightOptions {
+@@ -7,6 +9,7 @@ export interface PreflightOptions {
+   isTTY: boolean
+   stream?: NodeJS.WriteStream
+   input?: NodeJS.ReadableStream
++  resolvePlaywright?: ResolveFn
+ }
+ 
+ const SENSOR_DISPLAY: Record<SensorName, string> = {
+@@ -31,7 +34,7 @@ const formatEnabling = (report: DetectionReport): string => {
+ 
+ export const renderPreflight = (
+   report: DetectionReport,
+-  opts: { isTTY: boolean; yes: boolean; isStderrTTY?: boolean },
++  opts: { isTTY: boolean; yes: boolean; isStderrTTY?: boolean; resolvePlaywright?: ResolveFn },
+ ): string => {
+   const stream: "stdout" | "stderr" = "stdout"
+   const detected = formatDetected(report)
+@@ -76,6 +79,14 @@ export const renderPreflight = (
+     ].join(""),
+   )
+ 
++  if (report.isVisualSurface && !canResolvePlaywright(opts.resolvePlaywright)) {
++    lines.push("")
++    lines.push(hint(
++      `visual surface detected — run: ${PLAYWRIGHT_INSTALL_HINT}`,
++      { stream },
++    ))
++  }
++
+   if (!opts.isTTY) {
+     lines.push(hint("(auto-proceeding in CI)", { stream }))
+   } else if (!opts.yes) {
+@@ -100,7 +111,11 @@ export const runPreflight = async (
+   opts: PreflightOptions,
+ ): Promise<void> => {
+   const stream = opts.stream ?? process.stdout
+-  const rendered = renderPreflight(report, { isTTY: opts.isTTY, yes: opts.yes })
++  const rendered = renderPreflight(report, {
++    isTTY: opts.isTTY,
++    yes: opts.yes,
++    resolvePlaywright: opts.resolvePlaywright,
++  })
+   stream.write(rendered)
+ 
+   if (!opts.isTTY) return

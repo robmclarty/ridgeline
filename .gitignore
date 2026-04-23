@@ -4,3 +4,4 @@ node_modules/
 .fallow/
 coverage/
 .worktrees/
+.ridgeline/worktrees/

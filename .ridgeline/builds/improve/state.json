@@ -23,12 +23,12 @@
     },
     {
       "id": "01b-detection-preflight-color",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/improve/01b-detection-preflight-color",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/improve/01b-detection-preflight-color",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 1751780,
+      "completedAt": "2026-04-23T04:46:11.799Z",
       "failedAt": null
     },
     {

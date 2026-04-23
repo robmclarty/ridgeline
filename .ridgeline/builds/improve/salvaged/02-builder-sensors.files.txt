@@ -1,0 +1,10 @@
+ M src/agents/core/builder.md
+ M src/commands/shape.ts
+ M src/engine/pipeline/build.exec.ts
+ A src/sensors/a11y.ts
+ A src/sensors/contrast.ts
+ A src/sensors/index.ts
+ A src/sensors/playwright.ts
+ A src/sensors/vision.ts
+ A src/types/wcag-contrast.d.ts
+ M src/ui/preflight.ts
