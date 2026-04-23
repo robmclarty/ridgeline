@@ -19,6 +19,7 @@ import { runRetrospective } from "./commands/retrospective"
 import { runResearch } from "./commands/research"
 import { runRefine } from "./commands/refine"
 import { runCatalog } from "./commands/catalog"
+import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui"
 import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 import { enforceFlavourRemoved } from "./utils/flavour-removed"
 import { detect } from "./engine/detect"
@@ -361,6 +362,28 @@ program
     try {
       const { runClean } = require("./commands/clean")
       runClean(process.cwd())
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+program
+  .command("ui [build-name]")
+  .description("Open a localhost dashboard for monitoring a build")
+  .option("--port <number>", "Port to bind (default 4411, falls back to next free port if taken)")
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      const portRaw = opts.port as string | undefined
+      const port = portRaw ? parseInt(String(portRaw), 10) : UI_DEFAULT_PORT
+      const server = await runUi(process.cwd(), buildName, {
+        port: isNaN(port) ? UI_DEFAULT_PORT : port,
+      })
+      const shutdown = async (): Promise<void> => {
+        await server.close()
+        process.exit(0)
+      }
+      process.on("SIGINT", shutdown)
+      process.on("SIGTERM", shutdown)
     } catch (err) {
       handleCommandError(err)
     }
