@@ -12,7 +12,15 @@
     { "file": "src/catalog/colorthief.d.ts", "exports": ["default"] },
     { "file": "src/engine/detect/index.ts", "exports": ["ProjectType", "DetectOptions"] },
     { "file": "src/ui/color.ts", "exports": ["ColorStream"] },
-    { "file": "src/ui/preflight.ts", "exports": ["PreflightOptions"] }
+    { "file": "src/ui/preflight.ts", "exports": ["PreflightOptions"] },
+    { "file": "src/ui/dashboard/snapshot.ts", "exports": ["DashboardStatus", "DashboardPhase"] },
+    { "file": "src/ui/dashboard/tokens.ts", "exports": ["AccentName", "ResolvedAccent"] },
+    { "file": "src/ui/dashboard/watcher.ts", "exports": ["JsonWatcher", "TailWatcher"] },
+    { "file": "src/ui/dashboard/events.ts", "exports": ["DashboardEvent"] },
+    { "file": "src/ui/dashboard/favicon.ts", "exports": ["FaviconStatus"] },
+    { "file": "src/ui/dashboard/html.ts", "exports": ["RenderHtmlOptions"] },
+    { "file": "src/ui/dashboard/server.ts", "exports": ["StartDashboardOptions"] },
+    { "file": "src/commands/ui.ts", "exports": ["UiOptions"] }
   ],
   "duplicates": {
     "ignore": [
