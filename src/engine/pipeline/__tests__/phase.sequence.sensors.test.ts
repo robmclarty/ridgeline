@@ -71,6 +71,7 @@ const passVerdict: ReviewVerdict = {
   criteriaResults: [],
   issues: [],
   suggestions: [],
+  sensorFindings: [],
 }
 
 const config: RidgelineConfig = {
@@ -90,7 +91,8 @@ const config: RidgelineConfig = {
   unsafe: false,
   networkAllowlist: [],
   extraContext: null,
-  isDeepEnsemble: false,
+  isThorough: false,
+  specialistTimeoutSeconds: 180,
 }
 
 const phase: PhaseInfo = {
@@ -185,5 +187,29 @@ describe("phase.sequence — sensor integration", () => {
 
     const result = await runPhase(phase, config, makeState())
     expect(result).toBe("passed")
+  })
+
+  it("passes builder-loop sensorFindings into the reviewer invocation", async () => {
+    const finding = { kind: "a11y" as const, severity: "warning" as const, summary: "axe flagged a tabindex issue" }
+    vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+    vi.mocked(invokeReviewer).mockImplementation(async (_cfg, _phase, _tag, _cwd, sensorFindings) => {
+      const verdict: ReviewVerdict = { ...passVerdict, sensorFindings: sensorFindings ?? [] }
+      return { result: makeResult(), verdict }
+    })
+    vi.mocked(detect).mockResolvedValue({
+      projectType: "web",
+      isVisualSurface: true,
+      detectedDeps: ["react"],
+      hasDesignMd: false,
+      hasAssetDir: false,
+      suggestedSensors: ["a11y"],
+      suggestedEnsembleSize: 2,
+    })
+    vi.mocked(collectSensorFindings).mockResolvedValue([finding])
+
+    const result = await runPhase(phase, config, makeState())
+    expect(result).toBe("passed")
+    const reviewerCall = vi.mocked(invokeReviewer).mock.calls[0]
+    expect(reviewerCall[4]).toEqual([finding])
   })
 })

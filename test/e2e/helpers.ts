@@ -69,7 +69,8 @@ export const setupE2eDir = (): { dir: string; config: RidgelineConfig; cleanup: 
     unsafe: false,
     networkAllowlist: [],
     extraContext: null,
-    isDeepEnsemble: false,
+    isThorough: false,
+      specialistTimeoutSeconds: 180,
   }
 
   const cleanup = () => {

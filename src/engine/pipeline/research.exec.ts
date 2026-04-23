@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { EnsembleResult } from "../../types"
-import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
+import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { createStderrHandler } from "./pipeline.shared"
@@ -107,7 +107,20 @@ const assembleSpecialistUserPrompt = (
     )
   }
 
-  doc.instruction("Task", "Research this spec thoroughly using your web tools. Produce a markdown research report as your response.")
+  doc.instruction(
+    "Task",
+    [
+      "Research this spec thoroughly using your web tools. Produce a markdown research report as your response.",
+      "",
+      "At the very end of your report, append a fenced JSON block (```json ... ```) with this shape:",
+      "",
+      "```json",
+      "{ \"findings\": [\"short label for each finding\"], \"openQuestions\": [\"short label for each open question\"] }",
+      "```",
+      "",
+      "This block is used for ensemble agreement detection; keep the labels faithful to the main report.",
+    ].join("\n"),
+  )
   return doc.render()
 }
 
@@ -157,9 +170,11 @@ const assembleSynthesizerUserPrompt = (
 export type ResearchConfig = {
   model: string
   timeoutMinutes: number
+  specialistTimeoutSeconds: number
   maxBudgetUsd: number | null
   buildDir: string
   isQuick: boolean
+  isThorough: boolean
   networkAllowlist: string[]
   sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
   existingResearchMd: string | null
@@ -178,11 +193,11 @@ export const invokeResearcher = async (
   const gapsMd = registry.getGaps("researchers")
   const allSpecialists = registry.getSpecialists("researchers")
 
-  // Quick mode: pick one specialist at random
-  // Default: use all specialists
+  // Quick mode: pick one specialist at random.
+  // Default: cap at 2 specialists; thorough mode raises to 3.
   const specialists = config.isQuick && allSpecialists.length > 0
     ? [allSpecialists[Math.floor(Math.random() * allSpecialists.length)]]
-    : allSpecialists
+    : selectSpecialists(allSpecialists, { isThorough: config.isThorough })
 
   // Build a research agenda before dispatching specialists
   const agendaSpinner = startSpinner("Building agenda")
@@ -203,7 +218,7 @@ export const invokeResearcher = async (
 
     buildSpecialistPrompt: (overlay) => buildResearchSpecialistPrompt(context, overlay),
     specialistUserPrompt: assembleSpecialistUserPrompt(specMd, constraintsMd, tasteMd, agenda || null),
-    specialistSchema: "", // unused when isStructured is false
+    specialistSchema: "",
     specialistTools: ["WebFetch", "WebSearch", "Bash", "Skill"],
 
     synthesizerPrompt: registry.getCorePrompt("researcher.md"),
@@ -220,10 +235,49 @@ export const invokeResearcher = async (
 
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,
+    specialistTimeoutSeconds: config.specialistTimeoutSeconds,
     maxBudgetUsd: config.maxBudgetUsd,
     networkAllowlist: config.networkAllowlist,
     sandboxProvider: config.sandboxProvider,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
+
+    isTwoRound: config.isThorough,
+    buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
+      const sections = [
+        `You are the ${ownPerspective} research specialist. You have already submitted your report.`,
+        "Below are the other specialists' reports. Provide brief annotations:",
+        "- **Concerns:** Issues or weak citations in their findings",
+        "- **Agreements:** Where their findings corroborate yours",
+        "- **Gaps:** What none of the reports adequately cover",
+        "",
+        "Do NOT rewrite your report. Provide only annotations.",
+        "",
+      ]
+      for (const { perspective, draft } of otherDrafts) {
+        sections.push(`## ${perspective} Specialist Report\n`)
+        sections.push(draft)
+        sections.push("\n---\n")
+      }
+      return sections.join("\n")
+    },
+
+    stage: "research",
+    buildDir: config.buildDir,
+    onAgreementSkip: (successful) => {
+      const [first] = successful
+      const researchPath = path.join(config.buildDir, "research.md")
+      fs.mkdirSync(config.buildDir, { recursive: true })
+      fs.writeFileSync(researchPath, first.draft)
+      appendSkipAuditNote(researchPath, successful.length, "research")
+      return {
+        success: true,
+        result: first.draft,
+        durationMs: 0,
+        costUsd: 0,
+        usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+        sessionId: `synthesis-skipped-${first.perspective}`,
+      }
+    },
 
     verify: () => {
       if (!fs.existsSync(path.join(config.buildDir, "research.md"))) {

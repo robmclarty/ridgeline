@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import * as path from "node:path"
-import { Command } from "commander"
+import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config"
 import { resolveModel } from "./stores/settings"
 import { RidgelineConfig } from "./types"
@@ -26,6 +26,16 @@ import { detect } from "./engine/detect"
 import { runPreflight } from "./ui/preflight"
 
 enforceFlavourRemoved(process.argv.slice(2))
+
+// Deprecation pre-check: --deep-ensemble is renamed to --thorough.
+// Emit on every run (not once per session) so the user always sees it.
+{
+  const rawArgs = process.argv.slice(2)
+  const hasDeep = rawArgs.includes("--deep-ensemble")
+  if (hasDeep) {
+    console.error("[deprecated] --deep-ensemble is now --thorough; continuing with --thorough")
+  }
+}
 
 // Kill all Claude subprocesses on Ctrl+C before exiting
 process.on("SIGINT", () => {
@@ -75,7 +85,7 @@ const ridgelineDirFromCwd = (): string => path.join(process.cwd(), ".ridgeline")
 const detectPreflightFlags = (): { isThorough: boolean; isYes: boolean } => {
   const argv = process.argv.slice(2)
   return {
-    isThorough: argv.includes("--thorough"),
+    isThorough: argv.includes("--thorough") || argv.includes("--deep-ensemble"),
     isYes: argv.includes("--yes") || argv.includes("-y"),
   }
 }
@@ -209,11 +219,13 @@ addPreflightOptions(program
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
+      const { isThorough } = detectPreflightFlags()
       await runSpec(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         input,
+        isThorough,
       })
     } catch (err) {
       handleCommandError(err)
@@ -238,12 +250,14 @@ addPreflightOptions(program
         if (isNaN(auto) || auto < 1) auto = 2
       }
 
+      const { isThorough } = detectPreflightFlags()
       await runResearch(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "15"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         isQuick: opts.quick === true,
         auto,
+        isThorough,
       })
     } catch (err) {
       handleCommandError(err)
@@ -297,7 +311,7 @@ const addPlanOptions = (cmd: Command): Command => cmd
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
-  .option("--deep-ensemble", "Enable two-round cross-specialist annotation before synthesis")
+  .addOption(new Option("--deep-ensemble", "deprecated: use --thorough").hideHelp())
 
 addPreflightOptions(addPlanOptions(program
   .command("plan [build-name]")

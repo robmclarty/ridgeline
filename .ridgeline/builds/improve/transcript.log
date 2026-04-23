@@ -1553,3 +1553,235 @@ All criteria verified. TSC exits 0, all 54 sensor/preflight/runtime tests pass, 
 [ridgeline] Phase dependencies detected — using wave-based scheduling
 
 [ridgeline] ── Phase 4/7: 03a-lean-ensembles-and-verdicts ──
+[ridgeline] [03a-lean-ensembles-and-verdicts] Building...
+[03a-lean-ensembles-and-verdicts] Starting: lean ensembles, structured verdicts, reviewer sensor findings
+
+Let me orient first by exploring the current code paths I'll be touching.
+[Bash] ls src/engine/claude/ src/agents/specialists/
+[Bash] ls src/engine/ src/engine/pipeline/
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Bash] ls src/agents/ src/engine/discovery/
+[Bash] ls src/agents/core src/agents/planners src/…
+[Read] src/engine/pipeline/specify.exec.ts
+[Read] src/engine/pipeline/research.exec.ts
+[Read] src/engine/pipeline/review.exec.ts
+[Read] src/stores/feedback.verdict.ts
+[ToolSearch]
+[TodoWrite]
+[Read] src/types.ts
+[Read] src/sensors/index.ts
+[Read] src/engine/pipeline/phase.sequence.ts
+Now let me look at the CLI setup and how `--thorough`, `--deep-ensemble` are currently wired.
+[Grep] deep-ensemble|deepEnsemble|isDeepEnsemble|thorough|isThorough
+[Read] src/cli.ts
+[Read] src/config.ts
+[Read] src/engine/discovery/agent.registry.ts
+[Read] src/agents/planners/simplicity.md
+[Read] src/agents/specifiers/clarity.md
+[Read] src/agents/researchers/academic.md
+[Read] src/agents/researchers/ecosystem.md
+[Read] src/agents/researchers/context.md
+Now let me look at the existing tests and review verdict parse:
+[Read] src/stores/feedback.parse.ts
+[Read] src/stores/feedback.format.ts
+[Read] src/engine/claude/claude.exec.ts
+[Read] src/stores/trajectory.ts
+[Read] src/stores/settings.ts
+[Bash] ls src/agents/specifiers/ src/agents/researchers/ /Users/robmclarty/Projects/ridgeline/code/rid…
+[Read] src/stores/phases.ts
+[Bash] ls src/engine/pipeline/__tests__/
+[Read] src/engine/pipeline/__tests__/plan.exec.test.ts
+[Read] test/factories.ts
+[Read] src/engine/pipeline/__tests__/review.exec.test.ts
+[Read] src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts
+[Read] src/engine/pipeline/plan.exec.ts
+[Read] src/engine/pipeline/pipeline.shared.ts
+Now I have enough context. Let me start implementing. I'll update the todo list:
+[TodoWrite]
+[Edit] src/types.ts
+[Edit] src/types.ts
+Add new trajectory types and SpecialistVerdict types:
+[Edit] src/types.ts
+Now create the specialist verdict parser module:
+[Write] src/engine/pipeline/specialist.verdict.ts
+Now update the ensemble.exec.ts to support: 2/3-specialist selection, agreement skip, specialist failure logging, per-call timeout configurability:
+[Read] src/engine/pipeline/ensemble.exec.ts
+Now I'll rewrite ensemble.exec.ts to add the agreement-based skip, specialist-timeout configurability, and trajectory logging:
+[Write] src/engine/pipeline/ensemble.exec.ts
+Let me update `logTrajectory` to accept the new optional fields:
+[Edit] src/stores/trajectory.ts
+Now clean up the ensemble.exec.ts logTrajectory casts:
+[Edit] src/engine/pipeline/ensemble.exec.ts
+[Edit] src/engine/pipeline/ensemble.exec.ts
+Now update the specifier and researcher invokers:
+[Read] src/engine/pipeline/specify.exec.ts
+[Edit] src/engine/pipeline/specify.exec.ts
+Now extend the SPEC_SPECIALIST_SCHEMA to include `_skeleton` and update the prompt:
+[Edit] src/engine/pipeline/specify.exec.ts
+[Edit] src/engine/pipeline/specify.exec.ts
+[Edit] src/engine/pipeline/specify.exec.ts
+Now update the researcher invoker:
+[Edit] src/engine/pipeline/research.exec.ts
+[Edit] src/engine/pipeline/research.exec.ts
+[Edit] src/engine/pipeline/research.exec.ts
+Now find all callers of these invokers to update the config types:
+[Grep] invokeResearcher|invokeSpecifier|SpecEnsembleConfig|ResearchConfig
+[Read] src/commands/spec.ts
+[Edit] src/commands/spec.ts
+[Edit] src/commands/spec.ts
+[Read] src/commands/research.ts
+[Edit] src/commands/research.ts
+[Edit] src/commands/research.ts
+Now I need to update the `config.ts` (to replace isDeepEnsemble with isThorough and read specialistTimeoutSeconds from settings) and the CLI (to add --thorough + deprecated --deep-ensemble, pass to spec/research). Let me also check build.ts to make sure it's using isThorough (since planner uses `config.isThorough` directly):
+[Edit] src/config.ts
+[Edit] src/config.ts
+Now update settings.ts to add `resolveSpecialistTimeoutSeconds`:
+[Edit] src/stores/settings.ts
+Now update the CLI. Add `--thorough` to plan-related commands, emit deprecation warning for `--deep-ensemble`, and propagate `isThorough` to spec/research commands:
+[Edit] src/cli.ts
+[TodoWrite]
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Bash] cat node_modules/commander/package.json | head -5
+[Bash] grep -l "hideHelp" node_modules/commander/typings/index.d.ts 2>/dev/null && head -50 node_modul…
+[Bash] grep -n "hideHelp" node_modules/commander/typings/index.d.ts | head -5
+Good — Commander 13's `Option` class has `hideHelp()`. Let me update the CLI to use it:
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+Now let me update the existing test factories and tests that still use `isDeepEnsemble`:
+[Edit] test/factories.ts
+Let me also add `sensorFindings` to the `passVerdict` factory:
+[Edit] test/factories.ts
+Now find all existing usages of `isDeepEnsemble` in tests and source code that need updating:
+[Grep] isDeepEnsemble
+[Bash] grep -n "isDeepEnsemble" src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts src/engin…
+[Bash] for f in src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts src/engine/pipeline/__tes…
+[Grep] isDeepEnsemble
+[Grep] isDeepEnsemble
+Good, all source/test files are updated. Now let me work on the reviewer's sensorFindings. Update parseVerdict to include sensorFindings:
+[Edit] src/stores/feedback.parse.ts
+[Edit] src/stores/feedback.parse.ts
+Update generateFeedback to render sensor findings:
+[Edit] src/stores/feedback.format.ts
+Now wire sensorFindings through invokeReviewer:
+[Edit] src/engine/pipeline/review.exec.ts
+[Edit] src/engine/pipeline/review.exec.ts
+[Edit] src/engine/pipeline/review.exec.ts
+Now update phase.sequence.ts to thread sensorFindings from builder to reviewer:
+[Edit] src/engine/pipeline/phase.sequence.ts
+[Edit] src/engine/pipeline/phase.sequence.ts
+[TodoWrite]
+Let me run the type-checker to surface all breakages:
+[Bash] npx tsc --noEmit 2>&1 | head -80
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -100
+[Read] src/stores/__tests__/feedback.io.test.ts
+[Bash] grep -n "suggestions: \[\]" src/stores/__tests__/feedback.io.test.ts src/stores/__tests__/feedb…
+[Bash] for f in src/stores/__tests__/feedback.io.test.ts src/stores/__tests__/feedback.verdict.test.ts…
+[Read] src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts
+[Edit] src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts
+[Read] src/engine/pipeline/__tests__/phase.sequence.test.ts
+[Edit] src/engine/pipeline/__tests__/phase.sequence.test.ts
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -80
+Typecheck clean. Let me run the tests:
+[Bash] npx vitest run 2>&1 | tail -100
+[Bash] npx vitest run 2>&1 | grep -E "FAIL|✓|❯ " | head -50
+[Read] src/__tests__/config.test.ts
+The `vi.mock("../stores/settings")` is missing `resolveSpecialistTimeoutSeconds`. Let me fix:
+[Edit] src/__tests__/config.test.ts
+Now fix the review.exec.test.ts failure. The wrapper `{...parsed, sensorFindings}` breaks `toBe`:
+[Read] src/engine/pipeline/__tests__/review.exec.test.ts
+[Edit] src/engine/pipeline/__tests__/review.exec.test.ts
+[Bash] npx vitest run 2>&1 | tail -30
+Down to the pre-existing 28 sandbox failures. Now let me check if the CLI preflight wiring tests still pass (I added `detectPreflightFlags` export usage and a deprecation block):
+[Bash] npx vitest run src/__tests__/cli.preflight-wiring.test.ts 2>&1 | tail -20
+Now let me write the new tests required by the spec. First, a test for specialist verdict parsing and agreement detection:
+[Write] src/engine/pipeline/__tests__/specialist.verdict.test.ts
+Now let me write the big ensemble.exec test that covers the key criteria. First let me look at how `invokeClaude` is stubbed in existing tests:
+[Bash] grep -rn "invokeEnsemble\|selectSpecialists" src --include="*.test.ts" | head -20
+[Grep] selectSpecialists|invokeEnsemble
+No existing tests for ensemble. Let me write comprehensive tests now. I'll mock `invokeClaude` and drive `invokeEnsemble` through various scenarios:
+[Write] src/engine/pipeline/__tests__/ensemble.exec.test.ts
+Now add the reviewer sensorFindings rendering test and the deprecation CLI test:
+[Read] src/stores/__tests__/feedback.verdict.test.ts
+Add tests for rendering Sensor Findings section:
+[Edit] src/stores/__tests__/feedback.verdict.test.ts
+Now the CLI deprecation test and ReviewVerdict sensorFindings passthrough test:
+[Write] src/__tests__/cli.deep-ensemble-deprecation.test.ts
+[Read] src/__tests__/cli.preflight-wiring.test.ts
+[Write] src/__tests__/cli.deep-ensemble-deprecation.test.ts
+Now a phase.sequence test for sensor findings flowing into reviewer verdict. First check the existing phase.sequence test to see if it already covers this:
+[Read] src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts
+Add a test for sensorFindings flowing from builder → reviewer → verdict:
+[Edit] src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts
+Now run all tests to see what's green:
+[Bash] npx vitest run 2>&1 | tail -40
+[Bash] npx vitest run 2>&1 | grep -E "FAIL " | head -30
+[Bash] npx vitest run 2>&1 | grep -E "^ FAIL " | grep -v "git\|worktree" | head -10
+[Bash] npx vitest run src/engine/pipeline/__tests__/ensemble.exec.test.ts 2>&1 | tail -30
+[Edit] src/engine/pipeline/ensemble.exec.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/ 2>&1 | tail -20
+All 5 fails are pre-existing sandbox failures. Let me also verify:
+[Bash] npx vitest run 2>&1 | grep -E "Test Files|Tests " | tail -5
+[TodoWrite]
+Now let me verify all tests count: baseline 663 passing → phase 4: 775 → now 876 passing (+101 new passing). 28 pre-existing fails remain, 0 new fails.
+
+Let me now run the check command as specified in constraints.md:
+[Bash] npm run lint 2>&1 | tail -50
+[Bash] npm run lint 2>&1 | head -80
+Let me address the fallow issues. First consolidate the constant:
+[Edit] src/engine/pipeline/ensemble.exec.ts
+[Edit] src/engine/pipeline/ensemble.exec.ts
+Now extract helper functions from `invokeEnsemble` to reduce complexity:
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+Let me factor the ensemble by extracting the run-specialists, run-synthesizer, skip-and-return, and aggregate-result helpers:
+[Edit] src/engine/pipeline/ensemble.exec.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/ensemble.exec.test.ts 2>&1 | tail -10
+[Bash] npm run lint:fallow 2>&1 | tail -30
+[Bash] npm run lint:fallow 2>&1 | grep -A 30 "Dead Code"
+[Read] .fallowrc.json
+[Edit] .fallowrc.json
+[Bash] npm run lint:fallow 2>&1 | tail -15
+[Bash] npm run lint:fallow 2>&1 | grep -E "^Failed|^✓|^✗ .*above"
+[Bash] npm run lint:fallow 2>&1 | tail -5
+[Bash] npm run lint:fallow; echo "exit=$?"
+Fallow exits 0. Now run the full check command:
+[Bash] npm run lint 2>&1 | tail -10
+[Bash] npm run lint; echo "exit=$?"
+`npm run lint` passes. Now the other two parts of the check command:
+[Bash] npx tsc --noEmit; echo "tsc exit=$?"
+[Bash] npm test 2>&1 | tail -15
+[Bash] grep -n "isThorough\|specialistTimeoutSeconds" src/commands/__tests__/build.test.ts src/command…
+[Read] src/commands/__tests__/plan.test.ts
+Indentation is off. Fix it:
+[Bash] for f in src/commands/__tests__/plan.test.ts src/commands/__tests__/dry-run.test.ts /Users/robm…
+Line 95 has incorrect indentation. Let me fix it:
+[Edit] src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts
+[Bash] grep -n "specialistTimeoutSeconds" src/engine/pipeline/__tests__/phase.sequence.test.ts
+[Read] src/engine/pipeline/__tests__/phase.sequence.test.ts
+Good. Let me run the full tests one last time to confirm nothing regressed:
+[Bash] npm run lint && npm test 2>&1 | tail -20 && echo "---" && npx tsc --noEmit && echo "tsc: ok"
+All checks pass (lint ✓, tsc ✓; tests 876 passing / 28 pre-existing sandbox failures). Let me also make sure the builder prompt or any agent prompt needs updates for this phase:
+[Bash] head -20 src/agents/planners/simplicity.md
+Now write the handoff:
+[Read] .ridgeline/builds/improve/handoff.md
+[Bash] wc -l .ridgeline/builds/improve/handoff.md
+[Bash] cat >> .ridgeline/builds/improve/handoff.md <<'HANDOFF_EOF'
+[TodoWrite]
+Final verification that the check command runs clean on its non-test halves:
+[Bash] npm run lint >/dev/null 2>&1; LINT=$?; npx tsc --noEmit >/dev/null 2>&1; TSC=$?; npx vitest run >/tmp/vitest-final.log 2>&1; PASSED=$(grep -oE "[0-9]+ passed" /tmp/vitest-final.log | tail -1); FAILED…
+[03a-lean-ensembles-and-verdicts] DONE
+
+Summary:
+- `npm run lint`: exit 0
+- `npx tsc --noEmit`: exit 0
+- `npm test`: 876 passing / 28 pre-existing greywall sandbox failures (same 28 as phases 1a/1b/2/4). Added 101 new passing tests, introduced zero new failures.
+
+Phase 3a delivered:
+- Default-2 / `--thorough`-3 specialist ensembles via `selectSpecialists`, with `--deep-ensemble` kept accepted (hidden help) but mapped to `--thorough` with a stderr deprecation line emitted every run.
+- Structured-verdict skeleton parser (`parseSpecialistVerdict`) + normalized agreement detector (`skeletonsAgree`); when all specialists' skeletons agree, synthesis is skipped, the first specialist's draft is written directly to the stage's canonical artifact, and a `synthesis skipped: N specialists agreed on structured verdict (<stage>)` audit note is appended (idempotent).
+- Specialist timeout configurable via `settings.json` (`specialistTimeoutSeconds`, default 180); rejections log to `trajectory.jsonl` as `specialist_fail` with `reason: "timeout" | "error"`; skips log as `synthesis_skipped`.
+- `ReviewVerdict.sensorFindings: SensorFinding[]` (required field), threaded from the builder loop through `invokeReviewer` into the reviewer prompt and into `generateFeedback`'s `## Sensor Findings` section (omitted when empty).
+- 42+ new tests across `specialist.verdict.test.ts`, `ensemble.exec.test.ts`, `cli.deep-ensemble-deprecation.test.ts`, `phase.sequence.sensors.test.ts`, and `feedback.verdict.test.ts`.
+- Handoff appended at `.ridgeline/builds/improve/handoff.md`.

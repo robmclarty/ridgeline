@@ -42,6 +42,7 @@ describe("feedback.io", () => {
         criteriaResults: [],
         issues: [{ description: "broken", severity: "blocking" as const }],
         suggestions: [],
+        sensorFindings: [],
       }
 
       writeFeedback(phaseFile, "01-scaffold", verdict)
@@ -75,6 +76,7 @@ describe("feedback.io", () => {
         criteriaResults: [],
         issues: [{ description: "broken", severity: "blocking" as const }],
         suggestions: [],
+        sensorFindings: [],
       }
 
       archiveFeedback(phaseFile, "01-scaffold", verdict, 0)

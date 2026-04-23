@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { SpecifierDraft, EnsembleResult } from "../../types"
-import { invokeEnsemble, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
+import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { formatProposalHeading } from "./pipeline.shared"
 import { PromptDocument } from "./prompt.document"
@@ -90,8 +90,25 @@ const SPEC_SPECIALIST_SCHEMA = JSON.stringify({
         },
       },
     },
+    _skeleton: {
+      type: "object",
+      description: "Compact agreement-detection skeleton used to decide whether synthesis can be skipped.",
+      properties: {
+        sectionOutline: {
+          type: "array",
+          items: { type: "string" },
+          description: "Ordered feature/section names that structure the spec.",
+        },
+        riskList: {
+          type: "array",
+          items: { type: "string" },
+          description: "Concerns and risks the synthesizer must address.",
+        },
+      },
+      required: ["sectionOutline", "riskList"],
+    },
   },
-  required: ["perspective", "spec", "constraints", "tradeoffs", "concerns"],
+  required: ["perspective", "spec", "constraints", "tradeoffs", "concerns", "_skeleton"],
 })
 
 // ---------------------------------------------------------------------------
@@ -116,6 +133,7 @@ const buildSpecSpecialistPrompt = (overlay: string): string => {
     "- `taste`: { codeStyle, testPatterns, commitFormat, commentStyle } or null if no style preferences expressed",
     "- `tradeoffs`: What your approach sacrifices",
     "- `concerns`: Things the other specialists might miss",
+    "- `_skeleton`: { sectionOutline: string[], riskList: string[] } — sectionOutline mirrors your feature/section names in order; riskList mirrors your concerns. Keep this faithful; it is used for ensemble agreement detection.",
   ].join("\n")
 
   return `${overlay}${jsonDirective}`
@@ -271,11 +289,108 @@ const assembleSynthesizerUserPrompt = (
 export type SpecEnsembleConfig = {
   model: string
   timeoutMinutes: number
+  specialistTimeoutSeconds: number
   maxBudgetUsd: number | null
   buildDir: string
   matchedShapes: string[]
+  isThorough: boolean
   /** Optional user-authored spec content treated as authoritative source material. */
   userInput: string | null
+}
+
+const renderSpecMdFromDraft = (draft: SpecifierDraft): string => {
+  const lines: string[] = []
+  lines.push(`# ${draft.spec.title}`)
+  lines.push("")
+  lines.push("## Overview")
+  lines.push("")
+  lines.push(draft.spec.overview.trim())
+  lines.push("")
+  lines.push("## Features")
+  lines.push("")
+  for (const feature of draft.spec.features) {
+    lines.push(`### ${feature.name}`)
+    lines.push("")
+    lines.push(feature.description.trim())
+    lines.push("")
+    lines.push("**Acceptance Criteria:**")
+    lines.push("")
+    for (const criterion of feature.acceptanceCriteria) {
+      lines.push(`- ${criterion}`)
+    }
+    lines.push("")
+  }
+  lines.push("## Scope")
+  lines.push("")
+  lines.push("**In scope:**")
+  lines.push("")
+  for (const item of draft.spec.scopeBoundaries.inScope) {
+    lines.push(`- ${item}`)
+  }
+  lines.push("")
+  lines.push("**Out of scope:**")
+  lines.push("")
+  for (const item of draft.spec.scopeBoundaries.outOfScope) {
+    lines.push(`- ${item}`)
+  }
+  lines.push("")
+  return lines.join("\n")
+}
+
+const renderConstraintsMdFromDraft = (draft: SpecifierDraft): string => {
+  const lines: string[] = []
+  lines.push("# Constraints")
+  lines.push("")
+  lines.push(`- **Language:** ${draft.constraints.language}`)
+  lines.push(`- **Runtime:** ${draft.constraints.runtime}`)
+  if (draft.constraints.framework) lines.push(`- **Framework:** ${draft.constraints.framework}`)
+  lines.push(`- **Directory conventions:** ${draft.constraints.directoryConventions}`)
+  lines.push(`- **Naming conventions:** ${draft.constraints.namingConventions}`)
+  if (draft.constraints.apiStyle) lines.push(`- **API style:** ${draft.constraints.apiStyle}`)
+  if (draft.constraints.database) lines.push(`- **Database:** ${draft.constraints.database}`)
+  if (draft.constraints.dependencies.length > 0) {
+    lines.push(`- **Dependencies:** ${draft.constraints.dependencies.join(", ")}`)
+  }
+  lines.push("")
+  lines.push("## Check Command")
+  lines.push("")
+  lines.push("```bash")
+  lines.push(draft.constraints.checkCommand.trim())
+  lines.push("```")
+  lines.push("")
+  return lines.join("\n")
+}
+
+const renderTasteMdFromDraft = (draft: SpecifierDraft): string | null => {
+  if (!draft.taste) return null
+  const lines: string[] = ["# Taste", ""]
+  if (draft.taste.codeStyle.length > 0) {
+    lines.push("## Code Style", "")
+    for (const item of draft.taste.codeStyle) lines.push(`- ${item}`)
+    lines.push("")
+  }
+  if (draft.taste.testPatterns.length > 0) {
+    lines.push("## Test Patterns", "")
+    for (const item of draft.taste.testPatterns) lines.push(`- ${item}`)
+    lines.push("")
+  }
+  if (draft.taste.commitFormat) {
+    lines.push("## Commit Format", "", draft.taste.commitFormat.trim(), "")
+  }
+  if (draft.taste.commentStyle) {
+    lines.push("## Comment Style", "", draft.taste.commentStyle.trim(), "")
+  }
+  return lines.join("\n")
+}
+
+const writeSpecArtifactsFromDraft = (buildDir: string, draft: SpecifierDraft): string => {
+  fs.mkdirSync(buildDir, { recursive: true })
+  const specPath = path.join(buildDir, "spec.md")
+  fs.writeFileSync(specPath, renderSpecMdFromDraft(draft))
+  fs.writeFileSync(path.join(buildDir, "constraints.md"), renderConstraintsMdFromDraft(draft))
+  const tasteMd = renderTasteMdFromDraft(draft)
+  if (tasteMd) fs.writeFileSync(path.join(buildDir, "taste.md"), tasteMd)
+  return specPath
 }
 
 export const invokeSpecifier = async (
@@ -284,10 +399,11 @@ export const invokeSpecifier = async (
 ): Promise<EnsembleResult> => {
   const registry = buildAgentRegistry()
 
-  // Get standard specialists
-  let specialists = registry.getSpecialists("specifiers")
+  // Get standard specialists, capped at 2 (default) / 3 (thorough).
+  const baseSpecialists = registry.getSpecialists("specifiers")
+  let specialists = selectSpecialists(baseSpecialists, { isThorough: config.isThorough })
 
-  // Conditionally add visual coherence specialist when visual shapes matched
+  // Conditionally add visual coherence specialist when visual shapes matched.
   if (config.matchedShapes.length > 0) {
     const visualSpecialist = registry.getSpecialist("specifiers", "visual-coherence.md")
     if (visualSpecialist) {
@@ -310,12 +426,50 @@ export const invokeSpecifier = async (
 
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,
+    specialistTimeoutSeconds: config.specialistTimeoutSeconds,
     maxBudgetUsd: config.maxBudgetUsd,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
+    isTwoRound: config.isThorough,
+    buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
+      const sections = [
+        `You are the ${ownPerspective} specialist. You have already submitted your proposal.`,
+        "Below are the other specialists' proposals. Review them and provide brief annotations:",
+        "- **Concerns:** Issues you see in their approaches",
+        "- **Agreements:** Where they align with or strengthen yours",
+        "- **Gaps:** What none of the proposals (including yours) adequately address",
+        "",
+        "Do NOT rewrite your proposal. Provide only annotations.",
+        "",
+      ]
+      for (const { perspective, draft } of otherDrafts) {
+        sections.push(`## ${perspective} Specialist Proposal\n`)
+        sections.push(`**Summary:** ${draft.spec.overview}`)
+        sections.push(`**Features:** ${draft.spec.features.length}`)
+        sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
+      }
+      return sections.join("\n")
+    },
+
+    stage: "spec",
+    buildDir: config.buildDir,
+    onAgreementSkip: (successful) => {
+      const [first] = successful
+      const specPath = writeSpecArtifactsFromDraft(config.buildDir, first.draft)
+      appendSkipAuditNote(specPath, successful.length, "spec")
+      return {
+        success: true,
+        result: JSON.stringify(first.draft),
+        durationMs: 0,
+        costUsd: 0,
+        usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+        sessionId: `synthesis-skipped-${first.perspective}`,
+      }
+    },
+
     verify: () => {
       const missing = ["spec.md", "constraints.md"]
-        .filter(f => !fs.existsSync(path.join(config.buildDir, f)))
+        .filter((f) => !fs.existsSync(path.join(config.buildDir, f)))
       if (missing.length > 0) {
         throw new Error(`Synthesizer did not create required files: ${missing.join(", ")}`)
       }

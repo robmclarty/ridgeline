@@ -45,6 +45,21 @@ type RidgelineSettings = {
   }
   assetDir?: string
   model?: string
+  /**
+   * Per-call specialist timeout in seconds. Recommended 180–600.
+   * Applies to ensemble specialist invocations (planner, specifier, researcher).
+   */
+  specialistTimeoutSeconds?: number
+}
+
+export const DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 180
+
+export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number => {
+  const raw = loadSettings(ridgelineDir).specialistTimeoutSeconds
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_SPECIALIST_TIMEOUT_SECONDS
+  }
+  return Math.floor(raw)
 }
 
 /** Resolve the model to use: CLI opt wins, then settings.json, then built-in default. */

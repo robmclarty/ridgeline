@@ -15,6 +15,8 @@ type ResearchOptions = {
   maxBudgetUsd?: number
   isQuick: boolean
   auto: number | null
+  isThorough?: boolean
+  specialistTimeoutSeconds?: number
 }
 
 const readBuildFile = (buildDir: string, filename: string): string | null => {
@@ -57,9 +59,11 @@ const runSingleResearch = async (
   const config: ResearchConfig = {
     model: opts.model,
     timeoutMinutes: opts.timeout,
+    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? 180,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     isQuick: opts.isQuick,
+    isThorough: opts.isThorough === true,
     networkAllowlist: resolveResearchAllowlist(ridgelineDir),
     existingResearchMd,
     changelogMd,

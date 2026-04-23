@@ -59,5 +59,15 @@ export const generateFeedback = (phaseId: string, verdict: ReviewVerdict): strin
     lines.push("")
   }
 
+  if (verdict.sensorFindings && verdict.sensorFindings.length > 0) {
+    lines.push("## Sensor Findings")
+    lines.push("")
+    for (const finding of verdict.sensorFindings) {
+      const pathPart = finding.path ? ` (${finding.path})` : ""
+      lines.push(`- **${finding.severity}** [${finding.kind}]: ${finding.summary}${pathPart}`)
+    }
+    lines.push("")
+  }
+
   return lines.join("\n")
 }

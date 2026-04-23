@@ -13,6 +13,8 @@ export type SpecOptions = {
   maxBudgetUsd?: number
   /** Optional path to a file (e.g., idea.md) or raw text to feed as authoritative spec guidance. */
   input?: string
+  isThorough?: boolean
+  specialistTimeoutSeconds?: number
 }
 
 /**
@@ -87,9 +89,11 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
   const config: SpecEnsembleConfig = {
     model: opts.model,
     timeoutMinutes: opts.timeout,
+    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? 180,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     matchedShapes: getMatchedShapes(buildDir),
+    isThorough: opts.isThorough === true,
     userInput,
   }
 
