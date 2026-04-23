@@ -28,7 +28,7 @@ describe("cli preflight wiring", () => {
   const byName = new Map(blocks.map((b) => [b.name, b.body]))
 
   const PIPELINE_ENTRY = ["shape", "design", "spec", "research", "refine", "plan", "build", "rewind", "retrospective"]
-  const NON_PIPELINE = ["catalog", "dry-run", "clean", "check"]
+  const NON_PIPELINE = ["catalog", "dry-run", "clean", "check", "ui"]
 
   for (const name of PIPELINE_ENTRY) {
     it(`${name} command invokes runPreflightGuard or withConfigAndPreflight`, () => {
