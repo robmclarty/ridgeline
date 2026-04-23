@@ -143,6 +143,22 @@ describe("invokeBuilder", () => {
     expect(call.userPrompt).toContain("/my/build/handoff.md")
   })
 
+  it("routes the handoff path to a per-phase fragment when cwd is a worktree", async () => {
+    vi.mocked(invokeClaude).mockResolvedValue(makeClaudeResult())
+
+    await invokeBuilder(
+      makeConfig({ buildName: "improve", buildDir: "/main/.ridgeline/builds/improve" }),
+      makePhase({ id: "04-dashboard" }),
+      null,
+      "/wt/improve/04-dashboard",
+    )
+
+    const call = vi.mocked(invokeClaude).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## Handoff File")
+    expect(call.userPrompt).toContain("/wt/improve/04-dashboard/.ridgeline/builds/improve/handoff-04-dashboard.md")
+    expect(call.userPrompt).not.toContain("/main/.ridgeline/builds/improve/handoff.md")
+  })
+
   it("includes reviewer feedback when feedbackPath exists", async () => {
     vi.mocked(fs.existsSync).mockReturnValue(true)
     vi.mocked(fs.readFileSync).mockImplementation((p) => {

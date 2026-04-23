@@ -3,7 +3,7 @@ import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
 import { createCheckpoint, createCompletionTag } from "../../stores/tags"
 import { recordCost } from "../../stores/budget"
-import { ensureHandoffExists } from "../../stores/handoff"
+import { ensureHandoffExists, ensurePhaseHandoffExists } from "../../stores/handoff"
 import { formatIssue } from "../../stores/feedback.verdict"
 import { writeFeedback, archiveFeedback } from "../../stores/feedback.io"
 import { logTrajectory } from "../../stores/trajectory"
@@ -132,6 +132,13 @@ const executeBuild = async (
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
+
+  // In the wave path the builder appends to a per-phase handoff fragment
+  // inside the worktree; create it up-front so the file the prompt names exists.
+  if (cwd) {
+    const wtBuildDir = path.join(cwd, ".ridgeline", "builds", config.buildName)
+    ensurePhaseHandoffExists(wtBuildDir, phase.id)
+  }
 
   const wallStart = Date.now()
   const result = await invokeBuilder(config, phase, feedbackFilePath, cwd)
