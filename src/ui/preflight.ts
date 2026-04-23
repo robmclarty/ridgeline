@@ -5,7 +5,7 @@ import { bold, dimInfo, hint } from "./color"
 export interface PreflightOptions {
   yes: boolean
   isTTY: boolean
-  stream?: NodeJS.WriteStream
+  stream?: NodeJS.WritableStream
   input?: NodeJS.ReadableStream
 }
 
