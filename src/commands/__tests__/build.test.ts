@@ -110,7 +110,8 @@ describe("commands/run", () => {
       unsafe: false,
       networkAllowlist: [],
       extraContext: null,
-      isDeepEnsemble: false,
+      isThorough: false,
+      specialistTimeoutSeconds: 180,
     }
 
     // Mock process.exit to throw instead of exiting

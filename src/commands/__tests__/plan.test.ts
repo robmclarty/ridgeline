@@ -70,7 +70,8 @@ describe("commands/plan", () => {
       unsafe: false,
       networkAllowlist: [],
       extraContext: null,
-      isDeepEnsemble: false,
+      isThorough: false,
+      specialistTimeoutSeconds: 180,
     }
   })
 

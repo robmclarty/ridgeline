@@ -167,7 +167,7 @@ describe("invokeReviewer", () => {
     const output = await invokeReviewer(makeConfig(), makePhase(), "checkpoint-tag")
 
     expect(output.result).toBe(result)
-    expect(output.verdict).toBe(passVerdict)
+    expect(output.verdict).toEqual({ ...passVerdict, sensorFindings: [] })
   })
 
   it("calls appendDesign with the config", async () => {

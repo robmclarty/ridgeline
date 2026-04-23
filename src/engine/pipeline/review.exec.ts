@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../../types"
+import type { SensorFinding } from "../../sensors"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.display"
 import { getDiff } from "../../git"
@@ -16,6 +17,7 @@ const assembleUserPrompt = (
   phase: PhaseInfo,
   checkpointTag: string,
   cwd?: string,
+  sensorFindings?: SensorFinding[],
 ): string => {
   const doc = new PromptDocument()
 
@@ -31,6 +33,15 @@ const assembleUserPrompt = (
   doc.data("constraints.md", fs.readFileSync(config.constraintsPath, "utf-8"))
 
   appendDesign(doc, config)
+
+  if (sensorFindings && sensorFindings.length > 0) {
+    const lines: string[] = []
+    for (const finding of sensorFindings) {
+      const pathPart = finding.path ? ` (${finding.path})` : ""
+      lines.push(`- [${finding.severity}] ${finding.kind}: ${finding.summary}${pathPart}`)
+    }
+    doc.data("Sensor Findings (from builder loop)", lines.join("\n"))
+  }
 
   // Inject reviewer context from matched shapes
   const matchedShapeNames = getMatchedShapes(config.buildDir)
@@ -61,10 +72,11 @@ export const invokeReviewer = async (
   phase: PhaseInfo,
   checkpointTag: string,
   cwd?: string,
+  sensorFindings?: SensorFinding[],
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("reviewer.md")
-  const userPrompt = assembleUserPrompt(config, phase, checkpointTag, cwd)
+  const userPrompt = assembleUserPrompt(config, phase, checkpointTag, cwd, sensorFindings)
   const { onStdout, flush } = createDisplayCallbacks({ suppressJsonBlock: true, projectRoot: cwd ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
@@ -77,7 +89,8 @@ export const invokeReviewer = async (
       ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
 
-    const verdict = parseVerdict(result.result)
+    const parsed = parseVerdict(result.result)
+    const verdict: ReviewVerdict = { ...parsed, sensorFindings: sensorFindings ?? [] }
     return { result, verdict }
   } finally {
     flush()

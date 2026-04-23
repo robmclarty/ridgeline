@@ -17,7 +17,8 @@ export type RidgelineConfig = {
   networkAllowlist: string[]
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
   extraContext: string | null
-  isDeepEnsemble: boolean
+  isThorough: boolean
+  specialistTimeoutSeconds: number
 }
 
 // Phase metadata parsed from filesystem
@@ -99,6 +100,7 @@ export type ReviewVerdict = {
   }[]
   issues: ReviewIssue[]
   suggestions: ReviewIssue[]
+  sensorFindings: import("./sensors").SensorFinding[]
 }
 
 // A single proposed phase from a specialist planner
@@ -205,9 +207,29 @@ export type TrajectoryEntry = {
     | "research_complete"
     | "refine_start"
     | "refine_complete"
+    | "specialist_fail"
+    | "synthesis_skipped"
   phaseId: string | null
   duration: number | null
   tokens: { input: number; output: number } | null
   costUsd: number | null
   summary: string
+  reason?: string
+  specialist?: string
+  stage?: string
 }
+
+// Stage-specific structured skeletons used for ensemble agreement detection
+export type SpecialistSkeletonSpec = { sectionOutline: string[]; riskList: string[] }
+export type SpecialistSkeletonPlan = {
+  phaseList: { id: string; slug: string }[]
+  depGraph: [string, string][]
+}
+export type SpecialistSkeletonResearch = { findings: string[]; openQuestions: string[] }
+
+export type SpecialistStage = "spec" | "plan" | "research"
+
+export type SpecialistVerdict =
+  | { stage: "spec"; skeleton: SpecialistSkeletonSpec }
+  | { stage: "plan"; skeleton: SpecialistSkeletonPlan }
+  | { stage: "research"; skeleton: SpecialistSkeletonResearch }

@@ -20,7 +20,8 @@
     { "file": "src/ui/dashboard/favicon.ts", "exports": ["FaviconStatus"] },
     { "file": "src/ui/dashboard/html.ts", "exports": ["RenderHtmlOptions"] },
     { "file": "src/ui/dashboard/server.ts", "exports": ["StartDashboardOptions"] },
-    { "file": "src/commands/ui.ts", "exports": ["UiOptions"] }
+    { "file": "src/commands/ui.ts", "exports": ["UiOptions"] },
+    { "file": "src/stores/trajectory.ts", "exports": ["TrajectoryOpts"] }
   ],
   "duplicates": {
     "ignore": [

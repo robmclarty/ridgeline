@@ -40,6 +40,7 @@ const tryParseVerdict = (raw: unknown): ReviewVerdict | null => {
     suggestions: Array.isArray(obj.suggestions)
       ? obj.suggestions.map((s: unknown) => normalizeIssue(s, "suggestion"))
       : [],
+    sensorFindings: [],
   }
 }
 
@@ -86,6 +87,7 @@ const UNPARSEABLE_VERDICT: ReviewVerdict = {
   criteriaResults: [],
   issues: [{ description: "Reviewer output did not contain a valid JSON verdict", severity: "blocking" }],
   suggestions: [],
+  sensorFindings: [],
 }
 
 // Extract the JSON verdict block from reviewer's text output

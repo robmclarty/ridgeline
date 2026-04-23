@@ -83,6 +83,7 @@ const passVerdict: ReviewVerdict = {
   criteriaResults: [{ criterion: 1, passed: true, notes: "ok" }],
   issues: [],
   suggestions: [],
+  sensorFindings: [],
 }
 
 const failVerdict: ReviewVerdict = {
@@ -91,6 +92,7 @@ const failVerdict: ReviewVerdict = {
   criteriaResults: [{ criterion: 1, passed: false, notes: "bad" }],
   issues: [{ description: "thing is broken", severity: "blocking" as const }],
   suggestions: [{ description: "fix it", severity: "suggestion" as const }],
+  sensorFindings: [],
 }
 
 const config: RidgelineConfig = {
@@ -110,7 +112,8 @@ const config: RidgelineConfig = {
   unsafe: false,
   networkAllowlist: [],
   extraContext: null,
-  isDeepEnsemble: false,
+  isThorough: false,
+  specialistTimeoutSeconds: 180,
 }
 
 const phase: PhaseInfo = {

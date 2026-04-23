@@ -190,6 +190,7 @@ Checking criterion 2...
           requiredState: "--help flag must print usage and exit 0",
         }],
         suggestions: [],
+        sensorFindings: [],
       })
 
       expect(feedback).toContain("# Reviewer Feedback: Phase 01-core-cli")
@@ -207,12 +208,47 @@ Checking criterion 2...
         criteriaResults: [],
         issues: [{ description: "Unparseable output", severity: "blocking" }],
         suggestions: [],
+        sensorFindings: [],
       })
 
       expect(feedback).toContain("## Issues")
       expect(feedback).toContain("Unparseable output")
       expect(feedback).not.toContain("## Failed Criteria")
       expect(feedback).not.toContain("## What Passed")
+    })
+
+    it("renders a Sensor Findings section with one bullet per finding", () => {
+      const feedback = generateFeedback("03-sensors", {
+        passed: true,
+        summary: "ok",
+        criteriaResults: [],
+        issues: [],
+        suggestions: [],
+        sensorFindings: [
+          { kind: "a11y", severity: "warning", summary: "axe-core reported 1 violation", path: "index.html" },
+          { kind: "contrast", severity: "error", summary: "accent/bg pair 3.1:1 below 4.5:1" },
+        ],
+      })
+
+      expect(feedback).toContain("## Sensor Findings")
+      expect(feedback).toContain("axe-core reported 1 violation")
+      expect(feedback).toContain("(index.html)")
+      expect(feedback).toContain("accent/bg pair 3.1:1 below 4.5:1")
+      const bullets = feedback.split("\n").filter((l) => l.startsWith("- "))
+      expect(bullets.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it("omits the Sensor Findings section when the array is empty", () => {
+      const feedback = generateFeedback("03-sensors", {
+        passed: true,
+        summary: "ok",
+        criteriaResults: [{ criterion: 1, passed: true, notes: "ok" }],
+        issues: [],
+        suggestions: [],
+        sensorFindings: [],
+      })
+
+      expect(feedback).not.toContain("## Sensor Findings")
     })
   })
 })

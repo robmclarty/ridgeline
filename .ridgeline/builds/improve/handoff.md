@@ -832,3 +832,321 @@ Tests (14 new test files, 210 new passing tests):
   the file in a polling loop** to work around flakiness under load.
   If a future test framework adds deterministic watcher control,
   replace the `utimesSync` loop with a direct flush call.
+
+## Phase 3a: Lean ensembles, structured verdicts, reviewer sensor findings
+
+### What was built
+
+Types, parser, config rename, ensemble rewire, reviewer sensor wiring, and
+twenty-plus new tests landed in-place on `improve1` (no commits yet — to be
+committed after this handoff).
+
+New modules:
+
+- `src/engine/pipeline/specialist.verdict.ts` — exports
+  `parseSpecialistVerdict(stage, raw)` and `skeletonsAgree(verdicts)`.
+  Accepts three input shapes: a top-level JSON object whose root matches the
+  stage schema, a top-level JSON object with a nested `_skeleton` field
+  (used by planners + specifiers that still emit structured JSON), or a
+  fenced ```json block inside prose (used by researchers who now append a
+  skeleton at the end of their report). Returns `null` on missing block,
+  malformed JSON, or schema mismatch. Agreement normalization rules:
+  strings trimmed; arrays of primitives sorted; `phaseList` is
+  order-sensitive; `sectionOutline`, `riskList`, `findings`, `openQuestions`
+  order-insensitive; `depGraph` edges order-insensitive (sorted `from->to`
+  keys).
+- `src/engine/pipeline/__tests__/specialist.verdict.test.ts` — 19 tests
+  across spec/plan/research shapes, fenced-block extraction, malformed
+  handling, and ordered/unordered agreement.
+- `src/engine/pipeline/__tests__/ensemble.exec.test.ts` — 19 tests covering
+  `selectSpecialists`, `appendSkipAuditNote` idempotence, default-2
+  specialist count, one-survivor quorum + warning, all-fail halt,
+  specialist-timeout trajectory logging with `reason: "timeout"`,
+  per-call timeout defaulting to 180s and honoring the setting, `--thorough`
+  dispatching 3 specialists + 3 annotations + 1 synthesizer (7 calls), the
+  round-2 annotation payload listing the *other* specialists' perspectives,
+  agreement-based skip (2-way and 3-way under thorough), disagreement
+  falling back to synthesis, malformed-JSON falling back to synthesis with
+  a warning, and `synthesis_skipped` trajectory logging.
+- `src/__tests__/cli.deep-ensemble-deprecation.test.ts` — 4 tests that
+  source-parse `cli.ts` and assert the deprecation string literal,
+  `hideHelp()` usage, `--thorough`/`--deep-ensemble` OR mapping in
+  `detectPreflightFlags`, and the documented `--thorough` option.
+
+Rewire changes:
+
+- `src/types.ts` — `RidgelineConfig` gains `isThorough: boolean` (replaces
+  `isDeepEnsemble`) and `specialistTimeoutSeconds: number` (default
+  resolver in settings). `ReviewVerdict` gains
+  `sensorFindings: SensorFinding[]` (required; defaults `[]`).
+  `TrajectoryEntry` gains optional `reason`, `specialist`, `stage` fields
+  and two new types (`specialist_fail`, `synthesis_skipped`).
+  New `SpecialistStage`, `SpecialistVerdict`, `SpecialistSkeleton{Spec,
+  Plan,Research}` exports.
+- `src/stores/trajectory.ts` — `logTrajectory` now accepts optional
+  `reason`, `specialist`, `stage` opts that are written to the JSONL
+  entry when present. `TrajectoryOpts` type export added (allowlisted in
+  `.fallowrc.json`).
+- `src/stores/settings.ts` — `DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 180`
+  and `resolveSpecialistTimeoutSeconds(ridgelineDir)` with ≤0 / non-finite
+  guard. `RidgelineSettings.specialistTimeoutSeconds` optional key added.
+- `src/engine/pipeline/ensemble.exec.ts` — full rewire. Per-specialist
+  timeout taken from `config.specialistTimeoutSeconds` (defaults to
+  180s); rejections routed through a shared handler that logs
+  `specialist_fail` to trajectory with `reason: "timeout" | "error"` and
+  the specialist / stage. Quorum changed from "ceil(N/2) required" to
+  "≥1 survivor synthesizes" so a lone survivor still produces output
+  (warning emitted). Agreement detection (`detectAgreement`) parses each
+  successful specialist's skeleton via `parseSpecialistVerdict`; any
+  null → malformed warning + synthesis; all non-null + `skeletonsAgree`
+  → skip branch. Skip branch calls `config.onAgreementSkip(successful)`
+  to write the canonical artifact, logs `synthesis_skipped` trajectory
+  entry, and returns an aggregated `EnsembleResult` with the skip's
+  `ClaudeResult` substituted for the synthesizer. `invokeEnsemble`
+  factored into `dispatchSpecialists`, `collectSuccessful`,
+  `runAnnotationPass` (existing), `runSynthesizer`, `aggregateResult`,
+  `logSkip` helpers to keep cognitive complexity under the fallow 30
+  threshold. New `selectSpecialists(all, { isThorough })` helper caps
+  at 2 (default) / 3 (thorough). New `appendSkipAuditNote(filepath,
+  count, stage)` appends a single idempotent `synthesis skipped: N
+  specialists agreed on structured verdict (<stage>)` line.
+- `src/engine/pipeline/specify.exec.ts` — SPEC schema gains `_skeleton:
+  { sectionOutline, riskList }` (required). Specialist prompt appended
+  to instruct faithful skeleton emission. `SpecEnsembleConfig` gains
+  `isThorough` and `specialistTimeoutSeconds`. New `renderSpecMdFromDraft`
+  / `renderConstraintsMdFromDraft` / `renderTasteMdFromDraft` /
+  `writeSpecArtifactsFromDraft` helpers handle the skip path (write
+  spec.md/constraints.md/taste.md from the first specialist's draft
+  directly). Annotation prompt for `isTwoRound` added for spec stage.
+- `src/engine/pipeline/ensemble.exec.ts` planner schema gains
+  `_skeleton: { phaseList, depGraph }` (required). Planner specialist
+  prompt appended with the skeleton contract. `writePhasesFromProposal`
+  writes phase files directly from the first specialist's proposal
+  (sequential `NN-<slug>.md` naming, preserves `dependsOn` as YAML front
+  matter). Skip callback returns a synthetic `ClaudeResult` with
+  `costUsd: 0`, `durationMs: 0`.
+- `src/engine/pipeline/research.exec.ts` — agenda unchanged; specialist
+  user prompt now instructs researchers to append a fenced JSON
+  `{ findings: string[], openQuestions: string[] }` block at the end of
+  their prose. `ResearchConfig` gains `isThorough` +
+  `specialistTimeoutSeconds`. Annotation prompt added for research
+  stage. Skip path writes the first specialist's prose directly to
+  `research.md` + audit note.
+- `src/engine/pipeline/review.exec.ts` — `invokeReviewer` gains an
+  optional `sensorFindings: SensorFinding[]` argument, threads them
+  into the user prompt under a new `## Sensor Findings (from builder
+  loop)` section, and injects them into the parsed verdict post-parse
+  (the reviewer doesn't know about sensor findings; the builder loop
+  does). Parsed verdicts from the reviewer's JSON always default
+  `sensorFindings: []`.
+- `src/engine/pipeline/phase.sequence.ts` — thread `build.sensorFindings`
+  from the builder's executeBuild return into `executeReview` →
+  `invokeReviewer`. `ReviewVerdict` in the retry path now carries the
+  real findings.
+- `src/stores/feedback.parse.ts` — `UNPARSEABLE_VERDICT` and
+  `tryParseVerdict` emit `sensorFindings: []` so the type checks out.
+- `src/stores/feedback.format.ts` — `generateFeedback` appends a
+  `## Sensor Findings` section with one bullet per finding when
+  `verdict.sensorFindings.length > 0`; omits the heading when empty.
+- `src/config.ts` — `resolveConfig` sets `isThorough` from either
+  `--thorough` OR `--deep-ensemble` CLI flags, and pulls
+  `specialistTimeoutSeconds` from settings via the new resolver.
+- `src/cli.ts` — top-of-file deprecation pre-check: when
+  `--deep-ensemble` appears in argv, a stderr line
+  `[deprecated] --deep-ensemble is now --thorough; continuing with
+  --thorough` is emitted on every run. `detectPreflightFlags` OR-maps
+  `--thorough` / `--deep-ensemble` into `isThorough`. `addPlanOptions`
+  keeps `--deep-ensemble` accepted but hidden via
+  `new Option("--deep-ensemble", "...").hideHelp()`. The spec and
+  research command actions pass `isThorough` through to their
+  respective options payloads.
+- `src/commands/spec.ts` + `src/commands/research.ts` — options types
+  gain `isThorough` + `specialistTimeoutSeconds`; passed through to
+  the `SpecEnsembleConfig` / `ResearchConfig`.
+- `test/factories.ts`, `src/engine/pipeline/__tests__/phase.sequence*.test.ts`,
+  `src/commands/__tests__/{plan,dry-run,build}.test.ts`,
+  `test/e2e/helpers.ts` — swapped `isDeepEnsemble: false` →
+  `isThorough: false, specialistTimeoutSeconds: 180`.
+- `src/stores/__tests__/{feedback.io,feedback.verdict}.test.ts`,
+  `src/engine/pipeline/__tests__/phase.sequence*.test.ts` — verdict
+  fixtures gain `sensorFindings: []`.
+- `src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts` —
+  added "passes builder-loop sensorFindings into the reviewer
+  invocation" test.
+- `src/engine/pipeline/__tests__/review.exec.test.ts` — updated
+  `verdict` equality assertion to match the wrapped
+  `{ ...parsed, sensorFindings: [] }` output.
+- `src/stores/__tests__/feedback.verdict.test.ts` — added
+  "renders a Sensor Findings section" and "omits the section when
+  empty" tests for `generateFeedback`.
+- `src/__tests__/config.test.ts` — mock for `resolveSpecialistTimeoutSeconds`
+  added so `resolveConfig` tests don't blow up on the new call.
+- `.fallowrc.json` — added `TrajectoryOpts` to `ignoreExports` (public
+  helper type used by `logTrajectory`'s signature but not by any
+  external consumer yet).
+
+### Decisions
+
+- **Skeleton lives inside the main JSON output for planner/specifier
+  (via a required `_skeleton` field), and as an appended fenced JSON
+  block for researcher.** The spec criterion 11 reads "fenced JSON
+  block" but the existing planner/specifier specialists use
+  `--json-schema` to force pure-JSON output; relaxing that to allow
+  fenced-block emission would have required a major refactor plus
+  loss of the main-body JSON guarantee. Extending the schema with a
+  required `_skeleton` field achieves the same agreement-detection
+  semantic (a well-formed structured block, parsed independently for
+  skeleton comparison) without breaking the structured-output
+  contract. `parseSpecialistVerdict` handles *all three* shapes so
+  the next maintainer can migrate either way without parser churn.
+- **Quorum relaxed from "majority survives" to "≥1 survives".** The
+  spec says "if one of two fails, synthesis runs on one verdict with
+  a warning" — the old majority threshold would have required
+  `ceil(2/2) = 1` anyway, but under `--thorough` with 3 specialists
+  the old math required 2 survivors. Relaxing to "≥1 synthesizes" keeps
+  the pipeline moving on two failures out of three; the warning makes
+  the loss of signal visible. The existing `minRequired` check is
+  gone.
+- **Agreement skip writes artifacts programmatically from the first
+  specialist's draft.** For the planner this is a mini-synthesizer:
+  walks `proposal.phases`, assigns `NN-<slug>.md` names, writes
+  `## Goal / ## Acceptance Criteria / ## Spec Reference / ## Rationale`
+  markdown, emits `depends_on` YAML front matter when present. For
+  the specifier, renders `spec.md` / `constraints.md` /
+  (optional) `taste.md` from the draft's structured fields. For
+  research, writes the first specialist's prose directly to
+  `research.md`. In all cases the audit note
+  `synthesis skipped: N specialists agreed on structured verdict
+  (<stage>)` is appended via the shared `appendSkipAuditNote`
+  helper (idempotent). The synthetic `ClaudeResult` returned from
+  the skip callback reports `costUsd: 0, durationMs: 0` so the
+  EnsembleResult arithmetic is coherent.
+- **`--deep-ensemble` deprecation lives at the top of `cli.ts`, not
+  in a commander hook.** Commander's argument parsing runs inside
+  per-command handlers, but the spec wants the warning emitted
+  *every run*. Pre-parsing `process.argv` for the literal string
+  before `program.parse()` catches every invocation regardless of
+  which subcommand is used.
+- **`--deep-ensemble` is declared via `new Option(...).hideHelp()`
+  on `addPlanOptions`, not globally.** Commander rejects unknown
+  options unless you `allowUnknownOption()`, which I didn't want
+  applied broadly. Declaring it as a hidden option on the plan/
+  dry-run family preserves the "accepted but not listed" behavior
+  for the command that actually used the flag. `detectPreflightFlags`
+  independently matches the literal string in argv, so any other
+  command's preflight guard still honors it.
+- **`specialistTimeoutSeconds` lives in settings.json, not as a CLI
+  flag.** Criterion 9 says "configurable in settings.json via the
+  existing key (recommended range 180–600 s)". There was no "existing
+  key" yet, so I added one on `RidgelineSettings` with a documented
+  recommended range. `resolveSpecialistTimeoutSeconds` guards against
+  non-finite and ≤0 values. No CLI surface to keep the knob count
+  down.
+- **Reviewer verdict post-parse injection for sensorFindings.** The
+  reviewer subprocess doesn't know sensor findings exist — the
+  builder loop does. Rather than prompt the reviewer to echo the
+  findings back into its JSON verdict (fragile), `invokeReviewer`
+  accepts `sensorFindings` as an argument and merges them into the
+  parsed verdict's structure post-parse. The reviewer user prompt
+  still shows the findings so the reviewer can factor them into its
+  verdict content.
+- **`invokeEnsemble` factored to meet fallow's cognitive-complexity
+  threshold.** The monolithic body exceeded 38 cognitive; extracting
+  `dispatchSpecialists`, `collectSuccessful`, `runSynthesizer`,
+  `aggregateResult`, and `logSkip` brought the top-level function
+  back under budget (22 cyclomatic / ~25 cognitive after the
+  extraction). Behavior is unchanged; the refactor is purely for
+  fallow's threshold.
+
+### Deviations
+
+- **Criterion 11's "src/agents/specialists/"" phrasing.** The spec
+  literally reads `src/agents/specialists/` as the directory where
+  skeleton-emitting prompts live, but `src/agents/specialists/`
+  holds the builder's sub-agents (auditor/explorer/tester/verifier)
+  — NOT the ensemble specialists, which live under
+  `src/agents/{planners,specifiers,researchers}/`. I applied the
+  skeleton emission to the ensemble specialists' per-stage
+  prompt-builder functions (the system-prompt decorator), which is
+  the semantically correct location given where ensembles actually
+  fire. If a future maintainer interprets the spec literally and
+  wants the skeleton in the sub-agent prompts too, the parser's
+  three-shape acceptance makes that trivial.
+- **Criterion 6's "`ridgeline --help` documents `--thorough`".**
+  `--thorough` is documented on every `addPreflightOptions`-wrapped
+  command (shape, design, spec, research, refine, plan, build,
+  rewind, retrospective, default), but `ridgeline --help` lists only
+  the top-level commands and the *default* command's options.
+  `--thorough` shows on the default command's help since it's
+  threaded through `addPreflightOptions(program.argument...)`. For
+  subcommands the user runs `ridgeline <cmd> --help` to see their
+  flags — that's where `--thorough` appears. `--deep-ensemble` is
+  hidden on every command.
+- **Pre-existing greywall test-suite failures persist** —
+  `src/__tests__/git.test.ts`, `src/engine/__tests__/worktree.test.ts`,
+  `src/engine/pipeline/__tests__/worktree.parallel.test.ts` still
+  fail under macOS greywall because `git init` can't copy hook
+  templates from `/Library/Developer/CommandLineTools/...` into the
+  sandbox-confined `/tmp`. Net test counts: baseline (phase 4)
+  775 / 28 → phase 3a 876 / 28 (added 101 passing tests, zero new
+  failures). `npm run lint` and `npx tsc --noEmit` exit 0 cleanly;
+  the combined check command from `constraints.md` (`npm run lint &&
+  npm test && npx tsc --noEmit`) exits non-zero only because `npm
+  test` inherits the 28 pre-existing sandbox fails, exactly as
+  documented in phases 1a / 1b / 2 / 4.
+
+### Notes for next phase
+
+- **Phase 3b is the prompt-assembly rewrite.** 3a deliberately did
+  NOT touch `src/engine/claude/agent.prompt.ts` or the Claude CLI
+  subprocess argv. When 3b lands the
+  `--append-system-prompt-file` plumbing, it should integrate with
+  the existing `invokeClaude` boundary in
+  `src/engine/claude/claude.exec.ts`. The specialist dispatch path
+  already centralizes `systemPrompt` construction via
+  `config.buildSpecialistPrompt(overlay)` — hooking a stable-block
+  file path in there is a one-line change.
+- **Agreement skip is stage-gated, not flag-gated.** `detectAgreement`
+  fires whenever `config.stage` and `config.onAgreementSkip` are
+  both set. If a future phase wants to disable it temporarily (e.g.,
+  a debug flag), guard the call site, not `detectAgreement` itself —
+  tests already assume agreement detection is an input-driven
+  property of the ensemble config.
+- **Skeleton schema versioning.** The `_skeleton` field on planner
+  and specifier schemas is REQUIRED. A specialist running on an
+  older pre-3a prompt (say, a cached snapshot or an external plugin)
+  would produce output without `_skeleton` and the JSON-schema
+  constraint would fail; the existing `extractJSON` path then logs
+  `malformed JSON output` and the specialist is treated as failed.
+  If that starts happening in prod after the upgrade, relax
+  `_skeleton` to optional in the schema and keep the parser
+  tolerant (it already returns `null` when the field is missing
+  and falls through to the direct-match shape).
+- **The skip path's mini-synthesizer is a best-effort replica of
+  what the real synthesizer does.** For planner it preserves
+  `dependsOn`; for specifier it renders a minimal `spec.md` /
+  `constraints.md`; for researcher it copies prose verbatim. If the
+  real synthesizer starts doing more (merging drafts, applying
+  style polish, enriching with shape-context data), the skip path
+  will produce strictly less-rich artifacts. That's acceptable —
+  agreement means specialists all proposed the same thing, so
+  "best-effort replica" = "the thing all specialists proposed".
+- **`specialist_fail` and `synthesis_skipped` are new trajectory
+  types.** The `ui` dashboard (phase 4) tolerates unknown
+  trajectory events, so it'll show them unstyled. If you want
+  first-class rendering, extend `src/ui/dashboard/snapshot.ts`
+  `summarizeTrajectory` (or equivalent) to recognize them.
+- **`appendSkipAuditNote` writes to disk inside the skip callback.**
+  In worktree mode (phase 4's wave path) the planner writes to
+  `config.phasesDir` which is the per-build phases dir under
+  `.ridgeline/builds/<name>/phases/`, not a worktree — same as
+  the real synthesizer. The specifier writes into `config.buildDir`.
+  The researcher writes into `config.buildDir`. None of these
+  depend on cwd.
+- **Tests stub `invokeClaude` at the claude.exec boundary.** The
+  `ensemble.exec.test.ts` pattern (mock `invokeClaude`, drive it via
+  `mockImplementationOnce` / `mockImplementation`) is the one to
+  extend when adding more ensemble tests. Avoid reaching deeper
+  into `stream.display.ts` / `stream.parse.ts` — the ensemble
+  layer should be tested at the orchestration level, not the
+  subprocess level.

@@ -1,14 +1,18 @@
-import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult } from "../../types"
+import * as fs from "node:fs"
+import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult, SpecialistStage, SpecialistVerdict } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { createDisplayCallbacks } from "../claude/stream.display"
 import { scanPhases } from "../../stores/phases"
-import { printInfo, printError } from "../../ui/output"
+import { printInfo, printError, printWarn } from "../../ui/output"
 import { startSpinner, formatElapsed } from "../../ui/spinner"
 import { appendTranscript } from "../../ui/transcript"
 import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
 import { appendBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
 import { PromptDocument } from "./prompt.document"
+import { logTrajectory } from "../../stores/trajectory"
+import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../../stores/settings"
+import { parseSpecialistVerdict, skeletonsAgree } from "./specialist.verdict"
 
 // ---------------------------------------------------------------------------
 // Robust JSON extraction — handles markdown fences and surrounding text
@@ -22,14 +26,12 @@ import { PromptDocument } from "./prompt.document"
 export const extractJSON = (raw: string): unknown => {
   const trimmed = raw.trim()
 
-  // 1. Try direct parse first (happy path)
   try {
     return JSON.parse(trimmed)
   } catch {
-    // continue to extraction strategies
+    // continue
   }
 
-  // 2. Strip markdown fences: ```json ... ``` or ``` ... ```
   const fenceMatch = trimmed.match(/```(?:json)?\s*\n?([\s\S]*?)```/)
   if (fenceMatch) {
     try {
@@ -39,7 +41,6 @@ export const extractJSON = (raw: string): unknown => {
     }
   }
 
-  // 3. Find the outermost { ... } in the string
   const firstBrace = trimmed.indexOf("{")
   const lastBrace = trimmed.lastIndexOf("}")
   if (firstBrace !== -1 && lastBrace > firstBrace) {
@@ -99,8 +100,14 @@ type EnsembleConfig<TDraft> = {
   /** Model name for invokeClaude */
   model: string
 
-  /** Timeout in minutes */
+  /** Synthesizer timeout in minutes. */
   timeoutMinutes: number
+
+  /**
+   * Per-specialist call timeout in seconds. Defaults to 180. When `isStructured`
+   * is false (research), caller may override with a longer value.
+   */
+  specialistTimeoutSeconds?: number
 
   /** Budget cap (null = unlimited) */
   maxBudgetUsd: number | null
@@ -121,7 +128,6 @@ type EnsembleConfig<TDraft> = {
    * Enable two-round ensemble: after round 1 (independent drafts), each specialist
    * sees all other drafts and produces annotations (concerns, agreements, gaps).
    * The synthesizer then receives both drafts and annotations.
-   * Default: false (opt-in, because it roughly doubles specialist cost).
    */
   isTwoRound?: boolean
 
@@ -130,9 +136,57 @@ type EnsembleConfig<TDraft> = {
     ownPerspective: string,
     otherDrafts: { perspective: string; draft: TDraft }[],
   ) => string
+
+  /** Stage identifier for structured-verdict agreement detection. */
+  stage?: SpecialistStage
+
+  /**
+   * Build directory used for trajectory logging. When absent, specialist
+   * failures and agreement skips are logged to stderr only.
+   */
+  buildDir?: string
+
+  /**
+   * Extract the raw string used for skeleton parsing from a specialist's draft.
+   * Defaults to the ClaudeResult.result text.
+   */
+  skeletonSource?: (result: ClaudeResult, draft: TDraft) => string
+
+  /**
+   * When all specialists' skeletons agree, produce the canonical artifact
+   * from the first specialist's draft and return a synthetic synthesizer
+   * result describing the skip. When absent, agreement detection is disabled.
+   */
+  onAgreementSkip?: (
+    successful: { perspective: string; result: ClaudeResult; draft: TDraft }[],
+  ) => Promise<ClaudeResult> | ClaudeResult
 }
 
 type AnnotationEntry = { perspective: string; annotation: string; result: ClaudeResult }
+
+const isTimeoutMessage = (msg: string): boolean => {
+  const lower = msg.toLowerCase()
+  return lower.includes("timed out") || lower.includes("timeout") || lower.includes("stall")
+}
+
+const logSpecialistFailure = (
+  buildDir: string | undefined,
+  perspective: string,
+  reason: "timeout" | "error",
+  detail: string,
+  stage?: SpecialistStage,
+): void => {
+  if (!buildDir) return
+  try {
+    logTrajectory(buildDir, "specialist_fail", null, `Specialist ${perspective} failed: ${detail}`, {
+      reason,
+      specialist: perspective,
+      stage,
+    })
+  } catch {
+    // trajectory is best-effort
+  }
+}
 
 /** Run the optional two-round annotation pass where specialists review each other's drafts. */
 const runAnnotationPass = async <TDraft>(
@@ -160,7 +214,7 @@ const runAnnotationPass = async <TDraft>(
       model: config.model,
       allowedTools: [],
       cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      timeoutMs: (config.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS) * 1000,
       onStderr: createStderrHandler(`${perspective}-annotate`),
     }).then((result) => {
       const elapsed = formatElapsed(Date.now() - startTime)
@@ -210,113 +264,140 @@ const buildSynthPrompt = <TDraft>(
   return prompt
 }
 
-export const invokeEnsemble = async <TDraft>(
-  config: EnsembleConfig<TDraft>
-): Promise<EnsembleResult> => {
-  // 1. Validate pre-resolved specialists
-  const specialists = config.specialists
-  if (specialists.length === 0) {
-    throw new Error(`No specialist agents found for ${config.label}`)
+/** Parse all successful specialists' skeletons and decide whether synthesis should be skipped. */
+const detectAgreement = <TDraft>(
+  config: EnsembleConfig<TDraft>,
+  successful: { perspective: string; result: ClaudeResult; draft: TDraft }[],
+): { isAgreed: boolean; hadMalformed: boolean; verdicts: (SpecialistVerdict | null)[] } => {
+  if (!config.stage || !config.onAgreementSkip || successful.length < 2) {
+    return { isAgreed: false, hadMalformed: false, verdicts: [] }
   }
+  const stage = config.stage
+  const verdicts = successful.map((s) =>
+    parseSpecialistVerdict(stage, config.skeletonSource ? config.skeletonSource(s.result, s.draft) : s.result.result),
+  )
+  const hadMalformed = verdicts.some((v) => v === null)
+  if (hadMalformed) {
+    printWarn(`[ridgeline] WARN: one or more specialist verdicts did not parse; running synthesis`)
+    return { isAgreed: false, hadMalformed: true, verdicts }
+  }
+  return { isAgreed: skeletonsAgree(verdicts), hadMalformed: false, verdicts }
+}
 
-  // 2. Spawn specialists in parallel
-  const spinner = startSpinner(config.label)
+type Spinner = ReturnType<typeof startSpinner>
+type Successful<TDraft> = { perspective: string; result: ClaudeResult; draft: TDraft }
 
-  const specialistPromises = specialists.map(({ perspective, overlay }) => {
+const dispatchSpecialists = async <TDraft>(
+  config: EnsembleConfig<TDraft>,
+  spinner: Spinner,
+): Promise<PromiseSettledResult<{ perspective: string; result: ClaudeResult }>[]> => {
+  const specialistTimeoutMs = (config.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS) * 1000
+  const isStructured = config.isStructured !== false
+
+  const promises = config.specialists.map(({ perspective, overlay }) => {
     const systemPrompt = config.buildSpecialistPrompt(overlay)
     const startTime = Date.now()
-    const isStructured = config.isStructured !== false
-
     return invokeClaude({
       systemPrompt,
       userPrompt: config.specialistUserPrompt,
       model: config.model,
       allowedTools: config.specialistTools ?? [],
       cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
+      timeoutMs: specialistTimeoutMs,
       jsonSchema: isStructured ? config.specialistSchema : undefined,
       onStderr: createStderrHandler(perspective),
       networkAllowlist: config.networkAllowlist,
       sandboxProvider: config.sandboxProvider,
-    }).then((result) => {
-      const elapsed = formatElapsed(Date.now() - startTime)
-      const line = `  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`
-      spinner.printAbove(line)
-      appendTranscript(line)
-      return { perspective, result }
-    })
+    }).then(
+      (result) => {
+        const elapsed = formatElapsed(Date.now() - startTime)
+        const line = `  ${perspective.padEnd(14)} complete (${elapsed}, $${result.costUsd.toFixed(2)})`
+        spinner.printAbove(line)
+        appendTranscript(line)
+        return { perspective, result } as const
+      },
+      (err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err)
+        const reason: "timeout" | "error" = isTimeoutMessage(message) ? "timeout" : "error"
+        printError(`Specialist ${perspective} failed (${reason}): ${message}`)
+        logSpecialistFailure(config.buildDir, perspective, reason, message, config.stage)
+        throw err
+      },
+    )
   })
 
-  const settled = await Promise.allSettled(specialistPromises)
+  return Promise.allSettled(promises)
+}
 
-  // 3. Collect successful proposals
-  const successful: { perspective: string; result: ClaudeResult; draft: TDraft }[] = []
+const collectSuccessful = <TDraft>(
+  config: EnsembleConfig<TDraft>,
+  settled: PromiseSettledResult<{ perspective: string; result: ClaudeResult }>[],
+): Successful<TDraft>[] => {
+  const successful: Successful<TDraft>[] = []
   const isStructured = config.isStructured !== false
 
   for (const outcome of settled) {
-    if (outcome.status === "fulfilled") {
-      const { perspective, result } = outcome.value
-      if (isStructured) {
-        try {
-          const draft = extractJSON(result.result) as TDraft
-          successful.push({ perspective, result, draft })
-        } catch {
-          const preview = result.result.length > 300
-            ? result.result.slice(0, 300) + "..."
-            : result.result
-          printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
-        }
-      } else {
-        successful.push({ perspective, result, draft: result.result as TDraft })
-      }
-    } else {
-      printError(`Specialist failed: ${outcome.reason}`)
+    if (outcome.status !== "fulfilled") continue
+    const { perspective, result } = outcome.value
+
+    if (!isStructured) {
+      successful.push({ perspective, result, draft: result.result as TDraft })
+      continue
+    }
+
+    try {
+      const draft = extractJSON(result.result) as TDraft
+      successful.push({ perspective, result, draft })
+    } catch {
+      const preview = result.result.length > 300
+        ? result.result.slice(0, 300) + "..."
+        : result.result
+      printError(`Failed to parse ${perspective} specialist output as JSON. Preview:\n${preview}`)
+      logSpecialistFailure(config.buildDir, perspective, "error", "malformed JSON output", config.stage)
     }
   }
 
-  // 4. Threshold check
-  const minRequired = Math.ceil(specialists.length / 2)
-  if (successful.length < minRequired) {
-    spinner.stop()
-    throw new Error(
-      `${config.label} requires at least ${minRequired} of ${specialists.length} specialist proposals to succeed, got ${successful.length}. ` +
-      "Check Claude authentication and try again."
-    )
+  return successful
+}
+
+const aggregateResult = <TDraft>(
+  successful: Successful<TDraft>[],
+  annotations: AnnotationEntry[],
+  preSynthCost: number,
+  synthResult: ClaudeResult,
+): EnsembleResult => {
+  const specialistResults = successful.map((s) => s.result)
+  const annotationResults = annotations.map((a) => a.result)
+  const specialistWallMs = Math.max(...specialistResults.map((r) => r.durationMs))
+  const annotationWallMs = annotationResults.length > 0
+    ? Math.max(...annotationResults.map((r) => r.durationMs))
+    : 0
+  const totalDurationMs = specialistWallMs + annotationWallMs + synthResult.durationMs
+
+  return {
+    specialistNames: successful.map((s) => s.perspective),
+    specialistResults,
+    ...(annotationResults.length > 0 ? { annotationResults } : {}),
+    synthesizerResult: synthResult,
+    totalCostUsd: preSynthCost + synthResult.costUsd,
+    totalDurationMs,
   }
+}
 
-  if (successful.length < specialists.length) {
-    printInfo(`Continuing with ${successful.length} of ${specialists.length} proposals`)
-  }
-
-  // 5. Two-round annotation pass (optional)
-  const annotations = await runAnnotationPass(config, successful)
-
-  // 6. Budget guard
-  const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
-  const annotationCost = annotations.reduce((sum, a) => sum + a.result.costUsd, 0)
-  const preSynthCost = specialistCost + annotationCost
-  if (config.maxBudgetUsd !== null && preSynthCost >= config.maxBudgetUsd) {
-    spinner.stop()
-    throw new Error(
-      `Pre-synthesis cost ($${preSynthCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
-      "Skipping synthesis to avoid further cost."
-    )
-  }
-
-  // 7. Synthesize
-  spinner.stop()
+const runSynthesizer = async <TDraft>(
+  config: EnsembleConfig<TDraft>,
+  successful: Successful<TDraft>[],
+  annotations: AnnotationEntry[],
+): Promise<ClaudeResult> => {
   printInfo("Synthesizing from specialist proposals...")
-
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd(), dimText: true })
   const synthUserPrompt = buildSynthPrompt(
     config,
     successful.map(({ perspective, draft }) => ({ perspective, draft })),
     annotations,
   )
-
-  let synthResult: ClaudeResult
   try {
-    synthResult = await invokeClaude({
+    return await invokeClaude({
       systemPrompt: config.synthesizerPrompt,
       userPrompt: synthUserPrompt,
       model: config.model,
@@ -330,28 +411,100 @@ export const invokeEnsemble = async <TDraft>(
   } finally {
     flush()
   }
+}
 
-  // 8. Post-synthesis verification
-  if (config.verify) {
-    config.verify()
+const logSkip = (buildDir: string | undefined, count: number, stage: SpecialistStage): void => {
+  if (!buildDir) return
+  try {
+    logTrajectory(buildDir, "synthesis_skipped", null,
+      `synthesis skipped: ${count} specialists agreed on structured verdict (${stage})`,
+      { stage })
+  } catch {
+    // trajectory is best-effort
+  }
+}
+
+export const invokeEnsemble = async <TDraft>(
+  config: EnsembleConfig<TDraft>
+): Promise<EnsembleResult> => {
+  const specialists = config.specialists
+  if (specialists.length === 0) {
+    throw new Error(`No specialist agents found for ${config.label}`)
   }
 
-  // 9. Aggregate results
-  const specialistResults = successful.map((s) => s.result)
-  const annotationResults = annotations.map((a) => a.result)
-  const totalCostUsd = preSynthCost + synthResult.costUsd
-  const specialistWallMs = Math.max(...specialistResults.map((r) => r.durationMs))
-  const annotationWallMs = annotationResults.length > 0 ? Math.max(...annotationResults.map((r) => r.durationMs)) : 0
-  const totalDurationMs = specialistWallMs + annotationWallMs + synthResult.durationMs
+  const spinner = startSpinner(config.label)
 
-  return {
-    specialistNames: successful.map((s) => s.perspective),
-    specialistResults,
-    ...(annotationResults.length > 0 ? { annotationResults } : {}),
-    synthesizerResult: synthResult,
-    totalCostUsd,
-    totalDurationMs,
+  const settled = await dispatchSpecialists(config, spinner)
+  const successful = collectSuccessful<TDraft>(config, settled)
+
+  if (successful.length === 0) {
+    spinner.stop()
+    throw new Error(
+      `${config.label} had all ${specialists.length} specialists fail. ` +
+      "Check Claude authentication and try again.",
+    )
   }
+
+  if (successful.length < specialists.length) {
+    printWarn(`Continuing with ${successful.length} of ${specialists.length} specialist proposals`)
+  }
+
+  const annotations = await runAnnotationPass(config, successful)
+
+  const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
+  const annotationCost = annotations.reduce((sum, a) => sum + a.result.costUsd, 0)
+  const preSynthCost = specialistCost + annotationCost
+  if (config.maxBudgetUsd !== null && preSynthCost >= config.maxBudgetUsd) {
+    spinner.stop()
+    throw new Error(
+      `Pre-synthesis cost ($${preSynthCost.toFixed(2)}) already exceeds budget ($${config.maxBudgetUsd.toFixed(2)}). ` +
+      "Skipping synthesis to avoid further cost.",
+    )
+  }
+
+  const agreement = detectAgreement(config, successful)
+  if (agreement.isAgreed && config.onAgreementSkip) {
+    spinner.stop()
+    const count = successful.length
+    const stage = config.stage as SpecialistStage
+    printInfo(`Synthesis skipped: ${count} specialists agreed on structured verdict (${stage})`)
+    logSkip(config.buildDir, count, stage)
+
+    const synthResult = await config.onAgreementSkip(successful)
+    if (config.verify) config.verify()
+    return aggregateResult(successful, annotations, preSynthCost, synthResult)
+  }
+
+  spinner.stop()
+  const synthResult = await runSynthesizer(config, successful, annotations)
+  if (config.verify) config.verify()
+  return aggregateResult(successful, annotations, preSynthCost, synthResult)
+}
+
+/**
+ * Cap a registered specialist list to the configured ensemble size.
+ * Default size: 2; thorough mode: 3.
+ */
+export const selectSpecialists = (
+  all: SpecialistDef[],
+  { isThorough }: { isThorough: boolean },
+): SpecialistDef[] => {
+  const size = isThorough ? 3 : 2
+  return all.slice(0, size)
+}
+
+/**
+ * Append the audit note that marks an agreement-based synthesis skip.
+ * Idempotent when applied more than once to the same artifact.
+ */
+export const appendSkipAuditNote = (filepath: string, count: number, stage: SpecialistStage): void => {
+  if (!fs.existsSync(filepath)) {
+    fs.writeFileSync(filepath, "")
+  }
+  const message = `synthesis skipped: ${count} specialists agreed on structured verdict (${stage})`
+  const existing = fs.readFileSync(filepath, "utf-8")
+  if (existing.includes(message)) return
+  fs.appendFileSync(filepath, `\n\n${message}\n`)
 }
 
 // ---------------------------------------------------------------------------
@@ -388,14 +541,37 @@ const SPECIALIST_PROPOSAL_SCHEMA = JSON.stringify({
       },
     },
     tradeoffs: { type: "string", description: "What this approach sacrifices" },
+    _skeleton: {
+      type: "object",
+      description: "Compact agreement-detection skeleton used to decide whether synthesis can be skipped.",
+      properties: {
+        phaseList: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string", description: "e.g., '01-scaffold'" },
+              slug: { type: "string" },
+            },
+            required: ["id", "slug"],
+          },
+        },
+        depGraph: {
+          type: "array",
+          items: {
+            type: "array",
+            items: { type: "string" },
+            minItems: 2,
+            maxItems: 2,
+          },
+        },
+      },
+      required: ["phaseList", "depGraph"],
+    },
   },
-  required: ["perspective", "summary", "phases", "tradeoffs"],
+  required: ["perspective", "summary", "phases", "tradeoffs", "_skeleton"],
 })
 
-/**
- * Build a planner specialist system prompt by concatenating shared context,
- * the specialist's personality overlay, and a JSON output directive.
- */
 const buildPlannerSpecialistPrompt = (context: string, overlay: string): string => {
   const jsonDirective = [
     "",
@@ -414,12 +590,16 @@ const buildPlannerSpecialistPrompt = (context: string, overlay: string): string 
     "- `rationale`: Why this phase boundary exists",
     "",
     "Also include your `perspective` label, a `summary` of your approach, and the `tradeoffs` of your plan.",
+    "",
+    "Finally include a `_skeleton` field summarizing your plan:",
+    "- `phaseList`: array of { id, slug } entries in sequential order; id is `NN-<slug>` (two-digit index).",
+    "- `depGraph`: array of [from, to] id pairs describing cross-phase dependencies.",
+    "The `_skeleton` is used for ensemble agreement detection; keep it faithful to the main plan.",
   ].join("\n")
 
   return `${context}\n\n${overlay}${jsonDirective}`
 }
 
-/** Assemble the user prompt for a planner specialist (no output directory). */
 const assemblePlannerSpecialistUserPrompt = (config: RidgelineConfig): string => {
   const doc = new PromptDocument()
   appendBaseUserPrompt(doc, config)
@@ -427,17 +607,13 @@ const assemblePlannerSpecialistUserPrompt = (config: RidgelineConfig): string =>
   return doc.render()
 }
 
-/** Assemble the user prompt for the planner synthesizer, including all proposals. */
 const assemblePlannerSynthesizerUserPrompt = (
   config: RidgelineConfig,
   drafts: { perspective: string; draft: SpecialistProposal }[],
 ): string => {
   const doc = new PromptDocument()
-
-  // Include original inputs
   appendBaseUserPrompt(doc, config)
 
-  // Include each specialist proposal
   const proposalLines: string[] = []
   for (const { perspective, draft } of drafts) {
     formatProposalHeading(proposalLines, perspective, draft.tradeoffs)
@@ -458,7 +634,6 @@ const assemblePlannerSynthesizerUserPrompt = (
   }
   doc.data("Specialist Proposals", proposalLines.join("\n"))
 
-  // Output directory
   doc.instruction(
     "Output Directory",
     `Write phase spec files to: ${config.phasesDir}\nUse the naming convention: 01-<slug>.md, 02-<slug>.md, etc.`,
@@ -467,15 +642,61 @@ const assemblePlannerSynthesizerUserPrompt = (
   return doc.render()
 }
 
+/** Write phase files directly from the first specialist's proposal when synthesis is skipped. */
+const writePhasesFromProposal = async (
+  config: RidgelineConfig,
+  proposal: SpecialistProposal,
+): Promise<void> => {
+  fs.mkdirSync(config.phasesDir, { recursive: true })
+  for (let i = 0; i < proposal.phases.length; i++) {
+    const phase = proposal.phases[i]
+    const id = `${String(i + 1).padStart(2, "0")}-${phase.slug}`
+    const filepath = `${config.phasesDir}/${id}.md`
+    const lines: string[] = []
+    const depends = Array.isArray((phase as unknown as { dependsOn?: string[] }).dependsOn)
+      ? (phase as unknown as { dependsOn?: string[] }).dependsOn
+      : null
+    if (depends && depends.length > 0) {
+      lines.push("---")
+      lines.push(`depends_on: [${depends.join(", ")}]`)
+      lines.push("---")
+      lines.push("")
+    }
+    lines.push(`# Phase ${i + 1}: ${phase.title}`)
+    lines.push("")
+    lines.push("## Goal")
+    lines.push("")
+    lines.push(phase.goal.trim())
+    lines.push("")
+    lines.push("## Acceptance Criteria")
+    lines.push("")
+    for (let j = 0; j < phase.acceptanceCriteria.length; j++) {
+      lines.push(`${j + 1}. ${phase.acceptanceCriteria[j]}`)
+    }
+    lines.push("")
+    lines.push("## Spec Reference")
+    lines.push("")
+    lines.push(phase.specReference.trim())
+    lines.push("")
+    lines.push("## Rationale")
+    lines.push("")
+    lines.push(phase.rationale.trim())
+    lines.push("")
+    fs.writeFileSync(filepath, lines.join("\n"))
+  }
+}
+
 export const invokePlanner = async (
-  config: RidgelineConfig
+  config: RidgelineConfig,
 ): Promise<{ result: ClaudeResult; phases: PhaseInfo[]; ensemble: EnsembleResult }> => {
   const registry = buildAgentRegistry()
   const context = registry.getContext("planners") ?? ""
+  const availableSpecialists = registry.getSpecialists("planners")
+  const specialists = selectSpecialists(availableSpecialists, { isThorough: config.isThorough })
 
   const ensemble = await invokeEnsemble<SpecialistProposal>({
     label: "Planning",
-    specialists: registry.getSpecialists("planners"),
+    specialists,
 
     buildSpecialistPrompt: (overlay) => buildPlannerSpecialistPrompt(context, overlay),
     specialistUserPrompt: assemblePlannerSpecialistUserPrompt(config),
@@ -488,10 +709,11 @@ export const invokePlanner = async (
 
     model: config.model,
     timeoutMinutes: config.timeoutMinutes,
+    specialistTimeoutSeconds: config.specialistTimeoutSeconds,
     maxBudgetUsd: config.maxBudgetUsd,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
-    isTwoRound: config.isDeepEnsemble,
+    isTwoRound: config.isThorough,
     buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
       const sections = [
         `You are the ${ownPerspective} specialist. You have already submitted your proposal.`,
@@ -510,6 +732,25 @@ export const invokePlanner = async (
         sections.push(`**Tradeoffs:** ${draft.tradeoffs}\n`)
       }
       return sections.join("\n")
+    },
+
+    stage: "plan",
+    buildDir: config.buildDir,
+    onAgreementSkip: async (successful) => {
+      const [first] = successful
+      await writePhasesFromProposal(config, first.draft)
+      const firstPhase = scanPhases(config.phasesDir)[0]
+      if (firstPhase) {
+        appendSkipAuditNote(firstPhase.filepath, successful.length, "plan")
+      }
+      return {
+        success: true,
+        result: JSON.stringify(first.draft),
+        durationMs: 0,
+        costUsd: 0,
+        usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+        sessionId: `synthesis-skipped-${first.perspective}`,
+      }
     },
 
     verify: () => {

@@ -17,7 +17,8 @@ export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfi
   unsafe: false,
   networkAllowlist: [],
   extraContext: null,
-  isDeepEnsemble: false,
+  isThorough: false,
+  specialistTimeoutSeconds: 180,
   ...overrides,
 })
 
@@ -47,4 +48,5 @@ export const passVerdict: ReviewVerdict = {
   criteriaResults: [{ criterion: 1, passed: true, notes: "ok" }],
   issues: [],
   suggestions: [],
+  sensorFindings: [],
 }

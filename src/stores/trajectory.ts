@@ -5,15 +5,20 @@ import { TrajectoryEntry } from "../types"
 const trajectoryPath = (buildDir: string): string =>
   path.join(buildDir, "trajectory.jsonl")
 
+export type TrajectoryOpts = {
+  duration?: number
+  tokens?: { input: number; output: number }
+  costUsd?: number
+  reason?: string
+  specialist?: string
+  stage?: string
+}
+
 const makeEntry = (
   type: TrajectoryEntry["type"],
   phaseId: string | null,
   summary: string,
-  opts?: {
-    duration?: number
-    tokens?: { input: number; output: number }
-    costUsd?: number
-  }
+  opts?: TrajectoryOpts,
 ): TrajectoryEntry => ({
   timestamp: new Date().toISOString(),
   type,
@@ -22,6 +27,9 @@ const makeEntry = (
   tokens: opts?.tokens ?? null,
   costUsd: opts?.costUsd ?? null,
   summary,
+  ...(opts?.reason ? { reason: opts.reason } : {}),
+  ...(opts?.specialist ? { specialist: opts.specialist } : {}),
+  ...(opts?.stage ? { stage: opts.stage } : {}),
 })
 
 export const logTrajectory = (
@@ -29,11 +37,7 @@ export const logTrajectory = (
   type: TrajectoryEntry["type"],
   phaseId: string | null,
   summary: string,
-  opts?: {
-    duration?: number
-    tokens?: { input: number; output: number }
-    costUsd?: number
-  }
+  opts?: TrajectoryOpts,
 ): void => {
   fs.appendFileSync(trajectoryPath(buildDir), JSON.stringify(makeEntry(type, phaseId, summary, opts)) + "\n")
 }

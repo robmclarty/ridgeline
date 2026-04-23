@@ -175,13 +175,14 @@ const executeReview = async (
   checkpointTag: string,
   sandboxNote: string,
   cwd?: string,
+  sensorFindings?: SensorFinding[],
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   printPhase(phase.id, "Reviewing...")
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
   logTrajectory(config.buildDir, "review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`)
 
   const wallStart = Date.now()
-  const { result, verdict } = await invokeReviewer(config, phase, checkpointTag, cwd)
+  const { result, verdict } = await invokeReviewer(config, phase, checkpointTag, cwd, sensorFindings)
   result.durationMs = Date.now() - wallStart
 
   logTrajectory(config.buildDir, "review_complete", phase.id, verdict.summary, {
@@ -257,8 +258,10 @@ export const runPhase = async (
       return "retried"
     }
 
+    let sensorFindings: SensorFinding[] = []
     try {
       const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd)
+      sensorFindings = build.sensorFindings
       if (build.isBudgetExceeded) return "failed"
     } catch (err) {
       if (await retryOrFail(err, "build") === "fatal") return "failed"
@@ -267,7 +270,7 @@ export const runPhase = async (
 
     let verdict: ReviewVerdict
     try {
-      const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote, cwd)
+      const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote, cwd, sensorFindings)
       verdict = review.verdict
     } catch (err) {
       if (await retryOrFail(err, "review") === "fatal") return "failed"
