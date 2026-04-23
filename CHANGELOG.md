@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.7.20 — 2026-04-22
+
+### Added
+
+- Phase filenames may now carry a letter suffix (e.g. `1a`, `1b`) so a phase can be split without renumbering the rest of the plan
+
+### Changed
+
+- `/version` skill refactored: deterministic work (dirty-tree check, semver math, `package.json` rewrite) now runs in `scripts/bump-version.mjs` as a preflight step, leaving the skill body responsible only for summarizing commits, drafting CHANGELOG prose, and running git; release-commit convention switched from `chore: bump version to X.Y.Z` to plain `vX.Y.Z`, with the bump script recognizing both for backward compatibility
+
+### Fixed
+
+- `/version` preflight now exits 0 on expected errors (dirty tree, usage, runtime) so the skill body can branch on the JSON result instead of being short-circuited by a non-zero exit
+
+### Internal
+
+- Ridgeline 0.8.0 `improve` planning artifacts: split phases 1 and 3, add de-risking criteria, add sub-agent proposal, drop the flavour concept from the 0.8.0 spec, realign `shape.md`, and tidy markdownlint ignores
+
 ## 0.7.19
 
 - Fix software-engineering planner prompts that claimed `opus (~1M tokens)` and `sonnet (~200K tokens)`: with settings.json now able to pin `claude-opus-4-7` (200K window), the stale "opus = 1M" estimate was causing the synthesizer to collapse plans into fewer, oversized phases. Replace the model-keyed bullets in `core/planner.md` and `planners/context.md` with a single line stating the real 200K window and a ~100K target per phase
