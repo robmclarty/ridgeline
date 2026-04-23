@@ -9,10 +9,24 @@ import { buildAgentRegistry } from "../discovery/agent.registry"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
 import { PromptDocument } from "./prompt.document"
 
+/**
+ * Resolve the file path the builder should append handoff notes to.
+ * In the sequential path (cwd unset), this is the canonical handoff.md.
+ * In the wave path (cwd is a worktree), this is a per-phase fragment
+ * inside the worktree's buildDir, so concurrent phases never collide
+ * on the same file at git-merge time. Fragments are stitched back into
+ * the canonical handoff.md by consolidateHandoffs after the wave merges.
+ */
+const resolveHandoffTarget = (config: RidgelineConfig, phase: PhaseInfo, cwd?: string): string => {
+  if (!cwd) return path.join(config.buildDir, "handoff.md")
+  return path.join(cwd, ".ridgeline", "builds", config.buildName, `handoff-${phase.id}.md`)
+}
+
 const assembleUserPrompt = (
   config: RidgelineConfig,
   phase: PhaseInfo,
-  feedbackPath: string | null
+  feedbackPath: string | null,
+  cwd?: string,
 ): string => {
   const doc = new PromptDocument()
 
@@ -43,8 +57,9 @@ const assembleUserPrompt = (
     )
   }
 
-  // Handoff file path for the builder to append to
-  doc.instruction("Handoff File", `Append your handoff notes to: ${path.join(config.buildDir, "handoff.md")}`)
+  // Handoff file path for the builder to append to. Wave runs use a
+  // per-phase fragment so parallel phases don't collide at merge time.
+  doc.instruction("Handoff File", `Append your handoff notes to: ${resolveHandoffTarget(config, phase, cwd)}`)
 
   if (feedbackPath && fs.existsSync(feedbackPath)) {
     doc.data(
@@ -66,7 +81,7 @@ export const invokeBuilder = async (
 ): Promise<ClaudeResult> => {
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("builder.md")
-  const userPrompt = assembleUserPrompt(config, phase, feedbackPath)
+  const userPrompt = assembleUserPrompt(config, phase, feedbackPath, cwd)
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: cwd ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
