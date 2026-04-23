@@ -83,17 +83,21 @@ command in constraints actually works on your codebase.
 ## Step 3: Research (optional)
 
 ```sh
-ridgeline research my-feature         # quick mode (1 specialist)
-ridgeline research my-feature --deep  # deep mode (3 specialists)
+ridgeline research my-feature              # default: 2 specialists
+ridgeline research my-feature --quick      # quick mode (1 specialist)
+ridgeline research my-feature --thorough   # thorough mode (3 specialists)
 ```
 
 The research ensemble investigates the spec against external sources --
 academic papers, framework documentation, and competitive products. Before
 dispatching specialists, a lightweight agenda step evaluates the spec against a
 domain gap checklist (`gaps.md`) to focus the search on what's actually missing.
-In quick mode, one specialist (ecosystem) runs. In deep mode, three specialists
-(academic, ecosystem, competitive) run in parallel, each searching through a
-different lens. A synthesizer merges the reports into `research.md`.
+By default, 2 specialists (a random pair from academic, ecosystem, competitive)
+run in parallel. `--quick` drops to the ecosystem specialist alone for a fast
+sanity check; `--thorough` dispatches all three with two-round cross-annotation.
+A synthesizer merges the reports into `research.md` — unless the specialists'
+structured `findings` / `openQuestions` skeletons agree, in which case
+synthesis is skipped and the first specialist's prose is promoted directly.
 
 Research findings accumulate across iterations -- each run appends new findings
 to a Findings Log rather than overwriting prior work. Active Recommendations

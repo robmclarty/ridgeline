@@ -30,7 +30,7 @@ flowchart TB
     agenda --> full_path
     agenda --> quick_path
 
-    subgraph full_path ["Full Mode (default)"]
+    subgraph full_path ["Default (2 specialists) / Thorough (3)"]
         direction TB
         acad["Academic"] ~~~ eco2["Ecosystem"] ~~~ comp["Competitive"]
     end
@@ -44,14 +44,15 @@ flowchart TB
     synth --> research_md["research.md"]
 ```
 
-### Full mode (default)
+### Default mode (2 specialists)
 
 ```sh
 ridgeline research my-feature
 ```
 
-Runs three specialists in parallel plus a synthesizer. Each specialist
-investigates through a different lens:
+Runs two specialists (a randomly-chosen pair from academic, ecosystem, and
+competitive) in parallel plus a synthesizer. Each specialist investigates
+through a different lens:
 
 | Specialist | Focus | Where it searches |
 |------------|-------|-------------------|
@@ -59,8 +60,18 @@ investigates through a different lens:
 | **Ecosystem** | Framework docs, library features, version updates | Official docs, release notes, changelogs, GitHub repos, package registries |
 | **Competitive** | How other tools solve the same problem | GitHub repos, product pages, developer discussions, Hacker News, Reddit |
 
-Use full mode when the spec domain is unfamiliar, the architecture is complex,
-or you want competitive analysis to inform the design.[^1]
+Use the default when the spec domain is unfamiliar, the architecture is
+complex, or you want cross-perspective analysis to inform the design.[^1]
+
+### Thorough mode
+
+```sh
+ridgeline research my-feature --thorough
+```
+
+Dispatches all three specialists with two-round cross-annotation — each
+specialist reads the other two's drafts before producing a final verdict.
+Use when coverage matters more than cost.
 
 ### Quick mode
 
@@ -343,11 +354,17 @@ agenda step (1 sonnet call):
 
 | Configuration | Claude calls | Approximate cost profile |
 |---------------|-------------|--------------------------|
-| Full research (default) | 5 (1 agenda + 3 specialists + 1 synthesizer) | Moderate |
+| Default research | 4 (1 agenda + 2 specialists + 1 synthesizer) | Low-Moderate |
+| Thorough (`--thorough`) | 8 (1 agenda + 3 specialists + 3 annotations + 1 synthesizer) | Moderate |
 | Quick research (`--quick`) | 3 (1 agenda + 1 specialist + 1 synthesizer) | Low |
 | Refine | 1 | Low |
-| `--auto 2` | 11 (2 x (1 agenda + 3 specialists + 1 synthesizer) + 2 x refine) | Moderate |
-| `--auto 2 --quick` | 7 (2 x (1 agenda + 1 specialist + 1 synthesizer) + 2 x refine) | Low-Moderate |
+| `--auto 2` | 10 (2 x (1 agenda + 2 specialists + 1 synthesizer) + 2 x refine) | Moderate |
+| `--auto 2 --quick` | 8 (2 x (1 agenda + 1 specialist + 1 synthesizer) + 2 x refine) | Low-Moderate |
+
+When the specialists agree on their structured `findings` /
+`openQuestions` skeletons, the synthesizer is skipped and the first
+specialist's prose is promoted directly to `research.md` — the cost
+estimate above drops by one synthesizer call.
 
 `--auto 2` is the default when `--auto` is passed without a number.
 

@@ -1,26 +1,132 @@
 # Changelog
 
-## v0.8.1 — 2026-04-23
+## 0.8.0
+
+Tool selection is now driven by detection rather than a user-selected flavour
+taxonomy. Ridgeline scans the project, proposes sensors and ensemble sizing,
+surfaces the plan via a TTY-gated preflight, and runs the pipeline with the
+smallest ensemble that can cover the work. A new localhost dashboard
+(`ridgeline ui`) gives a live read on the running build without leaving the
+terminal session idle.
 
 ### Added
 
-- `ridgeline ui [build-name]` subcommand: serves a fully offline dark-mode build-monitoring dashboard from `127.0.0.1` (default port 4411 with free-port fallback), live-updates over SSE with a 2 s polling fallback on disconnect, no external assets, and selects the most recently modified build under `.ridgeline/builds/*` when no name is given
-- Always-on builder sensor pipeline (`src/sensors/`): Playwright screenshots, axe-core a11y, Claude vision, and `wcag-contrast` design-token contrast scoring; per-phase findings persisted to `<buildDir>/sensors/<phaseId>.json` and surfaced to the reviewer
-- TTY-gated preflight summary that runs before the 10 pipeline commands, listing detected project signals and dependency status with a continue prompt; non-TTY runs are unaffected
-- `src/engine/detect/` — fixture-tested project-signal scanner (frameworks, languages, tooling) used by preflight and the sensor pipeline
-- `src/ui/color.ts` — semantic terminal-color helper (`error`, `success`, `warning`, `info`, `hint`, `bold`, `dimInfo`, `stripAnsi`, `clearLineSequence`); six terminal modules route through it
-- Optional `playwright` peer dependency (>=1.57.0 <2.0.0); new `axe-core` and `wcag-contrast` runtime dependencies
+- Always-on builder sensor pipeline (`src/sensors/`) — Playwright Chromium
+  screenshots, Claude vision descriptions of those screenshots, `axe-core`
+  WCAG-AA accessibility audit, and `wcag-contrast` design-token contrast
+  scoring. Per-phase findings are persisted to
+  `<buildDir>/sensors/<phaseId>.json` and threaded into the reviewer's verdict.
+- Project-signal auto-detection (`src/engine/detect/`) exposes
+  `detect(cwd, opts)` returning a `DetectionReport` with project type,
+  detected deps, filesystem signals, `isVisualSurface`, `hasDesignMd`,
+  `suggestedSensors`, and `suggestedEnsembleSize`. Fixture-tested across
+  React+Vite, Vue+Vite, pure-Node, pure-HTML, and monorepo-root shapes.
+- Preflight detection summary with TTY gate: the 10 pipeline-entry commands
+  render a `Detected … → enabling …` / `Ensemble N specialists` / `Caching on`
+  block before running, prompting `Press Enter to continue, Ctrl+C to abort`
+  under TTY and appending `(auto-proceeding in CI)` otherwise.
+- `--thorough` flag: dispatches 3 specialists with two-round cross-annotation
+  (default is 2 specialists, single round). `--yes` skips the preflight
+  prompt non-interactively.
+- Structured specialist verdicts with agreement-based synthesis skip: when 2
+  (or 3 under `--thorough`) specialists emit a byte-identical structured
+  skeleton (`sectionOutline` + `riskList` for spec;
+  `phaseList` + `depGraph` for plan; `findings` + `openQuestions` for
+  research), the synthesizer is skipped, the first specialist's draft is
+  written as the canonical artifact, and an audit line is appended noting
+  how many specialists agreed. Disagreement falls back to synthesis;
+  malformed output falls back to synthesis with a warning.
+- Prompt caching of stable stage inputs: the builder and reviewer
+  invocations now pass `constraints.md → taste.md → spec.md` via a
+  hash-named temp file + `--append-system-prompt-file` and
+  `--exclude-dynamic-system-prompt-sections`. `build_complete` and
+  `review_complete` trajectory entries include `cacheReadInputTokens` and
+  `cacheCreationInputTokens`.
+- `ridgeline ui [build-name] [--port <n>]` — fully offline dark-mode build
+  monitoring dashboard served from `127.0.0.1` (default port 4411 with
+  30-attempt free-port fallback). Live-updates over Server-Sent Events with
+  a 2 s polling fallback on disconnect. Selects the most recently modified
+  build under `.ridgeline/builds/*` when no name is given. Zero external
+  assets: inline HTML/CSS/JS, inline SVG favicon, system font stacks.
+- `src/ui/color.ts` — semantic terminal-color helper (`error`, `success`,
+  `warning`, `info`, `hint`, `bold`, `dimInfo`, `stripAnsi`,
+  `clearLineSequence`). Honors `NO_COLOR` and strips on non-TTY streams.
+- Sensor `install-hint` preflight line: when a visual surface is detected
+  and Playwright is not resolvable, preflight prints a one-line install
+  command suggestion.
+- Optional `playwright` peer dependency (`>=1.57.0 <2.0.0`); `axe-core` and
+  `wcag-contrast` as direct dependencies.
+- Concurrent spinners on parallel phases are gated by a process-wide
+  singleton so only one spinner draws at a time.
+- Per-phase `handoff-<phaseId>.md` fragments for wave parallelization —
+  each parallel builder writes into its worktree's fragment, and
+  `consolidateHandoffs` stitches them back into the canonical `handoff.md`
+  after the wave merges. Eliminates merge-conflict drops.
 
 ### Changed
 
-- BREAKING: removed the flavour system entirely. `--flavour` / `--flavor` on any subcommand now exits non-zero with an actionable message; the `flavour` field is dropped from `RidgelineConfig`, `RidgelineSettings`, `ResearchConfig`, `RefineConfig`, and `SpecEnsembleConfig`; `buildAgentRegistry()` no longer accepts a flavour-path argument
-- `engines.node` raised to `">=20.0.0"`
-- `ridgeline check` reduced to a one-line stub now that preflight carries the real signal
+- Reviewer verdict gains a `sensorFindings: SensorFinding[]` field; empty
+  by default, populated by the builder loop from the per-phase
+  `sensors/<phaseId>.json` after each build run.
+- Prompt assembly order for cacheable stages is
+  `constraints.md → taste.md (if present) → spec.md (if present)`, written
+  to `os.tmpdir()/ridgeline-stable-<sha256>.md` and passed via
+  `--append-system-prompt-file`. Session-stable across retries of the same
+  phase.
+- `shape.md` may now declare a `## Runtime` section with a literal line
+  `- **Dev server port:** <n>` so the Playwright sensor short-circuits the
+  `5173 / 3000 / 8080 / 4321` probe chain.
+- Terminal UI modules (`spinner.ts`, `transcript.ts`, `output.ts`,
+  preflight, logger, color itself) route every color through
+  `src/ui/color.ts` — no raw ANSI escape codes in feature modules.
+- `ridgeline check` is reduced to a one-line stub; preflight now carries
+  the real project-prerequisites signal.
+- `buildAgentRegistry()` takes no arguments and resolves prompts from
+  `src/agents/{core,planners,researchers,specialists,specifiers}` only.
+- Ensemble quorum relaxed: a single surviving specialist synthesizes with a
+  warning, rather than aborting the stage.
+- `build_complete` and `review_complete` trajectory entries include
+  `cacheReadInputTokens` and `cacheCreationInputTokens` drawn from the
+  Claude CLI usage block.
 
-### Fixed
+### Removed
 
-- Wave parallelization no longer drops phases on a `handoff.md` merge conflict: each parallel builder appends to a per-phase `handoff-<phaseId>.md` fragment inside its worktree, and `consolidateHandoffs` stitches the fragments back into the canonical `handoff.md` after the wave merges
-- Concurrent spinners on parallel phases are gated by a process-wide singleton so only one spinner draws at a time
+- `src/flavours/` — all 15 flavour directories and every per-flavour
+  prompt / pack.
+- `src/engine/discovery/flavour.resolve.ts` and `flavour.config.ts`.
+- `flavour.json` and all references to `.ridgeline/flavour.json`.
+- The `--flavour` / `--flavor` CLI flag. Any occurrence now exits non-zero
+  with an actionable deprecation message.
+- The `flavour` field from `RidgelineConfig`, `RidgelineSettings`,
+  `ResearchConfig`, `RefineConfig`, `SpecEnsembleConfig`, and the
+  `state.json` on-disk schema.
+- `--deep-ensemble` as a documented flag (still accepted, hidden, and
+  mapped to `--thorough` with a stderr deprecation line).
+- The `docs/flavours.md` page and all `--flavour` rows in flag tables
+  across `docs/`.
+
+### Breaking
+
+- **The flavour system is gone.** `src/flavours/` (all 15 directories,
+  including `data-analysis`, `game-dev`, `legal-drafting`,
+  `machine-learning`, `mobile-app`, `music-composition`, `novel-writing`,
+  `screenwriting`, `security-audit`, `software-engineering`,
+  `technical-writing`, `test-suite`, `translation`, `web-game`, `web-ui`)
+  is deleted from disk. The `--flavour` / `--flavor` flag on any
+  subcommand now exits non-zero with an actionable message pointing at the
+  detection-driven replacement. Pipelines select sensors and ensemble
+  sizing from the `DetectionReport`; there is no capability-pack or
+  per-domain prompt override in 0.8.0.
+- The `state.json` `flavour` field is removed. 0.7.x build directories are
+  not migrated — start a new build.
+- `--deep-ensemble` is no longer a documented flag. It still works (as a
+  hidden alias for `--thorough`) and prints a one-line stderr deprecation,
+  but users should migrate to `--thorough`.
+- Node.js floor raised from prior implicit to an explicit
+  `engines.node: ">=20.0.0"`. Set by Playwright's active-support baseline.
+- No capability-pack abstraction is introduced. Tool selection is driven by
+  detection; there is no pluggable domain-pack layer to hook into.
+- 0.7.x builds cannot be resumed against the 0.8.0 pipeline.
 
 ## v0.7.21 — 2026-04-22
 

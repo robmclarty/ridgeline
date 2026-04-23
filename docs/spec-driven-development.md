@@ -137,7 +137,7 @@ See [Ensemble Flows](ensemble-flows.md) for details on the ensemble pattern.
 ### Researching and Refining (Optional)
 
 ```sh
-ridgeline research my-feature --deep
+ridgeline research my-feature
 ridgeline refine my-feature
 ```
 
@@ -161,7 +161,7 @@ The `--auto` flag chains research and refine for multiple iterations (default
 2), progressively improving the spec:
 
 ```sh
-ridgeline research my-feature --deep --auto 2
+ridgeline research my-feature --thorough --auto 2
 ```
 
 This is particularly useful when the spec involves unfamiliar technology,

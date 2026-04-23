@@ -185,6 +185,23 @@ dependencies.
 - Style: named exports, colocated tests
 ```
 
+## Declaring a dev-server port
+
+If your project boots a local dev server (React, Vue, Svelte, Next, Vite,
+and friends), add a `## Runtime` section to `shape.md` so the visual sensor
+pipeline skips its probe chain:
+
+```markdown
+## Runtime
+
+- **Dev server port:** 5173
+```
+
+The port is parsed strictly as an integer in `1..65535`. When absent,
+ridgeline probes `5173 → 3000 → 8080 → 4321` in order. See
+[Preflight, Detection, and Sensors](preflight-and-sensors.md) for the full
+detection and sensor flow.
+
 ## From Shape to Spec
 
 Once you have a shape, the next command turns it into a precise specification:

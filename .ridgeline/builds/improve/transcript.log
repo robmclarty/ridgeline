@@ -2106,3 +2106,204 @@ Walking the acceptance criteria:
 [ridgeline] [03b-prompt-caching] PASSED (539s)
 
 [ridgeline] ── Phase 7/7: 05-release-polish ──
+[ridgeline] [05-release-polish] Building...
+[05-release-polish] Starting: CHANGELOG authoring, docs cleanup, test gap audit, and final green check for 0.8.0 cutover readiness.
+[Bash] ls 
+[Bash] ls docs/
+[Read] CHANGELOG.md
+[Read] package.json
+[Bash] git log --oneline --all -20 -- package.json
+[Bash] git log --oneline -1 4cf68d6
+[Bash] git show --stat 4cf68d6
+I need to orient first. Let me investigate CHANGELOG state, docs for stale references, test coverage, and the `v0.8.1` tag that's diverged from the spec's expectation of 0.8.0.
+[Agent] Audit the current state of the ridgeline repo at /Users/robmclarty/Projects/ridgeline/code/ridgeline for a 0.8.0 release polish phase. Report concise findings on:
+[Bash] git status && git branch --show-current
+[Bash] grep -rn --include="*.md" -l "flavou\|flavor\|--deep-ensemble\|data-analysis\|game-dev\|legal-drafting\|machine-learning\|mobile-app\|music-composition\|novel-writing\|screenwriting\|security-audit\|…
+[Bash] grep -rn --include="*.ts" --include="*.js" -i "flavou\|flavor\|CapabilityPack\|capability-pack" src/ 2>/dev/null | grep -v "node_modules"
+[Bash] grep -rn "fs\.watchFile" src/ui/dashboard/ src/commands/ui.ts 2>/dev/null && grep -rn "@font-face" src/ui/dashboard/ 2>/dev/null && grep -rn "https://" src/ui/dashboard/ 2>/dev/null | grep -v "^\s*//…
+[Bash] grep -rPn "\x1b\[" src/ --include="*.ts" --include="*.js" 2>/dev/null | grep -v "src/ui/color.ts" | grep -v "__tests__" | grep -v ".test." | grep -v ".spec."
+[Bash] ls test/fixtures/ 2>/dev/null && find src -path "*/__tests__/*.test.ts" | wc -l && find test -name "*.test.ts" | wc -l
+[Bash] grep -rn "from.*flavour\|from.*flavor" test/ src/**/__tests__/ 2>/dev/null
+[Bash] ls src/utils/__tests__/flavour-removed.test.ts 2>/dev/null && ls src/engine/detect/__tests__/detect.test.ts 2>/dev/null && ls src/ui/__tests__/preflight.test.ts 2>/dev/null && ls src/engine/pipeline/…
+[Bash] ls src/ui/dashboard/__tests__/ 2>/dev/null && grep -rn "contrast\|reduced.motion\|offline" src/ test/ --include="*.test.ts" -l 2>/dev/null
+[Bash] for f in docs/*.md; do echo "$f: $(grep -m1 '^# ' "$f" 2>/dev/null)"; done
+[Bash] grep -n "flavou\|flavor\|--deep-ensemble\|data-analysis\|game-dev\|legal-drafting\|machine-learning\|mobile-app\|music-composition\|novel-writing\|screenwriting\|security-audit\|software-engineering\…
+[Bash] grep -rn "empty\|running\|failed\|disconnected" src/ui/dashboard/__tests__/ --include="*.test.ts" -l 2>/dev/null && grep -rn "DetectionReport\|5 fixture\|five fixture" src/engine/detect/__tests__/det…
+[Bash] grep -rn "https://" src/ui/dashboard/ --include="*.ts" --include="*.js" --include="*.css" --include="*.html" 2>/dev/null | grep -v "^\s*//" | grep -v "test\|spec"
+[Bash] grep -n "empty\|running\|failed\|disconnected" src/ui/dashboard/__tests__/snapshot.test.ts src/ui/dashboard/__tests__/server.test.ts 2>/dev/null | head -20
+[Bash] grep -n "5\|five\|fixture" src/engine/detect/__tests__/detect.test.ts 2>/dev/null | head -10
+[Bash] grep -c "it(" src/engine/detect/__tests__/detect.test.ts 2>/dev/null && grep -n "fixture\|monorepo\|pure-html\|pure-node\|react\|vue" src/engine/detect/__tests__/detect.test.ts 2>/dev/null | head -15
+[Bash] grep -rn "disconnected" src/ui/dashboard/__tests__/ 2>/dev/null | head -10
+[ToolSearch]
+[TodoWrite]
+Now I'll audit the docs in detail. The explorer said no flavour references remain but I need to verify the NEW feature coverage (criterion 7).
+[Grep] --thorough|--yes|--port|ridgeline ui|preflight|## Runtime|sensor|wcag-contrast|axe-core|playwright|caching|prompt cache|DetectionReport|SensorFinding|structured verdict
+[Grep] --thorough
+[Grep] ridgeline ui
+[Grep] preflight|sensor|--yes|--port
+Docs have zero coverage for the new 0.8.0 features — that's a real gap I need to fill. Let me look at the existing help docs to find the right integration pattern.
+[Read] docs/help.md
+[Bash] ls docs/extending-ridgeline.md docs/shaping.md /Users/robmclarty/Projects/ridgeline/code/ridgel…
+[Read] docs/shaping.md
+[Read] docs/research.md
+[TodoWrite]
+Now let me check the existing CLI to understand all the flags for the docs updates, then rewrite the CHANGELOG.
+[Grep] addPreflightOptions|--thorough|--deep-ensemble|--deep
+[Grep] research.*quick|research.*deep|--quick|.option.*research
+[Read] src/cli.ts
+[Read] src/cli.ts
+Now I have enough to write the CHANGELOG. Let me rewrite the v0.8.1 entry as the 0.8.0 entry per spec.
+[Read] CHANGELOG.md
+[Edit] CHANGELOG.md
+[TodoWrite]
+Now the docs. I'll update `help.md` with the new ui command + flags, add a new `docs/preflight-and-sensors.md` page covering preflight + sensors + caching + structured verdicts + dashboard, and add a Runtime note to `shaping.md`.
+[Edit] docs/help.md
+Now add the `ridgeline ui` command and correct the research flag (`--deep` is actually `--quick`):
+[Edit] docs/help.md
+[Edit] docs/help.md
+Now create the main new docs page covering preflight, detection, sensors, structured verdicts, caching, and the dashboard:
+[Write] docs/preflight-and-sensors.md
+Now add the `## Runtime` reference to `shaping.md`:
+[Edit] docs/shaping.md
+Let me also check architecture.md and ensemble-flows.md in case they carry stale explanations:
+[Grep] three specialist|3 specialist|ensemble.*3|specialists.*three|majority|ceil\(
+[Read] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+[Read] docs/ensemble-flows.md
+[Read] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+[Grep] three specialists|3 specialists
+[Read] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+Now check for other stale references — architecture.md and review-and-feedback.md:
+[Grep] three specialist|3 specialists|--deep|flavour|Flavour|flavor|Flavor
+[Edit] docs/help.md
+[Read] docs/build-lifecycle.md
+[Edit] docs/build-lifecycle.md
+[Read] docs/spec-driven-development.md
+[Edit] docs/spec-driven-development.md
+[Edit] docs/spec-driven-development.md
+Now research.md:
+[Read] docs/research.md
+[Edit] docs/research.md
+[Edit] docs/research.md
+Let me check the research.md Cost table for any `--deep` references I missed:
+[Read] docs/research.md
+[Edit] docs/research.md
+Check for any remaining `--deep` references in docs:
+[Grep] --deep
+[Edit] docs/preflight-and-sensors.md
+Now let me verify: zero matches for `--deep-ensemble` outside CHANGELOG:
+[Grep] --deep-ensemble|--flavour|--flavor
+[Grep] data-analysis|game-dev|legal-drafting|machine-learning|mobile-app|music-composition|novel-writing|screenwriting|security-audit|software-engineering|technical-writing|test-suite|translation|web-game|w…
+[TodoWrite]
+Now let me examine the dashboard client to understand the disconnect state, then add a test for it.
+[Bash] ls src/ui/dashboard/__tests__/
+[Grep] disconnect|Disconnect|banner
+[Read] src/ui/dashboard/client.ts
+[Read] src/ui/dashboard/__tests__/reduced-motion.test.ts
+Let me examine the server test to see the SSE smoke pattern, then write the disconnected-state test.
+[Read] src/ui/dashboard/__tests__/server.test.ts
+[Read] src/ui/dashboard/__tests__/server.test.ts
+Now I have enough context to write a focused disconnected-state test. Let me write it as a new file covering HTML structure (banner + aria semantics), CSS styling, and client-script behavior.
+[Read] src/ui/dashboard/css.ts
+[Read] src/ui/dashboard/html.ts
+[Write] src/ui/dashboard/__tests__/disconnect.test.ts
+[Bash] npx vitest run src/ui/dashboard/__tests__/disconnect.test.ts 2>&1 | tail -50
+All 9 disconnect tests pass. Now let me run the full check command.
+[TodoWrite]
+[Bash] npm run lint:code 2>&1 | tail -30
+[Bash] npm run lint:markdown 2>&1 | tail -30
+[Read] docs/preflight-and-sensors.md
+[Edit] docs/preflight-and-sensors.md
+[Bash] npm run lint:markdown 2>&1 | tail -10
+[Bash] npm run lint:fallow 2>&1 | tail -20
+[Bash] npm run lint:agents 2>&1 | tail -20
+Agnix passed locally. Now typecheck and unit tests.
+[Bash] npm run typecheck 2>&1 | tail -20
+[Bash] npx tsc --noEmit 2>&1 | tail -20
+Both typechecks clean. Now the unit tests:
+[Bash] npm run test:unit 2>&1 | tail -60
+[Bash] npm run test:unit 2>&1 | grep -E "skip|Tests " | tail -10
+No "skipped" line — the 28 failures are the exact same pre-existing greywall-sandbox failures documented in phases 1a–4. Net test count 908 (end of phase 3b) → 917 (+9 from the new disconnect test). Zero new failures.
+
+Now let me verify the failing test files are exactly the documented three pre-existing cases:
+[Bash] npm run test:unit 2>&1 | grep -E "^ FAIL" | sort -u
+Exactly the 28 pre-existing failures across the 3 documented sandbox-affected files (`git.test.ts`, `worktree.test.ts`, `worktree.parallel.test.ts`). No new failures introduced.
+
+Let me also run the final cross-phase audit from criterion 15:
+[Bash] node -e "console.log(JSON.stringify({version:require('./package.json').version,eng:require('./package.json').engines,pd:require('./package.json').peerDependencies,pdm:require('./package.json').peerDe…
+[Grep] src/flavours
+[Grep] CapabilityPack|capability-pack
+[Grep] fs\.watchFile
+Good — `fs.watchFile` appears only in the test that enforces its absence. Now let me verify the rest of the criterion-15 audit:
+[Grep] @font-face
+[Grep] https://
+All clean — every match is in test-enforcement code. Now write the handoff.
+[TodoWrite]
+[Bash] git status --short
+Now let me walk the acceptance criteria once more to confirm each is met before writing the handoff:
+[Bash] git diff --stat plans/ 2>&1 | head -5
+Zero diffs in `plans/` (criterion 8 ✓). Now the handoff:
+[Bash] wc -l .ridgeline/builds/improve/handoff.md
+[Bash] tail -5 .ridgeline/builds/improve/handoff.md
+[Bash] cat >> .ridgeline/builds/improve/handoff.md << 'HEOF'
+[Bash] npm run lint:markdown 2>&1 | tail -5
+[ridgeline] [05-release-polish] Build failed (transient): Error: Claude invocation stalled: No output received for 300s (stall timeout)
+[ridgeline] [05-release-polish] Waiting 1.1s before retry...
+[ridgeline] [05-release-polish] Retry 1: building...
+[05-release-polish] Starting: orienting against the actual project state since handoff claims Phase 5 work is done but uncommitted.
+[Bash] ls .ridgeline/builds/improve/ 2>/dev/null | head -40
+[Bash] ls .ridgeline/builds/improve/salvaged/ 2>/dev/null; echo "---"; git status --short
+No feedback file — this isn't a retry. The handoff claims Phase 5 work was done but uncommitted. Let me verify each acceptance criterion against actual files.
+[Read] CHANGELOG.md
+[Read] CHANGELOG.md
+CHANGELOG looks complete. Let me check the docs and the new test file.
+[Read] docs/preflight-and-sensors.md
+[Bash] wc -l docs/preflight-and-sensors.md src/ui/dashboard/__tests__/disconnect.test.ts
+[Read] src/ui/dashboard/__tests__/disconnect.test.ts
+[ToolSearch]
+[TodoWrite]
+Let me verify the acceptance criteria via parallel checks: docs cleanliness (criterion 6), `src/` cross-phase ripgrep audits (criterion 15), test file imports of `src/flavours/` (criterion 14), package.json state (criterion 16), and confirm `plans/` is untouched (criterion 8).
+[Grep] --flavour|--deep-ensemble
+[Grep] data-analysis|game-dev|legal-drafting|machine-learning|mobile-app|music-composition|novel-writing|screenwriting|security-audit|software-engineering|technical-writing|test-suite|translation|web-game|w…
+[Grep] from ['\"].*flavours
+[Grep] CapabilityPack|capability-pack
+[Grep] fs\.watchFile
+[Bash] git diff --name-only HEAD -- plans/ 2>/dev/null; echo "---"; git status --short plans/ 2>/dev/null
+[Grep] data-analysis|game-dev|legal-drafting|machine-learning|mobile-app|music-composition|novel-writing|screenwriting|security-audit|software-engineering|technical-writing|test-suite|translation|web-game|w…
+[Bash] grep -n -E 'data-analysis|game-dev|legal-drafting|machine-learning|mobile-app|music-composition|novel-writing|screenwriting|security-audit|software-engineering|technical-writing|test-suite|translatio…
+False positive — those two matches are the English word "translation" used in a sentence about translating criteria into tests, not the flavour name. Acceptable.
+
+Now let me check the remaining ripgrep audits and ANSI/font-face/cross-origin checks.
+[Grep] Flavour|flavour|Flavor|flavor
+[Grep] @font-face
+[Grep] https://
+All static audits pass — flavour matches are confined to the deprecation enforcement module (criterion 15 explicitly allows that), `@font-face`/`https://` matches are in test files asserting absence. Proceeding to the check command.
+[TodoWrite]
+[Bash] npm run lint 2>&1 | tail -50
+Lint catches multiple consecutive blank lines in handoff.md. Let me fix that.
+[Read] .ridgeline/builds/improve/handoff.md
+[Edit] .ridgeline/builds/improve/handoff.md
+[Bash] npm run lint 2>&1 | tail -30
+[Bash] npm run lint > /tmp/lint.out 2>&1; echo "EXIT: $?"; tail -5 /tmp/lint.out
+Lint passes. Now run typecheck and tests in parallel.
+[Bash] npx tsc --noEmit > /tmp/tsc.out 2>&1; echo "EXIT: $?"; tail -10 /tmp/tsc.out
+[Bash] npm test > /tmp/test.out 2>&1; echo "EXIT: $?"; tail -25 /tmp/test.out
+Results match the documented baseline exactly: 917 passing / 28 failing — the 28 failures are the same pre-existing greywall sandbox `git init` issue documented across every prior phase. Lint and typecheck exit 0. 
+
+Verifying no new failures:
+[Bash] grep -E "^ FAIL" /tmp/test.out | sort -u
+All 28 failures are confined to the three pre-existing greywall sandbox files documented in every prior phase handoff — no Phase 5 regression. Updating handoff to reflect the markdown-lint cleanup, then committing.
+[Read] .ridgeline/builds/improve/handoff.md
+[Bash] tail -50 .ridgeline/builds/improve/handoff.md
+The handoff already documents Phase 5 thoroughly. I just need to amend it with the markdown-lint fix note.
+[Edit] .ridgeline/builds/improve/handoff.md
+Re-running lint to confirm the handoff edit didn't regress markdownlint.
+[Bash] npm run lint:markdown 2>&1 | tail -5
+Clean. Now committing Phase 5 work.
+[TodoWrite]
+[Bash] git add CHANGELOG.md docs/build-lifecycle.md docs/ensemble-flows.md docs/help.md docs/research.md docs/shaping.md docs/spec-driven-development.md docs/preflight-and-sensors.md src/ui/dashboard/__test…
