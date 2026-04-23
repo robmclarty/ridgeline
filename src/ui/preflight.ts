@@ -1,12 +1,25 @@
 import * as readline from "node:readline"
 import type { DetectionReport, SensorName } from "../engine/detect"
-import { bold, dimInfo, hint } from "./color"
+import { bold, dimInfo, hint, warning } from "./color"
 
 export interface PreflightOptions {
   yes: boolean
   isTTY: boolean
-  stream?: NodeJS.WriteStream
+  stream?: NodeJS.WritableStream
   input?: NodeJS.ReadableStream
+  isPlaywrightResolvable?: () => boolean
+}
+
+const PLAYWRIGHT_INSTALL_HINT =
+  "npm install --save-dev playwright && npx playwright install chromium"
+
+const defaultIsPlaywrightResolvable = (): boolean => {
+  try {
+    require.resolve("playwright")
+    return true
+  } catch {
+    return false
+  }
 }
 
 const SENSOR_DISPLAY: Record<SensorName, string> = {
@@ -31,7 +44,7 @@ const formatEnabling = (report: DetectionReport): string => {
 
 export const renderPreflight = (
   report: DetectionReport,
-  opts: { isTTY: boolean; yes: boolean; isStderrTTY?: boolean },
+  opts: { isTTY: boolean; yes: boolean; isStderrTTY?: boolean; isPlaywrightResolvable?: () => boolean },
 ): string => {
   const stream: "stdout" | "stderr" = "stdout"
   const detected = formatDetected(report)
@@ -76,6 +89,18 @@ export const renderPreflight = (
     ].join(""),
   )
 
+  const resolver = opts.isPlaywrightResolvable ?? defaultIsPlaywrightResolvable
+  if (report.isVisualSurface && !resolver()) {
+    lines.push("")
+    lines.push(
+      [
+        warning("Playwright not installed", { stream }),
+        hint(" — visual surface detected; install with: ", { stream }),
+        PLAYWRIGHT_INSTALL_HINT,
+      ].join(""),
+    )
+  }
+
   if (!opts.isTTY) {
     lines.push(hint("(auto-proceeding in CI)", { stream }))
   } else if (!opts.yes) {
@@ -100,7 +125,11 @@ export const runPreflight = async (
   opts: PreflightOptions,
 ): Promise<void> => {
   const stream = opts.stream ?? process.stdout
-  const rendered = renderPreflight(report, { isTTY: opts.isTTY, yes: opts.yes })
+  const rendered = renderPreflight(report, {
+    isTTY: opts.isTTY,
+    yes: opts.yes,
+    isPlaywrightResolvable: opts.isPlaywrightResolvable,
+  })
   stream.write(rendered)
 
   if (!opts.isTTY) return

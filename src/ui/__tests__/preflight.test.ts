@@ -130,18 +130,19 @@ describe("preflight", () => {
   })
 
   describe("snapshots", () => {
+    const resolvable = () => true
     it("matches the TTY interactive rendering snapshot", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: false })
+      const out = renderPreflight(visualReport, { isTTY: true, yes: false, isPlaywrightResolvable: resolvable })
       expect(stripAnsi(out)).toMatchSnapshot()
     })
 
     it("matches the --yes rendering snapshot", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true })
+      const out = renderPreflight(visualReport, { isTTY: true, yes: true, isPlaywrightResolvable: resolvable })
       expect(stripAnsi(out)).toMatchSnapshot()
     })
 
     it("matches the non-TTY (CI) rendering snapshot", () => {
-      const out = renderPreflight(visualReport, { isTTY: false, yes: false })
+      const out = renderPreflight(visualReport, { isTTY: false, yes: false, isPlaywrightResolvable: resolvable })
       expect(stripAnsi(out)).toMatchSnapshot()
     })
   })

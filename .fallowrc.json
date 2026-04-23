@@ -18,7 +18,10 @@
     "ignore": [
       "**/__tests__/**",
       "src/engine/pipeline/ensemble.exec.ts",
-      "src/engine/pipeline/specify.exec.ts"
+      "src/engine/pipeline/specify.exec.ts",
+      "src/sensors/playwright.ts",
+      "src/sensors/a11y.ts",
+      "src/sensors/vision.ts"
     ],
     "minLines": 10
   },
