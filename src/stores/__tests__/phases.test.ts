@@ -12,6 +12,12 @@ describe("phases", () => {
       expect(PHASE_FILENAME_PATTERN.test("99-final.md")).toBe(true)
     })
 
+    it("matches sub-phase filenames with a letter suffix", () => {
+      expect(PHASE_FILENAME_PATTERN.test("01a-part-one.md")).toBe(true)
+      expect(PHASE_FILENAME_PATTERN.test("01b-part-two.md")).toBe(true)
+      expect(PHASE_FILENAME_PATTERN.test("03z-last.md")).toBe(true)
+    })
+
     it("rejects invalid filenames", () => {
       expect(PHASE_FILENAME_PATTERN.test("README.md")).toBe(false)
       expect(PHASE_FILENAME_PATTERN.test("scaffold.md")).toBe(false)
@@ -45,6 +51,15 @@ describe("phases", () => {
     it("handles multi-word slugs", () => {
       const result = parsePhaseFilename("02-setup-database.md")
       expect(result).toEqual({ id: "02-setup-database", index: 2, slug: "setup-database" })
+    })
+
+    it("parses sub-phase filenames with a letter suffix", () => {
+      const result = parsePhaseFilename("01b-detection-preflight.md")
+      expect(result).toEqual({
+        id: "01b-detection-preflight",
+        index: 1,
+        slug: "detection-preflight",
+      })
     })
   })
 
