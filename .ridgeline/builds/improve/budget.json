@@ -95,7 +95,19 @@
       "cacheCreationInputTokens": 103698,
       "durationMs": 451226,
       "timestamp": "2026-04-22T16:20:27.039Z"
+    },
+    {
+      "phase": "01a-flavour-removal-and-metadata",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 31.18742349999999,
+      "inputTokens": 6,
+      "outputTokens": 200,
+      "cacheReadInputTokens": 311229,
+      "cacheCreationInputTokens": 886,
+      "durationMs": 2247987,
+      "timestamp": "2026-04-23T04:10:14.326Z"
     }
   ],
-  "totalCostUsd": 10.54996015
+  "totalCostUsd": 41.73738364999999
 }

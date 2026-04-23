@@ -5,3 +5,5 @@
 {"timestamp":"2026-04-22T17:00:00.000Z","type":"refine_complete","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Refine complete (iteration 1, completed manually after harness context-window crash)"}
 {"timestamp":"2026-04-22T16:05:57.906Z","type":"plan_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Planning started"}
 {"timestamp":"2026-04-22T16:20:27.039Z","type":"plan_complete","phaseId":null,"duration":861965,"tokens":{"input":32,"output":88342},"costUsd":4.73882875,"summary":"Generated 5 phases"}
+{"timestamp":"2026-04-23T03:32:46.336Z","type":"build_start","phaseId":"01a-flavour-removal-and-metadata","duration":null,"tokens":null,"costUsd":null,"summary":"Build attempt 1 [sandbox: greywall]"}
+{"timestamp":"2026-04-23T04:10:14.324Z","type":"build_complete","phaseId":"01a-flavour-removal-and-metadata","duration":2247987,"tokens":{"input":6,"output":200},"costUsd":31.18742349999999,"summary":"Build complete"}
