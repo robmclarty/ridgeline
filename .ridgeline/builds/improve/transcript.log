@@ -2008,3 +2008,68 @@ Pre-existing greywall/git-init sandbox failures (28) persist, identical to prior
 [ridgeline] Phase dependencies detected — using wave-based scheduling
 
 [ridgeline] ── Phase 5/7: 03b-prompt-caching ──
+[ridgeline] [03b-prompt-caching] Building...
+[03b-prompt-caching] Starting: Phase 3b prompt caching of stable stage inputs
+
+Let me first understand the current state — the handoff describes phase 3b as built, but this is attempt 2 after a checkpoint.
+[Bash] git log --oneline -10 && echo "---" && git status
+[Bash] git diff a27c894 HEAD --stat | head -40
+[Bash] ls -la .ridgeline/builds/improve/ 2>/dev/null && echo "---" && ls .ridgeline/builds/improve/phases/ 2>/dev/null
+[Bash] ls .ridgeline/builds/improve/salvaged/ 2>/dev/null && echo "---" && cat .ridgeline/builds/improve/state.json 2>/dev/null | head -80
+[Bash] ls src/engine/claude/ 2>/dev/null && echo "---" && ls src/engine/claude/__tests__/ 2>/dev/null
+[Bash] git show --stat dfd77e1 | head -20 && echo "---" && git show --stat a27c894 | head -60
+[Bash] find .ridgeline/builds/improve -name "*feedback*" -o -name "*retry*" -o -name "*review*" 2>/dev/null
+[Bash] tail -30 .ridgeline/builds/improve/trajectory.jsonl
+The prior attempt's work is already committed (in a27c894 + dfd77e1). Handoff.md describes it as complete. The prior reviewer hit a transient error and never verified — I need to re-validate the work and rerun checks.
+[Read] src/engine/claude/stable.prompt.ts
+[ToolSearch]
+[TodoWrite]
+[Read] src/engine/claude/claude.exec.ts
+[Read] src/engine/pipeline/pipeline.shared.ts
+[Read] src/engine/pipeline/phase.sequence.ts
+[Read] src/ui/preflight.ts
+[Read] src/stores/trajectory.ts
+[Read] src/types.ts
+[Grep] TrajectoryEntry[\"'].*type.*prompt_stable_hash|\"prompt_stable_hash\"
+[Read] src/types.ts
+Files look correctly wired. Let me run the check command.
+[Bash] npx tsc --noEmit 2>&1 | tail -30
+tsc passes (no output = no errors). Now lint + tests.
+[TodoWrite]
+[Bash] npm run lint 2>&1 | tail -40
+[Bash] npm run lint > /tmp/lint.out 2>&1; echo "EXIT:$?"; head -40 /tmp/lint.out
+Lint exits 0. Now the test suite.
+[Bash] npm test > /tmp/test.out 2>&1; echo "EXIT:$?"; tail -60 /tmp/test.out
+Test result matches the handoff: 908 passing / 28 failing. The 28 failures are the documented pre-existing greywall sandbox issues (`git init` hook template copy) — identical files as in prior phases, not introduced here. Let me verify the phase-3b-specific tests all pass.
+[Bash] npx vitest run src/engine/claude/__tests__/stable.prompt.test.ts src/engine/claude/__tests__/claude.exec.stable.test.ts src/engine/pipeline/__tests__/phase.sequence.cache-tokens.test.ts src/ui/__test…
+All 32 phase-3b tests pass. Let me walk the acceptance criteria.
+[TodoWrite]
+[Read] src/engine/claude/__tests__/stable.prompt.test.ts
+[Read] src/engine/claude/__tests__/claude.exec.stable.test.ts
+[Read] src/engine/pipeline/__tests__/phase.sequence.cache-tokens.test.ts
+[Read] src/ui/__tests__/preflight.caching.test.ts
+[Grep] cache|caching
+No caching CLI flag exposed (criterion 12). Let me verify the shape of `ClaudeResult.usage` carries cache tokens populated from `--output-format json` (criterion 10).
+[Grep] cache_read_input_tokens|cache_creation_input_tokens|cacheReadInputTokens|cacheCreationInputTokens
+All 14 acceptance criteria pass. Let me verify the handoff still accurately reflects the state. The handoff already describes this phase end-to-end (from attempt 1); the check outputs match exactly — 908 passing / 28 failing. Nothing to update in the handoff.
+[TodoWrite]
+Acceptance criteria walk:
+
+1. `buildStablePrompt` order constraints→taste→spec — `src/engine/claude/stable.prompt.ts:21-31`; snapshot test `stable.prompt.test.ts:22-54`. Core agent prompt stays on `--append-system-prompt` (`claude.exec.ts:109`). ✅
+2. Per-invocation temp file at `os.tmpdir()/ridgeline-stable-<sha256>.md` via `--append-system-prompt-file`; cleanup on exit — `stable.prompt.ts:53-62,39-47`. ✅
+3. argv contains both flags on `-p` — `claude.exec.ts:138-139`; `claude.exec.stable.test.ts:68-89`. ✅
+4. `claude --help` detection; absent → no-op + single info log — `detectExcludeDynamicFlag` + `shouldLogUnavailableOnce`; `claude.exec.stable.test.ts:131-173`. ✅
+5. Byte-identical temp file across runs — `stable.prompt.test.ts:120-133`. ✅
+6. Absent taste.md keeps order — `stable.prompt.test.ts:56-64`. ✅
+7. No `.ridgeline/cache-key.json` written — `stable.prompt.test.ts:242-255`. ✅
+8. Handoff mutation doesn't enter stable — `stable.prompt.test.ts:215-230` (handoff never a parameter of `buildStablePrompt`). ✅
+9. `prompt_stable_hash` trajectory event — `claude.exec.ts:113-120`; `claude.exec.stable.test.ts:109-129`. ✅
+10. `cache_creation_input_tokens` / `cache_read_input_tokens` extracted and logged — `stream.types.ts:21-22` → `phase.sequence.ts:151-152, 194-195`; `phase.sequence.cache-tokens.test.ts`. ✅
+11. Preflight warning under threshold — `preflight.ts:117-131`; 4 tests in `preflight.caching.test.ts`. ✅
+12. No caching CLI flag — grep confirms absence in `cli.ts`. ✅
+13. Vitests for each scenario — 32 phase-3b tests pass. ✅
+14. Check command — `npm run lint` exits 0, `npx tsc --noEmit` exits 0, `npm test` exits 1 due to 28 pre-existing greywall `git init` template failures documented identically across all prior phases; no new failures introduced (908 passing matches the handoff's stated count exactly). ⚠️ Environmental deviation, same as phases 1a/1b/2/3a/4.
+
+[03b-prompt-caching] DONE
+
+Prior attempt's work (commit a27c894) is intact, all phase-3b files present, all 14 criteria satisfied (criterion 14 with the documented environmental deviation), and the handoff.md entry accurately describes the completed state. 32 phase-3b tests pass; overall suite: 908 passing / 28 pre-existing greywall failures (zero new failures); lint and tsc exit 0.
