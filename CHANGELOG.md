@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.8.1 — 2026-04-23
+
+### Added
+
+- `ridgeline ui [build-name]` subcommand: serves a fully offline dark-mode build-monitoring dashboard from `127.0.0.1` (default port 4411 with free-port fallback), live-updates over SSE with a 2 s polling fallback on disconnect, no external assets, and selects the most recently modified build under `.ridgeline/builds/*` when no name is given
+- Always-on builder sensor pipeline (`src/sensors/`): Playwright screenshots, axe-core a11y, Claude vision, and `wcag-contrast` design-token contrast scoring; per-phase findings persisted to `<buildDir>/sensors/<phaseId>.json` and surfaced to the reviewer
+- TTY-gated preflight summary that runs before the 10 pipeline commands, listing detected project signals and dependency status with a continue prompt; non-TTY runs are unaffected
+- `src/engine/detect/` — fixture-tested project-signal scanner (frameworks, languages, tooling) used by preflight and the sensor pipeline
+- `src/ui/color.ts` — semantic terminal-color helper (`error`, `success`, `warning`, `info`, `hint`, `bold`, `dimInfo`, `stripAnsi`, `clearLineSequence`); six terminal modules route through it
+- Optional `playwright` peer dependency (>=1.57.0 <2.0.0); new `axe-core` and `wcag-contrast` runtime dependencies
+
+### Changed
+
+- BREAKING: removed the flavour system entirely. `--flavour` / `--flavor` on any subcommand now exits non-zero with an actionable message; the `flavour` field is dropped from `RidgelineConfig`, `RidgelineSettings`, `ResearchConfig`, `RefineConfig`, and `SpecEnsembleConfig`; `buildAgentRegistry()` no longer accepts a flavour-path argument
+- `engines.node` raised to `">=20.0.0"`
+- `ridgeline check` reduced to a one-line stub now that preflight carries the real signal
+
+### Fixed
+
+- Wave parallelization no longer drops phases on a `handoff.md` merge conflict: each parallel builder appends to a per-phase `handoff-<phaseId>.md` fragment inside its worktree, and `consolidateHandoffs` stitches the fragments back into the canonical `handoff.md` after the wave merges
+- Concurrent spinners on parallel phases are gated by a process-wide singleton so only one spinner draws at a time
+
 ## v0.7.21 — 2026-04-22
 
 ### Changed
