@@ -1785,3 +1785,35 @@ Phase 3a delivered:
 - `ReviewVerdict.sensorFindings: SensorFinding[]` (required field), threaded from the builder loop through `invokeReviewer` into the reviewer prompt and into `generateFeedback`'s `## Sensor Findings` section (omitted when empty).
 - 42+ new tests across `specialist.verdict.test.ts`, `ensemble.exec.test.ts`, `cli.deep-ensemble-deprecation.test.ts`, `phase.sequence.sensors.test.ts`, and `feedback.verdict.test.ts`.
 - Handoff appended at `.ridgeline/builds/improve/handoff.md`.
+[ridgeline] [03a-lean-ensembles-and-verdicts] Reviewing...
+[review:03a-lean-ensembles-and-verdicts] Starting review
+[Bash] ls -la .ridgeline/builds/improve/
+[Bash] git log --oneline -5 && echo "---" && git status --short | head -20
+[Bash] git diff 883dfb3..HEAD --stat | tail -50
+[Agent] Run the check command for this phase and report results.
+[Bash] npm run lint 2>&1; echo "EXIT:$?"
+[Bash] npx tsc --noEmit 2>&1; echo "EXIT:$?"
+[Bash] ls src/engine/pipeline/__tests__/ensemble.exec.test.ts src/engine/pipeline/__tests__/specialist.verdict.test.ts src/__tests__/cli.deep-ensemble-deprecation.test.ts 2>&1; echo "EXIT:$?"
+[Bash] npx vitest run 2>&1 | tail -60; echo "EXIT:$?"
+[Bash] npx vitest run 2>&1 | grep -E "^( FAIL| PASS)" | head -50
+[Bash] npx vitest run src/engine/pipeline/__tests__/ensemble.exec.test.ts src/engine/pipeline/__tests__/specialist.verdict.test.ts src/__tests__/cli.deep-ensemble-deprecation.test.ts 2>&1 | tail -20; echo "…
+Check command passes. Now let me verify specific acceptance criteria by inspecting key files.
+[Read] src/engine/pipeline/specialist.verdict.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/cli.ts
+[Read] src/cli.ts
+[Bash] node dist/cli.js --help 2>&1 | head -40 || npx tsx src/cli.ts --help 2>&1 | head -40
+[Bash] node dist/cli.js --help 2>&1 | grep -E "deep-ensemble|thorough" || npx tsx src/cli.ts --help 2>&1 | grep -E "deep-ensemble|thorough"
+[Bash] node dist/cli.js --deep-ensemble --help 2>&1 > /dev/null
+[Bash] node dist/cli.js --deep-ensemble plan --help 2>&1 | head -5
+[Bash] ls -la dist/cli.js 2>&1; grep -c "deep-ensemble" dist/cli.js 2>/dev/null || echo "no dist"; head -20 dist/cli.js 2>/dev/null | tail -5
+[Bash] ls -la src/cli.ts | awk '{print $6, $7, $8, $9}'; grep -n "deep-ensemble" dist/cli.js | head -5
+[Bash] npx tsx src/cli.ts --deep-ensemble plan --help 2>&1 | head -5; echo "---"; npx tsx src/cli.ts --deep-ensemble plan --help 2>/tmp/stderr.log >/dev/null; cat /tmp/stderr.log
+[Read] src/__tests__/cli.deep-ensemble-deprecation.test.ts
+[Read] src/engine/pipeline/review.exec.ts
+I've reviewed the diff, key source files, and confirmed runtime behavior. Let me do a final targeted check on one edge case: does the check command pass end-to-end (verifier already confirmed, but let me re-verify the exact output).
+
+Verifying criterion by criterion against evidence.
+[ridgeline] [03a-lean-ensembles-and-verdicts] PASSED (1854s)
+
+[ridgeline] ── Phase 5/7: 03b-prompt-caching ──

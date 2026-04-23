@@ -43,12 +43,12 @@
     },
     {
       "id": "03a-lean-ensembles-and-verdicts",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/improve/03a-lean-ensembles-and-verdicts",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/improve/03a-lean-ensembles-and-verdicts",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 1853897,
+      "completedAt": "2026-04-23T21:53:39.969Z",
       "failedAt": null
     },
     {
