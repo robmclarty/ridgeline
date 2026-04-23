@@ -3,3 +3,360 @@
 [ridgeline] Phase dependencies detected — using wave-based scheduling
 
 [ridgeline] ── Phase 1/7: 01a-flavour-removal-and-metadata ──
+[ridgeline] [01a-flavour-removal-and-metadata] Building...
+[01a-flavour-removal-and-metadata] Starting: Flavour removal, agent-registry rewire, package metadata, test pruning
+[Read] .ridgeline/builds/improve/handoff.md
+[Bash] ls 
+[Bash] ls src/
+[Bash] ls src/flavours/
+[Bash] ls src/agents/
+[Bash] ls src/engine/
+[Bash] ls src/engine/discovery/
+[Read] package.json
+[Read] src/engine/discovery/agent.registry.ts
+[ToolSearch]
+[TodoWrite]
+Let me start with baseline capture and exploration.
+[Bash] git status
+[Bash] git log --oneline -10
+[Bash] npm test 2>&1 | tail -50
+These failures look environmental (sandbox blocking git init). Let me look at the actual full test output to understand what's pre-existing vs related to my work.
+[Bash] npm run test:unit 2>&1 | tail -100
+Test failures are pre-existing (sandbox blocks `git init`). Baseline: 617 total, 589 passing. Now let me find flavour-importing tests.
+[Bash] find src -name '*.test.ts' -o -name '*.test.tsx' | xargs grep -lE 'src/flavours/|flavour\.resolve|flavour\.config' 2>/dev/null
+[Bash] find test -name '*.test.ts' -o -name '*.test.tsx' 2>/dev/null | xargs grep -lE 'src/flavours/|flavour\.resolve|flavour\.config' 2>/dev/null
+[Bash] ls test/ 2>&1
+[Bash] find test/e2e -type f 2>&1 | head -20
+[Grep] src/flavours/|flavour\.resolve|flavour\.config
+Now let me look at each flavour-touching test file to understand what's actually flavour-dependent vs incidentally importing.
+[Bash] head -30 src/engine/discovery/__tests__/flavour.resolve.test.ts src/engine/discovery/__tests__/…
+[Read] src/commands/__tests__/check.test.ts
+[Bash] find src/commands -type f | sort
+[Read] src/cli.ts
+[Read] src/types.ts
+[Read] src/config.ts
+[Grep] flavour|Flavour
+[Read] src/engine/discovery/flavour.resolve.ts
+[Read] src/engine/discovery/flavour.config.ts
+[Bash] grep -rn 'buildAgentRegistry' src --include='*.ts' | head -30
+[Bash] grep -rn 'resolveFlavour\|loadFlavourConfig\|flavour\.resolve\|flavour\.config' src --include='*.ts' | grep -v __tests__ | head -30
+[Read] src/commands/check.ts
+[Read] src/commands/create.ts
+[Read] src/commands/shape.ts
+Let me get a comprehensive view of all flavour usages and look at settings/state:
+[Read] src/stores/settings.ts
+[Bash] grep -n 'flavour' src/stores/state.ts 2>&1 | head -20
+[Bash] ls src/stores/
+Now I have enough context. Let me start executing. First, the baseline file.
+[Bash] find src -name '*.test.ts' | xargs grep -lE 'src/flavours/|flavour\.resolve|flavour\.config' 2>/dev/null | wc -l
+[Write] .ridgeline/builds/improve/phase-1a-baseline.json
+[TodoWrite]
+Now rewire agent.registry.ts. The cleanest approach: change buildAgentRegistry to take no parameter and resolve from src/agents/ only.
+[Write] src/engine/discovery/agent.registry.ts
+Now update all callers. Since the registry signature changed (no more flavour param), I need to update them in this commit too.
+[Edit] src/commands/shape.ts
+[Edit] src/commands/shape.ts
+[Read] src/commands/design.ts
+[Edit] src/commands/design.ts
+[Edit] src/commands/design.ts
+[Read] src/commands/retrospective.ts
+[Edit] src/commands/retrospective.ts
+[Edit] src/commands/retrospective.ts
+Now the pipeline files:
+[Read] src/engine/pipeline/pipeline.shared.ts
+[Edit] src/engine/pipeline/pipeline.shared.ts
+[Edit] src/engine/pipeline/pipeline.shared.ts
+[Bash] grep -n 'flavour' src/engine/pipeline/ensemble.exec.ts
+[Bash] grep -n 'flavour' src/engine/pipeline/build.exec.ts
+[Bash] grep -n 'flavour' src/engine/pipeline/research.exec.ts
+[Bash] grep -n 'flavour' src/engine/pipeline/refine.exec.ts
+[Bash] grep -n 'flavour' src/engine/pipeline/specify.exec.ts
+[Bash] grep -n 'flavour' src/engine/pipeline/review.exec.ts
+[Read] src/engine/pipeline/research.exec.ts
+[Edit] src/engine/pipeline/research.exec.ts
+[Edit] src/engine/pipeline/research.exec.ts
+[Read] src/engine/pipeline/refine.exec.ts
+[Edit] src/engine/pipeline/refine.exec.ts
+[Edit] src/engine/pipeline/refine.exec.ts
+[Read] src/engine/pipeline/specify.exec.ts
+[Read] src/engine/pipeline/specify.exec.ts
+[Edit] src/engine/pipeline/specify.exec.ts
+[Edit] src/engine/pipeline/specify.exec.ts
+[Read] src/engine/pipeline/build.exec.ts
+[Edit] src/engine/pipeline/build.exec.ts
+[Edit] src/engine/pipeline/build.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Edit] src/engine/pipeline/ensemble.exec.ts
+[Edit] src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/pipeline/review.exec.ts
+[Edit] src/engine/pipeline/review.exec.ts
+[Edit] src/engine/pipeline/review.exec.ts
+Now let me check what's left referencing flavour.resolve or flavour.config in non-test code:
+[Bash] grep -rn 'flavour\.resolve\|flavour\.config\|resolveFlavour\|loadFlavourConfig' src --include='*.ts' | grep -v __tests__ | grep -v 'flavour.resolve…
+Let me run typecheck to see the current state:
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -80
+[Read] src/engine/discovery/__tests__/agent.registry.test.ts
+[Bash] sed -i.bak 's/buildAgentRegistry(null)/buildAgentRegistry()/g' src/engine/discovery/__tests__/agent.registry.test.ts && rm /Users/robmclarty/Projec…
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -40
+Typecheck passes. Now let me check what the existing flavour test mocks pass to buildAgentRegistry:
+[Bash] grep -n 'buildAgentRegistry' src/commands/__tests__/shape.test.ts src/commands/__tests__/design…
+[Bash] grep -lE 'src/flavours/|flavour\.resolve|flavour\.config' src/commands/__tests__/shape.test.ts …
+[Bash] grep -n 'flavour' src/commands/__tests__/shape.test.ts | head -10
+[Bash] grep -n 'flavour' src/engine/pipeline/__tests__/pipeline.shared.test.ts | head -10
+Now let me write the resolution test. First, let me verify what the canonical agent set looks like:
+[Bash] ls src/agents/core/
+[Bash] ls src/agents/specifiers src/agents/planners /Users/robmclarty/Projects/ridgeline/code/ridgelin…
+Now write the resolution test:
+[Write] src/engine/discovery/__tests__/agent.registry.resolution.test.ts
+[Bash] npx vitest run src/engine/discovery/__tests__/agent.registry.resolution.test.ts 2>&1 | tail -30
+Resolution test passes (with src/flavours/ still on disk). Now let me commit checkpoint A.
+[Bash] npx vitest run src/engine/discovery/__tests__/agent.registry.test.ts 2>&1 | tail -20
+[Bash] git status
+[Bash] git add src/commands/design.ts src/commands/retrospective.ts src/commands/shape.ts src/engine/discovery/__tests__/agent.registry.test.ts src/engine/discovery/agent.registry.ts src/engine/pipeline/bui…
+[Bash] git rev-parse HEAD > .ridgeline/builds/improve/phase-1a-checkpoint.txt && cat .ridgeline/builds…
+[TodoWrite]
+Now let me read remaining files I need to modify:
+[Read] src/engine/index.ts
+[Read] src/commands/spec.ts
+[Read] src/commands/research.ts
+[Read] src/commands/refine.ts
+[Read] src/commands/build.ts
+Now let me execute the deletion phase. First the deprecation helper:
+[Bash] mkdir -p src/cli/__tests__ && ls src/cli/ 2>&1
+[Bash] rmdir src/cli/__tests__ src/cli && ls src/u…
+[Write] src/utils/flavour-removed.ts
+Now write the parameterised deprecation test:
+[Write] src/utils/__tests__/flavour-removed.test.ts
+[Bash] npx vitest run src/utils/__tests__/flavour-removed.test.ts 2>&1 | tail -20
+Now wire it into cli.ts and remove --flavour:
+[Write] src/cli.ts
+Now update the types and stores:
+[Edit] src/types.ts
+[Edit] src/stores/settings.ts
+[Edit] src/config.ts
+[Bash] grep -n 'loadSettings' src/config.ts
+[Edit] src/config.ts
+Now update the *exec.ts config types and the command files:
+[Edit] src/engine/pipeline/research.exec.ts
+[Edit] src/engine/pipeline/refine.exec.ts
+[Edit] src/engine/pipeline/specify.exec.ts
+Now update the command files:
+[Edit] src/commands/shape.ts
+[Edit] src/commands/shape.ts
+[Edit] src/commands/design.ts
+[Edit] src/commands/spec.ts
+[Edit] src/commands/spec.ts
+[Edit] src/commands/research.ts
+[Edit] src/commands/research.ts
+[Edit] src/commands/research.ts
+[Edit] src/commands/refine.ts
+[Edit] src/commands/refine.ts
+[Edit] src/commands/retrospective.ts
+[Edit] src/commands/build.ts
+Now rework create.ts:
+[Write] src/commands/create.ts
+Now rework check.ts:
+[Write] src/commands/check.ts
+Now update engine/index.ts to remove resolveFlavour export:
+[Edit] src/engine/index.ts
+Now delete the source files (flavours dir, flavour.resolve.ts, flavour.config.ts) and the flavour-importing tests:
+[Bash] git rm -r src/flavours 2>&1 | tail -10
+[Bash] git rm src/engine/discovery/flavour.resolve.ts src/engine/discovery/flavour.config.ts src/engine/discovery/__tests__/flavour.resolve.test.ts src/engine/discovery/__tests__/flavour.config.test.ts src/…
+Now run typecheck and look for issues:
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -60
+[Read] test/factories.ts
+[Edit] test/factories.ts
+[Bash] grep -n 'flavour' test/e2e/helpers.ts src/commands/__tests__/build.test.ts /Users/robmclarty/Pr…
+[Bash] for f in test/e2e/helpers.ts src/commands/__tests__/build.test.ts /Users/robmclarty/Projects/ri…
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -40
+[Bash] npx vitest run 2>&1 | tail -30
+Let me check the deleted tests for important non-flavour coverage that should be preserved:
+[Bash] git show HEAD:src/engine/pipeline/__tests__/ensemble.exec.test.ts 2>&1 | head -60
+[Bash] git show HEAD:src/engine/pipeline/__tests__/ensemble.exec.test.ts | grep -c '^\s*it(\|^\s*test('
+[Bash] for f in src/commands/__tests__/check.test.ts src/commands/__tests__/create.test.ts src/commands/__tests__/design.test.ts src/commands/__tests__/shape.test.ts src/engine/discovery/__tests__/flavour.c…
+Let me check if extractJSON has other coverage:
+[Bash] grep -rln 'extractJSON' src --include='*.ts'
+[Bash] grep -n 'export.*extractJSON\|^const extractJSON\|^export const extractJSON' src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+Let me write a replacement test for `extractJSON` (substantial non-flavour coverage that was deleted):
+[Write] src/engine/pipeline/__tests__/extract-json.test.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/extract-json.test.ts 2>&1 | tail -15
+Let me look at what pipeline.shared.test.ts covered:
+[Bash] git show HEAD:src/engine/pipeline/__tests__/pipeline.shared.test.ts | head -100
+[Bash] git show HEAD:src/engine/pipeline/__tests__/pipeline.shared.test.ts | wc -l
+[Bash] git show HEAD:src/engine/pipeline/__tests__/pipeline.shared.test.ts | sed -n '100,330p'
+Let me restore pipeline.shared.test.ts as a flavour-free version with all the valuable utility test coverage:
+[Write] src/engine/pipeline/__tests__/pipeline.shared.test.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/pipeline.shared.test.ts 2>&1 | tail -10
+Let me restore the build.exec and review.exec tests:
+[Bash] git show HEAD:src/engine/pipeline/__tests__/build.exec.test.ts | head -150
+[Bash] git show HEAD:src/engine/pipeline/__tests__/build.exec.test.ts | sed -n '150,250p'
+[Write] src/engine/pipeline/__tests__/build.exec.test.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/build.exec.test.ts 2>&1 | tail -10
+[Bash] git show HEAD:src/engine/pipeline/__tests__/review.exec.test.ts
+[Write] src/engine/pipeline/__tests__/review.exec.test.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/review.exec.test.ts 2>&1 | tail -10
+[Bash] git show HEAD:src/engine/pipeline/__tests__/ensemble.exec.test.ts | grep -E '^\s*it\(|^\s*describe\(' | head -40
+Let me run the full test suite now:
+[Bash] npx vitest run 2>&1 | tail -15
+Let me check remaining flavour references and also verify all criteria pass:
+[Grep] [Ff]lavou?r
+[Read] src/engine/discovery/skill.check.ts
+[Edit] src/engine/discovery/skill.check.ts
+[Edit] src/engine/discovery/skill.check.ts
+[Read] src/engine/discovery/__tests__/skill.check.test.ts
+[Edit] src/engine/discovery/__tests__/skill.check.test.ts
+[Read] src/engine/claude/claude.exec.ts
+[Edit] src/engine/claude/claude.exec.ts
+[Edit] src/engine/discovery/__tests__/agent.registry.resolution.test.ts
+Now let's also check for CapabilityPack:
+[Grep] CapabilityPack|capability-pack
+Let me run the full test suite again and typecheck:
+[Bash] npx tsc --noEmit -p tsconfig.check.json 2>&1 | head -30
+[Bash] npx vitest run 2>&1 | tail -15
+Let me run the lint:
+[Bash] npm run lint 2>&1 | tail -30
+[Bash] npm run lint 2>&1 | head -40
+Lint passes. Now let me update the docs:
+[Bash] ls docs/
+[Bash] grep -lE 'flavour|--flavour|web-ui|game-dev|novel-writing|legal-drafting|machine-learning|mobile-app|music-composition|screenwriting|security-audit|software-engineering|technical-writing|test-suite|t…
+[Bash] git rm docs/flavours.md docs/check.md 2>&1 | tail -5
+[Bash] git show HEAD:docs/check.md | head -40
+[Bash] grep -nE 'flavour|--flavour|web-ui|game-dev|novel-writing|legal-drafting|machine-learning|mobile-app|music-composition|screenwriting|security-audit|software-engineering|technical-writing|test-suite|t…
+[Read] docs/architecture.md
+[Edit] docs/architecture.md
+[Bash] grep -nE 'flavour|--flavour|web-ui|game-dev|novel-writing|legal-drafting|machine-learning|mobile-app|music-composition|screenwriting|security-audit|software-engineering|technical-writing|test-suite|t…
+Let me fix each doc with flavour refs:
+[Read] docs/help.md
+[Bash] grep -n 'flavour' docs/help.md
+[Bash] sed -i.bak '/| `--flavour <name-or-path>` | none | Agent flavour |/d' docs/help.md && rm docs/h…
+[Bash] grep -n 'flavour' docs/research.md docs/retrospective.md /Users/robmclarty/Projects/ridgeline/c…
+[Bash] for f in docs/research.md docs/retrospective.md /Users/robmclarty/Projects/ridgeline/code/ridge…
+[Read] docs/research.md
+[Edit] docs/research.md
+[Read] docs/ensemble-flows.md
+[Edit] docs/ensemble-flows.md
+[Read] docs/infrastructure-audit.md
+[Edit] docs/infrastructure-audit.md
+[Read] docs/infrastructure-audit.md
+[Edit] docs/infrastructure-audit.md
+Now architecture-rationale.md and shaping.md and stakeholder-guide.md:
+[Read] docs/architecture-rationale.md
+[Read] docs/architecture-rationale.md
+[Edit] docs/architecture-rationale.md
+[Edit] docs/architecture-rationale.md
+[Read] docs/shaping.md
+[Edit] docs/shaping.md
+[Read] docs/stakeholder-guide.md
+[Edit] docs/stakeholder-guide.md
+[Bash] grep -n 'flavour' docs/stakeholder-guide.md
+[Read] docs/stakeholder-guide.md
+[Edit] docs/stakeholder-guide.md
+[Read] docs/stakeholder-guide.md
+[Edit] docs/stakeholder-guide.md
+[Edit] docs/stakeholder-guide.md
+[Bash] grep -lE 'flavour|--flavour|game-dev|novel-writing|legal-drafting|machine-learning|mobile-app|music-composition|screenwriting|security-audit|software-engineering|technical-writing|test-suite|web-game…
+[Bash] grep -lE 'flavour|--flavour|web-ui|translation' docs/*.md
+[Bash] grep -nE 'flavour|--flavour|web-ui|translation' docs/acceptance-criteria-subagent.md
+[Bash] git diff --name-only HEAD plans/ 2>&1 | head -5
+Good. Now let me also write the coverage-floor verification script as required by criterion 19:
+[Write] scripts/verify-phase-1a-coverage.sh
+[Bash] chmod +x scripts/verify-phase-1a-coverage.sh && bash scripts/verify-phase-1a-coverage.sh 2>&1 |…
+[Bash] git log --oneline -5
+[Bash] git diff --diff-filter=D --name-only 0b64c37...HEAD -- 'src' 'test' 2>&1 | grep test
+Let me commit the deletion commit, then verify:
+[Bash] git status 2>&1 | head -50
+[Bash] git status --porcelain | grep -v '^D ' | head -60
+[Bash] git add -A docs/ src/ test/ scripts/ && git status --porcelain | head -10
+[Bash] git commit -m "$(cat <<'EOF'
+Committed. Now let me tackle the package.json update:
+[TodoWrite]
+[Write] package.json
+[Bash] npm install 2>&1 | tail -20
+[Bash] npm run lint 2>&1 | tail -20
+[Read] docs/architecture-rationale.md
+[Bash] awk 'NR<=124 || /[^[:space:]]/{print; prev_blank=0; next} prev_blank{next} {print; prev_blank=1}' docs/architecture-rationale.md > /tmp/arch.md && …
+[Read] docs/architecture-rationale.md
+[Bash] printf '%s' "$(cat docs/architecture-rationale.md)" > /tmp/arch.md && echo "" >> /tmp/arch.md && cp /tmp/arch.md /Users/robmclarty/Projects/ridgeli…
+[Bash] npm run lint 2>&1 | tail -10
+[Bash] npm run lint 2>&1 | grep -A3 'Failed\|error' | head -20
+[Bash] npm run lint:fallow 2>&1 | tail -50
+[Bash] npm run lint:fallow 2>&1 | grep -E '✗|✓|FAIL|fail|⚠|error' | head -20
+[Bash] npm run lint:fallow 2>&1 | grep -B2 -A10 'unused deps'
+[Bash] npm run lint:fallow 2>&1 | grep -B5 -A15 'Listed in dependencies but never imported'
+[Bash] ls .fallow* fallow* 2>&1
+[Read] .fallowrc.json
+[Edit] .fallowrc.json
+[Bash] npm run lint 2>&1 | grep -E '✗|✓|FAIL|fail|error|warning' | head -20
+[Bash] npm run lint 2>&1 | tail -3
+[Bash] npm run lint > /tmp/lint.log 2>&1; echo "EXIT=$?"
+Lint passes. Now run the install-and-check gate:
+[Bash] npm install && npm run lint && npm test && npx tsc --noEmit 2>&1 | tail -10; echo "EXIT=$?"
+[Bash] tail -10 /Users/robmclarty/.claude/projects/-Users-robmclarty-Projects-ridgeline-code-ridgeline/9ffa77cd-c316-4670-9f5b-ae9b83e14713/tool-results/bum12jg9z.txt
+[Bash] grep -E '^FAIL' /Users/robmclarty/.claude/projects/-Users-robmclarty-Projects-ridgeline-code-ridgeline/9ffa77cd-c316-4670-9f5b-ae9b83e14713/tool-results/bum12jg9z.txt | head -10
+[Bash] grep -E 'FAIL ' /Users/robmclarty/.claude/projects/-Users-robmclarty-Projects-ridgeline-code-ridgeline/9ffa77cd-c316-4670-9f5b-ae9b83e14713/tool-results/bum12jg9z.txt | head -10
+[Bash] grep -E 'FAIL ' /Users/robmclarty/.claude/projects/-Users-robmclarty-Projects-ridgeline-code-ridgeline/9ffa77cd-c316-4670-9f5b-ae9b83e14713/tool-results/bum12jg9z.txt | sort -u | awk -F'>' '{print $1…
+[Bash] npx vitest run src/__tests__/git.test.ts 2>&1 | tail -25
+[Bash] npx tsc --noEmit 2>&1; echo "EXIT=$?"
+[Bash] npm run test:unit 2>&1 | tail -7
+Now let me commit package.json:
+[Bash] git add package.json package-lock.json .fallowrc.json docs/architecture-rationale.md && git commit -m "chore(deps): bump to 0.8.0; add engines, peer playwright, axe-core, wcag-contrast
+[TodoWrite]
+[Bash] bash scripts/verify-phase-1a-coverage.sh 2>&1 | tail -10
+Coverage floor passes. Now let me verify all the acceptance criteria systematically:
+[Bash] node -e "console.log('exists:', require('fs').existsSync('src/flavours'))"
+[Bash] ls src/agents/core/ | sort
+[Bash] ls src/agents/
+[Bash] node dist/cli.js shape --flavour web-ui test 2>&1 | head -5; echo "EXIT=$?"
+[Bash] npm run build 2>&1 | tail -10
+[Bash] node dist/cli.js shape --flavour web-ui test 2>&1; echo "EXIT=$?"
+[Bash] for cmd in shape design spec research refine plan build rewind retrospective create; do
+All 10 commands exit non-zero with the deprecation message. Let me verify the remaining criteria:
+[Bash] node dist/cli.js --help 2>&1 | grep -ic 'flavou\?r' || echo "0"
+[Bash] node dist/cli.js check 2>&1; echo "EXIT=$?"
+[Bash] node dist/cli.js --help 2>&1 | grep -i 'flavou\?r'; echo "[end]"
+[Bash] cat /private/tmp/claude-501/-Users-robmclarty-Projects-ridgeline-code-ridgeline/9ffa77cd-c316-4670-9f5b-ae9b83e14713/tasks/bqtfu225t.output 2>&1 | head -20
+[Bash] node dist/cli.js help shape 2>&1 | head -10
+[Bash] node dist/cli.js shape --help 2>&1
+No flavour flag in help. Let me also verify state.json doesn't have flavour:
+[Bash] grep -rn 'flavour\|Flavour' src/types.ts src/stores/state.ts 2>&1
+[Bash] node -e "
+[Bash] git diff --diff-filter=D --name-only 0b64c37...HEAD -- 'src/**/*.test.ts' 'test/**/*.test.ts'
+[Bash] git diff --name-only 0b64c37...HEAD -- 'plans/' && echo "[end]"
+[Grep] [Ff]lavou?r
+[Bash] npx vitest run src/engine/discovery/__tests__/agent.registry.resolution.test.ts 2>&1 | tail -8
+[Bash] npx fallow 2>&1 | grep -E '✗|✓|Failed' | head -10
+All checks pass. Now let me write the handoff:
+[Read] .ridgeline/builds/improve/handoff.md
+[Write] .ridgeline/builds/improve/handoff.md
+[TodoWrite]
+Let me run the final check command one more time to confirm:
+[Bash] npm run lint 2>&1 | tail -3; echo "LINT_EXIT=$?"; echo "---"; npx vitest run 2>&1 | tail -7; echo "---"; npx tsc --noEmit 2>&1 | tail -3; echo "TSC_EXIT=$?"
+[Read] .ridgeline/builds/improve/handoff.md
+[Edit] .ridgeline/builds/improve/handoff.md
+[Bash] npm run lint 2>&1 | grep -E 'error|Summary' | head -10
+[Bash] npm run lint > /dev/null 2>&1; echo "LINT_EXIT=$?"
+All lint, typecheck, and resolution tests pass. The 28 environmental test failures are unchanged from baseline. Let me also verify the final coverage script and state:
+[Bash] bash scripts/verify-phase-1a-coverage.sh 2>&1 | tail -8
+[Bash] git log --oneline 0b64c37..HEAD
+Phase 1a complete. Three commits land cleanly:
+
+- `b9bd238` rewires `agent.registry.ts` through `src/agents/` only and adds the resolution test (criteria 2-4).
+- `d250874` deletes `src/flavours/`, the two flavour modules, and ten flavour-importing tests; reworks `check.ts`/`create.ts`; removes `--flavour` from every command and adds the deprecation guard with a 48-test parameterised matrix; restores three test files as flavour-free versions to preserve unrelated coverage; cleans up docs (criteria 5-6, 9-22, 28-30).
+- `8ee4bb5` bumps `package.json` to `0.8.0`, adds `engines`, the optional Playwright peer dep, `axe-core`/`wcag-contrast`, and drops the `dist/flavours` build step (criteria 7, 23-27).
+
+Coverage floor: `N_end=590 ≥ N_baseline (589) − D (7) + A (3) = 585` (verified by `scripts/verify-phase-1a-coverage.sh`).
+
+Open caveat: `npm test` exits non-zero because of 28 pre-existing environmental failures (sandbox blocks `git init` for `git.test.ts`, `worktree.test.ts`, `worktree.parallel.test.ts`). Same 28 failures at baseline; no regressions. Lint, typecheck, fallow, agnix, and the resolution test all exit 0.
+
+[01a-flavour-removal-and-metadata] DONE
+The phase is complete; the background help-grep task finished with exit 0 (no `--flavour` references found in help output).
+
+Phase 1a summary:
+- 3 commits: registry rewire, flavour deletion + deprecation guard, package.json bump
+- 590 passing tests (baseline 589); 28 environmental failures unchanged
+- Coverage floor verified: 590 ≥ 585
+- Lint, typecheck, fallow, agnix all green
+- Handoff written to `.ridgeline/builds/improve/handoff.md`
+
+[01a-flavour-removal-and-metadata] DONE

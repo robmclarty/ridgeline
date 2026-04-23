@@ -2,3 +2,4 @@
 {"timestamp":"2026-04-23T03:32:46.153Z","level":"info","phase":null,"message":"Starting build: improve (7 phases)\n"}
 {"timestamp":"2026-04-23T03:32:46.191Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
 {"timestamp":"2026-04-23T03:32:46.191Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"Phase 1/7: 01a-flavour-removal-and-metadata"}
+{"timestamp":"2026-04-23T03:32:46.336Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"Building..."}
