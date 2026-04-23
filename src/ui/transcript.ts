@@ -1,8 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-
-// eslint-disable-next-line no-control-regex
-const ANSI_PATTERN = /\x1b\[[0-9;]*m/g
+import { stripAnsi } from "./color"
 
 let transcriptFilePath: string | null = null
 let isEnabled = true
@@ -24,7 +22,7 @@ export const disableTranscript = (): void => {
  */
 export const appendTranscript = (text: string): void => {
   if (!isEnabled || !transcriptFilePath) return
-  const stripped = text.replace(ANSI_PATTERN, "")
+  const stripped = stripAnsi(text)
   const withNewline = stripped.endsWith("\n") ? stripped : stripped + "\n"
   try {
     fs.appendFileSync(transcriptFilePath, withNewline)
