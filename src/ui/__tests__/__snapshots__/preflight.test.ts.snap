@@ -1,0 +1,27 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`preflight > snapshots > matches the --yes rendering snapshot 1`] = `
+"Detected   react, vite, design.md   →   enabling   Playwright, vision, pa11y, contrast
+
+Ensemble   2 specialists   (use --thorough for 3)
+Caching    on
+"
+`;
+
+exports[`preflight > snapshots > matches the TTY interactive rendering snapshot 1`] = `
+"Detected   react, vite, design.md   →   enabling   Playwright, vision, pa11y, contrast
+
+Ensemble   2 specialists   (use --thorough for 3)
+Caching    on
+  Press Enter to continue, Ctrl+C to abort
+"
+`;
+
+exports[`preflight > snapshots > matches the non-TTY (CI) rendering snapshot 1`] = `
+"Detected   react, vite, design.md   →   enabling   Playwright, vision, pa11y, contrast
+
+Ensemble   2 specialists   (use --thorough for 3)
+Caching    on
+(auto-proceeding in CI)
+"
+`;
