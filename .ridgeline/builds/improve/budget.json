@@ -203,7 +203,19 @@
       "cacheCreationInputTokens": 412819,
       "durationMs": 1539576,
       "timestamp": "2026-04-23T21:48:25.727Z"
+    },
+    {
+      "phase": "03a-lean-ensembles-and-verdicts",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 2.3580190500000002,
+      "inputTokens": 22,
+      "outputTokens": 17564,
+      "cacheReadInputTokens": 2033819,
+      "cacheCreationInputTokens": 117379,
+      "durationMs": 314067,
+      "timestamp": "2026-04-23T21:53:39.916Z"
     }
   ],
-  "totalCostUsd": 130.4758768
+  "totalCostUsd": 132.83389585
 }
