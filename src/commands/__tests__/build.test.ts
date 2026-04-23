@@ -50,6 +50,7 @@ vi.mock("../../stores/state", () => ({
     })),
   })),
   resetRetries: vi.fn(),
+  reconcilePhases: vi.fn(() => ({ added: [], removed: [] })),
   markBuildRunning: vi.fn(),
   advancePipeline: vi.fn(),
 }))

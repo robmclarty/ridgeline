@@ -134,6 +134,46 @@ export const updatePhaseStatus = (
   })
 }
 
+/**
+ * Reconcile state.phases against the current phase files on disk.
+ * Appends new phase files as pending entries, reorders to match disk order,
+ * and drops entries whose phase file no longer exists. Idempotent.
+ *
+ * Handles cases like sub-phase splits (01 → 01a/01b) performed between runs:
+ * without reconciliation, the new files aren't in state.phases and runPhase
+ * throws "Phase <id> not found in state".
+ */
+export const reconcilePhases = (
+  state: BuildState,
+  phases: PhaseInfo[],
+  buildName: string,
+): { added: string[]; removed: string[] } => {
+  const byId = new Map(state.phases.map((p) => [p.id, p]))
+  const diskIds = new Set(phases.map((p) => p.id))
+
+  const added: string[] = []
+  const removed = state.phases.filter((p) => !diskIds.has(p.id)).map((p) => p.id)
+
+  const reconciled: PhaseState[] = phases.map((p) => {
+    const existing = byId.get(p.id)
+    if (existing) return existing
+    added.push(p.id)
+    return {
+      id: p.id,
+      status: "pending",
+      checkpointTag: checkpointTagName(buildName, p.id),
+      completionTag: null,
+      retries: 0,
+      duration: null,
+      completedAt: null,
+      failedAt: null,
+    }
+  })
+
+  state.phases = reconciled
+  return { added, removed }
+}
+
 export const resetRetries = (buildDir: string, state: BuildState): void => {
   for (const phase of state.phases) {
     if (phase.status !== "complete") {

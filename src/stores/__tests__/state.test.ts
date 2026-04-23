@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo, rebuildStateFromTrajectory } from "../state"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, reconcilePhases, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo, rebuildStateFromTrajectory } from "../state"
 import type { PhaseInfo, BuildState, PipelineState } from "../../types"
 
 // Mock tags module for getNextIncompletePhase and trajectory recovery
@@ -227,6 +227,66 @@ describe("state", () => {
       const loaded = loadState(tmpDir)
       expect(loaded!.phases[0].status).toBe("pending")
       expect(loaded!.phases[0].retries).toBe(0)
+    })
+  })
+
+  describe("reconcilePhases", () => {
+    const makePhaseInfo = (id: string, index: number): PhaseInfo => ({
+      id, index, slug: id.replace(/^\d+[a-z]?-/, ""),
+      filename: `${id}.md`, filepath: `/phases/${id}.md`, dependsOn: [],
+    })
+
+    it("appends new phase files as pending entries", () => {
+      const state = initState("build", samplePhases)
+      const withSubphases: PhaseInfo[] = [
+        makePhaseInfo("01a-scaffold-a", 1),
+        makePhaseInfo("01b-scaffold-b", 1),
+        samplePhases[1],
+        samplePhases[2],
+      ]
+
+      const { added, removed } = reconcilePhases(state, withSubphases, "build")
+
+      expect(added).toEqual(["01a-scaffold-a", "01b-scaffold-b"])
+      expect(removed).toEqual(["01-scaffold"])
+      expect(state.phases.map((p) => p.id)).toEqual([
+        "01a-scaffold-a", "01b-scaffold-b", "02-api", "03-ui",
+      ])
+      expect(state.phases[0].status).toBe("pending")
+      expect(state.phases[0].checkpointTag).toBe("ridgeline/checkpoint/build/01a-scaffold-a")
+    })
+
+    it("preserves status of phases that still exist", () => {
+      const state = initState("build", samplePhases)
+      state.phases[1].status = "complete"
+      state.phases[1].completionTag = "ridgeline/phase/build/02-api"
+      state.phases[1].duration = 1234
+
+      const { added, removed } = reconcilePhases(state, samplePhases, "build")
+
+      expect(added).toEqual([])
+      expect(removed).toEqual([])
+      expect(state.phases[1].status).toBe("complete")
+      expect(state.phases[1].duration).toBe(1234)
+    })
+
+    it("is idempotent", () => {
+      const state = initState("build", samplePhases)
+      const first = reconcilePhases(state, samplePhases, "build")
+      const second = reconcilePhases(state, samplePhases, "build")
+
+      expect(first).toEqual({ added: [], removed: [] })
+      expect(second).toEqual({ added: [], removed: [] })
+      expect(state.phases).toHaveLength(3)
+    })
+
+    it("reorders phases to match disk order", () => {
+      const state = initState("build", samplePhases)
+      const reordered = [samplePhases[2], samplePhases[0], samplePhases[1]]
+
+      reconcilePhases(state, reordered, "build")
+
+      expect(state.phases.map((p) => p.id)).toEqual(["03-ui", "01-scaffold", "02-api"])
     })
   })
 
