@@ -1996,3 +1996,15 @@ Summary of what was built:
 - **Tests** — 4 new vitest files, 32 new passing tests covering assembly order, absent-taste, byte-identical writes, argv flags, flag detection, hash trajectory, cache-token logging, preflight thresholds, handoff-immunity, and absence of cache-key.json.
 
 Pre-existing greywall/git-init sandbox failures (28) persist, identical to prior phases. `npm run lint` and `npx tsc --noEmit` exit 0; combined check command exits non-zero only because of the pre-existing environmental tests, as documented. Handoff appended.
+[ridgeline] [03b-prompt-caching] Reviewing...
+[ridgeline] [03b-prompt-caching] Review failed (transient): Error: claude exited with code 143: 
+[ridgeline] [03b-prompt-caching] Waiting 1.4s before retry...
+[ridgeline] [03b-prompt-caching] Retry 1: building...
+[ridgeline] [03b-prompt-caching] Build failed (transient): Error: claude exited with code null: 
+[ridgeline] [03b-prompt-caching] Waiting 2.4s before retry...
+[ridgeline] Resuming build 'improve' from phase 6/7
+[ridgeline] Sandbox: greywall
+[ridgeline] Starting build: improve (7 phases)
+[ridgeline] Phase dependencies detected — using wave-based scheduling
+
+[ridgeline] ── Phase 5/7: 03b-prompt-caching ──
