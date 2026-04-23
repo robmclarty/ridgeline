@@ -2,13 +2,13 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { PhaseInfo } from "../types"
 
-export const PHASE_FILENAME_PATTERN = /^\d{2}-.*\.md$/
+export const PHASE_FILENAME_PATTERN = /^\d{2}[a-z]?-.*\.md$/
 
 export const isPhaseFile = (filename: string): boolean =>
   PHASE_FILENAME_PATTERN.test(filename) && !filename.includes(".feedback")
 
 export const parsePhaseFilename = (filename: string): { id: string; index: number; slug: string } => {
-  const match = filename.match(/^(\d{2})-(.+)\.md$/)
+  const match = filename.match(/^(\d{2})[a-z]?-(.+)\.md$/)
   return {
     id: filename.replace(/\.md$/, ""),
     index: match ? parseInt(match[1], 10) : 0,
