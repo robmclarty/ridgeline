@@ -5,6 +5,7 @@ import { buildAgentRegistry } from "../discovery/agent.registry"
 import { discoverPluginDirs, getCorePluginDir, PluginDir } from "../discovery/plugin.scan"
 import { printError } from "../../ui/output"
 import { PromptDocument } from "./prompt.document"
+import { buildStablePrompt } from "../claude/stable.prompt"
 
 /**
  * Discover agents and plugins, including the core hooks plugin in unsafe mode.
@@ -137,6 +138,21 @@ export const appendAssetCatalog = (doc: PromptDocument, config: RidgelineConfig)
 }
 
 /**
+ * Assemble the stable prompt block (constraints.md → taste.md → spec.md) from
+ * config and on-disk files. Returns null when constraints.md is unreadable.
+ */
+export const resolveStablePrompt = (config: RidgelineConfig): string | null => {
+  if (!fs.existsSync(config.constraintsPath)) return null
+  const constraintsMd = fs.readFileSync(config.constraintsPath, "utf-8")
+  const tasteMd = config.tastePath && fs.existsSync(config.tastePath)
+    ? fs.readFileSync(config.tastePath, "utf-8")
+    : null
+  const specPath = path.join(config.buildDir, "spec.md")
+  const specMd = fs.existsSync(specPath) ? fs.readFileSync(specPath, "utf-8") : null
+  return buildStablePrompt({ constraintsMd, tasteMd, specMd })
+}
+
+/**
  * Build the common invokeClaude options shared across pipeline agents.
  */
 export const commonInvokeOptions = (
@@ -154,5 +170,7 @@ export const commonInvokeOptions = (
   sandboxProvider: config.sandboxProvider,
   networkAllowlist: config.networkAllowlist,
   additionalWritePaths: [config.buildDir],
+  stablePrompt: resolveStablePrompt(config) ?? undefined,
+  buildDir: config.buildDir,
 })
 

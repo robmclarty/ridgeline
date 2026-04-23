@@ -23,7 +23,9 @@ import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui"
 import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 import { enforceFlavourRemoved } from "./utils/flavour-removed"
 import { detect } from "./engine/detect"
-import { runPreflight } from "./ui/preflight"
+import { runPreflight, type StablePromptInfo } from "./ui/preflight"
+import { resolveStablePrompt } from "./engine/pipeline/pipeline.shared"
+import { approximateTokenCount } from "./engine/claude/stable.prompt"
 
 enforceFlavourRemoved(process.argv.slice(2))
 
@@ -90,12 +92,23 @@ const detectPreflightFlags = (): { isThorough: boolean; isYes: boolean } => {
   }
 }
 
-const runPreflightGuard = async (): Promise<void> => {
+const stablePromptInfoFromConfig = (config: RidgelineConfig): StablePromptInfo | undefined => {
+  try {
+    const content = resolveStablePrompt(config)
+    if (!content) return undefined
+    return { tokens: approximateTokenCount(content), model: config.model }
+  } catch {
+    return undefined
+  }
+}
+
+const runPreflightGuard = async (config?: RidgelineConfig): Promise<void> => {
   const { isThorough, isYes } = detectPreflightFlags()
   const report = await detect(process.cwd(), { isThorough })
   await runPreflight(report, {
     yes: isYes,
     isTTY: Boolean(process.stdin.isTTY),
+    stablePromptInfo: config ? stablePromptInfoFromConfig(config) : undefined,
   })
 }
 
@@ -108,28 +121,27 @@ const parseBaseOpts = (opts: Opts) => ({
   timeout: parseInt(String(opts.timeout ?? "10"), 10),
 })
 
-const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
-  async (buildName: string | undefined, opts: Opts) => {
-    try {
-      if (opts.structuredLog === false) disableLogger()
-      const config = resolveConfig(await requireBuildName(buildName), opts)
-      await fn(config)
-    } catch (err) {
-      handleCommandError(err)
-    }
+const invokeWithConfig = async (
+  buildName: string | undefined,
+  opts: Opts,
+  withPreflight: boolean,
+  fn: (config: RidgelineConfig) => Promise<void>,
+): Promise<void> => {
+  try {
+    if (opts.structuredLog === false) disableLogger()
+    const config = resolveConfig(await requireBuildName(buildName), opts)
+    if (withPreflight) await runPreflightGuard(config)
+    await fn(config)
+  } catch (err) {
+    handleCommandError(err)
   }
+}
+
+const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
+  (buildName: string | undefined, opts: Opts) => invokeWithConfig(buildName, opts, false, fn)
 
 const withConfigAndPreflight = (fn: (config: RidgelineConfig) => Promise<void>) =>
-  async (buildName: string | undefined, opts: Opts) => {
-    try {
-      if (opts.structuredLog === false) disableLogger()
-      await runPreflightGuard()
-      const config = resolveConfig(await requireBuildName(buildName), opts)
-      await fn(config)
-    } catch (err) {
-      handleCommandError(err)
-    }
-  }
+  (buildName: string | undefined, opts: Opts) => invokeWithConfig(buildName, opts, true, fn)
 
 const program = new Command()
 
