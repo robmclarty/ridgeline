@@ -2073,3 +2073,36 @@ Acceptance criteria walk:
 [03b-prompt-caching] DONE
 
 Prior attempt's work (commit a27c894) is intact, all phase-3b files present, all 14 criteria satisfied (criterion 14 with the documented environmental deviation), and the handoff.md entry accurately describes the completed state. 32 phase-3b tests pass; overall suite: 908 passing / 28 pre-existing greywall failures (zero new failures); lint and tsc exit 0.
+[Bash] git stash pop 2>&1 | tail -3
+[Bash] git log --oneline --all | grep -E "improve1|phase" | head -5; echo "---"; git show --stat ce18419 --name-only | head -40
+[Bash] git stash list | head; echo "---"; git status
+[Bash] git stash drop stash@{0}
+[Bash] git status
+[Bash] git diff ce18419 HEAD --name-only | grep -E "^src/" | head -20; echo "---"; git diff ce18419 HEAD -- src/__tests__/git.test.ts src/engine/pipeline/__tests__/worktree.parallel.test.ts | head -5
+[Bash] grep -E "Test Files|Tests " /tmp/r-test.out
+[Bash] grep -E "cache_creation_input_tokens|cache_read_input_tokens|cacheReadInputTokens|cacheCreationInputTokens" src/cli.ts | head -3
+[Bash] grep -nE "cach|Cach" src/cli.ts | head -20
+[Bash] grep -n "option" src/cli.ts | head -20
+[Grep] runPreflight|stablePromptInfo
+[Read] src/cli.ts
+All information gathered. Let me write up the final verdict.
+
+Walking the acceptance criteria:
+
+1. **`buildStablePrompt` ordering** — Function exists and exports correct order (constraints → taste → spec); inline snapshot verified. Note: placed in new `stable.prompt.ts` rather than `agent.prompt.ts` as literally named in the criterion, but the function is correctly namespaced under `src/engine/claude/` and imported from there. Core agent prompt passed separately via `--append-system-prompt` (claude.exec.ts:109). ✅
+2. **Temp file `ridgeline-stable-<sha256>.md` + `--append-system-prompt-file` + cleanup on exit** — stable.prompt.ts:53-62,39-47; `registerCleanup` hooks `process.on("exit")`. ✅
+3. **argv contains both flags on `-p`** — claude.exec.ts:138-139; test claude.exec.stable.test.ts:68-89. ✅
+4. **`claude --help` detection + no-op + one info log on missing flag** — `detectExcludeDynamicFlag` + `shouldLogUnavailableOnce`; tests cover both branches. ✅
+5. **Byte-identical temp file bytes across runs** — stable.prompt.test.ts:120-133 asserts `bytesA.equals(bytesB)`. ✅
+6. **Absent taste.md preserves order** — stable.prompt.test.ts:56-64. ✅
+7. **No client-side cache-key.json** — stable.prompt.test.ts:242-255. ✅
+8. **Handoff mutation doesn't enter stable file** — stable.prompt.test.ts:215-230; handoff never a parameter of `buildStablePrompt`. ✅
+9. **`prompt_stable_hash` trajectory event** — claude.exec.ts:113-120; test at :109-129. ✅
+10. **`cache_creation_input_tokens` + `cache_read_input_tokens` extracted and logged** — stream.types.ts:21-22 → phase.sequence.ts:151-152, 194-195; phase.sequence.cache-tokens.test.ts verifies both events. ✅
+11. **Preflight warning under threshold** — preflight.ts:117-131; wired via `stablePromptInfoFromConfig` (cli.ts:95-112); 4 tests in preflight.caching.test.ts. ✅
+12. **No caching CLI flag** — grep of src/cli.ts confirmed no `cache`/`Cache` options exposed. ✅
+13. **Vitest coverage** — 32 phase-3b tests pass across 4 files. ✅
+14. **Check command** — `npm run lint` exit 0, `npx tsc --noEmit` exit 0, `npm test` exit 1 (28 failed / 908 passed). All 28 failures are pre-existing environmental issues in `src/__tests__/git.test.ts` and `src/engine/pipeline/__tests__/worktree.parallel.test.ts` — greywall sandbox blocking `git init` from copying git-core hook templates into `/private/tmp/greywall/`. Phase 3b did not touch these test files; no new failures introduced (908-passing count matches pre-phase baseline exactly). Strictly the check command does not exit 0, but the failure mode is environmental and matches documented precedent across prior phases on this build (1a/1b/2/3a/4 all carry the same 28). ⚠️
+[ridgeline] [03b-prompt-caching] PASSED (539s)
+
+[ridgeline] ── Phase 7/7: 05-release-polish ──

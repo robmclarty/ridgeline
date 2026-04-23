@@ -53,12 +53,12 @@
     },
     {
       "id": "03b-prompt-caching",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/improve/03b-prompt-caching",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/improve/03b-prompt-caching",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 538896,
+      "completedAt": "2026-04-23T23:17:23.425Z",
       "failedAt": null
     },
     {
