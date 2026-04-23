@@ -8,38 +8,7 @@
     "research": "complete",
     "refine": "complete",
     "plan": "complete",
-    "build": "running"
+    "build": "pending"
   },
-  "phases": [
-    {
-      "id": "02-builder-sensors",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/improve/02-builder-sensors",
-      "completionTag": null,
-      "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
-    },
-    {
-      "id": "04-dashboard",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/improve/04-dashboard",
-      "completionTag": null,
-      "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
-    },
-    {
-      "id": "05-release-polish",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/improve/05-release-polish",
-      "completionTag": null,
-      "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
-    }
-  ]
+  "phases": []
 }

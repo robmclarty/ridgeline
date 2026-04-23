@@ -6,7 +6,7 @@ import { initTranscript } from "../ui/transcript"
 import { detectSandbox } from "../engine/claude/sandbox"
 import { scanPhases } from "../stores/phases"
 import { runPhase } from "../engine/pipeline/phase.sequence"
-import { loadState, saveState, initState, resetRetries, markBuildRunning, advancePipeline } from "../stores/state"
+import { loadState, saveState, initState, resetRetries, reconcilePhases, markBuildRunning, advancePipeline } from "../stores/state"
 import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/pipeline/phase.graph"
 import { loadBudget } from "../stores/budget"
 import { cleanupBuildTags } from "../stores/tags"
@@ -277,6 +277,11 @@ const loadOrInitState = (config: RidgelineConfig, phases: PhaseInfo[]) => {
   }
 
   if (isResume) {
+    const { added, removed } = reconcilePhases(state, phases, config.buildName)
+    if (added.length > 0) printInfo(`Reconciled state: added ${added.length} new phase(s) (${added.join(", ")})`)
+    if (removed.length > 0) printInfo(`Reconciled state: dropped ${removed.length} stale phase(s) (${removed.join(", ")})`)
+    if (added.length > 0 || removed.length > 0) saveState(config.buildDir, state)
+
     resetRetries(config.buildDir, state)
     const completedCount = state.phases.filter((p) => p.status === "complete").length
     printInfo(`Resuming build '${config.buildName}' from phase ${completedCount + 1}/${state.phases.length}`)
