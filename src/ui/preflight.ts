@@ -1,6 +1,12 @@
 import * as readline from "node:readline"
 import type { DetectionReport, SensorName } from "../engine/detect"
 import { bold, dimInfo, hint, warning } from "./color"
+import { minCacheableTokens } from "../engine/claude/stable.prompt"
+
+export interface StablePromptInfo {
+  tokens: number
+  model: string
+}
 
 export interface PreflightOptions {
   yes: boolean
@@ -8,6 +14,7 @@ export interface PreflightOptions {
   stream?: NodeJS.WritableStream
   input?: NodeJS.ReadableStream
   isPlaywrightResolvable?: () => boolean
+  stablePromptInfo?: StablePromptInfo
 }
 
 const PLAYWRIGHT_INSTALL_HINT =
@@ -44,7 +51,13 @@ const formatEnabling = (report: DetectionReport): string => {
 
 export const renderPreflight = (
   report: DetectionReport,
-  opts: { isTTY: boolean; yes: boolean; isStderrTTY?: boolean; isPlaywrightResolvable?: () => boolean },
+  opts: {
+    isTTY: boolean
+    yes: boolean
+    isStderrTTY?: boolean
+    isPlaywrightResolvable?: () => boolean
+    stablePromptInfo?: StablePromptInfo
+  },
 ): string => {
   const stream: "stdout" | "stderr" = "stdout"
   const detected = formatDetected(report)
@@ -101,6 +114,22 @@ export const renderPreflight = (
     )
   }
 
+  if (opts.stablePromptInfo) {
+    const threshold = minCacheableTokens(opts.stablePromptInfo.model)
+    if (opts.stablePromptInfo.tokens < threshold) {
+      lines.push("")
+      lines.push(
+        [
+          warning("Caching skipped", { stream }),
+          hint(
+            ` — stable prompt ~${opts.stablePromptInfo.tokens} tokens under ${threshold}-token minimum; upstream will skip the cache`,
+            { stream },
+          ),
+        ].join(""),
+      )
+    }
+  }
+
   if (!opts.isTTY) {
     lines.push(hint("(auto-proceeding in CI)", { stream }))
   } else if (!opts.yes) {
@@ -129,6 +158,7 @@ export const runPreflight = async (
     isTTY: opts.isTTY,
     yes: opts.yes,
     isPlaywrightResolvable: opts.isPlaywrightResolvable,
+    stablePromptInfo: opts.stablePromptInfo,
   })
   stream.write(rendered)
 

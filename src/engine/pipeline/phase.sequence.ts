@@ -148,6 +148,8 @@ const executeBuild = async (
     duration: result.durationMs,
     tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
     costUsd: result.costUsd,
+    cacheReadInputTokens: result.usage.cacheReadInputTokens,
+    cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
   })
 
   const budget = recordCost(config.buildDir, phase.id, "builder", attempt, result)
@@ -189,6 +191,8 @@ const executeReview = async (
     duration: result.durationMs,
     tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
     costUsd: result.costUsd,
+    cacheReadInputTokens: result.usage.cacheReadInputTokens,
+    cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
   })
 
   recordCost(config.buildDir, phase.id, "reviewer", attempt, result)

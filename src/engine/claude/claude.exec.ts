@@ -2,6 +2,13 @@ import { spawn, ChildProcess } from "node:child_process"
 import { ClaudeResult } from "../../types"
 import { extractResult } from "./stream.result"
 import { SandboxProvider } from "./sandbox"
+import {
+  detectExcludeDynamicFlag,
+  writeStablePromptFile,
+  shouldLogUnavailableOnce,
+  type HelpRunner,
+} from "./stable.prompt"
+import { logTrajectory } from "../../stores/trajectory"
 
 /** Default: kill if no stdout arrives within 2 minutes of spawn. */
 const DEFAULT_STARTUP_TIMEOUT_MS = 2 * 60 * 1000
@@ -57,6 +64,90 @@ export type InvokeOptions = {
   sandboxProvider?: SandboxProvider | null
   networkAllowlist?: string[]
   additionalWritePaths?: string[]
+  /**
+   * Stable-block content (constraints.md → taste.md → spec.md) written to a
+   * per-invocation temp file and attached via --append-system-prompt-file.
+   * Only applied when the Claude CLI advertises --exclude-dynamic-system-prompt-sections.
+   */
+  stablePrompt?: string
+  /** Build directory for trajectory logging of prompt_stable_hash events. */
+  buildDir?: string
+  /** Test hook: stub `claude --help` flag detection. */
+  helpRunner?: HelpRunner
+}
+
+const buildBaseArgs = (opts: InvokeOptions): string[] => {
+  const args: string[] = [
+    "-p",
+    "--output-format", "stream-json",
+    "--model", opts.model,
+    "--verbose",
+    "--setting-sources", "project,local",
+  ]
+
+  if (opts.allowedTools && opts.allowedTools.length > 0) {
+    args.push("--allowedTools", opts.allowedTools.join(","))
+  }
+  if (opts.sessionId) {
+    args.push("--resume", opts.sessionId)
+  }
+  if (opts.agents && Object.keys(opts.agents).length > 0) {
+    args.push("--agents", JSON.stringify(opts.agents))
+  }
+  if (opts.pluginDirs) {
+    for (const dir of opts.pluginDirs) {
+      args.push("--plugin-dir", dir)
+    }
+  }
+  if (opts.jsonSchema) {
+    args.push("--json-schema", opts.jsonSchema)
+  }
+
+  // Append to Claude Code's default system prompt so harness-level context
+  // (skill discovery, built-in reminders) is preserved alongside ridgeline's
+  // agent prompts.
+  args.push("--append-system-prompt", opts.systemPrompt)
+  return args
+}
+
+const logStableHash = (buildDir: string | undefined, hash: string): void => {
+  if (!buildDir) return
+  try {
+    logTrajectory(buildDir, "prompt_stable_hash", null,
+      `stable prompt sha256: ${hash}`,
+      { promptStableHash: hash })
+  } catch { /* best-effort */ }
+}
+
+const logCachingUnavailable = (buildDir: string | undefined): void => {
+  if (!buildDir || !shouldLogUnavailableOnce()) return
+  try {
+    logTrajectory(buildDir, "prompt_stable_hash", null,
+      "caching code path skipped: claude CLI does not expose --exclude-dynamic-system-prompt-sections",
+      { reason: "cli_flag_unavailable" })
+  } catch { /* best-effort */ }
+}
+
+const applyCachingArgs = (args: string[], opts: InvokeOptions): void => {
+  if (!opts.stablePrompt || opts.stablePrompt.length === 0) return
+  if (!detectExcludeDynamicFlag(opts.helpRunner)) {
+    logCachingUnavailable(opts.buildDir)
+    return
+  }
+  const stable = writeStablePromptFile(opts.stablePrompt)
+  args.push("--append-system-prompt-file", stable.path)
+  args.push("--exclude-dynamic-system-prompt-sections")
+  logStableHash(opts.buildDir, stable.hash)
+}
+
+const classifyCloseError = (code: number | null, stderrData: string): Error => {
+  const lower = stderrData.toLowerCase()
+  const isAuth = lower.includes("authentication") || lower.includes("unauthorized") ||
+    lower.includes("forbidden") || lower.includes("oauth token has expired") ||
+    lower.includes("invalid_api_key")
+  return isAuth
+    ? new Error("Authentication failed. Refresh your OAuth token or API key and resume.")
+    : new Error(`claude exited with code ${code}: ${stderrData}`)
 }
 
 export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> => {
@@ -66,40 +157,8 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
   }
 
   return new Promise((resolve, reject) => {
-    const args: string[] = [
-      "-p",
-      "--output-format", "stream-json",
-      "--model", opts.model,
-      "--verbose",
-      "--setting-sources", "project,local",
-    ]
-
-    if (opts.allowedTools && opts.allowedTools.length > 0) {
-      args.push("--allowedTools", opts.allowedTools.join(","))
-    }
-
-    if (opts.sessionId) {
-      args.push("--resume", opts.sessionId)
-    }
-
-    if (opts.agents && Object.keys(opts.agents).length > 0) {
-      args.push("--agents", JSON.stringify(opts.agents))
-    }
-
-    if (opts.pluginDirs) {
-      for (const dir of opts.pluginDirs) {
-        args.push("--plugin-dir", dir)
-      }
-    }
-
-    if (opts.jsonSchema) {
-      args.push("--json-schema", opts.jsonSchema)
-    }
-
-    // Append to Claude Code's default system prompt so harness-level context
-    // (skill discovery, built-in reminders) is preserved alongside ridgeline's
-    // agent prompts.
-    args.push("--append-system-prompt", opts.systemPrompt)
+    const args = buildBaseArgs(opts)
+    applyCachingArgs(args, opts)
 
     const spawnCmd = provider ? provider.command : "claude"
     const spawnArgs = provider
@@ -182,24 +241,14 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
         reject(new Error("Claude invocation timed out"))
         return
       }
-
       if (stalled) {
         reject(new Error(`Claude invocation stalled: ${stallReason}`))
         return
       }
-
       if (code !== 0 && !stdoutData.trim()) {
-        const lower = stderrData.toLowerCase()
-        if (lower.includes("authentication") || lower.includes("unauthorized") ||
-            lower.includes("forbidden") || lower.includes("oauth token has expired") ||
-            lower.includes("invalid_api_key")) {
-          reject(new Error("Authentication failed. Refresh your OAuth token or API key and resume."))
-          return
-        }
-        reject(new Error(`claude exited with code ${code}: ${stderrData}`))
+        reject(classifyCloseError(code, stderrData))
         return
       }
-
       try {
         resolve(extractResult(stdoutData))
       } catch (err) {

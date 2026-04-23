@@ -21,7 +21,9 @@
     { "file": "src/ui/dashboard/html.ts", "exports": ["RenderHtmlOptions"] },
     { "file": "src/ui/dashboard/server.ts", "exports": ["StartDashboardOptions"] },
     { "file": "src/commands/ui.ts", "exports": ["UiOptions"] },
-    { "file": "src/stores/trajectory.ts", "exports": ["TrajectoryOpts"] }
+    { "file": "src/stores/trajectory.ts", "exports": ["TrajectoryOpts"] },
+    { "file": "src/engine/claude/stable.prompt.ts", "exports": ["StablePromptParts", "StablePromptFile", "HelpRunner"] },
+    { "file": "src/ui/preflight.ts", "exports": ["StablePromptInfo"] }
   ],
   "duplicates": {
     "ignore": [

@@ -1817,3 +1817,182 @@ Verifying criterion by criterion against evidence.
 [ridgeline] [03a-lean-ensembles-and-verdicts] PASSED (1854s)
 
 [ridgeline] ── Phase 5/7: 03b-prompt-caching ──
+[ridgeline] [03b-prompt-caching] Building...
+[03b-prompt-caching] Starting: implement prompt caching of stable stage inputs via `--append-system-prompt-file` and log cache token counters.
+[Read] src/engine/claude/agent.prompt.ts
+[Read] src/engine/claude/claude.exec.ts
+[Read] src/engine/claude/stream.result.ts
+[Read] src/engine/claude/stream.types.ts
+[Read] src/types.ts
+[Read] src/stores/trajectory.ts
+[Read] src/ui/preflight.ts
+[Read] src/config.ts
+[Read] src/engine/pipeline/specify.exec.ts
+[ToolSearch]
+[TodoWrite]
+[Agent] I'm implementing a "prompt caching of stable stage inputs" feature in the ridgeline CLI at /Users/robmclarty/Projects/ridgeline/code/ridgeline. I need a thorough map of how system prompts are assembl…
+[Glob] src/engine/claude/*.ts
+[Glob] src/engine/pipeline/*.ts
+[Glob] src/ui/*.ts
+[Bash] find /Users/robmclarty/Projects/ridgeline/code/ridgeline -name "*.ts" | head -50
+[Read] src/engine/claude/claude.exec.ts
+[Grep] invokeClaude
+[Grep] logTrajectory
+[Grep] invokeClaude\(
+[Read] src/ui/preflight.ts
+[Read] src/engine/pipeline/build.exec.ts
+[Read] src/engine/pipeline/pipeline.shared.ts
+[Read] src/stores/trajectory.ts
+[Grep] logTrajectory\(
+[Bash] grep -rn "invokeClaude(" src --include="*.ts" | grep -v test | grep -v "\.d\.ts"
+[Bash] grep -rn "cache_read_input_tokens\|cache_creation_input_tokens" src --include="*.ts"
+[Bash] grep -rn "\-\-resume\|\-\-json-schema" src --include="*.ts" | head -30
+[Read] src/engine/pipeline/review.exec.ts
+[Read] src/engine/pipeline/research.exec.ts
+[Read] src/engine/pipeline/refine.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/claude/stream.types.ts
+[Read] src/commands/qa-workflow.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/commands/retrospective.ts
+[Read] src/sensors/vision.ts
+[Read] src/engine/pipeline/plan.exec.ts
+[Grep] appendConstraintsAndTaste|appendDesign|appendAssetCatalog
+[Bash] grep -n "cacheReadInputTokens\|cacheCreationInputTokens" src/types.ts
+[Bash] grep -rn "\-\-output-format\|\-\-print\|-p" src/engine/claude/claude.exec.ts
+[Read] src/types.ts
+[Read] src/engine/pipeline/pipeline.shared.ts
+[Read] src/engine/pipeline/phase.sequence.ts
+[Read] src/engine/pipeline/build.exec.ts
+[Read] src/engine/pipeline/review.exec.ts
+[Read] src/engine/pipeline/prompt.document.ts
+[Read] src/engine/pipeline/refine.exec.ts
+[Bash] ls .ridgeline/builds/improve/ | head -30
+[Grep] spec\.md
+[Read] src/stores/settings.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Read] src/cli.ts
+[Read] src/__tests__/cli.preflight-order.test.ts
+[Read] src/__tests__/cli.preflight-wiring.test.ts
+Now I have enough context to start implementing. Let me update the todo list and begin coding.
+[TodoWrite]
+[Write] src/engine/claude/stable.prompt.ts
+Now let me extend the TrajectoryEntry type and logTrajectory:
+[Edit] src/types.ts
+[Edit] src/stores/trajectory.ts
+Now wire the stable prompt into `invokeClaude`:
+[Edit] src/engine/claude/claude.exec.ts
+[Edit] src/engine/claude/claude.exec.ts
+Now add the caching argv assembly in `invokeClaude`:
+[Edit] src/engine/claude/claude.exec.ts
+Now add a helper in pipeline.shared.ts to build the stable prompt from config:
+[Edit] src/engine/pipeline/pipeline.shared.ts
+[Edit] src/engine/pipeline/pipeline.shared.ts
+[Grep] commonInvokeOptions
+[Read] src/engine/pipeline/plan.exec.ts
+[Grep] invokeEnsemble
+[Read] src/ui/__tests__/preflight.test.ts
+[Edit] src/ui/preflight.ts
+[Edit] src/ui/preflight.ts
+[Edit] src/ui/preflight.ts
+[Edit] src/ui/preflight.ts
+Now log cache tokens in the existing build_complete/review_complete events:
+[Edit] src/engine/pipeline/phase.sequence.ts
+[Edit] src/engine/pipeline/phase.sequence.ts
+Now wire the preflight guard to pass stable info when a config is available:
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+Now let me write the tests. Start with the core `stable.prompt` unit tests:
+[Bash] ls src/engine/claude/__tests__/ 2>/dev/null || echo "no __tests__ dir"
+[Read] src/engine/claude/__tests__/claude.exec.test.ts
+Now create the stable.prompt tests:
+[Write] src/engine/claude/__tests__/stable.prompt.test.ts
+[TodoWrite]
+Now add argv-level tests to claude.exec test file:
+[Write] src/engine/claude/__tests__/claude.exec.stable.test.ts
+Now add preflight warning tests:
+[Read] src/ui/__tests__/preflight.test.ts
+[Write] src/ui/__tests__/preflight.caching.test.ts
+Now let me check that the existing phase.sequence tests and build/review tests still reference a valid commonInvokeOptions interface:
+[Grep] commonInvokeOptions|resolveStablePrompt
+[Read] src/engine/pipeline/__tests__/pipeline.shared.test.ts
+[Read] src/engine/pipeline/__tests__/pipeline.shared.test.ts
+[Read] test/factories.ts
+[Bash] npx tsc --noEmit 2>&1 | head -50
+[Bash] npx tsc --noEmit 2>&1 | head -50
+[Bash] npx tsc --noEmit 2>&1 | head -80
+[Bash] npx tsc --noEmit; echo "exit=$?"
+Typecheck passes. Let me run lint:
+[Bash] npm run lint 2>&1 | tail -60
+[Bash] npm run lint 2>&1 | head -80
+[Read] src/cli.ts
+[Edit] src/cli.ts
+Now factor down the complexity of `invokeClaude` in claude.exec.ts:
+[Read] src/engine/claude/claude.exec.ts
+[Edit] src/engine/claude/claude.exec.ts
+[Edit] src/engine/claude/claude.exec.ts
+Now add the fallow ignore entries for `StablePromptParts` and `StablePromptFile`:
+[Read] .fallowrc.json
+[Edit] .fallowrc.json
+[Bash] npm run lint 2>&1 | tail -40
+[Bash] npm run lint 2>&1 | grep -E "(✗|✓|error|Error|Failed|Passed)" | head -20
+[Bash] npm run lint 2>&1 | tail -10
+[Bash] npm run lint > /tmp/lint.log 2>&1; echo "exit=$?"; grep -E "Failed" /tmp/lint.log | head
+Lint passes. Now run tests:
+[Bash] npm test 2>&1 | tail -60
+[Bash] npx vitest run src/engine/claude/__tests__/stable.prompt.test.ts src/engine/claude/__tests__/claude.exec.stable.test.ts src/ui/__tests__/preflight.caching.test.ts 2>&1 | tail -40
+All 30 new tests pass. Let me verify no regressions in the existing tests:
+[Bash] npm test 2>&1 | grep -E "Test Files|Tests" | tail -5
+[Bash] npm test 2>&1 | grep -E "FAIL|✗" | grep -vE "greywall|git init|worktree|git.test" | head -20
+[Bash] npm test 2>&1 | grep -E "^\s*FAIL" | head -20
+[Bash] npm test 2>&1 | grep -E "^\s*FAIL" | awk -F'>' '{print $1}' | sort -u
+Let me verify the commonInvokeOptions tests still work:
+[Bash] npx vitest run src/engine/pipeline/__tests__/pipeline.shared.test.ts 2>&1 | tail -15
+[Bash] npx vitest run src/__tests__/cli.preflight-wiring.test.ts src/__tests__/cli.preflight-order.test.ts src/engine/pipeline/__tests__/phase.sequence.test.ts src/engine/pipeline/__tests__/build.exec.test.…
+All tests pass. Let me also verify the preflight tests with the new optional field:
+[Bash] npx vitest run src/ui/__tests__/preflight.test.ts src/ui/__tests__/preflight.install-hint.test.ts 2>&1 | tail -10
+[TodoWrite]
+Let me now verify each acceptance criterion systematically:
+[Bash] npm run lint > /tmp/final.log 2>&1 && npx tsc --noEmit >> /tmp/final.log 2>&1 && echo "lint+tsc PASS" || echo "lint+tsc exit=$?"
+[Bash] npx vitest run 2>&1 | tail -6
+Let me add a test for cache tokens being logged to the existing phase events, and confirm no cache-key.json file is written:
+[Read] src/engine/pipeline/__tests__/phase.sequence.test.ts
+[Grep] cacheReadInputTokens|cacheCreationInputTokens
+[Grep] build_complete|review_complete
+Let me add a focused test that asserts the phase events carry cache tokens:
+[Write] src/engine/pipeline/__tests__/phase.sequence.cache-tokens.test.ts
+[Bash] npx vitest run src/engine/pipeline/__tests__/phase.sequence.cache-tokens.test.ts 2>&1 | tail -25
+Now add the no-cache-key-file assertion test:
+[Edit] src/engine/claude/__tests__/stable.prompt.test.ts
+[Bash] npx vitest run src/engine/claude/__tests__/stable.prompt.test.ts 2>&1 | tail -15
+Let me now run the full test suite one more time and do the final lint check:
+[Bash] npm run lint > /tmp/final.log 2>&1 && npx tsc --noEmit >> /tmp/final.log 2>&1 && echo "lint+tsc: PASS" || { echo "lint+tsc: FAIL"; tail -40 /tmp/final.log; }
+[Bash] npx vitest run 2>&1 | tail -5
+[TodoWrite]
+[Read] .ridgeline/builds/improve/handoff.md
+[Bash] wc -l .ridgeline/builds/improve/handoff.md
+[Bash] cat >> .ridgeline/builds/improve/handoff.md <<'HANDOFF_EOF'
+[TodoWrite]
+[Bash] npm run lint > /tmp/lint.log 2>&1 && npx tsc --noEmit >> /tmp/lint.log 2>&1 && echo "lint+tsc PASS"; npx vitest run 2>&1 | tail -3
+[Bash] npm run lint > /tmp/lint.log 2>&1; echo "lint exit=$?"; npx tsc --noEmit; echo "tsc exit=$?"; npx vitest run 2>&1 | grep -E "Test Files|Tests " | tail -5
+[Bash] tail -30 /tmp/lint.log
+[Read] .ridgeline/builds/improve/handoff.md
+[Edit] .ridgeline/builds/improve/handoff.md
+[Bash] npm run lint > /tmp/lint.log 2>&1; echo "lint exit=$?"
+[Bash] npx vitest run 2>&1 | grep -E "Test Files|Tests " | tail -3
+Final state: lint and tsc pass; 908 passing tests (+32 over the phase-3a baseline of 876); the 28 pre-existing greywall sandbox failures are unchanged and documented.
+
+[03b-prompt-caching] DONE
+
+Summary of what was built:
+
+- **New module** `src/engine/claude/stable.prompt.ts` — `buildStablePrompt`, `writeStablePromptFile` (hash-named temp files), `computeStableHash`, `approximateTokenCount`, `minCacheableTokens`, `detectExcludeDynamicFlag` (with caching), `shouldLogUnavailableOnce` guard, and `process.on("exit")` cleanup.
+- **`invokeClaude` wiring** — new `stablePrompt`, `buildDir`, `helpRunner` options. When the Claude CLI exposes `--exclude-dynamic-system-prompt-sections`, the stable content is written to `os.tmpdir()/ridgeline-stable-<sha256>.md` and passed via `--append-system-prompt-file` alongside the exclusion flag. When unavailable, caching is a no-op and a one-shot `cli_flag_unavailable` info entry lands in trajectory.
+- **Pipeline integration** via `commonInvokeOptions` + `resolveStablePrompt` — builder and reviewer auto-get the stable block (`constraints.md → taste.md → spec.md`). `build_complete` / `review_complete` trajectory entries now carry `cacheReadInputTokens` and `cacheCreationInputTokens`.
+- **Preflight warning** — `renderPreflight` emits a `Caching skipped` line when the stable block is under the model's cacheable threshold (4,096 opus/haiku; 2,048 sonnet). `withConfigAndPreflight` resolves config first so the warning can surface.
+- **Tests** — 4 new vitest files, 32 new passing tests covering assembly order, absent-taste, byte-identical writes, argv flags, flag detection, hash trajectory, cache-token logging, preflight thresholds, handoff-immunity, and absence of cache-key.json.
+
+Pre-existing greywall/git-init sandbox failures (28) persist, identical to prior phases. `npm run lint` and `npx tsc --noEmit` exit 0; combined check command exits non-zero only because of the pre-existing environmental tests, as documented. Handoff appended.

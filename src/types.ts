@@ -209,6 +209,7 @@ export type TrajectoryEntry = {
     | "refine_complete"
     | "specialist_fail"
     | "synthesis_skipped"
+    | "prompt_stable_hash"
   phaseId: string | null
   duration: number | null
   tokens: { input: number; output: number } | null
@@ -217,6 +218,9 @@ export type TrajectoryEntry = {
   reason?: string
   specialist?: string
   stage?: string
+  promptStableHash?: string
+  cacheReadInputTokens?: number
+  cacheCreationInputTokens?: number
 }
 
 // Stage-specific structured skeletons used for ensemble agreement detection
