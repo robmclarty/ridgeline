@@ -143,7 +143,55 @@
       "cacheCreationInputTokens": 85956,
       "durationMs": 359052,
       "timestamp": "2026-04-23T04:46:11.720Z"
+    },
+    {
+      "phase": "04-dashboard",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 17.558398249999993,
+      "inputTokens": 191,
+      "outputTokens": 105484,
+      "cacheReadInputTokens": 26348219,
+      "cacheCreationInputTokens": 276507,
+      "durationMs": 1740675,
+      "timestamp": "2026-04-23T14:51:44.012Z"
+    },
+    {
+      "phase": "02-builder-sensors",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 26.993281000000007,
+      "inputTokens": 240,
+      "outputTokens": 128558,
+      "cacheReadInputTokens": 43067890,
+      "cacheCreationInputTokens": 356468,
+      "durationMs": 1927635,
+      "timestamp": "2026-04-23T14:54:50.867Z"
+    },
+    {
+      "phase": "04-dashboard",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.8082557500000003,
+      "inputTokens": 20,
+      "outputTokens": 19073,
+      "cacheReadInputTokens": 997046,
+      "cacheCreationInputTokens": 107461,
+      "durationMs": 335002,
+      "timestamp": "2026-04-23T14:57:19.136Z"
+    },
+    {
+      "phase": "02-builder-sensors",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 2.3170143999999993,
+      "inputTokens": 27,
+      "outputTokens": 18253,
+      "cacheReadInputTokens": 2171896,
+      "cacheCreationInputTokens": 103889,
+      "durationMs": 346401,
+      "timestamp": "2026-04-23T15:00:37.377Z"
     }
   ],
-  "totalCostUsd": 60.01321964999999
+  "totalCostUsd": 108.69016905
 }
