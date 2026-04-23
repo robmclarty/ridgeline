@@ -1,5 +1,5 @@
 {
-  "entry": ["examples/**", "scripts/**"],
+  "entry": ["examples/**", "scripts/**", "test/fixtures/**"],
   "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast"],
   "ignoreExports": [
     { "file": "src/engine/claude/stream.types.ts", "exports": ["StreamEvent"] },
@@ -9,7 +9,10 @@
     { "file": "src/stores/phases.ts", "exports": ["PhaseContent"] },
     { "file": "src/ui/spinner.ts", "exports": ["Spinner"] },
     { "file": "src/ui/transcript.ts", "exports": ["disableTranscript"] },
-    { "file": "src/catalog/colorthief.d.ts", "exports": ["default"] }
+    { "file": "src/catalog/colorthief.d.ts", "exports": ["default"] },
+    { "file": "src/engine/detect/index.ts", "exports": ["ProjectType", "DetectOptions"] },
+    { "file": "src/ui/color.ts", "exports": ["ColorStream"] },
+    { "file": "src/ui/preflight.ts", "exports": ["PreflightOptions"] }
   ],
   "duplicates": {
     "ignore": [
