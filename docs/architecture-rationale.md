@@ -121,4 +121,3 @@ Ridgeline is a build harness for long-horizon software execution using AI agents
 
 [^20]: Fowler, M. "Event Sourcing." martinfowler.com, 2005.
 [^21]: Young, G. "CQRS Documents." 2010. <https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf>
-
