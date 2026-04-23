@@ -1,3 +1,5 @@
+import * as fs from "node:fs"
+import * as path from "node:path"
 import { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
 import { createCheckpoint, createCompletionTag } from "../../stores/tags"
 import { recordCost } from "../../stores/budget"
@@ -6,10 +8,13 @@ import { formatIssue } from "../../stores/feedback.verdict"
 import { writeFeedback, archiveFeedback } from "../../stores/feedback.io"
 import { logTrajectory } from "../../stores/trajectory"
 import { updatePhaseStatus } from "../../stores/state"
-import { printPhase } from "../../ui/output"
+import { printPhase, printWarn } from "../../ui/output"
 import { commitAll, isWorkingTreeDirty } from "../../git"
 import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
+import { detect } from "../detect"
+import { collectSensorFindings } from "./sensors.collect"
+import type { SensorFinding } from "../../sensors"
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -71,6 +76,50 @@ const isBudgetExceeded = (
   return true
 }
 
+const runSensorsForPhase = async (
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+  cwd: string,
+): Promise<SensorFinding[]> => {
+  try {
+    const report = await detect(cwd)
+    if (report.suggestedSensors.length === 0) return []
+    const findings = await collectSensorFindings(report.suggestedSensors, {
+      cwd,
+      ridgelineDir: config.ridgelineDir,
+      buildDir: config.buildDir,
+      shapeMdPath: path.join(config.buildDir, "shape.md"),
+      model: config.model,
+    }, {
+      onWarn: (line) => printWarn(line),
+    })
+    return findings
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    printWarn(`[ridgeline] WARN: sensor pipeline error for ${phase.id}: ${message}`)
+    return []
+  }
+}
+
+const persistSensorFindings = (
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+  findings: SensorFinding[],
+): string | null => {
+  if (findings.length === 0) return null
+  const dir = path.join(config.buildDir, "sensors")
+  try {
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, `${phase.id}.json`)
+    fs.writeFileSync(file, JSON.stringify({ phaseId: phase.id, findings }, null, 2))
+    return file
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    printWarn(`[ridgeline] WARN: failed to persist sensor findings for ${phase.id}: ${message}`)
+    return null
+  }
+}
+
 const executeBuild = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
@@ -79,7 +128,7 @@ const executeBuild = async (
   feedbackFilePath: string | null,
   sandboxNote: string,
   cwd?: string,
-): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean }> => {
+): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean; sensorFindings: SensorFinding[] }> => {
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
@@ -101,7 +150,14 @@ const executeBuild = async (
     commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`, cwd)
   }
 
-  return { result, isBudgetExceeded: isBudgetExceeded(budget.totalCostUsd, config, phase, state) }
+  const sensorFindings = await runSensorsForPhase(config, phase, cwd ?? process.cwd())
+  persistSensorFindings(config, phase, sensorFindings)
+
+  return {
+    result,
+    isBudgetExceeded: isBudgetExceeded(budget.totalCostUsd, config, phase, state),
+    sensorFindings,
+  }
 }
 
 const executeReview = async (

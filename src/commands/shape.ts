@@ -47,6 +47,12 @@ const SHAPE_OUTPUT_SCHEMA = JSON.stringify({
       },
       required: ["errorHandling", "performance", "security", "tradeoffs", "style"],
     },
+    runtime: {
+      type: "object",
+      properties: {
+        devServerPort: { type: "integer", minimum: 1, maximum: 65535 },
+      },
+    },
   },
   required: ["projectName", "intent", "scope", "solutionShape", "risksAndComplexities", "existingLandscape", "technicalPreferences"],
 })
@@ -69,6 +75,9 @@ type ShapeOutput = {
     security: string
     tradeoffs: string
     style: string
+  }
+  runtime?: {
+    devServerPort?: number
   }
 }
 
@@ -95,7 +104,7 @@ const resolveInputContext = async (
 }
 
 /** Format the structured shape output as shape.md markdown. */
-const formatShapeMd = (shape: ShapeOutput): string => {
+export const formatShapeMd = (shape: ShapeOutput): string => {
   const lines: string[] = []
 
   lines.push(`# ${shape.projectName}`)
@@ -165,6 +174,13 @@ const formatShapeMd = (shape: ShapeOutput): string => {
   lines.push(`- **Trade-offs:** ${shape.technicalPreferences.tradeoffs}`)
   lines.push(`- **Style:** ${shape.technicalPreferences.style}`)
   lines.push("")
+
+  if (shape.runtime && typeof shape.runtime.devServerPort === "number") {
+    lines.push("## Runtime")
+    lines.push("")
+    lines.push(`- **Dev server port:** ${shape.runtime.devServerPort}`)
+    lines.push("")
+  }
 
   return lines.join("\n")
 }

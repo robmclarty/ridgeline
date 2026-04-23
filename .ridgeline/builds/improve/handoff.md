@@ -310,3 +310,247 @@ Three commits on `improve1`:
   name). Verified manually; if a future caller observes a stuck
   stdin, the diagnosis is most likely a missing `terminal: false`
   on the new readline rather than a preflight teardown bug.
+
+## Phase 2: Always-on builder sensors and dev-server port convention
+
+### What was built
+
+New files:
+
+- `src/sensors/index.ts` — public types only (`SensorFinding`, `ColorPair`,
+  `SensorInput`, `SensorAdapter`). No runtime imports from sensor
+  files; keeps dependency graph acyclic.
+- `src/sensors/playwright.ts` — Chromium screenshot sensor with
+  `parsePortFromShape`, `probeDevServer`, `resolveDevServerPort`, and
+  `runPlaywrightSensor` exported for tests. Launch args auto-switch
+  to `['--no-sandbox', '--disable-setuid-sandbox']` when any of
+  `RIDGELINE_SANDBOX`, `GREYWALL_ACTIVE`, `BWRAP_DETECTED`, or
+  `container` env markers are set. Launch timeout fixed at 10s;
+  any launch failure/timeout yields a warning whose summary contains
+  the phrase `sandbox-incompatible`. When `require.resolve("playwright")`
+  throws or chromium reports `browser not found`, emits the canonical
+  install-hint substring.
+- `src/sensors/a11y.ts` — injects axe-core into a Playwright `Page` via
+  `page.addScriptTag({ path: require.resolve("axe-core") })`. Maps
+  violation impacts (`critical`/`serious` → error, `moderate` →
+  warning, else info). Offline — no outbound HTTP. Playwright
+  unresolvable path returns install-hint warning; chromium launch
+  failure yields `sandbox-incompatible`.
+- `src/sensors/vision.ts` — routes the caller-supplied screenshot
+  through `invokeClaude` on the existing Claude CLI subprocess path.
+  No separate API client. Missing / absent screenshot paths yield
+  warning findings rather than throws.
+- `src/sensors/contrast.ts` — scores design-token hex pairs via
+  `wcag-contrast`. Auto-discovers pairs from `.ridgeline/design.md`
+  when `contrastPairs` is not supplied. Invalid hex maps to warning;
+  below-4.5:1 contrast maps to error; passing maps to info.
+- `src/engine/pipeline/sensors.collect.ts` — the SENSOR_REGISTRY and
+  `collectSensorFindings` live OUTSIDE `src/sensors/` so the sensor
+  folder's `index.ts` carries types only, and no runtime import cycle
+  exists between `index.ts` and its siblings. Consumers import the
+  registry from this file.
+- `src/wcag-contrast.d.ts` — ambient module declaration for the
+  untyped `wcag-contrast` package (project has no `@types/...` for it).
+
+Test suites:
+
+- `src/sensors/__tests__/contrast.test.ts` (5 tests) — explicit pairs,
+  design.md discovery, invalid-hex warning, AA threshold crossings.
+- `src/sensors/__tests__/playwright.test.ts` (20 tests) — regex unit
+  tests, probe-order-and-cap tests, shape-md→port short-circuit,
+  malformed-port fallback with stderr warn, Chromium launch timeout
+  → `sandbox-incompatible`, playwright-unresolvable → install-hint,
+  sandbox-detected → `--no-sandbox` args, non-sandboxed → empty args.
+- `src/sensors/__tests__/a11y.test.ts` (7 tests) — unresolvable
+  → install-hint, `addScriptTag` injection verified, axe violation
+  severity mapping, offline (`globalThis.fetch` stubbed to throw),
+  launch failure → `sandbox-incompatible`, chromium-not-installed
+  → install-hint.
+- `src/sensors/__tests__/vision.test.ts` (6 tests) — unresolvable,
+  missing screenshot path, missing file, stubbed invoke returns info
+  finding, invoke rejection maps to warning.
+- `src/sensors/__tests__/index.test.ts` (4 tests) — SENSOR_REGISTRY
+  declares all four sensors unconditionally, reject-in-one-sensor
+  emits warn line and continues collecting the rest.
+- `src/ui/__tests__/preflight.install-hint.test.ts` (4 tests) — hint
+  appears when visual + unresolvable; hidden when resolvable; hidden
+  when non-visual; both halves of the install command on one line.
+- `src/engine/pipeline/__tests__/phase.sequence.sensors.test.ts` (3
+  tests) — sensor rejection keeps phase `passed`, empty
+  `suggestedSensors` skips sensor invocation, `detect()` errors are
+  swallowed.
+- `src/commands/__tests__/shape.runtime.test.ts` (5 tests) — Runtime
+  section format, trailing-heading position, omission when absent or
+  empty, no YAML front matter.
+
+Wiring changes:
+
+- `src/ui/preflight.ts` — `PreflightOptions.isPlaywrightResolvable`
+  injected (defaults to `require.resolve`). When
+  `report.isVisualSurface && !resolvable`, a single line containing
+  the phrase `visual surface detected` and the literal install-hint
+  command is appended between the Caching line and the prompt line.
+  Type of `stream` widened from `NodeJS.WriteStream` to
+  `NodeJS.WritableStream` so `node:stream.Writable` instances used by
+  existing preflight tests stop erroring under `tsc --noEmit` on
+  tsconfig.check.json.
+- `src/commands/shape.ts` — `SHAPE_OUTPUT_SCHEMA` gains the optional
+  `runtime.devServerPort: integer (1..65535)` field; `ShapeOutput`
+  adds `runtime?: { devServerPort?: number }`; `formatShapeMd`
+  exported (was `const`) and emits a trailing `## Runtime` block
+  with line `- **Dev server port:** <n>` when set.
+- `src/agents/core/builder.md` — new §4a "Visual self-verification"
+  names all four sensors, points builders at the
+  `shape.md` `## Runtime` port declaration and `.ridgeline/design.md`
+  contrast pairs, and reminds them that sensor findings are warnings.
+- `src/engine/pipeline/phase.sequence.ts` — new `runSensorsForPhase`
+  helper calls `detect(cwd)` + `collectSensorFindings(...)`; failures
+  are swallowed internally, and per-sensor rejection warnings bubble
+  through `printWarn`. Findings are persisted to
+  `<buildDir>/sensors/<phase.id>.json` via `persistSensorFindings`.
+  Sensor pipeline runs right after the builder subprocess commits its
+  work, before the reviewer.
+- `.fallowrc.json` — `wcag-contrast` path declaration lives in a
+  root-level `.d.ts`; no new fallow config entries. The previous
+  `ignoreDependencies` entries (`axe-core`, `wcag-contrast`) now
+  legitimately back real consumers — safe to keep until fallow re-
+  analyzes after these changes.
+
+### Decisions
+
+- **Registry lives outside `src/sensors/`.** Criterion 1 pins the
+  sensor folder to exactly five files. To avoid a value-level cycle
+  (`src/sensors/index.ts` importing `./playwright` while
+  `./playwright` imports types from `./index`), I put
+  `SENSOR_REGISTRY` + `collectSensorFindings` in
+  `src/engine/pipeline/sensors.collect.ts`. Sensors import types
+  from `./index` (type-only, erased at compile time);
+  `./index` has zero runtime imports from siblings. Fallow reports no
+  circular deps.
+- **Each sensor duplicates the `isPlaywrightResolvable` helper and
+  `PLAYWRIGHT_INSTALL_HINT` constant.** Sharing them from `./index`
+  reintroduces the cycle. Duplication is small (5 LOC × 3 files) and
+  the alternative (new file in `src/sensors/`) violates the 5-file
+  constraint. Tests override via an optional `isResolvable` callback
+  on the `*RunInternals` parameter, so no shared stubbing is needed.
+- **Sensor `run(input: SensorInput)` accepts one shared shape.** The
+  spec says "at minimum `{ name, run(input) }`". Rather than per-
+  sensor input types, a common `SensorInput` (cwd, buildDir,
+  shapeMdPath, artifactsDir, model, url, screenshotPath,
+  contrastPairs) covers every sensor's needs and lets
+  `collectSensorFindings` pass one object. Unused fields are
+  ignored by each adapter.
+- **Sandbox detection via env markers, not by probing capabilities.**
+  Greywall / bwrap providers don't currently set markers; the sensor
+  checks `RIDGELINE_SANDBOX`, `GREYWALL_ACTIVE`, `BWRAP_DETECTED`,
+  `container`. This keeps the sensor deterministic and testable; the
+  sandbox providers can set any of these in a future phase without
+  touching sensor code. When no marker is set, launch args stay
+  empty (stock Chromium sandbox on).
+- **`http.request` for the 250 ms probe.** HTTP HEAD with
+  `timeout: 250` and a socket error → `resolve(false)` makes probes
+  bounded and cheap. The probe function is injected via
+  `ProbeOptions.probe` so unit tests never touch real sockets.
+  Probes use `127.0.0.1` (not `localhost`) to skip DNS.
+- **`parsePortFromShape` flags multiple `## Runtime` blocks as
+  malformed.** Criterion 24 lists "multiple `## Runtime` sections" as
+  a malformed case. My implementation collects all matching blocks
+  via a global regex and returns `{ malformed: true }` when more
+  than one is present (or when the lone block has >1 port
+  declarations, or a port is out of range).
+- **Install-hint formatting: warning label + dim reason + hint
+  command on a single rendered line.** Criterion 15 requires the
+  command on one line and the reason phrase in the block; keeping
+  the whole render on one line satisfies both. Color via the
+  semantic helper (`warning` + `hint`); plain text path from
+  `PLAYWRIGHT_INSTALL_HINT`.
+- **Sensor findings persisted to `<buildDir>/sensors/<phase.id>.json`.**
+  Phase 3 will wire these to the reviewer's structured verdict.
+  Persisting now keeps the integration point stable and allows
+  manual inspection of what sensors reported per phase.
+- **Vision sensor needs a pre-captured screenshot path.** The sensor
+  itself does not launch Chromium — it receives `screenshotPath` via
+  `SensorInput` and invokes Claude to describe the image. In the
+  current wiring, `collectSensorFindings` doesn't yet thread
+  Playwright's output into vision's input; that's a phase 3
+  enhancement. When no screenshot is supplied the sensor emits a
+  warning rather than silently no-op.
+- **Preflight tests pass `isPlaywrightResolvable: () => true` in
+  snapshot cases.** The runtime default reports playwright as
+  unresolvable in this workstation (peer dep unmerged until the
+  user opts in). Hardcoding `true` keeps snapshot tests stable
+  regardless of local dev environment.
+- **Exactly 5 files in `src/sensors/` is enforced structurally.**
+  `index.ts`, `playwright.ts`, `vision.ts`, `a11y.ts`, `contrast.ts`.
+  `__tests__/` sibling dir doesn't count against the five-file cap.
+
+### Deviations
+
+- **`npm run lint:agents` (agnix) fails in this sandbox workstation.**
+  Agnix's install script downloads a platform-specific binary from
+  github.com; the sandbox blocks outbound HTTPS, so `npm install`
+  leaves the binary absent. `npm run lint` therefore exits non-zero.
+  Same environmental constraint that phase 1a/1b called out for the
+  git-init-under-greywall tests. `oxlint`, `markdownlint-cli2`, and
+  `fallow` all exit 0.
+- **The three pre-existing greywall test failures persist** — same
+  `git init` hook-template sandbox issue that phase 1a and 1b already
+  documented. Baseline 663 passing / 28 failing → phase 2 shows 717
+  passing / 28 failing (+54 new passing tests, zero new failures).
+- **`wcag-contrast.d.ts` lives at `src/wcag-contrast.d.ts`.** The
+  package ships no TypeScript declarations and the existing project
+  convention (`src/catalog/colorthief.d.ts`) uses co-located ambient
+  modules. Placing the declaration at the src root keeps it outside
+  `src/sensors/` (respecting the five-file cap) while keeping it in
+  the tsconfig `include` glob. `tsconfig.json` was not modified.
+- **`PreflightOptions.stream` type widened from `NodeJS.WriteStream`
+  to `NodeJS.WritableStream`.** Required for `npm run typecheck` to
+  pass: existing preflight tests pass a `node:stream.Writable`
+  instance, which is not structurally assignable to the narrower
+  `WriteStream`. The runtime behavior is identical (only `.write()`
+  is called); the wider type reflects that.
+
+### Notes for next phase
+
+- **Wire `SensorFinding[]` into `ReviewVerdict.sensorFindings`.**
+  Phase 3's reviewer changes can read `<buildDir>/sensors/<phase.id>.json`
+  or be passed the findings directly from `executeBuild`. The shape
+  is already frozen: `{ kind, path?, summary, severity }`.
+- **`executeBuild` now returns `{ result, isBudgetExceeded,
+  sensorFindings }`.** Only the first two fields are used by
+  callers in this phase; phase 3 can pick up `sensorFindings` and
+  feed it into the reviewer's user prompt.
+- **Bridge vision → playwright output.** The vision sensor currently
+  requires `SensorInput.screenshotPath` to be set by the caller.
+  When phase 3 refines the collector, have it pass the path from a
+  successful playwright finding (the `path` field of the returned
+  `SensorFinding`) into the vision sensor's subsequent invocation.
+- **Runtime sandbox markers need setting.** None of the existing
+  sandbox providers (greywall, bwrap) set `RIDGELINE_SANDBOX` or
+  equivalent on the child process env. When running inside a
+  sandbox, the sensor falls through to stock chromium launch args.
+  If phase 3 or 4 starts to need the `--no-sandbox` launch args in
+  practice, add one line to `greywall.env()` / `bwrap.env` to export
+  the marker.
+- **Tests prefer `*RunInternals` injection over `vi.doMock`.** The
+  `isResolvable`, `loadPlaywright`, `isSandboxed`, `invokeVision`,
+  `probeOptions`, `launchTimeoutMs`, and `resolveAxePath` hooks on
+  each sensor's internal API are stable; if you add a new sensor
+  dependency, expose an override through the same pattern rather
+  than reaching for `vi.doMock`.
+- **Dev-server port auto-probe list is `[5173, 3000, 8080, 4321]`.**
+  If a new ecosystem's default port becomes common (e.g. Astro's
+  `3003`, Angular's `4200`), update `PROBE_PORTS` in
+  `src/sensors/playwright.ts`. The sensor test file asserts the
+  exact call list — bump the assertions too.
+- **`require.resolve("axe-core")` serves the script-tag path.** The
+  a11y sensor doesn't care about axe's runtime API — it only needs
+  the file path on disk. If axe-core ever ships as ESM-only without
+  a CommonJS entry, the sensor will need `import.meta.url` +
+  `fileURLToPath` fallback. Not currently a concern (axe-core 4.10
+  still ships CommonJS).
+- **Fallow circular-dep check was flagging pre-existing type-only
+  import patterns.** The fix was structural (move registry to
+  `src/engine/pipeline/sensors.collect.ts`). No rules / overrides
+  were added; do the same if phase 3 adds new types at the sensor
+  folder boundary.
