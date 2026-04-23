@@ -1,5 +1,6 @@
 import { log } from "./logger"
 import { appendTranscript } from "./transcript"
+import { error, warning } from "./color"
 
 export const printInfo = (msg: string): void => {
   const line = `[ridgeline] ${msg}`
@@ -9,14 +10,14 @@ export const printInfo = (msg: string): void => {
 }
 
 export const printWarn = (msg: string): void => {
-  const line = `[ridgeline] WARN: ${msg}`
+  const line = `[ridgeline] ${warning("WARN:", { stream: "stderr" })} ${msg}`
   console.error(line)
   log("warn", msg)
   appendTranscript(line)
 }
 
 export const printError = (msg: string): void => {
-  const line = `[ridgeline] ERROR: ${msg}`
+  const line = `[ridgeline] ${error("ERROR:", { stream: "stderr" })} ${msg}`
   console.error(line)
   log("error", msg)
   appendTranscript(line)

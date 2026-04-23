@@ -3,6 +3,8 @@
 // Frames animate a lit segment bouncing left-to-right then right-to-left:
 //   [=   ] → [==  ] → … → [  ==] → [   =] → [  ==] → … → [=   ] (ping-pong)
 
+import { clearLineSequence, hint } from "./color"
+
 const FRAMES = [
   "[=   ]",
   "[==  ]",
@@ -118,9 +120,7 @@ export const startSpinner = (verb?: string): Spinner => {
     const frame = FRAMES[frameIndex]
     const elapsed = formatElapsed(Date.now() - startTime)
     const suffix = detail ? ` [${detail}]` : ""
-    // \r moves cursor to start of line; the frame overwrites previous output.
-    // \x1b[K clears to end of line to avoid artifacts from longer previous lines.
-    process.stderr.write(`\r\x1b[K${frame} ${label}... (${elapsed})${suffix}`)
+    process.stderr.write(`${clearLineSequence()}${frame} ${label}... (${elapsed})${suffix}`)
     if (pauseFrames > 0) {
       pauseFrames--
       return
@@ -138,7 +138,7 @@ export const startSpinner = (verb?: string): Spinner => {
   )
 
   const clearLine = () => {
-    process.stderr.write("\r\x1b[K")
+    process.stderr.write(clearLineSequence())
   }
 
   return {
@@ -167,7 +167,7 @@ export const startSpinner = (verb?: string): Spinner => {
     printAbove(line: string) {
       if (stopped || !timer) return
       clearLine()
-      process.stderr.write(`\x1b[90m${line}\x1b[0m\n`)
+      process.stderr.write(`${hint(line, { stream: "stderr" })}\n`)
       tick()
     },
   }
