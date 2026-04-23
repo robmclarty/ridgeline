@@ -119,7 +119,19 @@
       "cacheCreationInputTokens": 121649,
       "durationMs": 405460,
       "timestamp": "2026-04-23T04:16:59.882Z"
+    },
+    {
+      "phase": "01b-detection-preflight-color",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 13.274158499999995,
+      "inputTokens": 155,
+      "outputTokens": 86880,
+      "cacheReadInputTokens": 19322647,
+      "cacheCreationInputTokens": 228368,
+      "durationMs": 1392494,
+      "timestamp": "2026-04-23T04:40:12.581Z"
     }
   ],
-  "totalCostUsd": 45.04473639999999
+  "totalCostUsd": 58.31889489999999
 }

@@ -451,3 +451,187 @@ Concerns:
 [ridgeline] [01a-flavour-removal-and-metadata] PASSED (2654s)
 
 [ridgeline] ── Phase 2/7: 01b-detection-preflight-color ──
+[ridgeline] [01b-detection-preflight-color] Building...
+[01b-detection-preflight-color] Starting: Project-signal detection, preflight TTY gate, semantic color helper.
+[Bash] ls /Users/robmclarty/Projects/ridgeline/code/ridgeline
+[Bash] ls src
+[Bash] ls src/ui
+[Bash] ls src/engine
+[Read] src/cli.ts
+[Read] src/ui/spinner.ts
+[Read] src/ui/logger.ts
+[Read] src/ui/output.ts
+[Read] src/ui/prompt.ts
+[ToolSearch]
+[TodoWrite]
+[Read] src/ui/summary.ts
+[Read] src/ui/transcript.ts
+[Grep] \\x1b\[
+[Read] src/ui/__tests__/spinner.test.ts
+[Bash] wc -l src/ui/__tests__/spinner.test.ts
+[Read] src/ui/__tests__/spinner.test.ts
+[Grep] \\x1b\[
+[Read] src/types.ts
+[Read] src/commands
+[Bash] ls src/commands
+[Read] src/commands/shape.ts
+[Read] src/commands/spec.ts
+[Read] src/commands/check.ts
+[Read] src/utils/flavour-removed.ts
+[Bash] ls test 2>/dev/null && ls test/fixtures 2>/dev/null
+[Read] package.json
+[Read] src/ui/__tests__/transcript.test.ts
+[Read] src/ui/index.ts
+[Read] src/commands/build.ts
+Now let me look at a few more entry commands quickly to understand which ones to wire preflight into:
+[Read] src/commands/build.ts
+[TodoWrite]
+Now I'll build the semantic color helper.
+[Write] src/ui/color.ts
+[Write] src/ui/color.ts
+[Bash] head -3 src/ui/color.ts | xxd | head -5
+[Edit] src/ui/color.ts
+[Read] src/ui/color.ts
+[Edit] src/ui/color.ts
+[Bash] cat -A src/ui/color.ts | head -10
+[Bash] sed -n '1,10p' src/ui/color.ts | od -c | head -10
+[Bash] sed -n '5,10p' src/ui/color.ts | od -c
+[Write] src/ui/color.ts
+Now let me refactor the spinner module:
+[Edit] src/ui/spinner.ts
+[Edit] src/ui/spinner.ts
+[Edit] src/ui/spinner.ts
+[Edit] src/ui/spinner.ts
+[Edit] src/ui/spinner.ts
+Now refactor transcript.ts:
+[Edit] src/ui/transcript.ts
+[Edit] src/ui/transcript.ts
+[TodoWrite]
+[Edit] src/ui/output.ts
+[Edit] src/ui/__tests__/spinner.test.ts
+Now build the color helper tests:
+[Write] src/ui/__tests__/color.test.ts
+[Bash] for f in spinner logger output prompt summary transcript; do
+[Grep] \\x1b\[
+[TodoWrite]
+[Bash] mkdir -p src/engine/detect
+[Write] src/engine/detect/index.ts
+Now build the preflight module:
+[Write] src/ui/preflight.ts
+[Edit] src/ui/preflight.ts
+Now wire preflight into the CLI:
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+Now I need to wire preflight into each pipeline-entry command's action and add the preflight options:
+[Edit] src/cli.ts
+[TodoWrite]
+Now let me wire each pipeline-entry command. Let me read the current cli.ts to make precise edits:
+[Read] src/cli.ts
+Now let me wire preflight into each pipeline-entry command. Default action (create), shape, design, spec, research, refine, retrospective, rewind get the preflight call. Plan/dry-run/build are wrapped via `withConfig`.
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+Now wire shape, design, spec, research, refine, build, rewind, retrospective:
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+Let me now verify the whole CLI file compiles by reading it through:
+[Read] src/cli.ts
+[Edit] src/cli.ts
+Now let me run a typecheck quickly:
+[Bash] npx tsc --noEmit 2>&1 | head -50
+[TodoWrite]
+Now create test fixtures and tests:
+[Bash] mkdir -p test/fixtures/react-vite-design test/fixtures/pure-node /Users/robmclarty/Projects/rid…
+[Bash] mkdir -p test/fixtures/react-vite-design/.ridgeline test/fixtures/react-vite-design/src /Users/…
+[Write] test/fixtures/react-vite-design/package.json
+[Write] test/fixtures/react-vite-design/.ridgeline/design.md
+[Write] test/fixtures/react-vite-design/src/App.tsx
+[Write] test/fixtures/pure-node/package.json
+[Write] test/fixtures/pure-node/server.js
+[Write] test/fixtures/pure-html/index.html
+[Write] test/fixtures/vue-vite/package.json
+[Write] test/fixtures/vue-vite/src/App.vue
+[Write] test/fixtures/monorepo-root/package.json
+[Bash] ls -la .markdownlint* 2>/dev/null
+[Read] .markdownlint-cli2.jsonc
+[Bash] mkdir -p src/engine/detect/__tests__
+[Write] src/engine/detect/__tests__/detect.test.ts
+Now write preflight tests:
+[Write] src/ui/__tests__/preflight.test.ts
+[Write] src/__tests__/cli.preflight-wiring.test.ts
+[Write] src/ui/__tests__/no-raw-ansi.test.ts
+Now let's run the check command to see how things stand:
+[Bash] npx tsc --noEmit 2>&1 | head -60
+Typecheck clean. Let me run lint:
+[Bash] npm run lint 2>&1 | tail -80
+[Bash] npm run lint 2>&1 | head -100
+[Bash] cat .fallowrc.json 2>/dev/null || ls -a .fallow* 2>/dev/null
+[Edit] .fallowrc.json
+[Read] .fallowrc.json
+[Edit] .fallowrc.json
+[Bash] npm run lint 2>&1 | tail -40
+[Bash] npm run lint 2>&1 | grep -E "(Failed|Error|✗|error)" | head -30
+[Bash] echo $?; npm run lint > /tmp/lint.out 2>&1; echo "Exit: $?"; tail -5 /tmp/lint.out
+Lint passes. Now run unit tests:
+[Bash] npx vitest run 2>&1 | tail -100
+[Bash] npx vitest run 2>&1 | grep -E "^( FAIL|⎯⎯)" | head -40
+[Edit] src/__tests__/cli.preflight-wiring.test.ts
+[Bash] npx vitest run src/__tests__/cli.preflight-wiring.test.ts 2>&1 | tail -30
+Now run the full unit suite to verify only the pre-existing greywall failures remain:
+[Bash] npx vitest run 2>&1 | tail -10
+[Bash] ls src/ui/__tests__/__snapshots__/ 2>&1 | head -10
+[Read] src/ui/__tests__/__snapshots__/preflight.test.ts.snap
+[Edit] src/ui/preflight.ts
+[Bash] rm src/ui/__tests__/__snapshots__/preflight.test.ts.snap
+[Bash] npx vitest run src/ui/__tests__/preflight.test.ts 2>&1 | tail -30
+[Read] src/ui/__tests__/__snapshots__/preflight.test.ts.snap
+[Bash] npx vitest run 2>&1 | tail -10
+[Bash] npm run lint > /tmp/lint.out 2>&1 && echo "lint: PASS" || echo "lint: FAIL ($?)"
+[Write] src/__tests__/cli.preflight-order.test.ts
+[Bash] npx vitest run src/__tests__/cli.preflight-order.test.ts 2>&1 | tail -15
+[Bash] npm run lint > /tmp/lint.out 2>&1 && echo "lint: PASS" || echo "lint: FAIL"
+[TodoWrite]
+[Read] src/ui/index.ts
+[Read] src/ui/__tests__/spinner.test.ts
+[Edit] src/ui/__tests__/spinner.test.ts
+[Bash] npx vitest run src/ui/__tests__/spinner.test.ts 2>&1 | tail -10
+Now run the full check command to confirm baseline:
+[Bash] npm run lint > /tmp/lint.out 2>&1
+[Bash] grep -E "^ FAIL" /tmp/vitest.out | sort -u
+Let me commit in logical chunks:
+[Bash] git status
+[Bash] git add src/ui/color.ts src/ui/__tests__/color.test.ts src/ui/__tests__/no-raw-ansi.test.ts src/ui/spinner.ts src/ui/transcript.ts src/ui/output.ts src/ui/__tests__/spinner.test.ts && git commit -m "…
+[Bash] git add src/engine/detect test/fixtures .fallowrc.json && git commit -m "$(cat <<'EOF'
+[Bash] git add src/ui/preflight.ts src/ui/__tests__/preflight.test.ts src/ui/__tests__/__snapshots__ src/cli.ts src/__tests__/cli.preflight-wiring.test.ts src/__tests__/cli.preflight-order.test.ts && git co…
+Now write the handoff:
+[Read] .ridgeline/builds/improve/handoff.md
+[Bash] wc -l .ridgeline/builds/improve/handoff.md
+[Read] .ridgeline/builds/improve/handoff.md
+[Bash] cat >> .ridgeline/builds/improve/handoff.md << 'EOF'
+[Bash] npm run lint > /tmp/lint.out 2>&1 && echo "lint: PASS" || echo "lint: FAIL"; tail -3 /tmp/lint.out
+[Read] .ridgeline/builds/improve/handoff.md
+[Edit] .ridgeline/builds/improve/handoff.md
+[Bash] npm run lint > /tmp/lint.out 2>&1 && echo "lint: PASS" || echo "lint: FAIL"; tail -3 /tmp/lint.out
+[Bash] npx vitest run > /tmp/vitest.out 2>&1; echo "vitest: $?"; tail -5 /tmp/vitest.out
+[Bash] git add .ridgeline/builds/improve/handoff.md && git commit -m "$(cat <<'EOF'
+[TodoWrite]
+[Bash] git log --oneline -5
+Summary of what shipped on phase 1b:
+
+- `src/ui/color.ts` (new) — semantic role helper exposing `error / success / warning / info / hint / bold / dimInfo`, `stripAnsi`, `clearLineSequence`. Honors `NO_COLOR` and per-stream TTY state; output is byte-identical when colors are stripped.
+- `src/ui/spinner.ts`, `transcript.ts`, `output.ts` — refactored to route every escape sequence through the helper. Zero raw ANSI literals remain in any of `{spinner, logger, output, prompt, summary, transcript}.ts`.
+- `src/engine/detect/index.ts` (new) — async `detect(cwd, opts?)` returning the exact `DetectionReport` interface the spec requires; deterministic, sub-second, fail-soft on missing/malformed `package.json`.
+- `test/fixtures/` (new) — five fixture projects (react+vite+design.md, pure-node, pure-html, vue+vite, monorepo-root); `.fallowrc.json` adds them as entry points.
+- `src/ui/preflight.ts` (new) — three-line summary in the exact constraints.md format (bold labels, dim values, dim-cyan arrow, no Unicode box-drawing); waits on Enter in TTY interactive mode, auto-proceeds with the CI suffix otherwise, skipped by `--yes`.
+- `src/cli.ts` — `runPreflightGuard()` + `withConfigAndPreflight` wired into the ten pipeline-entry commands (default-create / shape / design / spec / research / refine / plan / build / rewind / retrospective). `catalog`, `dry-run`, `clean`, `check` deliberately bypass preflight.
+- New test files: `color.test.ts` (15), `no-raw-ansi.test.ts` (7), `detect.test.ts` (16), `preflight.test.ts` (18), `cli.preflight-wiring.test.ts` (14), `cli.preflight-order.test.ts` (2). Net +73 passing tests, zero new failures.
+
+Check command outcome: `npm run lint` and `npx tsc --noEmit` exit 0 cleanly. `npm test` exits non-zero only because of the same 28 pre-existing greywall sandbox failures phase 1a documented (identical 3 files, same hook-template copy error). Per-phase deltas: baseline 590 passing / 28 failing → phase 1b 663 passing / 28 failing.
+
+[01b-detection-preflight-color] DONE
