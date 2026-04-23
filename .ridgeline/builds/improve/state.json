@@ -1,6 +1,6 @@
 {
   "buildName": "improve",
-  "startedAt": "2026-04-23T02:29:24.418Z",
+  "startedAt": "2026-04-23T03:32:45.499Z",
   "pipeline": {
     "shape": "complete",
     "design": "complete",
@@ -8,7 +8,78 @@
     "research": "complete",
     "refine": "complete",
     "plan": "complete",
-    "build": "pending"
+    "build": "running"
   },
-  "phases": []
+  "phases": [
+    {
+      "id": "01a-flavour-removal-and-metadata",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/01a-flavour-removal-and-metadata",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "01b-detection-preflight-color",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/01b-detection-preflight-color",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "02-builder-sensors",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/02-builder-sensors",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "03a-lean-ensembles-and-verdicts",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/03a-lean-ensembles-and-verdicts",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "03b-prompt-caching",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/03b-prompt-caching",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "04-dashboard",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/04-dashboard",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "05-release-polish",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/improve/05-release-polish",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    }
+  ]
 }
