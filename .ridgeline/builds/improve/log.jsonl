@@ -7,3 +7,20 @@
 {"timestamp":"2026-04-23T04:16:59.940Z","level":"info","phase":"01a-flavour-removal-and-metadata","message":"PASSED (2654s)"}
 {"timestamp":"2026-04-23T04:16:59.941Z","level":"info","phase":"01b-detection-preflight-color","message":"Phase 2/7: 01b-detection-preflight-color"}
 {"timestamp":"2026-04-23T04:17:00.086Z","level":"info","phase":"01b-detection-preflight-color","message":"Building..."}
+{"timestamp":"2026-04-23T04:40:12.667Z","level":"info","phase":"01b-detection-preflight-color","message":"Reviewing..."}
+{"timestamp":"2026-04-23T04:46:11.800Z","level":"info","phase":"01b-detection-preflight-color","message":"PASSED (1752s)"}
+{"timestamp":"2026-04-23T04:46:11.800Z","level":"info","phase":null,"message":"\nWave: 2 parallel phases (02-builder-sensors, 04-dashboard)"}
+{"timestamp":"2026-04-23T04:46:12.021Z","level":"info","phase":"02-builder-sensors","message":"Phase 3/7: 02-builder-sensors"}
+{"timestamp":"2026-04-23T04:46:12.021Z","level":"info","phase":"04-dashboard","message":"Phase 6/7: 04-dashboard"}
+{"timestamp":"2026-04-23T04:46:12.129Z","level":"info","phase":"02-builder-sensors","message":"Building..."}
+{"timestamp":"2026-04-23T04:46:12.205Z","level":"info","phase":"04-dashboard","message":"Building..."}
+{"timestamp":"2026-04-23T04:58:56.681Z","level":"info","phase":"02-builder-sensors","message":"Build failed (transient): Error: Failed to parse claude output: Error: No result event found in stream-json output"}
+{"timestamp":"2026-04-23T04:58:56.682Z","level":"info","phase":"02-builder-sensors","message":"Waiting 1.4s before retry..."}
+{"timestamp":"2026-04-23T04:58:56.825Z","level":"info","phase":"04-dashboard","message":"Build failed (transient): Error: Failed to parse claude output: Error: No result event found in stream-json output"}
+{"timestamp":"2026-04-23T04:58:56.826Z","level":"info","phase":"04-dashboard","message":"Waiting 1.1s before retry..."}
+{"timestamp":"2026-04-23T04:58:57.962Z","level":"info","phase":"04-dashboard","message":"Retry 1: building..."}
+{"timestamp":"2026-04-23T04:58:58.115Z","level":"info","phase":"02-builder-sensors","message":"Retry 1: building..."}
+{"timestamp":"2026-04-23T04:58:58.372Z","level":"info","phase":"02-builder-sensors","message":"Build failed (transient): Error: claude exited with code 143: "}
+{"timestamp":"2026-04-23T04:58:58.372Z","level":"info","phase":"02-builder-sensors","message":"Waiting 2.8s before retry..."}
+{"timestamp":"2026-04-23T04:58:58.476Z","level":"info","phase":"04-dashboard","message":"Build failed (transient): Error: claude exited with code null: "}
+{"timestamp":"2026-04-23T04:58:58.476Z","level":"info","phase":"04-dashboard","message":"Waiting 2.2s before retry..."}
