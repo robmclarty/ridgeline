@@ -47,6 +47,21 @@ Before saving, walk each acceptance criterion from the phase spec:
 
 This is distinct from the check command. The check command catches mechanical failures (compilation, tests). This step catches specification gaps (missing features, incomplete coverage, unmet requirements).
 
+### 4a. Visual self-verification (when applicable)
+
+On projects with a visual surface (React, Vue, Svelte, HTML, canvas, etc.), ridgeline exposes four always-on sensors that run after your phase completes and feed the reviewer:
+
+- **playwright** — launches Chromium against the detected dev-server port and captures a full-page screenshot. Reads `shape.md` `## Runtime` block (`- **Dev server port:** <n>`) when present; otherwise probes `5173`, `3000`, `8080`, `4321` in order. Degrades to a warning when Playwright is not installed or the browser cannot launch under the sandbox.
+- **vision** — routes the captured screenshot through Claude to describe what's actually rendered: layout, visible elements, color usage, obvious defects. Shares the Claude CLI trust boundary used by every other agent.
+- **a11y** — injects `axe-core` into the Playwright page (via `page.addScriptTag`) and reports WCAG AA violations with impact, description, and node counts. Runs fully offline against the local dev server.
+- **contrast** — scores design-token hex pairs (foreground / background) with `wcag-contrast` and flags pairs below 4.5:1. Independent of Playwright; runs even without a dev server.
+
+Sensor failures are non-fatal warnings — the phase continues. You do not need to invoke them manually; they attach to your phase output automatically when `DetectionReport.suggestedSensors` includes them and the peer dependency is resolvable. When working on a visual phase, prefer to:
+
+- Declare the dev-server port in `shape.md` under a `## Runtime` section using the literal line `- **Dev server port:** <n>` so the Playwright sensor skips probing.
+- Reference design tokens (palette, contrast pairs) in `.ridgeline/design.md` so the contrast sensor has pairs to score.
+- Treat sensor findings as signal, not gospel — they're warnings, not test failures.
+
 ### 5. Save progress
 
 Save work incrementally as you complete logical units of work. Use clear progress markers:
