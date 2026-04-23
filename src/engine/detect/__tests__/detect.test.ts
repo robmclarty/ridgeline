@@ -1,0 +1,148 @@
+import * as fs from "node:fs"
+import * as os from "node:os"
+import * as path from "node:path"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { detect } from "../index"
+
+const FIXTURES = path.resolve(__dirname, "../../../../test/fixtures")
+
+describe("detect", () => {
+  describe("fixture projects", () => {
+    it("React+Vite with design.md is a visual surface with full sensor suite", async () => {
+      const report = await detect(path.join(FIXTURES, "react-vite-design"))
+      expect(report.projectType).toBe("web")
+      expect(report.isVisualSurface).toBe(true)
+      expect(report.detectedDeps).toEqual(expect.arrayContaining(["react", "vite"]))
+      expect(report.hasDesignMd).toBe(true)
+      expect(report.suggestedSensors.sort()).toEqual(["a11y", "contrast", "playwright", "vision"])
+      expect(report.suggestedEnsembleSize).toBe(2)
+    })
+
+    it("pure Node project (express only) has no sensors", async () => {
+      const report = await detect(path.join(FIXTURES, "pure-node"))
+      expect(report.projectType).toBe("node")
+      expect(report.isVisualSurface).toBe(false)
+      expect(report.detectedDeps).toEqual([])
+      expect(report.hasDesignMd).toBe(false)
+      expect(report.suggestedSensors).toEqual([])
+    })
+
+    it("pure HTML (no package.json) is unknown but visual via filesystem signal", async () => {
+      const report = await detect(path.join(FIXTURES, "pure-html"))
+      expect(report.projectType).toBe("unknown")
+      expect(report.isVisualSurface).toBe(true)
+      expect(report.suggestedSensors.length).toBe(4)
+    })
+
+    it("Vue+Vite project is web with full sensor suite", async () => {
+      const report = await detect(path.join(FIXTURES, "vue-vite"))
+      expect(report.projectType).toBe("web")
+      expect(report.isVisualSurface).toBe(true)
+      expect(report.detectedDeps).toEqual(expect.arrayContaining(["vue", "vite"]))
+      expect(report.suggestedSensors.length).toBe(4)
+    })
+
+    it("monorepo root with no visual deps and no visual files is node", async () => {
+      const report = await detect(path.join(FIXTURES, "monorepo-root"))
+      expect(report.projectType).toBe("node")
+      expect(report.isVisualSurface).toBe(false)
+      expect(report.detectedDeps).toEqual([])
+      expect(report.suggestedSensors).toEqual([])
+    })
+  })
+
+  describe("filesystem-only signals", () => {
+    let tmpDir: string
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ridgeline-detect-"))
+    })
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    })
+
+    it("treats a single .jsx file (no package.json) as a visual surface", async () => {
+      fs.writeFileSync(path.join(tmpDir, "Component.jsx"), "export default () => null\n")
+      const report = await detect(tmpDir)
+      expect(report.isVisualSurface).toBe(true)
+      expect(report.projectType).toBe("unknown")
+      expect(report.suggestedSensors.length).toBe(4)
+    })
+
+    it("treats a single .svelte file as a visual surface", async () => {
+      fs.writeFileSync(path.join(tmpDir, "App.svelte"), "<script></script><div></div>\n")
+      const report = await detect(tmpDir)
+      expect(report.isVisualSurface).toBe(true)
+    })
+
+    it("ignores files inside node_modules / dist / build / .git", async () => {
+      for (const dir of ["node_modules", "dist", "build", ".git"]) {
+        fs.mkdirSync(path.join(tmpDir, dir))
+        fs.writeFileSync(path.join(tmpDir, dir, "buried.jsx"), "x\n")
+      }
+      const report = await detect(tmpDir)
+      expect(report.isVisualSurface).toBe(false)
+    })
+  })
+
+  describe("package.json edge cases", () => {
+    let tmpDir: string
+
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ridgeline-detect-pkg-"))
+    })
+
+    afterEach(() => {
+      fs.rmSync(tmpDir, { recursive: true, force: true })
+    })
+
+    it("handles missing package.json without throwing", async () => {
+      const report = await detect(tmpDir)
+      expect(report.projectType).toBe("unknown")
+      expect(report.isVisualSurface).toBe(false)
+    })
+
+    it("warns and falls back to filesystem on malformed package.json", async () => {
+      fs.writeFileSync(path.join(tmpDir, "package.json"), "{ not valid json")
+      fs.writeFileSync(path.join(tmpDir, "page.html"), "<!doctype html><html></html>")
+      const report = await detect(tmpDir)
+      expect(report.detectedDeps).toEqual([])
+      expect(report.isVisualSurface).toBe(true)
+    })
+  })
+
+  describe("ensemble size and thoroughness", () => {
+    it("defaults to ensemble size 2", async () => {
+      const report = await detect(path.join(FIXTURES, "pure-node"))
+      expect(report.suggestedEnsembleSize).toBe(2)
+    })
+
+    it("returns ensemble size 3 when isThorough is true", async () => {
+      const report = await detect(path.join(FIXTURES, "pure-node"), { isThorough: true })
+      expect(report.suggestedEnsembleSize).toBe(3)
+    })
+  })
+
+  describe("determinism", () => {
+    it("produces byte-identical serialized reports for unchanged inputs", async () => {
+      const a = await detect(path.join(FIXTURES, "react-vite-design"))
+      const b = await detect(path.join(FIXTURES, "react-vite-design"))
+      expect(JSON.stringify(a)).toBe(JSON.stringify(b))
+    })
+
+    it("sorts detected deps alphabetically", async () => {
+      const report = await detect(path.join(FIXTURES, "react-vite-design"))
+      const sorted = [...report.detectedDeps].sort()
+      expect(report.detectedDeps).toEqual(sorted)
+    })
+  })
+
+  describe("performance", () => {
+    it("completes in under 1 second on a small project", async () => {
+      const start = Date.now()
+      await detect(path.join(FIXTURES, "react-vite-design"))
+      expect(Date.now() - start).toBeLessThan(1000)
+    })
+  })
+})
