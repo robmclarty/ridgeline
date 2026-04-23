@@ -63,3 +63,7 @@
 {"timestamp":"2026-04-23T23:08:24.607Z","level":"info","phase":"03b-prompt-caching","message":"Building..."}
 {"timestamp":"2026-04-23T23:17:23.426Z","level":"info","phase":"03b-prompt-caching","message":"PASSED (539s)"}
 {"timestamp":"2026-04-23T23:17:23.426Z","level":"info","phase":"05-release-polish","message":"Phase 7/7: 05-release-polish"}
+{"timestamp":"2026-04-23T23:17:23.549Z","level":"info","phase":"05-release-polish","message":"Building..."}
+{"timestamp":"2026-04-23T23:41:29.811Z","level":"info","phase":"05-release-polish","message":"Build failed (transient): Error: Claude invocation stalled: No output received for 300s (stall timeout)"}
+{"timestamp":"2026-04-23T23:41:29.811Z","level":"info","phase":"05-release-polish","message":"Waiting 1.1s before retry..."}
+{"timestamp":"2026-04-23T23:41:30.921Z","level":"info","phase":"05-release-polish","message":"Retry 1: building..."}

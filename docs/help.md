@@ -16,6 +16,34 @@ npm install -g ridgeline
 
 ## Commands
 
+### Preflight
+
+Every pipeline-entry command (default, `shape`, `design`, `spec`, `research`,
+`refine`, `plan`, `build`, `rewind`, `retrospective`) runs a short preflight
+that scans the project, prints what it detected, names the sensors it will
+enable, and prompts once before running. Under a TTY the prompt reads
+`Press Enter to continue, Ctrl+C to abort`; in CI (non-TTY) the prompt is
+replaced with `(auto-proceeding in CI)` and the command continues.
+
+```text
+Detected   react, vite, design.md   →   enabling   Playwright, vision, pa11y, contrast
+
+Ensemble   2 specialists   (use --thorough for 3)
+Caching    on
+  Press Enter to continue, Ctrl+C to abort
+```
+
+Two flags shape preflight behavior on every pipeline-entry command:
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--thorough` | off | Dispatch 3 specialists with two-round cross-annotation instead of the default 2 |
+| `-y`, `--yes` | off | Skip the Enter-to-continue prompt (useful for scripts) |
+
+See [Preflight, Detection, and Sensors](preflight-and-sensors.md) for the
+detection rules, the four built-in sensors, and the `shape.md` `## Runtime`
+convention.
+
 ### `ridgeline [build-name] [input]` (default)
 
 Auto-advance the build through the next incomplete pipeline stage
@@ -69,18 +97,18 @@ Research the spec using web sources. Optional step between `spec` and `plan`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--deep` | off | Run full ensemble (3 specialists: academic, ecosystem, competitive) instead of quick single-agent mode |
+| `--quick` | off | Run a single random specialist instead of the full ensemble |
 | `--auto [N]` | off | Auto-loop: research + refine for N iterations (default 2 if no number given) |
 | `--model <name>` | `opus` | Model for research agents |
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative research cost exceeds this amount |
 
 ```sh
-ridgeline research my-feature              # Quick research (1 agent)
-ridgeline research my-feature --deep       # Deep research (3 specialists)
-ridgeline research my-feature --auto       # 2 auto iterations
-ridgeline research my-feature --auto 5     # 5 auto iterations
-ridgeline research my-feature --deep --auto 2  # Deep + 2 auto iterations
+ridgeline research my-feature               # Full ensemble (default, 2 specialists)
+ridgeline research my-feature --quick       # Single specialist, faster
+ridgeline research my-feature --thorough    # 3 specialists with cross-annotation
+ridgeline research my-feature --auto        # 2 auto iterations
+ridgeline research my-feature --auto 5      # 5 auto iterations
 ```
 
 ### `ridgeline refine [build-name]`
@@ -173,6 +201,28 @@ worktree in place so you can inspect the state before discarding it.
 ridgeline clean
 ```
 
+### `ridgeline ui [build-name]`
+
+Open a localhost build-monitoring dashboard. Serves a fully offline
+dark-mode page from `127.0.0.1` (default port 4411 with free-port fallback)
+that live-updates over Server-Sent Events, falling back to 2 s polling on
+disconnect. With no `build-name` argument, attaches to the most recently
+modified build under `.ridgeline/builds/*`. The command prints the URL on
+startup and continues running until you `Ctrl+C`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--port <number>` | `4411` | Port to bind (falls back to the next free port if taken) |
+
+```sh
+ridgeline ui                 # attaches to most recent build
+ridgeline ui my-feature      # attaches to a named build
+ridgeline ui --port 5050     # bind to an explicit port
+```
+
+See [Preflight, Detection, and Sensors](preflight-and-sensors.md#the-ridgeline-ui-dashboard)
+for the dashboard's design and offline guarantees.
+
 ## Common Workflows
 
 **Full workflow from scratch:**
@@ -180,7 +230,7 @@ ridgeline clean
 ```sh
 ridgeline shape my-feature "Build a task management API"
 ridgeline spec my-feature
-ridgeline research my-feature --deep  # optional: enrich spec with web research
+ridgeline research my-feature         # optional: enrich spec with web research (default 2 specialists)
 ridgeline refine my-feature           # optional: merge research into spec
 ridgeline plan my-feature
 ridgeline dry-run my-feature    # preview before committing

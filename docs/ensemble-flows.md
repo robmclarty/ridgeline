@@ -26,7 +26,7 @@ flowchart TB
         direction TB
         discover["1. Discover specialists\nagents/{dir}/*.md"]
         invoke["2. Invoke in parallel\nPromise.allSettled()"]
-        collect["3. Collect proposals\n≥ ceil(n/2) required"]
+        collect["3. Collect proposals\n≥ 1 survivor required"]
         budget["4. Budget guard\nhalt if over cap"]
         synth["5. Synthesize\nmerge proposals → output files"]
         verify["6. Verify\noptional post-synthesis check"]
@@ -64,18 +64,38 @@ the sum of all.
 
 ### Stage 3: Proposal Collection
 
-Results are collected via `Promise.allSettled()`. The engine requires at least
-`ceil(n / 2)` successful proposals to proceed:
+Results are collected via `Promise.allSettled()`. As of 0.8.0 the engine
+requires **at least one surviving specialist** to proceed. When a lone
+survivor emerges (the rest timed out or errored), synthesis runs on the
+single verdict with a warning on stderr. Earlier versions required
+`ceil(n/2)` survivors; that threshold was relaxed so a 2-specialist
+ensemble can still produce output when one call fails.
 
-| Specialists | Minimum required |
-|-------------|-----------------|
-| 2           | 1               |
-| 3           | 2               |
-| 4           | 2               |
-| 5           | 3               |
+Failed specialists (timeouts, parse errors) are logged to the trajectory
+stream as `specialist_fail` entries with `reason: "timeout" | "error"` but
+do not block the run.
 
-Failed specialists (timeouts, parse errors) are logged but do not block the
-run. The threshold adapts automatically as specialists are added or removed.
+### Stage 3b: Agreement-based synthesis skip
+
+When every surviving specialist returns a **structured verdict skeleton**
+that matches byte-for-byte across proposals, the synthesizer is skipped
+entirely. The first specialist's draft is written as the canonical
+artifact, and a single audit line is appended (for example
+`synthesis skipped: 2 specialists agreed on structured verdict (plan)`).
+This is logged as a `synthesis_skipped` trajectory entry.
+
+The skeleton shapes are:
+
+- Specifier → `{ sectionOutline, riskList }`
+- Planner → `{ phaseList, depGraph }`
+- Researcher → `{ findings, openQuestions }`
+
+Normalization: strings trimmed, arrays of primitives sorted, `phaseList`
+order-preserving, `sectionOutline` / `riskList` / `findings` /
+`openQuestions` / `depGraph` order-insensitive.
+
+Disagreement → synthesis runs. Malformed JSON → synthesis runs with a
+warning.
 
 ### Stage 4: Budget Guard
 
@@ -285,15 +305,25 @@ flowchart LR
 | **Ecosystem** | Framework docs, library features, version updates | Checks official docs, release notes, changelogs, migration guides. Surfaces built-in solutions that would replace custom implementations. Catches deprecations. |
 | **Competitive** | How other tools solve the same problem | Investigates GitHub repos, product pages, developer discussions. Identifies well-considered patterns, common feature requests, and documented anti-patterns. |
 
-### Quick vs Deep Mode
+### Ensemble Sizing
 
-In **quick mode** (default, no flag), only the first specialist (ecosystem)
-runs. This is faster and focused on the immediate tech stack -- good for a
-sanity check against the latest documentation.
+By default, the researcher ensemble runs **2 specialists** in parallel (a
+random pair from academic / ecosystem / competitive). Two specialists is
+the 0.8.0 default across every ensemble — enough perspectives to catch
+genuine disagreement, small enough to stay cheap.
 
-In **deep mode** (`--deep`), all three specialists run in parallel. This
-provides broader coverage across academic research, ecosystem updates, and
-competitive landscape.
+Two other sizing opt-outs are available:
+
+- `ridgeline research my-feature --quick` — runs a single ecosystem
+  specialist. Fast sanity check against the latest docs.
+- `ridgeline research my-feature --thorough` — dispatches all three
+  specialists with two-round cross-annotation, where each specialist
+  reads the others' drafts before producing a final verdict.
+
+The agreement-based synthesis skip (Stage 3b) applies to research as well:
+when every surviving researcher returns identical `findings` /
+`openQuestions` skeletons, the synthesizer is skipped and the first
+specialist's prose is promoted directly to `research.md`.
 
 ### Agenda Pre-step
 
@@ -424,7 +454,7 @@ flowchart LR
 
     subgraph spec_ensemble ["Specifier Ensemble"]
         direction TB
-        s_spec["3 specialists\n(completeness, clarity, pragmatism)"]
+        s_spec["2 specialists by default, 3 with --thorough\n(from completeness / clarity / pragmatism)"]
         s_synth["Synthesizer"]
         s_spec --> s_synth
     end
@@ -438,7 +468,7 @@ flowchart LR
 
     subgraph research_ensemble ["Researcher Ensemble (optional)"]
         direction TB
-        r_spec["1-3 specialists\n(academic, ecosystem, competitive)"]
+        r_spec["1-3 specialists\n(--quick: 1 · default: 2 · --thorough: 3)"]
         r_synth["Synthesizer"]
         r_spec --> r_synth
     end
@@ -453,7 +483,7 @@ flowchart LR
 
     subgraph plan_ensemble ["Planner Ensemble"]
         direction TB
-        p_spec["3 specialists\n(simplicity, velocity, thoroughness)"]
+        p_spec["2 specialists by default, 3 with --thorough\n(from simplicity / velocity / thoroughness)"]
         p_synth["Synthesizer"]
         p_spec --> p_synth
     end
