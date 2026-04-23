@@ -49,3 +49,14 @@
 {"timestamp":"2026-04-23T21:53:39.969Z","level":"info","phase":"03a-lean-ensembles-and-verdicts","message":"PASSED (1854s)"}
 {"timestamp":"2026-04-23T21:53:39.970Z","level":"info","phase":"03b-prompt-caching","message":"Phase 5/7: 03b-prompt-caching"}
 {"timestamp":"2026-04-23T21:53:40.095Z","level":"info","phase":"03b-prompt-caching","message":"Building..."}
+{"timestamp":"2026-04-23T22:15:14.101Z","level":"info","phase":"03b-prompt-caching","message":"Reviewing..."}
+{"timestamp":"2026-04-23T22:15:20.630Z","level":"info","phase":"03b-prompt-caching","message":"Review failed (transient): Error: claude exited with code 143: "}
+{"timestamp":"2026-04-23T22:15:20.630Z","level":"info","phase":"03b-prompt-caching","message":"Waiting 1.4s before retry..."}
+{"timestamp":"2026-04-23T22:15:22.001Z","level":"info","phase":"03b-prompt-caching","message":"Retry 1: building..."}
+{"timestamp":"2026-04-23T22:15:22.366Z","level":"info","phase":"03b-prompt-caching","message":"Build failed (transient): Error: claude exited with code null: "}
+{"timestamp":"2026-04-23T22:15:22.367Z","level":"info","phase":"03b-prompt-caching","message":"Waiting 2.4s before retry..."}
+{"timestamp":"2026-04-23T23:08:23.771Z","level":"info","phase":null,"message":"Resuming build 'improve' from phase 6/7"}
+{"timestamp":"2026-04-23T23:08:24.413Z","level":"info","phase":null,"message":"Sandbox: greywall"}
+{"timestamp":"2026-04-23T23:08:24.414Z","level":"info","phase":null,"message":"Starting build: improve (7 phases)\n"}
+{"timestamp":"2026-04-23T23:08:24.472Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
+{"timestamp":"2026-04-23T23:08:24.473Z","level":"info","phase":"03b-prompt-caching","message":"Phase 5/7: 03b-prompt-caching"}
