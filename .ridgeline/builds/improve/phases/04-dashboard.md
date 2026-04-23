@@ -1,5 +1,5 @@
 ---
-depends_on: [01-foundations-and-preflight]
+depends_on: [01b-detection-preflight-color]
 ---
 # Phase 4: ridgeline ui localhost dashboard
 
@@ -15,11 +15,11 @@ This phase is parallel-safe with phase 3 (lean ensembles / caching) — they tou
 
 ## Context
 
-Phase 1 deleted `src/flavours/`, added `axe-core` and `wcag-contrast` as direct dependencies, bumped to `0.8.0`, and shipped the semantic color helper (`src/ui/color.ts`). The dashboard does NOT use the terminal color helper directly (it serves CSS, not ANSI), but the same semantic vocabulary should map onto the served palette — error/success/warning/info accents come from the design tokens table.
+Phase 1a deleted `src/flavours/` and added `axe-core` and `wcag-contrast` as direct dependencies; phase 1b shipped the semantic color helper (`src/ui/color.ts`). The dashboard does NOT use the terminal color helper directly (it serves CSS, not ANSI), but the same semantic vocabulary should map onto the served palette — error/success/warning/info accents come from the design tokens table.
 
-Preflight is NOT triggered for `ridgeline ui` (criterion 42 of phase 1) — verify this remains true here.
+Preflight is NOT triggered for `ridgeline ui` (criterion 27 of phase 1b) — verify this remains true here.
 
-The dashboard's contrast verification uses `wcag-contrast` (declared as a direct dep in phase 1). The same package backs the contrast sensor in phase 2; that does not block this phase.
+The dashboard's contrast verification uses `wcag-contrast` (declared as a direct dep in phase 1a). The same package backs the contrast sensor in phase 2; that does not block this phase.
 
 Existing artifacts the dashboard reads from `.ridgeline/builds/<name>/`:
 

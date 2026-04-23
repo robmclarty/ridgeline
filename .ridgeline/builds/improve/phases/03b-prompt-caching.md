@@ -31,7 +31,7 @@ This phase does NOT attempt cross-invocation prompt-cache reuse — the Claude C
 8. Volatile content (per-phase handoff, current task) is passed on stdin or as the non-cached `-p` prompt argument — never merged into the stable file. A vitest mutates the handoff across runs and asserts the stable-file sha256 is unchanged.
 9. A local `sha256` of the concatenated stable files is logged to `trajectory.jsonl` under event type `prompt_stable_hash` for diagnostics only.
 10. With `--output-format json`, the Claude CLI emits `cache_creation_input_tokens` and `cache_read_input_tokens` per response; both are extracted and logged to `trajectory.jsonl` under the existing phase event.
-11. When the combined stable block is under the model's minimum cacheable prefix (4,096 tokens for Opus 4.5/4.6/4.7 and Haiku 4.5; 2,048 for Sonnet 4.6), preflight (from phase 1) prints a `warning`-level line noting the threshold was not met and caching will be silently skipped upstream. The check uses the same token count the `-p` invocation will see.
+11. When the combined stable block is under the model's minimum cacheable prefix (4,096 tokens for Opus 4.5/4.6/4.7 and Haiku 4.5; 2,048 for Sonnet 4.6), preflight (from phase 1b) prints a `warning`-level line noting the threshold was not met and caching will be silently skipped upstream. The check uses the same token count the `-p` invocation will see.
 12. No caching-specific flag is exposed on the CLI — always-on when available; preserved across 0.8.0.
 
 ### Tests
