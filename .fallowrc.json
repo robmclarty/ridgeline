@@ -1,5 +1,5 @@
 {
-  "entry": ["examples/**"],
+  "entry": ["examples/**", "scripts/**"],
   "ignoreDependencies": ["colorthief"],
   "ignoreExports": [
     { "file": "src/engine/claude/stream.types.ts", "exports": ["StreamEvent"] },

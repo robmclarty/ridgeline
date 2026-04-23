@@ -64,6 +64,8 @@ On a successful bump, the JSON carries everything the skill needs: `new` is the 
    - Write for a reader who didn't follow the work. "Fixed flaky cache eviction under concurrent writes" beats "fixed bug in cache".
    - If the JSON's `since` is `null`, this is the first release — title the section "vX.Y.Z — initial release" instead of listing every commit in repo history.
 
+   **Print the drafted section back to the user** as a fenced `markdown` code block in your response text — the entire block, verbatim, exactly as it will be prepended to `CHANGELOG.md`. This is the user's one chance to see the prose in isolation before it's folded into the file, committed, and tagged. Do this before moving on to step 5; don't summarize or abbreviate — print the raw markdown. The skill continues automatically after printing (no wait for confirmation); if the user wants to change the prose, they'll interrupt.
+
 5. **Prepend the new section to `CHANGELOG.md`.** The existing file uses `## X.Y.Z` (bare, no `v` prefix) as the section heading, followed by flat bullets — no subsections. The new format switches to `## vX.Y.Z — YYYY-MM-DD` with the grouped subsections from step 4. Prepend above the existing content; keep the single `# Changelog` heading at the very top. Leave the older flat entries below untouched.
 
 6. **Stage exactly `package.json` and `CHANGELOG.md`, nothing else.**
