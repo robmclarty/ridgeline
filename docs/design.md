@@ -235,4 +235,3 @@ Establish or update a visual design system through interactive Q&A. Produces
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for designer agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
-| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |

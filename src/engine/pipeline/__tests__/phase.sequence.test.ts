@@ -110,7 +110,6 @@ const config: RidgelineConfig = {
   unsafe: false,
   networkAllowlist: [],
   extraContext: null,
-  flavour: null,
   isDeepEnsemble: false,
 }
 

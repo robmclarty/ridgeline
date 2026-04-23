@@ -1,9 +1,0 @@
-{
-  "name": "web-game",
-  "recommendedSkills": [
-    "agent-browser",
-    "visual-diff",
-    "canvas-screenshot",
-    "shader-validate"
-  ]
-}

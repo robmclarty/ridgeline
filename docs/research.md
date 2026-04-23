@@ -87,12 +87,11 @@ accumulated findings log and `spec.changelog.md` to avoid repeating prior work.
 
 ### gaps.md
 
-Each flavour has a `researchers/gaps.md` file -- a static domain checklist of
-common spec gaps (e.g., security considerations, error handling, performance
-constraints, accessibility). There is also a base checklist for generic software
-projects. The agenda step reads this to know what to look for, ensuring
-specialists investigate areas the spec may have missed rather than only
-confirming what is already there.
+`src/agents/researchers/gaps.md` is a static checklist of common spec gaps
+(security considerations, error handling, performance constraints,
+accessibility, etc.). The agenda step reads this to know what to look for,
+ensuring specialists investigate areas the spec may have missed rather than
+only confirming what is already there.
 
 ### How specialists work
 
@@ -369,7 +368,6 @@ directory.
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
 | `--quick` | off | Run a single random specialist instead of the full ensemble |
 | `--auto [iterations]` | off | Auto-loop: research + refine for N iterations (default 2 if no number given) |
-| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 ### `ridgeline refine [build-name]`
 
@@ -380,7 +378,6 @@ the build directory. Writes `spec.changelog.md` alongside `spec.md`.
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for refiner agent |
 | `--timeout <minutes>` | `10` | Max duration |
-| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 [^1]: **Further reading:** [Triangulation in Research](https://doi.org/10.1177/1558689806298224) — Methodological triangulation -- investigating the same question through multiple independent lenses -- is a well-established technique for reducing bias and improving validity in research.
 [^2]: **Further reading:** [Systematic Literature Reviews in Software Engineering](https://doi.org/10.1016/j.infsof.2008.09.009) — Kitchenham and Charters' guidelines on structured synthesis of multi-source research findings, the academic foundation for deduplication-and-ranking approaches to research aggregation.

@@ -65,7 +65,6 @@ describe("commands/dry-run", () => {
       unsafe: false,
       networkAllowlist: [],
       extraContext: null,
-      flavour: null,
       isDeepEnsemble: false,
     }
   })

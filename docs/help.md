@@ -74,7 +74,6 @@ Research the spec using web sources. Optional step between `spec` and `plan`.
 | `--model <name>` | `opus` | Model for research agents |
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative research cost exceeds this amount |
-| `--flavour <name-or-path>` | none | Agent flavour |
 
 ```sh
 ridgeline research my-feature              # Quick research (1 agent)
@@ -93,7 +92,6 @@ what changed. Run after reviewing/editing research.md.
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for refiner agent |
 | `--timeout <minutes>` | `10` | Max duration |
-| `--flavour <name-or-path>` | none | Agent flavour |
 
 ```sh
 ridgeline refine my-feature

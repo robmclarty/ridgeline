@@ -21,7 +21,6 @@ const resolveDesignOutputPath = (
 type DesignOptions = {
   model: string
   timeout: number
-  flavour?: string
   matchedShapes?: string[]
 }
 

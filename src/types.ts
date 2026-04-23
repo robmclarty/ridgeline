@@ -17,7 +17,6 @@ export type RidgelineConfig = {
   networkAllowlist: string[]
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
   extraContext: string | null
-  flavour: string | null
   isDeepEnsemble: boolean
 }
 

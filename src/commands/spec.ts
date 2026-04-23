@@ -11,7 +11,6 @@ export type SpecOptions = {
   model: string
   timeout: number
   maxBudgetUsd?: number
-  flavour?: string
   /** Optional path to a file (e.g., idea.md) or raw text to feed as authoritative spec guidance. */
   input?: string
 }
@@ -90,7 +89,6 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     timeoutMinutes: opts.timeout,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
-    flavour: opts.flavour ?? null,
     matchedShapes: getMatchedShapes(buildDir),
     userInput,
   }

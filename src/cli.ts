@@ -20,6 +20,9 @@ import { runResearch } from "./commands/research"
 import { runRefine } from "./commands/refine"
 import { runCatalog } from "./commands/catalog"
 import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
+import { enforceFlavourRemoved } from "./utils/flavour-removed"
+
+enforceFlavourRemoved(process.argv.slice(2))
 
 // Kill all Claude subprocesses on Ctrl+C before exiting
 process.on("SIGINT", () => {
@@ -69,7 +72,6 @@ const ridgelineDirFromCwd = (): string => path.join(process.cwd(), ".ridgeline")
 const parseBaseOpts = (opts: Opts) => ({
   model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
   timeout: parseInt(String(opts.timeout ?? "10"), 10),
-  flavour: (opts.flavour as string) ?? undefined,
 })
 
 const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
@@ -105,7 +107,6 @@ program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runCreate(await requireBuildName(buildName), {
@@ -119,7 +120,6 @@ program
         taste: opts.taste as string | undefined,
         context: opts.context as string | undefined,
         unsafe: opts.unsafe === true,
-        flavour: opts.flavour as string | undefined,
         input,
       })
     } catch (err) {
@@ -132,13 +132,11 @@ program
   .description("Gather project context and produce shape.md")
   .option("--model <name>", "Model for shaper agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runShape(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
-        flavour: (opts.flavour as string) ?? undefined,
         input,
       })
     } catch (err) {
@@ -151,7 +149,6 @@ program
   .description("Establish or update visual design system (design.md)")
   .option("--model <name>", "Model for designer agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runDesign(buildName ? await requireBuildName(buildName) : null, parseBaseOpts(opts))
@@ -170,14 +167,12 @@ program
   .option("--model <name>", "Model for specialists and synthesizer (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runSpec(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
-        flavour: (opts.flavour as string) ?? undefined,
         input,
       })
     } catch (err) {
@@ -193,7 +188,6 @@ program
   .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
   .option("--quick", "Run a single random specialist instead of the full ensemble")
   .option("--auto [iterations]", "Auto-loop: research + refine for N iterations (default 2)")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       const autoRaw = opts.auto
@@ -207,7 +201,6 @@ program
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "15"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
-        flavour: (opts.flavour as string) ?? undefined,
         isQuick: opts.quick === true,
         auto,
       })
@@ -221,7 +214,6 @@ program
   .description("Merge research.md findings into spec.md")
   .option("--model <name>", "Model for refiner agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runRefine(await requireBuildName(buildName), parseBaseOpts(opts))
@@ -263,7 +255,6 @@ const addPlanOptions = (cmd: Command) => cmd
   .option("--timeout <minutes>", "Max duration for planning", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .option("--deep-ensemble", "Enable two-round cross-specialist annotation before synthesis")
 
 addPlanOptions(program
@@ -289,7 +280,6 @@ program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--unsafe", "Disable sandbox auto-detection")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .option("--no-structured-log", "Disable structured logging to log.jsonl")
   .action(withConfig(runBuild))
 
@@ -310,13 +300,11 @@ program
   .description("Analyze a completed build and extract learnings for future builds")
   .option("--model <name>", "Model for retrospective agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runRetrospective(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
-        flavour: (opts.flavour as string) ?? undefined,
       })
     } catch (err) {
       handleCommandError(err)
@@ -337,12 +325,11 @@ program
 
 program
   .command("check")
-  .description("Check recommended tools and prerequisites for a flavour")
-  .option("--flavour <name-or-path>", "Agent flavour: built-in name or path to custom agents")
-  .action((opts: Opts) => {
+  .description("Check project prerequisites and tooling")
+  .action(() => {
     try {
       const { runCheck } = require("./commands/check")
-      runCheck({ flavour: (opts.flavour as string) ?? undefined })
+      runCheck()
     } catch (err) {
       handleCommandError(err)
     }

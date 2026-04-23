@@ -141,7 +141,6 @@ Analyze a completed build and extract learnings.
 |------|---------|-------------|
 | `--model <name>` | `opus` | Model for retrospective agent |
 | `--timeout <minutes>` | `10` | Max duration |
-| `--flavour <name-or-path>` | none | Agent flavour: built-in name or path to custom agents |
 
 ## Cost
 

@@ -1,6 +1,6 @@
 # Why Ridgeline Works This Way
 
-Ridgeline is a build harness for long-horizon software execution using AI agents. It orchestrates multi-phase builds through the Claude CLI with an ensemble specialist-synthesizer pattern, git-native checkpointing, structured review loops, cost tracking, sandboxing, and a domain flavour system. This document links each architectural decision to supporting research and industry practice.
+Ridgeline is a build harness for long-horizon software execution using AI agents. It orchestrates multi-phase builds through the Claude CLI with an ensemble specialist-synthesizer pattern, git-native checkpointing, structured review loops, cost tracking, and sandboxing. This document links each architectural decision to supporting research and industry practice.
 
 ---
 
@@ -122,15 +122,3 @@ Ridgeline is a build harness for long-horizon software execution using AI agents
 [^20]: Fowler, M. "Event Sourcing." martinfowler.com, 2005.
 [^21]: Young, G. "CQRS Documents." 2010. <https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf>
 
----
-
-## 10. Domain Flavour System
-
-**Decision.** Ridgeline supports domain-specific agent overlays called "flavours." A flavour is a directory containing specialist definitions, prompt overrides, and context files for a particular domain (e.g., web frontend, CLI tooling, data pipeline). Flavours can be built-in (shipped with Ridgeline) or external (referenced by file path). Resolution follows a name-then-path strategy: if the value looks like a path, resolve it against the working directory; otherwise, look it up in the built-in flavours directory.
-
-**Alternatives considered.** Hardcoded domain knowledge in the core prompts. A plugin system with runtime code execution. Per-project configuration files that inline all domain-specific content.
-
-**Why this approach.** Hardcoded domain knowledge makes the core prompts unwieldy and forces every user to pay the context-window cost for irrelevant domains. Runtime plugins introduce security and compatibility risks. Inlined per-project configuration duplicates effort across projects in the same domain. The flavour system applies the strategy pattern[^22]: the core pipeline defines the algorithm skeleton, and flavours supply domain-specific behavior without modifying the core. This maps directly to the plugin architecture literature[^23], which distinguishes between extension points (Ridgeline's specialist/synthesizer/context slots) and extensions (flavour-provided content). The `buildAgentRegistry` function merges flavour overlays with core defaults, ensuring that a missing flavour gracefully falls back to generic behavior rather than failing. The dual resolution strategy (name lookup for convenience, path lookup for flexibility) follows the convention-over-configuration principle while preserving escape hatches for custom setups. This design keeps the core small and domain-agnostic while enabling deep specialization for teams that need it.
-
-[^22]: Gamma, E. et al. *Design Patterns: Elements of Reusable Object-Oriented Software.* Addison-Wesley, 1994.
-[^23]: Mayer, P. et al. "An Empirical Study of the Design and Implementation of Plugin Architectures." Empirical Software Engineering, 2017.

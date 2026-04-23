@@ -1,8 +1,0 @@
-{
-  "name": "test-suite",
-  "recommendedSkills": [
-    "coverage-report",
-    "test-runner",
-    "mutation-test"
-  ]
-}

@@ -13,7 +13,6 @@ type ResearchOptions = {
   model: string
   timeout: number
   maxBudgetUsd?: number
-  flavour?: string
   isQuick: boolean
   auto: number | null
 }
@@ -60,7 +59,6 @@ const runSingleResearch = async (
     timeoutMinutes: opts.timeout,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
-    flavour: opts.flavour ?? null,
     isQuick: opts.isQuick,
     networkAllowlist: resolveResearchAllowlist(ridgelineDir),
     existingResearchMd,
@@ -111,7 +109,6 @@ const runSingleRefine = async (
   await runRefine(buildName, {
     model: opts.model,
     timeout: opts.timeout,
-    flavour: opts.flavour,
     iterationNumber,
   })
 }
