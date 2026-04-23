@@ -554,6 +554,7 @@ Wiring changes:
   `src/engine/pipeline/sensors.collect.ts`). No rules / overrides
   were added; do the same if phase 3 adds new types at the sensor
   folder boundary.
+
 ## Phase 4: ridgeline ui localhost dashboard
 
 ### What was built

@@ -24,3 +24,18 @@
 {"timestamp":"2026-04-23T04:58:58.372Z","level":"info","phase":"02-builder-sensors","message":"Waiting 2.8s before retry..."}
 {"timestamp":"2026-04-23T04:58:58.476Z","level":"info","phase":"04-dashboard","message":"Build failed (transient): Error: claude exited with code null: "}
 {"timestamp":"2026-04-23T04:58:58.476Z","level":"info","phase":"04-dashboard","message":"Waiting 2.2s before retry..."}
+{"timestamp":"2026-04-23T14:22:42.341Z","level":"info","phase":null,"message":"Resuming build 'improve' from phase 3/7"}
+{"timestamp":"2026-04-23T14:22:42.812Z","level":"info","phase":null,"message":"Sandbox: greywall"}
+{"timestamp":"2026-04-23T14:22:42.813Z","level":"info","phase":null,"message":"Starting build: improve (7 phases)\n"}
+{"timestamp":"2026-04-23T14:22:42.850Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
+{"timestamp":"2026-04-23T14:22:42.851Z","level":"info","phase":null,"message":"\nWave: 2 parallel phases (02-builder-sensors, 04-dashboard)"}
+{"timestamp":"2026-04-23T14:22:43.138Z","level":"info","phase":"02-builder-sensors","message":"Phase 3/7: 02-builder-sensors"}
+{"timestamp":"2026-04-23T14:22:43.138Z","level":"info","phase":"04-dashboard","message":"Phase 6/7: 04-dashboard"}
+{"timestamp":"2026-04-23T14:22:43.230Z","level":"info","phase":"02-builder-sensors","message":"Building..."}
+{"timestamp":"2026-04-23T14:22:43.336Z","level":"info","phase":"04-dashboard","message":"Building..."}
+{"timestamp":"2026-04-23T14:51:44.132Z","level":"info","phase":"04-dashboard","message":"Reviewing..."}
+{"timestamp":"2026-04-23T14:54:50.975Z","level":"info","phase":"02-builder-sensors","message":"Reviewing..."}
+{"timestamp":"2026-04-23T14:57:19.174Z","level":"info","phase":"04-dashboard","message":"PASSED (2076s)"}
+{"timestamp":"2026-04-23T15:00:37.432Z","level":"info","phase":"02-builder-sensors","message":"PASSED (2274s)"}
+{"timestamp":"2026-04-23T15:00:38.150Z","level":"error","phase":null,"message":"Merge conflict for 04-dashboard: .ridgeline/builds/improve/handoff.md"}
+{"timestamp":"2026-04-23T15:00:38.150Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/improve/04-dashboard"}

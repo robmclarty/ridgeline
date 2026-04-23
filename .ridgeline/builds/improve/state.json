@@ -33,12 +33,12 @@
     },
     {
       "id": "02-builder-sensors",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/improve/02-builder-sensors",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/improve/02-builder-sensors",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 2274240,
+      "completedAt": "2026-04-23T15:00:37.431Z",
       "failedAt": null
     },
     {
@@ -63,12 +63,12 @@
     },
     {
       "id": "04-dashboard",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/improve/04-dashboard",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/improve/04-dashboard",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 2075881,
+      "completedAt": "2026-04-23T14:57:19.174Z",
       "failedAt": null
     },
     {
