@@ -77,7 +77,7 @@
       "checkpointTag": "ridgeline/checkpoint/improve/05-release-polish",
       "completionTag": null,
       "retries": 0,
-      "duration": null,
+      "duration": 3355857,
       "completedAt": null,
       "failedAt": null
     }
