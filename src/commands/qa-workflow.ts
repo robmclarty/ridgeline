@@ -1,6 +1,7 @@
 import * as readline from "node:readline"
 import { invokeClaude } from "../engine/claude/claude.exec"
 import { createDisplayCallbacks } from "../engine/claude/stream.display"
+import { hint } from "../ui/color"
 
 const MAX_CLARIFICATION_ROUNDS = 4
 
@@ -71,7 +72,7 @@ export const runQAIntake = async (
   timeoutMs: number,
   statusMessage: string,
 ): Promise<{ sessionId: string; qa: QAResponse }> => {
-  process.stderr.write(`\n\x1b[90m${statusMessage}\x1b[0m\n`)
+  process.stderr.write(`\n${hint(statusMessage, { stream: "stderr" })}\n`)
   const display = createDisplayCallbacks({ projectRoot: process.cwd() })
   const intakeResult = await invokeClaude({
     systemPrompt,
@@ -103,7 +104,7 @@ export const runOutputTurn = async (
   statusMessage: string,
   jsonSchema?: string,
 ): Promise<{ result: string; sessionId: string }> => {
-  process.stderr.write(`\n\x1b[90m${statusMessage}\x1b[0m\n`)
+  process.stderr.write(`\n${hint(statusMessage, { stream: "stderr" })}\n`)
   const display = createDisplayCallbacks({ projectRoot: process.cwd() })
   const result = await invokeClaude({
     systemPrompt,
@@ -138,14 +139,14 @@ const runClarificationLoop = async (
     const normalized = qa.questions.map(normalizeQuestion)
     const label = opts.questionLabel ?? "Questions"
     console.log(`\n${label}:\n`)
-    console.log(`  \x1b[90m(tip: you can enter a file path for longer answers)\x1b[0m\n`)
+    console.log(`  ${hint("(tip: you can enter a file path for longer answers)")}\n`)
     const answers: string[] = []
     for (let i = 0; i < normalized.length; i++) {
       if (i > 0) console.log("")
       const q = normalized[i]
       if (q.suggestedAnswer) {
         console.log(`  ${i + 1}. ${q.question}`)
-        console.log(`     \x1b[90m(suggested: ${q.suggestedAnswer})\x1b[0m`)
+        console.log(`     ${hint(`(suggested: ${q.suggestedAnswer})`)}`)
         const answer = await askQuestion(rl, `  > `)
         answers.push(answer || q.suggestedAnswer)
       } else {
@@ -154,7 +155,7 @@ const runClarificationLoop = async (
       }
     }
 
-    process.stderr.write(`\n\x1b[90mProcessing your answers...\x1b[0m\n`)
+    process.stderr.write(`\n${hint("Processing your answers...", { stream: "stderr" })}\n`)
     const answersPrompt = normalized
       .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
       .join("\n\n")

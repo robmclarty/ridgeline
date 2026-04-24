@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { AssetCatalog } from "./types"
 import type { PackerExporterType } from "free-tex-packer-core"
+import { hint, warning } from "../ui/color"
 
 /**
  * Pack sprites into texture atlases grouped by category.
@@ -65,10 +66,10 @@ export const packAtlases = async (assetDir: string, catalog: AssetCatalog): Prom
         fs.writeFileSync(outPath, file.buffer)
       }
 
-      process.stderr.write(`\x1b[90m  Packed ${category}: ${images.length} sprites\x1b[0m\n`)
+      process.stderr.write(`${hint(`  Packed ${category}: ${images.length} sprites`, { stream: "stderr" })}\n`)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      process.stderr.write(`\x1b[33mFailed to pack ${category}: ${msg}\x1b[0m\n`)
+      process.stderr.write(`${warning(`Failed to pack ${category}: ${msg}`, { stream: "stderr" })}\n`)
     }
   }
 }

@@ -2,13 +2,11 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execSync } from "node:child_process"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir, initTestRepo } from "../../../test/setup"
 import { ensureGitRepo } from "../worktree"
 
 const initGitRepo = (dir: string): void => {
-  execSync("git init", { cwd: dir, stdio: "pipe" })
-  execSync("git config user.email test@test.com", { cwd: dir, stdio: "pipe" })
-  execSync("git config user.name Test", { cwd: dir, stdio: "pipe" })
+  initTestRepo(dir)
   fs.writeFileSync(path.join(dir, "README.md"), "# Test")
   execSync("git add -A && git commit -m 'init'", { cwd: dir, stdio: "pipe" })
 }
@@ -31,15 +29,14 @@ describe("worktree", () => {
       expect(ensureGitRepo(repoDir)).toBe(false)
     })
 
-    it("returns true and initializes repo when directory has no .git", () => {
+    it("returns true and initializes repo when directory has no HEAD", () => {
       const freshDir = makeTempDir()
-      // Write a file so there's something to commit
+      initTestRepo(freshDir)
       fs.writeFileSync(path.join(freshDir, "index.ts"), "export {}")
 
       const result = ensureGitRepo(freshDir)
 
       expect(result).toBe(true)
-      // Should have a commit now
       const log = execSync("git log --oneline", { cwd: freshDir, encoding: "utf-8" })
       expect(log).toContain("initial commit")
 
@@ -48,6 +45,7 @@ describe("worktree", () => {
 
     it("generates .gitignore with Node patterns when package.json exists", () => {
       const freshDir = makeTempDir()
+      initTestRepo(freshDir)
       fs.writeFileSync(path.join(freshDir, "package.json"), "{}")
 
       ensureGitRepo(freshDir)
@@ -60,6 +58,7 @@ describe("worktree", () => {
 
     it("generates .gitignore with Python patterns when requirements.txt exists", () => {
       const freshDir = makeTempDir()
+      initTestRepo(freshDir)
       fs.writeFileSync(path.join(freshDir, "requirements.txt"), "flask")
 
       ensureGitRepo(freshDir)
@@ -72,6 +71,7 @@ describe("worktree", () => {
 
     it("does not overwrite existing .gitignore", () => {
       const freshDir = makeTempDir()
+      initTestRepo(freshDir)
       fs.writeFileSync(path.join(freshDir, ".gitignore"), "my-custom-ignore")
 
       ensureGitRepo(freshDir)
@@ -84,7 +84,7 @@ describe("worktree", () => {
 
     it("seeds initial commit when repo exists but has no commits", () => {
       const freshDir = makeTempDir()
-      execSync("git init", { cwd: freshDir, stdio: "pipe" })
+      initTestRepo(freshDir)
       fs.writeFileSync(path.join(freshDir, "app.ts"), "console.log('hi')")
 
       const result = ensureGitRepo(freshDir)

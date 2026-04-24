@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from "vitest"
 import { execSync } from "node:child_process"
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { initTestRepo } from "../../../../test/setup"
 import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../worktree.parallel"
 
 const run = (cmd: string, cwd: string) =>
@@ -9,9 +10,7 @@ const run = (cmd: string, cwd: string) =>
 
 const setupGitRepo = (): string => {
   const dir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "ridgeline-wt-test-"))
-  run("git init", dir)
-  run("git config user.email test@test.com", dir)
-  run("git config user.name Test", dir)
+  initTestRepo(dir)
   fs.writeFileSync(path.join(dir, "file.txt"), "initial")
   run("git add -A && git commit -m 'initial'", dir)
   return dir
