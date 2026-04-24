@@ -1,6 +1,6 @@
 # Preflight, Detection, and Sensors
 
-Ridgeline 0.8.0 replaced the user-selected flavour taxonomy with a
+Ridgeline 0.8.2 replaced the user-selected flavour taxonomy with a
 detection-driven flow. Before any pipeline-entry command runs, ridgeline
 scans the project, prints what it found, names the sensors it will enable,
 confirms the ensemble size, and waits for you to press Enter. The same

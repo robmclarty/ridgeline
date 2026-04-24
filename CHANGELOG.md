@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.0
+## 0.8.2
 
 Tool selection is now driven by detection rather than a user-selected flavour
 taxonomy. Ridgeline scans the project, proposes sensors and ensemble sizing,
@@ -116,7 +116,7 @@ terminal session idle.
   subcommand now exits non-zero with an actionable message pointing at the
   detection-driven replacement. Pipelines select sensors and ensemble
   sizing from the `DetectionReport`; there is no capability-pack or
-  per-domain prompt override in 0.8.0.
+  per-domain prompt override in 0.8.2.
 - The `state.json` `flavour` field is removed. 0.7.x build directories are
   not migrated — start a new build.
 - `--deep-ensemble` is no longer a documented flag. It still works (as a
@@ -126,7 +126,7 @@ terminal session idle.
   `engines.node: ">=20.0.0"`. Set by Playwright's active-support baseline.
 - No capability-pack abstraction is introduced. Tool selection is driven by
   detection; there is no pluggable domain-pack layer to hook into.
-- 0.7.x builds cannot be resumed against the 0.8.0 pipeline.
+- 0.7.x builds cannot be resumed against the 0.8.2 pipeline.
 
 ## v0.7.21 — 2026-04-22
 

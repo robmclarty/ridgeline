@@ -64,7 +64,7 @@ the sum of all.
 
 ### Stage 3: Proposal Collection
 
-Results are collected via `Promise.allSettled()`. As of 0.8.0 the engine
+Results are collected via `Promise.allSettled()`. As of 0.8.2 the engine
 requires **at least one surviving specialist** to proceed. When a lone
 survivor emerges (the rest timed out or errored), synthesis runs on the
 single verdict with a warning on stderr. Earlier versions required
@@ -309,7 +309,7 @@ flowchart LR
 
 By default, the researcher ensemble runs **2 specialists** in parallel (a
 random pair from academic / ecosystem / competitive). Two specialists is
-the 0.8.0 default across every ensemble — enough perspectives to catch
+the 0.8.2 default across every ensemble — enough perspectives to catch
 genuine disagreement, small enough to stay cheap.
 
 Two other sizing opt-outs are available:

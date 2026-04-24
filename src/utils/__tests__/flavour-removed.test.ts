@@ -40,8 +40,8 @@ describe("detectFlavourFlag", () => {
 })
 
 describe("flavourRemovedMessage", () => {
-  it("contains the literal substring 'removed in 0.8.0'", () => {
-    expect(flavourRemovedMessage("web-ui")).toContain("removed in 0.8.0")
+  it("contains the literal substring 'removed in 0.8.2'", () => {
+    expect(flavourRemovedMessage("web-ui")).toContain("removed in 0.8.2")
   })
 
   it("contains the literal substring 'drop the --flavour flag'", () => {
@@ -82,7 +82,7 @@ describe("enforceFlavourRemoved — parameterised across all pipeline-entry comm
         ).toThrow(/__exit:1__/)
 
         const stderr = errorSpy.mock.calls.flat().join("\n")
-        expect(stderr).toContain("removed in 0.8.0")
+        expect(stderr).toContain("removed in 0.8.2")
         expect(stderr).toContain("drop the --flavour flag")
         expect(stderr).toContain(flavour)
       })

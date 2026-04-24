@@ -16,8 +16,8 @@ export const detectFlavourFlag = (argv: string[]): string | null => {
 
 export const flavourRemovedMessage = (flavourName: string): string => {
   const named = flavourName
-    ? `Flavour "${flavourName}" removed in 0.8.0.`
-    : "--flavour removed in 0.8.0."
+    ? `Flavour "${flavourName}" removed in 0.8.2.`
+    : "--flavour removed in 0.8.2."
   return [
     named,
     "Non-software flavours are no longer supported; drop the --flavour flag to use the default software flavour.",
