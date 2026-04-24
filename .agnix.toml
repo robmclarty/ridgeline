@@ -5,6 +5,7 @@ exclude = [
     "dist/**",
     "plugin/**",
     "src/agents/**",
+    ".ridgeline/**",
 ]
 target = "ClaudeCode"
 tools = ["claude-code"]
