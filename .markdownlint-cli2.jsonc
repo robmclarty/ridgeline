@@ -17,7 +17,6 @@
     "dist/**",
     "examples/**",
     ".worktrees/**",
-    ".ridgeline/builds/**/phases/**",
-    ".ridgeline/*.md"
+    ".ridgeline/**"
   ]
 }
