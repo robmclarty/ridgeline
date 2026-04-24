@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { execFileSync } from "node:child_process"
 import { AssetCatalog, AssetEntry, LayoutRegion } from "./types"
+import { hint, warning } from "../ui/color"
 
 type VisionOptions = {
   model: string
@@ -104,7 +105,7 @@ const invokeVision = (
     return typeof text === "string" ? JSON.parse(text) : text
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    process.stderr.write(`\x1b[33mVision failed for ${imagePath}: ${msg}\x1b[0m\n`)
+    process.stderr.write(`${warning(`Vision failed for ${imagePath}: ${msg}`, { stream: "stderr" })}\n`)
     return null
   }
 }
@@ -147,7 +148,7 @@ export const describeAssets = async (
     if (!fs.existsSync(absPath)) continue
 
     const prompt = buildPrompt(entry)
-    process.stderr.write(`\x1b[90m  Describing ${entry.file}...\x1b[0m\n`)
+    process.stderr.write(`${hint(`  Describing ${entry.file}...`, { stream: "stderr" })}\n`)
 
     const vision = invokeVision(absPath, prompt, opts.model, opts.timeoutMs)
     if (vision) {

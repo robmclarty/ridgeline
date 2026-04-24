@@ -1,13 +1,14 @@
 import { createStreamHandler } from "./stream.parse"
 import { startSpinner } from "../../ui/spinner"
 import { appendTranscript } from "../../ui/transcript"
+import { hint } from "../../ui/color"
 
 interface DisplayCallbackOptions {
   /** Suppress fenced JSON blocks (```json ... ```) from display output. */
   suppressJsonBlock?: boolean
   /** When set, strip this prefix from tool-call file paths so the display shows relative paths. */
   projectRoot?: string
-  /** When set, render streamed text in dim grey (ANSI 90). */
+  /** When set, render streamed text dimmed. */
   dimText?: boolean
 }
 
@@ -62,7 +63,7 @@ export const createDisplayCallbacks = (opts?: DisplayCallbackOptions): {
     if (!lastCharWasNewline) {
       process.stdout.write("\n")
     }
-    process.stdout.write(opts?.dimText ? `\x1b[90m${text}\x1b[0m` : text)
+    process.stdout.write(opts?.dimText ? hint(text, { force: true }) : text)
     appendTranscript(text)
     lastCharWasNewline = text.endsWith("\n")
   }

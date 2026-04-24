@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execSync } from "node:child_process"
-import { makeTempDir } from "../../test/setup"
+import { makeTempDir, initTestRepo } from "../../test/setup"
 import {
   getCurrentSha,
   isWorkingTreeDirty,
@@ -16,13 +16,9 @@ import {
   deleteTagsByPrefix,
 } from "../git"
 
-// Helper to create a temp git repo
 const initTempRepo = (): string => {
   const dir = makeTempDir()
-  execSync("git init", { cwd: dir, stdio: "pipe" })
-  execSync("git config user.email 'test@test.com'", { cwd: dir, stdio: "pipe" })
-  execSync("git config user.name 'Test'", { cwd: dir, stdio: "pipe" })
-  // Create initial commit so HEAD exists
+  initTestRepo(dir)
   fs.writeFileSync(path.join(dir, "init.txt"), "init")
   execSync("git add -A && git commit -m 'init'", { cwd: dir, stdio: "pipe" })
   return dir

@@ -11,6 +11,7 @@ import {
   extractBasicMetadata,
 } from "./extract-metadata"
 import { classifyByHeuristics, classifyWithAI } from "./classify"
+import { hint } from "../ui/color"
 
 /** Map file extensions to media types. */
 const MEDIA_EXTENSIONS: Record<string, MediaType> = {
@@ -277,7 +278,7 @@ export const buildCatalog = async (
 
     // Classify uncategorized files when --classify is set
     if (conventions.category === "uncategorized" && opts.isClassify) {
-      process.stderr.write(`\x1b[90m  Classifying ${relPath} (${processedCount}/${totalFiles})...\x1b[0m\n`)
+      process.stderr.write(`${hint(`  Classifying ${relPath} (${processedCount}/${totalFiles})...`, { stream: "stderr" })}\n`)
 
       const result = classifyByHeuristics(relPath, basic.extension, mediaType)
         ?? classifyWithAI(absPath, relPath, basic.extension, mediaType, opts.model, timeoutMs)
