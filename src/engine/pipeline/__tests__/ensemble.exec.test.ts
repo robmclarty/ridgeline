@@ -172,14 +172,14 @@ describe("invokeEnsemble — default 2-specialist", () => {
     fs.rmSync(tmp, { recursive: true, force: true })
   })
 
-  it("uses specialistTimeoutSeconds (default 180s)", async () => {
+  it("uses specialistTimeoutSeconds (default 600s)", async () => {
     mockClaude.mockImplementation(async () => makeClaudeResult("ok"))
 
     const specialists = [makeSpecialist("a"), makeSpecialist("b")]
     await invokeEnsemble(buildInvoke(specialists))
 
     const firstCall = mockClaude.mock.calls[0][0]
-    expect(firstCall.timeoutMs).toBe(180 * 1000)
+    expect(firstCall.timeoutMs).toBe(600 * 1000)
   })
 
   it("honors a custom specialistTimeoutSeconds", async () => {

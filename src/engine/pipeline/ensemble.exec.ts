@@ -104,7 +104,7 @@ type EnsembleConfig<TDraft> = {
   timeoutMinutes: number
 
   /**
-   * Per-specialist call timeout in seconds. Defaults to 180. When `isStructured`
+   * Per-specialist call timeout in seconds. Defaults to 600. When `isStructured`
    * is false (research), caller may override with a longer value.
    */
   specialistTimeoutSeconds?: number

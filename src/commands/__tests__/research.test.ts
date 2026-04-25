@@ -21,6 +21,7 @@ vi.mock("../../stores/budget", () => ({
 
 vi.mock("../../stores/settings", () => ({
   resolveResearchAllowlist: vi.fn(() => []),
+  DEFAULT_SPECIALIST_TIMEOUT_SECONDS: 600,
 }))
 
 vi.mock("../../ui/output", () => ({
