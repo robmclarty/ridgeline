@@ -52,7 +52,7 @@ type RidgelineSettings = {
   specialistTimeoutSeconds?: number
 }
 
-export const DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 180
+export const DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 600
 
 export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number => {
   const raw = loadSettings(ridgelineDir).specialistTimeoutSeconds

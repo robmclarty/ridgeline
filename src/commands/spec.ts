@@ -4,6 +4,7 @@ import * as readline from "node:readline"
 import { printInfo, printError } from "../ui/output"
 import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
 import { advancePipeline, getMatchedShapes } from "../stores/state"
+import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../stores/settings"
 import { resolveInput } from "./input"
 import { askQuestion } from "./qa-workflow"
 
@@ -89,7 +90,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
   const config: SpecEnsembleConfig = {
     model: opts.model,
     timeoutMinutes: opts.timeout,
-    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? 180,
+    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     matchedShapes: getMatchedShapes(buildDir),

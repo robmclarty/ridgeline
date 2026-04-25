@@ -5,7 +5,7 @@ import { invokeResearcher, ResearchConfig } from "../engine/pipeline/research.ex
 import { advancePipeline } from "../stores/state"
 import { logTrajectory } from "../stores/trajectory"
 import { recordCost } from "../stores/budget"
-import { resolveResearchAllowlist } from "../stores/settings"
+import { resolveResearchAllowlist, DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../stores/settings"
 import { printResearchSummary } from "../ui/summary"
 import { runRefine } from "./refine"
 
@@ -59,7 +59,7 @@ const runSingleResearch = async (
   const config: ResearchConfig = {
     model: opts.model,
     timeoutMinutes: opts.timeout,
-    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? 180,
+    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     isQuick: opts.isQuick,
