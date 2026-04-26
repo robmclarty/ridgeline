@@ -29,30 +29,21 @@ describe("greywallProvider", () => {
     expect(greywallProvider.command).toBe("greywall")
   })
 
-  it("writes a settings file with allowWrite for repo, /tmp, and package manager caches", () => {
-    greywallProvider.buildArgs("/my/repo", [])
+  it("writes a settings file with allowWrite for repo, /tmp, and additional paths", () => {
+    greywallProvider.buildArgs("/my/repo", [], ["/extra/scratch"])
 
     expect(fs.writeFileSync).toHaveBeenCalledOnce()
     const [path, content] = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0]
     expect(path).toMatch(/ridgeline-greywall-/)
     const settings = JSON.parse(content as string)
-    expect(settings.filesystem.allowWrite).toContain("/my/repo")
-    expect(settings.filesystem.allowWrite).toContain("/tmp")
-    // Package manager cache directories
-    expect(settings.filesystem.allowWrite).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining(".npm"),
-        expect.stringContaining(".cache"),
-        expect.stringContaining(".yarn"),
-        expect.stringContaining(".cargo"),
-      ])
-    )
+    expect(settings.filesystem.allowWrite).toEqual(["/my/repo", "/tmp", "/extra/scratch"])
   })
 
-  it("passes --auto-profile, --no-credential-protection, --settings, and -- separator", () => {
+  it("passes --profile claude,node, --no-credential-protection, --settings, and -- separator", () => {
     const args = greywallProvider.buildArgs("/repo", [])
-    expect(args[0]).toBe("--auto-profile")
-    expect(args[1]).toBe("--no-credential-protection")
+    expect(args[0]).toBe("--profile")
+    expect(args[1]).toBe("claude,node")
+    expect(args[2]).toBe("--no-credential-protection")
     expect(args).toContain("--settings")
     expect(args[args.length - 1]).toBe("--")
   })
