@@ -529,7 +529,9 @@ The layered defense strategy has been implemented:
    `--unsafe` to opt out. Greywall provides domain-level network allowlisting;
    bwrap provides binary network blocking. Provider interface in
    `src/engine/claude/sandbox.ts` with implementations in `sandbox.bwrap.ts`
-   and `sandbox.greywall.ts`.
+   and `sandbox.greywall.ts`. See [greywall-sandbox.md](./greywall-sandbox.md)
+   for the profile composition model and what the Greywall integration
+   actually allows in practice.
 
 2. **Network allowlist** -- sensible defaults (npm, pypi, crates.io, github,
    etc.) with user overrides via `.ridgeline/settings.json`. User list replaces
