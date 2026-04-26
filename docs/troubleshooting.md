@@ -26,7 +26,7 @@ Claude subprocess is spawned but produces no output within the initial window.
 
 Claude was producing output but then went silent for an extended period.
 
-**Symptoms:** `No output received for 300s (stall timeout)`.
+**Symptoms:** `No output received for 600s (stall timeout)`.
 
 **Cause:** The task may be too complex for the model to process within the timeout window, the API may be rate-limiting requests, or there may be an API outage.
 

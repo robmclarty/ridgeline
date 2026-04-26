@@ -14,8 +14,8 @@ import { logTrajectory } from "../../stores/trajectory"
 /** Default: kill if no stdout arrives within 2 minutes of spawn. */
 const DEFAULT_STARTUP_TIMEOUT_MS = 2 * 60 * 1000
 
-/** Default: kill if no stdout arrives for 5 minutes during execution. */
-const DEFAULT_STALL_TIMEOUT_MS = 5 * 60 * 1000
+/** Default: kill if no stdout arrives for 10 minutes during execution. */
+const DEFAULT_STALL_TIMEOUT_MS = 10 * 60 * 1000
 
 // --- Process registry: track all live Claude subprocesses ---
 const liveProcs = new Set<ChildProcess>()
