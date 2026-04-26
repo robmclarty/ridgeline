@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.8.5 — 2026-04-25
+
+### Changed
+
+- Greywall sandbox now loads the official `node` toolchain profile via
+  `--profile claude,node` instead of `--auto-profile`, replacing a
+  hand-rolled cache-path list with greywall's curated allow set (covers
+  pnpm-store, ~/.npmrc, node-gyp, Playwright/Cypress browser caches,
+  Volta, Bun, Deno, etc.) and dropping the `NPM_CONFIG_USERCONFIG=/dev/null`
+  workaround for pnpm.
+
+### Internal
+
+- New `docs/greywall-sandbox.md` documenting the profile composition
+  model, why explicit profiles beat auto-detection, how `--settings`
+  layers per-build paths on top, and how to triage blocked reads/writes.
+
 ## v0.8.4 — 2026-04-25
 
 ### Fixed
