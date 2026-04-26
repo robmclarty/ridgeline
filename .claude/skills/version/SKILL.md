@@ -3,7 +3,7 @@ name: version
 description: Bump the project version in `package.json`, prepend a `CHANGELOG.md` section summarizing every commit since the last release, commit with a `vX.Y.Z` message, and push an annotated tag. The deterministic work happens in `scripts/bump-version.mjs` before this skill begins reasoning. Use when cutting a release.
 argument-hint: "[major|minor|patch]"
 disable-model-invocation: true
-allowed-tools: Read, Edit, Write, Bash(node scripts/bump-version.mjs*), Bash(npm run lint*), Bash(git log*), Bash(git diff*), Bash(git status*), Bash(git add *), Bash(git commit *), Bash(git tag *), Bash(git push origin v*), Bash(git reset *), Bash(git restore *), Bash(node -e *), Bash(cat *)
+allowed-tools: Read, Edit, Write, Bash(node scripts/bump-version.mjs*), Bash(npm run lint*), Bash(git log*), Bash(git diff*), Bash(git describe*), Bash(git status*), Bash(git add *), Bash(git commit *), Bash(git tag *), Bash(git push origin v*), Bash(git reset *), Bash(git restore *), Bash(git checkout *), Bash(node -e *), Bash(cat *)
 ---
 
 # version
@@ -26,6 +26,14 @@ The bump script runs *first*, before the skill reasons about anything. By the ti
 - nothing was changed and the script emitted an error JSON (`mode: "error"`).
 
 On a successful bump, the JSON carries everything the skill needs: `new` is the authoritative version (never recompute it), and `since` is the SHA of the previous release commit — the left boundary for the CHANGELOG commit range. The script recognizes both the current `vX.Y.Z` convention and the legacy `chore: bump version to X.Y.Z` convention, so the changeover to the new convention is seamless. If `since` is `null`, there is no prior release and this is an initial release.
+
+## Conventions
+
+The skill's `allowed-tools` permissions match plain `git <verb>` invocations and Bash patterns like `cat *`. Stay inside those:
+
+- **Run git commands directly.** The skill's working directory is already the repo root. Use `git status`, `git log`, `git commit`, `git restore`, etc. without `-C <path>`. The `git -C <path> <verb>` form does not match patterns like `Bash(git log*)` and triggers a permission prompt for every command.
+- **Use Read or Glob for file existence checks.** Don't shell out to `ls`. If you need to inspect a file's content, use Read; if you only need to know whether it exists, Glob with the literal path.
+- **Quote-free commit messages.** The commit message is always literally `vX.Y.Z` (no body, no apostrophes), so `git commit -m "vX.Y.Z"` is safe inline — no scratch file needed.
 
 ## Steps
 
@@ -66,9 +74,26 @@ On a successful bump, the JSON carries everything the skill needs: `new` is the 
 
    **Print the drafted section back to the user** as a fenced `markdown` code block in your response text — the entire block, verbatim, exactly as it will be prepended to `CHANGELOG.md`. This is the user's one chance to see the prose in isolation before it's folded into the file, committed, and tagged. Do this before moving on to step 5; don't summarize or abbreviate — print the raw markdown. The skill continues automatically after printing (no wait for confirmation); if the user wants to change the prose, they'll interrupt.
 
-5. **Prepend the new section to `CHANGELOG.md`.** The existing file uses `## X.Y.Z` (bare, no `v` prefix) as the section heading, followed by flat bullets — no subsections. The new format switches to `## vX.Y.Z — YYYY-MM-DD` with the grouped subsections from step 4. Prepend above the existing content; keep the single `# Changelog` heading at the very top. Leave the older flat entries below untouched.
+5. **Prepend the new section to `CHANGELOG.md`.** First, note whether the file already exists — the unwind in step 6 needs this fact. Use Glob with the literal path `CHANGELOG.md` to check, not a shell `ls`. Then:
 
-6. **Stage exactly `package.json` and `CHANGELOG.md`, nothing else.**
+   - If it exists: prepend the new section above the existing content; keep the single `# Changelog` heading at the very top. The existing file uses `## X.Y.Z` (bare, no `v` prefix) for older entries with flat bullets — leave those untouched. The new format switches to `## vX.Y.Z — YYYY-MM-DD` with the grouped subsections from step 4.
+   - If it doesn't exist, create it with:
+
+     ```markdown
+     # Changelog
+
+     <new section here>
+     ```
+
+6. **Verify with `npm run lint:markdown` *before* staging.** The only thing that can fail on a `(package.json version string + CHANGELOG prose)` diff is markdown lint on the new CHANGELOG section. Semver-string replacement in one `package.json` field can't break types, code lint, or tests, so running the full `npm test` pipeline is wasted CPU. If the narrow check exits 0, continue to step 7.
+
+   If it exits non-zero, the release must not happen. Roll the working tree back to its pre-bump state so the user can fix the issue and re-invoke the skill cleanly:
+
+   - Restore `package.json` to its pre-bump content: `git restore package.json`. (The bump-script edits live in the working tree only — nothing has been staged yet — so `git restore` is the right tool.)
+   - For `CHANGELOG.md`: if the file existed before this skill run, `git restore CHANGELOG.md`. If it was newly created in step 5, `rm CHANGELOG.md`. The existence check from step 5 tells you which branch to take.
+   - Tell the user the check failed, show the markdownlint output, and stop. Don't retry; the user decides whether to fix the CHANGELOG prose and re-invoke the skill or investigate first.
+
+7. **Stage exactly `package.json` and `CHANGELOG.md`, nothing else.**
 
    ```bash
    git add package.json CHANGELOG.md
@@ -76,20 +101,13 @@ On a successful bump, the JSON carries everything the skill needs: `new` is the 
 
    Confirm via `git status --short` that no other files are staged. If anything unexpected is staged, stop and hand it back to the user — a release commit is not the place to sneak other changes in.
 
-7. **Commit.** Use the JSON's `new` field literally:
+8. **Commit.** Use the JSON's `new` field literally:
 
    ```bash
    git commit -m "vX.Y.Z"
    ```
 
-   No prefix, no body, no footer. That matches the tag convention the repo uses to find "the last release" on the next bump. Note: this is a change from the legacy `chore: bump version to X.Y.Z` convention. The script recognizes both, so old history keeps working as the boundary marker.
-
-8. **Verify with `npm run lint:markdown`.** The only thing that can fail on a `(package.json version string + CHANGELOG prose)` diff is markdown lint on the new CHANGELOG section. Semver-string replacement in one `package.json` field can't break types, code lint, or tests, so running the full `npm test` pipeline is wasted CPU. If the narrow check exits 0, continue to step 9.
-
-   If it exits non-zero:
-   - The release commit is already created (step 7 already ran).
-   - Undo with `git reset --hard HEAD~1`. This restores both `package.json` and `CHANGELOG.md`.
-   - Tell the user the check failed, show the markdownlint output, and stop. Don't retry the commit; the user decides whether to fix the CHANGELOG prose and re-invoke the skill or investigate first.
+   No prefix, no body, no footer. That matches the marker convention the repo uses to find "the last release" on the next bump. Note: this is a change from the legacy `chore: bump version to X.Y.Z` convention. The script recognizes both, so old history keeps working as the boundary marker.
 
 9. **Create an annotated tag and push it.** Use the JSON's `new` field literally:
 
@@ -132,4 +150,4 @@ In every error case: no edits, no git operations, no retry. The user decides wha
 - **`CHANGELOG.md` exists but has no `# Changelog` heading.** Prepend the new heading plus the new section; leave the old content below untouched.
 - **Commit list contains merge commits.** Drop them from the summary unless they introduced something not present in the squashed commits. `--no-merges` on the log is fine if the output is noisy.
 - **A commit is marked with `BREAKING:` or `!:` but the user asked for `patch` or `minor`.** Warn the user and ask if they meant `major`. Don't override silently. Note: by this point the bump has *already happened on disk* (the script ran in preflight); if the user wants `major` instead, they need to `git restore package.json` and re-invoke `/version major`.
-- **`npm run lint:markdown` fails in step 8.** `git reset --hard HEAD~1` restores the pre-bump state. Do not amend, do not retry the commit from inside the skill — the user decides.
+- **`npm run lint:markdown` fails in step 6.** The skill restores `package.json` with `git restore` and either removes a freshly-created `CHANGELOG.md` or restores a pre-existing one (per the existence check in step 5). No commit was created, so no reset is needed.
