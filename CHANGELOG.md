@@ -1,5 +1,23 @@
 # Changelog
 
+## v0.8.4 — 2026-04-25
+
+### Fixed
+
+- Builder no longer crashes on Claude CLI 2.1.x with `Cannot use both
+  --append-system-prompt and --append-system-prompt-file`. When prompt
+  caching is enabled, the dynamic per-phase system prompt is now folded
+  behind the stable prefix in the same temp file passed via
+  `--append-system-prompt-file`; the upstream prompt cache continues to
+  hit on the stable bytes. A runtime guard
+  (`assertSystemPromptFlagsExclusive`) catches any future regression at
+  the args-assembly site.
+
+### Internal
+
+- `/version` skill instructions aligned with the weft iteration;
+  resolved an agnix lint error.
+
 ## v0.8.3 — 2026-04-25
 
 ### Fixed
