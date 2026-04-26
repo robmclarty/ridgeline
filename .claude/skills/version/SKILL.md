@@ -1,6 +1,6 @@
 ---
 name: version
-description: Bump the project version in `package.json`, prepend a `CHANGELOG.md` section summarizing every commit since the last release, commit with a `vX.Y.Z` message, and push an annotated tag. The deterministic work happens in `scripts/bump-version.mjs` before this skill begins reasoning. Use when cutting a release.
+description: Bump the project version in `package.json` via scripts/bump-version.mjs, summarize every commit since the last release into a new CHANGELOG.md section, commit with a `vX.Y.Z` message, and push an annotated tag. Use when cutting a release.
 argument-hint: "[major|minor|patch]"
 disable-model-invocation: true
 allowed-tools: Read, Edit, Write, Bash(node scripts/bump-version.mjs*), Bash(npm run lint*), Bash(git log*), Bash(git diff*), Bash(git describe*), Bash(git status*), Bash(git add *), Bash(git commit *), Bash(git tag *), Bash(git push origin v*), Bash(git reset *), Bash(git restore *), Bash(git checkout *), Bash(node -e *), Bash(cat *)
@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Bash(node scripts/bump-version.mjs*), Bash(npm
 
 # version
 
-Bump the project version, prepend a `CHANGELOG.md` section summarizing every commit since the last release, commit, and tag. The deterministic work — dirty-tree check, semver math, `package.json` rewrite — happens in `scripts/bump-version.mjs` *before this skill begins reasoning*. The skill itself only summarizes commits, drafts prose, and runs git.
+Bump the project version, prepend a `CHANGELOG.md` section summarizing every commit since the last release, and commit. The deterministic work — dirty-tree check, semver math, `package.json` rewrite — happens in `scripts/bump-version.mjs` *before this skill begins reasoning*. The skill itself only summarizes commits, drafts prose, and runs git.
 
 ## Arguments
 
@@ -76,21 +76,21 @@ The skill's `allowed-tools` permissions match plain `git <verb>` invocations and
 
 5. **Prepend the new section to `CHANGELOG.md`.** First, note whether the file already exists — the unwind in step 6 needs this fact. Use Glob with the literal path `CHANGELOG.md` to check, not a shell `ls`. Then:
 
-   - If it exists: prepend the new section above the existing content; keep the single `# Changelog` heading at the very top. The existing file uses `## X.Y.Z` (bare, no `v` prefix) for older entries with flat bullets — leave those untouched. The new format switches to `## vX.Y.Z — YYYY-MM-DD` with the grouped subsections from step 4.
+   - If it exists, prepend above the existing content (keep a single `# Changelog` heading at the very top). The existing file uses `## X.Y.Z` (bare, no `v` prefix) for older entries with flat bullets — leave those untouched. The new format switches to `## vX.Y.Z — YYYY-MM-DD` with the grouped subsections from step 4.
    - If it doesn't exist, create it with:
 
      ```markdown
      # Changelog
 
-     <new section here>
+     [new section here]
      ```
 
-6. **Verify with `npm run lint:markdown` *before* staging.** The only thing that can fail on a `(package.json version string + CHANGELOG prose)` diff is markdown lint on the new CHANGELOG section. Semver-string replacement in one `package.json` field can't break types, code lint, or tests, so running the full `npm test` pipeline is wasted CPU. If the narrow check exits 0, continue to step 7.
+6. **Verify with `npm run lint:markdown` *before* staging.** The only thing that can fail on a `(package.json version string + CHANGELOG prose)` diff is markdown lint on the new CHANGELOG section — semver-string replacement in one `package.json` field can't break types, code lint, or tests, so running the full `npm test` pipeline is wasted CPU. If the narrow check exits 0, continue to step 7.
 
    If it exits non-zero, the release must not happen. Roll the working tree back to its pre-bump state so the user can fix the issue and re-invoke the skill cleanly:
 
    - Restore `package.json` to its pre-bump content: `git restore package.json`. (The bump-script edits live in the working tree only — nothing has been staged yet — so `git restore` is the right tool.)
-   - For `CHANGELOG.md`: if the file existed before this skill run, `git restore CHANGELOG.md`. If it was newly created in step 5, `rm CHANGELOG.md`. The existence check from step 5 tells you which branch to take.
+   - For `CHANGELOG.md`: if the file existed before this skill run, `git restore CHANGELOG.md`. If it was newly created in step 5, `rm CHANGELOG.md`. Note this in step 5 so you know which branch to take here.
    - Tell the user the check failed, show the markdownlint output, and stop. Don't retry; the user decides whether to fix the CHANGELOG prose and re-invoke the skill or investigate first.
 
 7. **Stage exactly `package.json` and `CHANGELOG.md`, nothing else.**
@@ -122,7 +122,7 @@ The skill's `allowed-tools` permissions match plain `git <verb>` invocations and
    - `git tag` fails because the tag already exists → stop and tell the user. Don't force-overwrite. A prior release at this version already exists and the user needs to resolve it by hand.
    - `git push` fails (network, auth, permissions) → the local tag is already created. Tell the user the commit + tag exist locally, show the push error, and suggest re-running `git push origin vX.Y.Z` once the issue is resolved. Do not delete the tag.
 
-10. **Report back.** Tell the user: the old version, the new version (both from the JSON), the commit SHA, the tag name, the number of commits summarized, and whether the tag push succeeded.
+10. **Report back.** Tell the user: the old version, the new version (both from the JSON), the commit SHA, the tag name, the number of commits summarized, and whether the tag push succeeded. The user still pushes the release branch themselves when they're ready.
 
 ## Steps — error
 
