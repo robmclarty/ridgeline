@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.8.3 — 2026-04-25
+
+### Fixed
+
+- `ridgeline spec` and `ridgeline research` now honor the
+  `specialistTimeoutSeconds` setting from `.ridgeline/settings.json`.
+  Previously the override was silently ignored — only commands routed
+  through `resolveConfig` (`plan`, `build`) read it, so users who set
+  e.g. `600` to give research more headroom still hit the hard-coded
+  3-minute default.
+- Raised the built-in default specialist timeout from 180s to 600s.
+  The previous default was too aggressive for non-trivial research and
+  spec ensembles, causing premature failures on slower projects.
+
+### Internal
+
+- Excluded `.ridgeline/` build output from every lint tool (oxlint,
+  markdownlint, agnix, fallow), including top-level markdown under
+  `.ridgeline/`.
+
 ## 0.8.2
 
 Tool selection is now driven by detection rather than a user-selected flavour
