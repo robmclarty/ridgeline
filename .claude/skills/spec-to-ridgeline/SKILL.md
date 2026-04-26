@@ -28,6 +28,7 @@ If any of (1) or (2) is missing, ask once, then proceed.
 A worked example lives at `/Users/robmclarty/Projects/agent-kit/docs/mk1-comp/` (produced from `agent-kit-composition-layer-spec.md`). When in doubt about tone, depth, or section ordering, **read those three files** before writing new ones — they are the canonical shape.
 
 The ridgeline format itself is defined in:
+
 - `~/projects/ridgeline/code/ridgeline/docs/spec-driven-development.md`
 - `~/projects/ridgeline/code/ridgeline/docs/constraints-and-taste.md`
 - `~/projects/ridgeline/code/ridgeline/docs/design.md` (if `design.md` is being produced)
@@ -47,6 +48,7 @@ Material that is pure rationale ("why we chose X") goes to `taste.md` if it just
 ### What goes in `constraints.md`
 
 Hard, mechanically-checkable rules. Examples:
+
 - language + runtime + module format ("TypeScript 5.x strict, ESM only, Node ≥ 20")
 - framework / SDK pinning
 - directory structure (where files MUST live)
@@ -62,6 +64,7 @@ Hard, mechanically-checkable rules. Examples:
 ### What goes in `spec.md`
 
 Outcomes and contracts. Examples:
+
 - problem statement (why this exists)
 - solution overview / data flow / layer position
 - interface definitions (function signatures, types, options objects, result shapes)
@@ -77,6 +80,7 @@ Outcomes and contracts. Examples:
 ### What goes in `taste.md`
 
 Why the API is shaped the way it is, and what "good code" looks like at a call site. Examples:
+
 - design principles (numbered, each with **Rule** + **Why**)
 - "what this rules out" — explicit anti-patterns and the reasoning
 - "what good code looks like" — one or two short call-site examples
