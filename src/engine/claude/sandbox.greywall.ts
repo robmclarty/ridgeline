@@ -1,23 +1,18 @@
 import { execSync } from "node:child_process"
 import { writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { tmpdir, homedir } from "node:os"
+import { tmpdir } from "node:os"
 import { SandboxProvider } from "./sandbox.types"
 
 const GREYPROXY_API = "http://localhost:43080"
 
-/** Directories package managers need write access to for caching. */
-const packageManagerCachePaths = (): string[] => {
-  const home = homedir()
-  return [
-    join(home, ".npm"),           // npm
-    join(home, ".cache"),         // pip, yarn berry, pnpm, misc
-    join(home, ".yarn"),          // yarn classic
-    join(home, ".pnpm-store"),    // pnpm
-    join(home, ".cargo"),         // cargo
-    join(home, ".local", "share"), // pip user installs, various tools
-  ]
-}
+// Profiles loaded via `greywall --profile`. `claude` is the agent profile
+// (Claude config dirs + Anthropic/GitHub/npm endpoints); `node` is the
+// toolchain profile (npm/pnpm/yarn/bun/deno caches, ~/.npmrc, node-gyp,
+// Playwright/Cypress browser caches, ...). To support builds that need
+// other toolchains, append names like `python`, `go`, `rust`, `ruby`,
+// `java`, `containers`, `iac`, or `scm`.
+const GREYWALL_PROFILES = "claude,node"
 
 /** Ensure a greyproxy allow rule exists for the given domain. */
 const ensureRule = async (domain: string, existingDestinations: Set<string>): Promise<void> => {
@@ -75,7 +70,7 @@ export const greywallProvider: SandboxProvider = {
     await Promise.all(networkAllowlist.map((domain) => ensureRule(domain, existing)))
   },
   buildArgs(repoRoot: string, _networkAllowlist: string[], additionalWritePaths?: string[]): string[] {
-    const writePaths = [repoRoot, "/tmp", ...packageManagerCachePaths(), ...(additionalWritePaths ?? [])]
+    const writePaths = [repoRoot, "/tmp", ...(additionalWritePaths ?? [])]
     const settings: Record<string, unknown> = {
       filesystem: {
         allowWrite: writePaths,
@@ -85,15 +80,11 @@ export const greywallProvider: SandboxProvider = {
     const settingsPath = join(tmpdir(), `ridgeline-greywall-${process.pid}.json`)
     writeFileSync(settingsPath, JSON.stringify(settings))
 
-    return ["--auto-profile", "--no-credential-protection", "--settings", settingsPath, "--"]
-  },
-  env(): Record<string, string> {
-    // pnpm/npm read ~/.npmrc on every invocation; seatbelt's auto-profile denies
-    // reads to credential-bearing dotfiles, so pnpm exits 254 before running.
-    // Point user-config at /dev/null (empty) so script execution works without
-    // exposing registry tokens to the agent.
-    return {
-      NPM_CONFIG_USERCONFIG: "/dev/null",
-    }
+    return [
+      "--profile", GREYWALL_PROFILES,
+      "--no-credential-protection",
+      "--settings", settingsPath,
+      "--",
+    ]
   },
 }
