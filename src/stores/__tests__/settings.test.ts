@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadSettings, resolveNetworkAllowlist, resolveModel, DEFAULT_NETWORK_ALLOWLIST, CLAUDE_REQUIRED_DOMAINS } from "../settings"
+import { loadSettings, resolveNetworkAllowlist, resolveModel, resolveSpecialistTimeoutSeconds, DEFAULT_NETWORK_ALLOWLIST, DEFAULT_SPECIALIST_TIMEOUT_SECONDS, CLAUDE_REQUIRED_DOMAINS } from "../settings"
 
 describe("settings", () => {
   let tmpDir: string
@@ -87,6 +87,44 @@ describe("settings", () => {
 
     it("falls back to 'opus' when neither is set", () => {
       expect(resolveModel(undefined, tmpDir)).toBe("opus")
+    })
+  })
+
+  describe("resolveSpecialistTimeoutSeconds", () => {
+    it("returns the default when no settings file exists", () => {
+      expect(resolveSpecialistTimeoutSeconds(tmpDir)).toBe(DEFAULT_SPECIALIST_TIMEOUT_SECONDS)
+    })
+
+    it("reads specialistTimeoutSeconds from settings.json", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ specialistTimeoutSeconds: 600 })
+      )
+      expect(resolveSpecialistTimeoutSeconds(tmpDir)).toBe(600)
+    })
+
+    it("falls back to default for non-positive values", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ specialistTimeoutSeconds: 0 })
+      )
+      expect(resolveSpecialistTimeoutSeconds(tmpDir)).toBe(DEFAULT_SPECIALIST_TIMEOUT_SECONDS)
+    })
+
+    it("falls back to default for non-numeric values", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ specialistTimeoutSeconds: "600" })
+      )
+      expect(resolveSpecialistTimeoutSeconds(tmpDir)).toBe(DEFAULT_SPECIALIST_TIMEOUT_SECONDS)
+    })
+
+    it("floors fractional values", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ specialistTimeoutSeconds: 450.7 })
+      )
+      expect(resolveSpecialistTimeoutSeconds(tmpDir)).toBe(450)
     })
   })
 

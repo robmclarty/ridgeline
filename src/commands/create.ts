@@ -1,9 +1,11 @@
+import * as path from "node:path"
 import { printInfo } from "../ui/output"
 import { getPipelineStatus, getNextPipelineStage } from "../stores/state"
 import { PipelineStage } from "../types"
 import { runShape, ShapeOptions } from "./shape"
 import { runSpec, SpecOptions } from "./spec"
 import { resolveBuildDir, resolveConfig } from "../config"
+import { resolveSpecialistTimeoutSeconds } from "../stores/settings"
 import { runPlan } from "./plan"
 import { runBuild } from "./build"
 
@@ -78,6 +80,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         model: opts.model,
         timeout: parseInt(opts.timeout, 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(opts.maxBudgetUsd) : undefined,
+        specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(path.join(process.cwd(), ".ridgeline")),
       }
       await runSpec(buildName, specOpts)
       break

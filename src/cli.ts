@@ -3,7 +3,7 @@
 import * as path from "node:path"
 import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config"
-import { resolveModel } from "./stores/settings"
+import { resolveModel, resolveSpecialistTimeoutSeconds } from "./stores/settings"
 import { RidgelineConfig } from "./types"
 import { disableLogger } from "./ui/logger"
 import { askBuildName } from "./ui/prompt"
@@ -232,12 +232,14 @@ addPreflightOptions(program
     try {
       await runPreflightGuard()
       const { isThorough } = detectPreflightFlags()
+      const ridgelineDir = ridgelineDirFromCwd()
       await runSpec(await requireBuildName(buildName), {
-        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
+        model: resolveModel(opts.model as string | undefined, ridgelineDir),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         input,
         isThorough,
+        specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
       })
     } catch (err) {
       handleCommandError(err)
@@ -263,13 +265,15 @@ addPreflightOptions(program
       }
 
       const { isThorough } = detectPreflightFlags()
+      const ridgelineDir = ridgelineDirFromCwd()
       await runResearch(await requireBuildName(buildName), {
-        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
+        model: resolveModel(opts.model as string | undefined, ridgelineDir),
         timeout: parseInt(String(opts.timeout ?? "15"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         isQuick: opts.quick === true,
         auto,
         isThorough,
+        specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
       })
     } catch (err) {
       handleCommandError(err)
