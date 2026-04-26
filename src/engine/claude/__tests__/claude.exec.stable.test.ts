@@ -18,7 +18,7 @@ vi.mock("node:child_process", () => {
 })
 
 import { spawn } from "node:child_process"
-import { invokeClaude } from "../claude.exec"
+import { assertSystemPromptFlagsExclusive, invokeClaude } from "../claude.exec"
 import { __resetStablePromptState } from "../stable.prompt"
 
 const sampleResult = JSON.stringify({
@@ -84,8 +84,31 @@ describe("invokeClaude stable-prompt wiring", () => {
     const filePath = argv[fileFlagIdx + 1]
     expect(filePath.startsWith(os.tmpdir())).toBe(true)
     expect(fs.existsSync(filePath)).toBe(true)
-    expect(fs.readFileSync(filePath, "utf-8")).toBe(STABLE_BLOCK)
+    expect(fs.readFileSync(filePath, "utf-8")).toBe(`${STABLE_BLOCK}\nsys`)
     expect(argv).toContain("--exclude-dynamic-system-prompt-sections")
+    // The CLI rejects passing both --append-system-prompt and
+    // --append-system-prompt-file together; caching path must use only the file.
+    expect(argv).not.toContain("--append-system-prompt")
+  })
+
+  it("falls back to --append-system-prompt with the dynamic prompt when caching is unavailable", async () => {
+    const promise = invokeClaude({
+      systemPrompt: "sys",
+      userPrompt: "user",
+      model: "opus",
+      cwd: "/tmp",
+      stablePrompt: STABLE_BLOCK,
+      buildDir,
+      helpRunner: () => "--model\n--verbose\n",
+    })
+    finishSpawn()
+    await promise
+
+    const argv = vi.mocked(spawn).mock.calls[0][1] as string[]
+    const idx = argv.indexOf("--append-system-prompt")
+    expect(idx).toBeGreaterThan(-1)
+    expect(argv[idx + 1]).toBe("sys")
+    expect(argv).not.toContain("--append-system-prompt-file")
   })
 
   it("omits both flags when the Claude CLI lacks --exclude-dynamic-system-prompt-sections", async () => {
@@ -188,5 +211,30 @@ describe("invokeClaude stable-prompt wiring", () => {
     expect(argv).not.toContain("--exclude-dynamic-system-prompt-sections")
     const trajectoryPath = path.join(buildDir, "trajectory.jsonl")
     expect(fs.existsSync(trajectoryPath)).toBe(false)
+  })
+})
+
+describe("assertSystemPromptFlagsExclusive", () => {
+  it("throws when both system-prompt append flags are present", () => {
+    expect(() => assertSystemPromptFlagsExclusive([
+      "--append-system-prompt", "x",
+      "--append-system-prompt-file", "/tmp/y.md",
+    ])).toThrow(/rejects this combination/)
+  })
+
+  it("does not throw when only --append-system-prompt is present", () => {
+    expect(() => assertSystemPromptFlagsExclusive([
+      "--append-system-prompt", "x",
+    ])).not.toThrow()
+  })
+
+  it("does not throw when only --append-system-prompt-file is present", () => {
+    expect(() => assertSystemPromptFlagsExclusive([
+      "--append-system-prompt-file", "/tmp/y.md",
+    ])).not.toThrow()
+  })
+
+  it("does not throw when neither flag is present", () => {
+    expect(() => assertSystemPromptFlagsExclusive(["--model", "opus"])).not.toThrow()
   })
 })

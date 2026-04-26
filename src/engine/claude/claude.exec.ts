@@ -3,6 +3,7 @@ import { ClaudeResult } from "../../types"
 import { extractResult } from "./stream.result"
 import { SandboxProvider } from "./sandbox"
 import {
+  computeStableHash,
   detectExcludeDynamicFlag,
   writeStablePromptFile,
   shouldLogUnavailableOnce,
@@ -103,10 +104,6 @@ const buildBaseArgs = (opts: InvokeOptions): string[] => {
     args.push("--json-schema", opts.jsonSchema)
   }
 
-  // Append to Claude Code's default system prompt so harness-level context
-  // (skill discovery, built-in reminders) is preserved alongside ridgeline's
-  // agent prompts.
-  args.push("--append-system-prompt", opts.systemPrompt)
   return args
 }
 
@@ -128,16 +125,34 @@ const logCachingUnavailable = (buildDir: string | undefined): void => {
   } catch { /* best-effort */ }
 }
 
-const applyCachingArgs = (args: string[], opts: InvokeOptions): void => {
-  if (!opts.stablePrompt || opts.stablePrompt.length === 0) return
+// The Claude CLI rejects --append-system-prompt and --append-system-prompt-file
+// together, so when caching is on we fold the dynamic system prompt into the
+// file behind the stable prefix (which preserves the cacheable bytes upstream).
+const applyCachingArgs = (args: string[], opts: InvokeOptions): boolean => {
+  if (!opts.stablePrompt || opts.stablePrompt.length === 0) return false
   if (!detectExcludeDynamicFlag(opts.helpRunner)) {
     logCachingUnavailable(opts.buildDir)
-    return
+    return false
   }
-  const stable = writeStablePromptFile(opts.stablePrompt)
-  args.push("--append-system-prompt-file", stable.path)
+  const combined = opts.systemPrompt && opts.systemPrompt.length > 0
+    ? `${opts.stablePrompt}\n${opts.systemPrompt}`
+    : opts.stablePrompt
+  const file = writeStablePromptFile(combined)
+  args.push("--append-system-prompt-file", file.path)
   args.push("--exclude-dynamic-system-prompt-sections")
-  logStableHash(opts.buildDir, stable.hash)
+  logStableHash(opts.buildDir, computeStableHash(opts.stablePrompt))
+  return true
+}
+
+// Guard: the Claude CLI rejects --append-system-prompt and
+// --append-system-prompt-file together. Catch any future regression at the
+// assembly site rather than relying on the CLI's exit-code-1 surface.
+export const assertSystemPromptFlagsExclusive = (args: string[]): void => {
+  if (args.includes("--append-system-prompt") && args.includes("--append-system-prompt-file")) {
+    throw new Error(
+      "claude args contain both --append-system-prompt and --append-system-prompt-file; the Claude CLI rejects this combination",
+    )
+  }
 }
 
 const classifyCloseError = (code: number | null, stderrData: string): Error => {
@@ -158,7 +173,13 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
 
   return new Promise((resolve, reject) => {
     const args = buildBaseArgs(opts)
-    applyCachingArgs(args, opts)
+    const cached = applyCachingArgs(args, opts)
+    // Append the dynamic system prompt directly only when caching didn't
+    // already fold it into --append-system-prompt-file.
+    if (!cached) {
+      args.push("--append-system-prompt", opts.systemPrompt)
+    }
+    assertSystemPromptFlagsExclusive(args)
 
     const spawnCmd = provider ? provider.command : "claude"
     const spawnArgs = provider
