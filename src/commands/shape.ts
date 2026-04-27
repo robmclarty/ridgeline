@@ -6,8 +6,8 @@ import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { advancePipeline, recordMatchedShapes } from "../stores/state"
 import { resolveBuildDir } from "../config"
 import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
-import { runDesign } from "./design"
-import { askQuestion, runQAIntake, runOutputTurn } from "./qa-workflow"
+import { runDesign, runDesignOneShot } from "./design"
+import { askQuestion, runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow"
 import { resolveInput } from "./input"
 
 const SHAPE_OUTPUT_SCHEMA = JSON.stringify({
@@ -185,6 +185,72 @@ export const formatShapeMd = (shape: ShapeOutput): string => {
   return lines.join("\n")
 }
 
+/**
+ * Parse the shape JSON, write shape.md, advance pipeline state, run shape
+ * detection, and either chain to design (when visual shapes match) or print
+ * the next-step hint. Shared by interactive `runShape` and `runShapeOneShot`.
+ */
+const finalizeShape = async (
+  buildName: string,
+  buildDir: string,
+  rawResult: string,
+  opts: ShapeOptions & { interactive: boolean },
+): Promise<void> => {
+  let shapeOutput: ShapeOutput
+  try {
+    shapeOutput = JSON.parse(rawResult) as ShapeOutput
+  } catch {
+    printError("Failed to parse shape output as structured JSON")
+    printError("Raw output will be written as-is")
+    fs.writeFileSync(path.join(buildDir, "shape.md"), rawResult)
+    advancePipeline(buildDir, buildName, "shape")
+    return
+  }
+
+  const shapeMd = formatShapeMd(shapeOutput)
+  fs.writeFileSync(path.join(buildDir, "shape.md"), shapeMd)
+  advancePipeline(buildDir, buildName, "shape")
+
+  const shapeMdContent = fs.readFileSync(path.join(buildDir, "shape.md"), "utf-8")
+  const shapeDefinitions = loadShapeDefinitions()
+  const matchedShapes = detectShapes(shapeMdContent, shapeDefinitions)
+
+  if (matchedShapes.length === 0) {
+    console.log("")
+    printInfo("Created:")
+    console.log(`  ${path.join(buildDir, "shape.md")}`)
+    console.log("")
+    printInfo(`Next: ridgeline spec ${buildName}`)
+    return
+  }
+
+  const matchedNames = matchedShapes.map((s) => s.name)
+  recordMatchedShapes(buildDir, buildName, matchedNames)
+
+  console.log("")
+  printInfo("Created:")
+  console.log(`  ${path.join(buildDir, "shape.md")}`)
+  console.log("")
+  printInfo(`Visual concerns detected: ${matchedNames.join(", ")}`)
+  printInfo("Auto-chaining to design...")
+  console.log("")
+
+  if (opts.interactive) {
+    await runDesign(buildName, {
+      model: opts.model,
+      timeout: opts.timeout,
+      matchedShapes: matchedNames,
+    })
+  } else {
+    await runDesignOneShot(buildName, {
+      model: opts.model,
+      timeout: opts.timeout,
+      matchedShapes: matchedNames,
+      inferGapFlagging: true,
+    })
+  }
+}
+
 export const runShape = async (buildName: string, opts: ShapeOptions): Promise<void> => {
   const buildDir = resolveBuildDir(buildName, { ensure: true })
   printInfo(`Build directory: ${buildDir}`)
@@ -221,7 +287,6 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
       timeoutMs, "Analyzing project and input...",
     )
 
-    // Shape output turn
     if (qa.summary) {
       console.log(`\nFinal understanding:\n  ${qa.summary}`)
     }
@@ -232,55 +297,62 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
       opts.model, timeoutMs, sessionId, "Producing shape document...", SHAPE_OUTPUT_SCHEMA,
     )
 
-    // Parse and write shape.md
-    let shapeOutput: ShapeOutput
-    try {
-      shapeOutput = JSON.parse(shapeResult.result) as ShapeOutput
-    } catch {
-      printError("Failed to parse shape output as structured JSON")
-      printError("Raw output will be written as-is")
-      fs.writeFileSync(path.join(buildDir, "shape.md"), shapeResult.result)
-      advancePipeline(buildDir, buildName, "shape")
-      return
-    }
-
-    const shapeMd = formatShapeMd(shapeOutput)
-    fs.writeFileSync(path.join(buildDir, "shape.md"), shapeMd)
-
-    // Update pipeline state
-    advancePipeline(buildDir, buildName, "shape")
-
-    // --- Shape detection ---
-    const shapeMdContent = fs.readFileSync(path.join(buildDir, "shape.md"), "utf-8")
-    const shapeDefinitions = loadShapeDefinitions()
-    const matchedShapes = detectShapes(shapeMdContent, shapeDefinitions)
-
-    if (matchedShapes.length > 0) {
-      const matchedNames = matchedShapes.map((s) => s.name)
-      recordMatchedShapes(buildDir, buildName, matchedNames)
-
-      console.log("")
-      printInfo("Created:")
-      console.log(`  ${path.join(buildDir, "shape.md")}`)
-      console.log("")
-      printInfo(`Visual concerns detected: ${matchedNames.join(", ")}`)
-      printInfo("Auto-chaining to design...")
-      console.log("")
-
-      // Auto-chain to design command within the same build context
-      await runDesign(buildName, {
-        model: opts.model,
-        timeout: opts.timeout,
-        matchedShapes: matchedNames,
-      })
-    } else {
-      console.log("")
-      printInfo("Created:")
-      console.log(`  ${path.join(buildDir, "shape.md")}`)
-      console.log("")
-      printInfo(`Next: ridgeline spec ${buildName}`)
-    }
+    await finalizeShape(buildName, buildDir, shapeResult.result, { ...opts, interactive: true })
   } finally {
     rl.close()
   }
+}
+
+type ShapeOneShotOptions = ShapeOptions & {
+  /** Pre-resolved source content. Required — callers must supply input. */
+  inputContent: string
+  /** Optional human-readable label for status output (e.g. file path). */
+  inputLabel?: string
+}
+
+/**
+ * Non-interactive shape: skip Q&A, infer reasonable defaults from the source
+ * content + project, and produce shape.md in a single LLM call. Used by the
+ * `ingest` command so users with a written-out PRD don't have to answer
+ * back-and-forth questions.
+ */
+export const runShapeOneShot = async (
+  buildName: string,
+  opts: ShapeOneShotOptions,
+): Promise<void> => {
+  const buildDir = resolveBuildDir(buildName, { ensure: true })
+  printInfo(`Build directory: ${buildDir}`)
+  if (opts.inputLabel) {
+    printInfo(`Using input from: ${opts.inputLabel}`)
+  }
+
+  const registry = buildAgentRegistry()
+  const systemPrompt = registry.getCorePrompt("shaper.md")
+  const timeoutMs = opts.timeout * 60 * 1000
+
+  const userPrompt = [
+    `The user wants to create a new build called "${buildName}".`,
+    "",
+    "Source material (authoritative — preserve its detail):",
+    opts.inputContent,
+    "",
+    "Use Read, Glob, and Grep to analyze the existing project directory if useful.",
+    "Then produce the final shape output as structured JSON.",
+    "Do NOT ask questions. The user has chosen non-interactive ingest — make reasonable inferences where the source is silent.",
+    "Where you infer a value the source did not state, prefix that field's content with `[inferred] ` so the user can spot it when reviewing shape.md.",
+    "Respond with ONLY the structured JSON shape document.",
+  ].join("\n")
+
+  const result = await runOneShotCall({
+    systemPrompt,
+    userPrompt,
+    model: opts.model,
+    timeoutMs,
+    allowedTools: ["Read", "Glob", "Grep"],
+    jsonSchema: SHAPE_OUTPUT_SCHEMA,
+    buildDir,
+    statusMessage: "Producing shape document (non-interactive)...",
+  })
+
+  await finalizeShape(buildName, buildDir, result.result, { ...opts, interactive: false })
 }

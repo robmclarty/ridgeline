@@ -92,6 +92,42 @@ export const runQAIntake = async (
   })
 }
 
+type OneShotOpts = {
+  systemPrompt: string
+  userPrompt: string
+  model: string
+  timeoutMs: number
+  allowedTools?: string[]
+  jsonSchema?: string
+  buildDir?: string
+  statusMessage: string
+}
+
+/**
+ * Single-call Claude invocation with the standard display callbacks. Used by
+ * non-interactive paths (`runShapeOneShot`, `runDesignOneShot`) where there
+ * is no resumable session — just one prompt, one output.
+ */
+export const runOneShotCall = async (
+  opts: OneShotOpts,
+): Promise<{ result: string; sessionId: string }> => {
+  process.stderr.write(`\n${hint(opts.statusMessage, { stream: "stderr" })}\n`)
+  const display = createDisplayCallbacks({ projectRoot: process.cwd() })
+  const result = await invokeClaude({
+    systemPrompt: opts.systemPrompt,
+    userPrompt: opts.userPrompt,
+    model: opts.model,
+    allowedTools: opts.allowedTools,
+    cwd: process.cwd(),
+    timeoutMs: opts.timeoutMs,
+    jsonSchema: opts.jsonSchema,
+    onStdout: display.onStdout,
+    buildDir: opts.buildDir,
+  })
+  display.flush()
+  return { result: result.result, sessionId: result.sessionId }
+}
+
 /**
  * Run the output turn — invoke Claude for the final output (no QA schema).
  */
