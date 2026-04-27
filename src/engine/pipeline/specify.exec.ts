@@ -244,12 +244,21 @@ const formatDraftProposal = (
   sections.push("---\n")
 }
 
+const SPEC_GAP_FLAGGING_INSTRUCTION = [
+  "When writing each output file, append a final section titled `## Inferred / Gaps`.",
+  "Under that heading list every load-bearing fact in the file you inferred without the user's input or shape.md directly stating it.",
+  "Use one bullet per item: `- <fact> — inferred because: <one-line reason>`.",
+  "If every load-bearing fact is source-backed, write `(none)`.",
+  "The user will edit this section to confirm or override your guesses before plan runs.",
+].join(" ")
+
 /** Assemble the user prompt for the specifier synthesizer. */
 const assembleSynthesizerUserPrompt = (
   shapeMd: string,
   buildDir: string,
   drafts: { perspective: string; draft: SpecifierDraft }[],
   userInput: string | null,
+  inferGapFlagging: boolean,
 ): string => {
   const doc = new PromptDocument()
 
@@ -279,6 +288,10 @@ const assembleSynthesizerUserPrompt = (
     `Write spec.md, constraints.md, and optionally taste.md to: ${buildDir}/\nUse the Write tool to create each file.`,
   )
 
+  if (inferGapFlagging) {
+    doc.instruction("Gap Flagging", SPEC_GAP_FLAGGING_INSTRUCTION)
+  }
+
   return doc.render()
 }
 
@@ -296,6 +309,12 @@ export type SpecEnsembleConfig = {
   specialistCount: 1 | 2 | 3
   /** Optional user-authored spec content treated as authoritative source material. */
   userInput: string | null
+  /**
+   * When true, instruct the synthesizer to append a `## Inferred / Gaps`
+   * section to each output file listing facts it had to guess at. Used by
+   * the `ingest` command so users can see what to confirm or override.
+   */
+  inferGapFlagging?: boolean
 }
 
 const renderSpecMdFromDraft = (draft: SpecifierDraft): string => {
@@ -421,7 +440,13 @@ export const invokeSpecifier = async (
 
     synthesizerPrompt: registry.getCorePrompt("specifier.md"),
     buildSynthesizerUserPrompt: (drafts) =>
-      assembleSynthesizerUserPrompt(shapeMd, config.buildDir, drafts, config.userInput),
+      assembleSynthesizerUserPrompt(
+        shapeMd,
+        config.buildDir,
+        drafts,
+        config.userInput,
+        config.inferGapFlagging ?? false,
+      ),
     synthesizerTools: ["Write"],
 
     model: config.model,
@@ -453,7 +478,10 @@ export const invokeSpecifier = async (
 
     stage: "spec",
     buildDir: config.buildDir,
-    onAgreementSkip: (successful) => {
+    // Skip the agreement shortcut when gap-flagging is requested: the
+    // shortcut writes files mechanically from a specialist draft, bypassing
+    // the synthesizer prompt where the gap directive lives.
+    onAgreementSkip: config.inferGapFlagging ? undefined : (successful) => {
       const [first] = successful
       const specPath = writeSpecArtifactsFromDraft(config.buildDir, first.draft)
       appendSkipAuditNote(specPath, successful.length, "spec")

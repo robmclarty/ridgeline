@@ -19,6 +19,14 @@ export type SpecOptions = {
   input?: string
   specialistCount?: 1 | 2 | 3
   specialistTimeoutSeconds?: number
+  /**
+   * Pre-resolved authoritative spec content. When provided, takes precedence
+   * over `input` (skips disk read and the file-vs-text heuristic). Used by
+   * the `ingest` command to pass an already-resolved bundle through.
+   */
+  inputContent?: string
+  /** When true, instruct the synthesizer to add `## Inferred / Gaps` sections. */
+  inferGapFlagging?: boolean
 }
 
 /**
@@ -68,9 +76,13 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
 
   const shapeMd = fs.readFileSync(shapePath, "utf-8")
 
-  // Resolve optional user input (raw text or file path)
+  // Resolve optional user input (raw text or file path).
+  // `inputContent` takes precedence — it's a pre-resolved bundle from ingest.
   let userInput: string | null = null
-  if (opts.input) {
+  if (opts.inputContent !== undefined) {
+    userInput = opts.inputContent
+    printInfo("Using spec input from: pre-resolved bundle")
+  } else if (opts.input) {
     const resolved = resolveInput(opts.input)
     if (resolved.type === "file") {
       printInfo(`Using spec input from: ${resolved.path}`)
@@ -99,6 +111,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     matchedShapes: getMatchedShapes(buildDir),
     specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
     userInput,
+    inferGapFlagging: opts.inferGapFlagging,
   }
 
   const result = await invokeSpecifier(shapeMd, config)
