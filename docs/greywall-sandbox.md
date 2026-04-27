@@ -16,7 +16,7 @@ the `sandbox.mode` field in `.ridgeline/settings.json`:
 
 | Mode | Profile composition | When to use |
 |------|---------------------|-------------|
-| `semi-locked` (default) | `claude,node,python,ruby,go,rust,containers,scm` | The right default for most builds. Worktree boundary is still kernel-enforced; network still goes through greyproxy; but the broad toolchain set lets binary tools (Playwright, MCP servers, agent-browser) launch without per-build configuration. |
+| `semi-locked` (default) | `claude,node,python,ruby,go,cargo,docker` | The right default for most builds. Worktree boundary is still kernel-enforced; network still goes through greyproxy; but the broad toolchain set lets binary tools (Playwright, MCP servers, agent-browser) launch without per-build configuration. |
 | `strict` | `claude,node` | Maximum lockdown. Use when you've audited exactly what the build needs and are willing to add `extraProfiles` / `extraWritePaths` for anything else. This is what `--sandbox=strict` mode is — equivalent to v0.8.5's behavior. |
 | `off` | _no sandbox_ | The escape hatch. `--sandbox=off` (or the deprecated `--unsafe`) disables OS-level enforcement entirely. Worktree isolation still applies. Use this only when greywall is broken or unavailable. |
 
@@ -90,8 +90,8 @@ both registered upstream in `internal/profiles/`:
   `~/.claude` and `~/.claude.json`, and allows network egress to
   `api.anthropic.com`, `mcp-proxy.anthropic.com`, `github.com`,
   `registry.npmjs.org`, and a handful of others.
-- **Toolchain profiles** (`node`, `python`, `go`, `rust`, `ruby`, `java`,
-  `containers`, `iac`, `scm`) — what a _language ecosystem_ needs to
+- **Toolchain profiles** (`node`, `python`, `go`, `cargo`, `ruby`, `java`,
+  `docker`, `terraform`, `gh`) — what a _language ecosystem_ needs to
   install packages and run binaries. The `node` profile (registered for
   the names `node|npm|npx|yarn|pnpm|bun|deno`) covers `~/.npm`, `~/.npmrc`,
   `~/.pnpm-store`, `~/.config/pnpm`, `~/.local/share/pnpm`,

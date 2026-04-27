@@ -9,12 +9,12 @@ const GREYPROXY_API = "http://localhost:43080"
 
 // Greywall profiles compose two halves: an agent profile (claude config dirs +
 // Anthropic/GitHub endpoints) and toolchain profiles (npm/pnpm/yarn/bun/deno,
-// python via uv, ruby, go, rust, container runtimes, generic SCM). Strict mode
-// stays minimal; semi-locked mode (default) opts into the broad ecosystem set
-// so binary tools the build needs (Playwright, MCP servers, agent-browser)
+// python via uv, ruby, go, cargo, docker, generic SCM). Strict mode stays
+// minimal; semi-locked mode (default) opts into the broad ecosystem set so
+// binary tools the build needs (Playwright, MCP servers, agent-browser)
 // generally just work without per-build configuration.
 const STRICT_PROFILES = ["claude", "node"]
-const SEMI_LOCKED_PROFILES = ["claude", "node", "python", "ruby", "go", "rust", "containers", "scm"]
+const SEMI_LOCKED_PROFILES = ["claude", "node", "python", "ruby", "go", "cargo", "docker"]
 
 const resolveProfiles = (mode: SandboxMode, extra: string[]): string => {
   const base = mode === "strict" ? STRICT_PROFILES : SEMI_LOCKED_PROFILES

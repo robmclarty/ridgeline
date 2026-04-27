@@ -60,7 +60,7 @@ describe("greywallProvider", () => {
     expect(profiles).toContain("claude")
     expect(profiles).toContain("node")
     expect(profiles).toContain("python")
-    expect(profiles).toContain("containers")
+    expect(profiles).toContain("docker")
 
     const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
     const [, content] = calls[calls.length - 1]

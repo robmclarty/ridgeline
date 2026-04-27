@@ -74,7 +74,7 @@ type RidgelineSettings = {
     extraWritePaths?: string[]
     /** Extra paths the sandbox can read from (e.g. shared config dirs). */
     extraReadPaths?: string[]
-    /** Extra greywall toolchain profiles (e.g. "python", "containers"). */
+    /** Extra greywall toolchain profiles (e.g. "python", "docker"). */
     extraProfiles?: string[]
     /** Extra network domains appended to the active allowlist. */
     extraNetworkAllowlist?: string[]
