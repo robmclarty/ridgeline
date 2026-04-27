@@ -1,13 +1,20 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
-import { printInfo } from "../ui/output"
+import { printInfo, printWarn } from "../ui/output"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { advancePipeline } from "../stores/state"
 import { runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow"
 import { resolveAssetDirSafe } from "../catalog/resolve-asset-dir"
 import { AssetCatalog } from "../catalog/types"
 import { countByField } from "./catalog"
+import {
+  downloadReference,
+  parseReferenceFinderOutput,
+  writeVisualAnchorsMd,
+  type DownloadedReference,
+  type ReferenceFinding,
+} from "../references/download"
 
 /**
  * Reusable directive that asks the agent to append a non-rendering
@@ -206,6 +213,15 @@ const gatherDesignContext = async (
     contextParts.push("")
   }
 
+  if (buildDir) {
+    const anchorsPath = path.join(buildDir, "references", "visual-anchors.md")
+    if (fs.existsSync(anchorsPath)) {
+      contextParts.push("## Reference Anchors (visual-anchors.md)\n")
+      contextParts.push(fs.readFileSync(anchorsPath, "utf-8"))
+      contextParts.push("")
+    }
+  }
+
   return contextParts
 }
 
@@ -232,6 +248,140 @@ const writeDesignOutput = (
   if (buildName) {
     printInfo(`Next: ridgeline spec ${buildName}`)
   }
+}
+
+const promptForReferenceNames = (rl: readline.Interface): Promise<string[]> => {
+  console.log("")
+  console.log(
+    "Are there specific existing works, products, or aesthetics you want to anchor on?",
+  )
+  console.log(
+    "Examples: 'Final Fantasy Tactics', 'EXAPUNKS', 'Linear app', 'Stripe dashboard'.",
+  )
+  console.log("Enter comma-separated names, or press Enter to skip.")
+  return new Promise((resolve) => {
+    rl.question("References: ", (answer: string) => {
+      const names = answer
+        .split(",")
+        .map((n) => n.trim())
+        .filter((n) => n.length > 0)
+      resolve(names)
+    })
+  })
+}
+
+const runReferenceFinder = async (
+  references: string[],
+  buildName: string | null,
+  buildDir: string | null,
+  ridgelineDir: string,
+  opts: DesignOptions,
+  timeoutMs: number,
+): Promise<ReferenceFinding[]> => {
+  const registry = buildAgentRegistry()
+  const specialist = registry.getSpecialist("specialists", "reference-finder.md")
+  if (!specialist) {
+    printWarn("reference-finder specialist not found; skipping reference search.")
+    return []
+  }
+  const systemPrompt = specialist.overlay
+
+  const contextLines: string[] = []
+  if (buildDir) {
+    const shapePath = path.join(buildDir, "shape.md")
+    if (fs.existsSync(shapePath)) {
+      contextLines.push("## shape.md\n")
+      contextLines.push(fs.readFileSync(shapePath, "utf-8"))
+      contextLines.push("")
+    }
+  }
+  const projectDesign = path.join(ridgelineDir, "design.md")
+  if (fs.existsSync(projectDesign)) {
+    contextLines.push("## Existing project design.md\n")
+    contextLines.push(fs.readFileSync(projectDesign, "utf-8"))
+    contextLines.push("")
+  }
+
+  const userPrompt = [
+    `Find reference imagery for these named works for build "${buildName ?? "(project-level)"}":`,
+    "",
+    references.map((r) => `- ${r}`).join("\n"),
+    "",
+    ...contextLines,
+    "",
+    "Return a JSON object with the schema in your system prompt. Do NOT download files — URLs only.",
+  ].join("\n")
+
+  const result = await runOneShotCall({
+    systemPrompt,
+    userPrompt,
+    model: opts.model,
+    timeoutMs,
+    allowedTools: ["WebSearch"],
+    buildDir: buildDir ?? undefined,
+    statusMessage: `Searching reference imagery for ${references.length} reference(s)...`,
+  })
+  return parseReferenceFinderOutput(result.result).references
+}
+
+const resolveReferenceAnchors = async (
+  rl: readline.Interface,
+  buildName: string | null,
+  buildDir: string | null,
+  ridgelineDir: string,
+  opts: DesignOptions,
+  timeoutMs: number,
+): Promise<void> => {
+  if (!buildDir) return
+  const referencesDir = path.join(buildDir, "references")
+  const anchorsPath = path.join(referencesDir, "visual-anchors.md")
+  if (fs.existsSync(anchorsPath)) {
+    printInfo(`Reference anchors already exist at ${anchorsPath}; skipping search.`)
+    return
+  }
+
+  const names = await promptForReferenceNames(rl)
+  if (names.length === 0) {
+    printInfo("No references provided. Continuing without anchors.")
+    return
+  }
+
+  fs.mkdirSync(referencesDir, { recursive: true })
+  let findings: ReferenceFinding[] = []
+  try {
+    findings = await runReferenceFinder(names, buildName, buildDir, ridgelineDir, opts, timeoutMs)
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    printWarn(`reference-finder failed: ${message}. Continuing without anchors.`)
+    return
+  }
+
+  if (findings.length === 0) {
+    printWarn("reference-finder returned no usable references. Continuing without anchors.")
+    return
+  }
+
+  const downloaded: DownloadedReference[] = []
+  for (const finding of findings) {
+    if (finding.image_urls.length === 0) {
+      downloaded.push({ name: finding.name, slug: finding.name.toLowerCase().replace(/\W+/g, "-"), anchor_quality: finding.anchor_quality, files: [], failures: [] })
+      continue
+    }
+    try {
+      downloaded.push(await downloadReference(referencesDir, finding))
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      printWarn(`Download failed for ${finding.name}: ${message}`)
+    }
+  }
+
+  if (downloaded.length === 0) {
+    printWarn("All reference downloads failed. Continuing without anchors.")
+    return
+  }
+
+  const written = writeVisualAnchorsMd(referencesDir, downloaded)
+  printInfo(`Wrote reference anchors: ${written}`)
 }
 
 type DesignRunSetup = {
@@ -264,12 +414,15 @@ export const runDesign = async (
   buildName: string | null,
   opts: DesignOptions
 ): Promise<void> => {
-  const { buildDir, outputPath, timeoutMs, systemPrompt, contextParts } =
+  const { ridgelineDir, buildDir, outputPath, timeoutMs, systemPrompt } =
     await setupDesignRun(buildName, opts)
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 
   try {
+    await resolveReferenceAnchors(rl, buildName, buildDir, ridgelineDir, opts, timeoutMs)
+    const contextParts = await gatherDesignContext(buildName, buildDir, ridgelineDir, opts)
+
     const userPrompt = [
       buildName
         ? `Gather design system context for build "${buildName}".`

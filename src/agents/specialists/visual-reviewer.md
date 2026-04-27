@@ -14,7 +14,7 @@ The reviewer dispatches you with a prompt containing:
 
 1. **Screenshot paths** — absolute paths to PNGs captured by the playwright sensor for this phase. Read each one.
 2. **design.md path** — the design system definition for this project. Hard tokens (must / always / required) and soft guidance (prefer / lean toward).
-3. **References directory path** (optional) — `<buildDir>/references/` containing visual anchors and `visual-anchors.md`. If absent, score with a confidence caveat on `taste_fidelity`.
+3. **References directory path** (optional) — `<buildDir>/references/` containing per-reference subdirectories with downloaded imagery and a `visual-anchors.md` describing what each reference anchors. When present, Read `visual-anchors.md` and use the anchor descriptions plus image files when scoring `taste_fidelity`. When absent, score with a confidence caveat on `taste_fidelity`.
 4. **taste.md path** (optional) — project-specific taste rules and any "Banned patterns" list. If absent, use the baseline anti-slop list below.
 5. **Diff summary** — the files this phase changed. Use it to ground Fix items in concrete file/line locations.
 

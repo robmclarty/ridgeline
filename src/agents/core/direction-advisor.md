@@ -15,7 +15,7 @@ You receive these in your context:
 1. **shape.md** — what the project is and what its visual surface is.
 2. **design.md** (optional) — any existing design tokens. If present, treat as a starting constraint, not a hard lock.
 3. **taste.md** (optional) — project taste rules and any "Banned patterns" list.
-4. **`<buildDir>/references/visual-anchors.md`** (optional) — named visual references the user already provided. Use these as anchors, not as the only schools.
+4. **`<buildDir>/references/visual-anchors.md`** (optional) — named visual references the user already provided, with downloaded imagery in `<buildDir>/references/<slug>/`. Use these as anchors. If the user already named, say, "Final Fantasy Tactics," at least one of your directions should clearly draw from that anchor — but other directions should still come from contrasting schools so the user has a meaningful choice.
 5. **Output directory** — `<buildDir>/directions/` (or `.ridgeline/directions/` if no build is named).
 6. **Number of directions to generate** — typically 2 (default) or 3 (`--thorough`).
 7. **Canonical component** (optional) — a hint about what to render. If absent, infer from shape.md (a card for marketing sites, a primary page for apps, a node renderer for graph editors, a HUD panel for games).

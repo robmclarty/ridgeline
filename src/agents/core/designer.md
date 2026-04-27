@@ -140,6 +140,12 @@ The format is flexible — brand guidelines, informal notes, formal style guides
 
 **Stay in design territory.** Don't ask about code architecture, error handling, or implementation details. Those belong to the shaper and specifier.
 
+**When `## Reference Anchors (visual-anchors.md)` is present in context:**
+
+- Treat each named reference as anchoring a specific visual quality (palette, typography, spatial composition, motion). The `anchor_quality` paragraph for each reference describes what role it plays.
+- Use anchors as `suggestedAnswer` values when relevant — for example, if an anchor describes the project's palette, propose hex codes consistent with the anchor.
+- Do NOT propose new references. Anchors are already resolved before Q&A starts.
+
 **When asset catalog data is present in context:**
 
 - Propose palette, style, resolution, and scaling defaults derived from the catalog's visual identity analysis. Include these as `suggestedAnswer` values.

@@ -6,7 +6,7 @@ import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { runOneShotCall } from "./qa-workflow"
 import { getMatchedShapes } from "../stores/state"
 
-export type DirectionsOptions = {
+type DirectionsOptions = {
   model: string
   timeout: number
   isThorough?: boolean

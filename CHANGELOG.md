@@ -1,5 +1,39 @@
 # Changelog
 
+## v0.9.4 — 2026-04-26
+
+### Added
+
+- New `reference-finder` specialist (sonnet, WebSearch) that searches the
+  web for canonical imagery of named visual references (Final Fantasy
+  Tactics, Linear, Stripe dashboard, etc.) and returns image URLs plus
+  per-reference anchor descriptions.
+- Interactive `ridgeline design` now prompts for named references, invokes
+  the reference-finder, downloads representative imagery to
+  `<buildDir>/references/<slug>/`, and writes a `visual-anchors.md` the
+  downstream stages read. When anchors already exist on disk the prompt is
+  skipped and the existing file is loaded as Q&A context.
+- New `src/references/download.ts` module — Node-side image fetcher with
+  redirect handling, content-type-aware extension inference, and a
+  per-file size cap.
+
+### Changed
+
+- `visual-reviewer` and `direction-advisor` now consume reference anchors
+  when present: visual-reviewer scores taste fidelity against the imagery,
+  direction-advisor ensures at least one of the generated directions draws
+  from the user-named anchors while keeping the rest in contrasting
+  schools.
+- `designer` agent reads a `## Reference Anchors` context block when
+  `visual-anchors.md` exists, using anchor descriptions as
+  `suggestedAnswer` defaults.
+
+### Notes
+
+- The reference flow only runs in interactive `ridgeline design`. The
+  non-interactive `runDesignOneShot` path used by `ingest` skips it —
+  reference selection needs user judgment.
+
 ## v0.9.3 — 2026-04-26
 
 ### Added
