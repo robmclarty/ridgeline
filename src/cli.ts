@@ -10,6 +10,7 @@ import { askBuildName } from "./ui/prompt"
 import { runShape } from "./commands/shape"
 import { runDesign } from "./commands/design"
 import { runSpec } from "./commands/spec"
+import { runIngest } from "./commands/ingest"
 import { runPlan } from "./commands/plan"
 import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
@@ -276,6 +277,38 @@ addPreflightOptions(program
         input,
         specialistCount,
         specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
+      })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+addPreflightOptions(program
+  .command("ingest [build-name] [input]")
+  .description(
+    "One-shot pipeline kickoff: convert a freeform spec (file or directory of " +
+      "files) into shape.md, spec.md, constraints.md, taste.md (and design.md " +
+      "if visual). No Q&A — the synthesizer flags inferred facts in a " +
+      "`## Inferred / Gaps` section per file so you can edit them by hand " +
+      "before running plan.",
+  )
+  .option("--model <name>", "Model for shaper, designer, and specifier (defaults to settings.json model, or 'opus')")
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
+  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount"))
+  .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
+    try {
+      await runPreflightGuard()
+      if (!input) {
+        console.error("ingest requires an input path (file or directory) or raw text")
+        process.exit(1)
+      }
+      const { specialistCount } = detectPreflightFlags()
+      await runIngest(await requireBuildName(buildName), {
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
+        maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
+        specialistCount,
+        input,
       })
     } catch (err) {
       handleCommandError(err)
