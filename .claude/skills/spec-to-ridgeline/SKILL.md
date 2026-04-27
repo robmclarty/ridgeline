@@ -1,22 +1,22 @@
 ---
 name: spec-to-ridgeline
-description: Convert an arbitrary spec, PRD, RFC, or design doc into a ridgeline-ready trio of `spec.md` + `constraints.md` + `taste.md` (and optional `design.md`) saved to a target directory. Use this skill whenever the user wants to feed a single freeform specification into ridgeline, asks to "ridgeline-ify" or "split" a spec, mentions converting a PRD/RFC/design doc into ridgeline inputs, or requests producing constraints/taste/spec files from one source document. Do NOT trigger for editing an existing constraints.md/taste.md/spec.md — only for the initial extraction from a single source spec.
+description: Convert an arbitrary spec, PRD, RFC, or design doc (or a directory of related docs) into a ridgeline-ready trio of `spec.md` + `constraints.md` + `taste.md` (and optional `design.md`) saved to a target directory. Use this skill whenever the user wants to feed a freeform specification into ridgeline, asks to "ridgeline-ify" or "split" a spec, mentions converting a PRD/RFC/design doc into ridgeline inputs, or requests producing constraints/taste/spec files from a source document or document folder. Do NOT trigger for editing an existing constraints.md/taste.md/spec.md — only for the initial extraction from source material.
 ---
 
 # Spec → Ridgeline Converter
 
-Take **one** arbitrary specification (PRD, RFC, design doc, technical spec, freeform notes) and split it into the file trio ridgeline expects:
+Take an arbitrary specification (PRD, RFC, design doc, technical spec, freeform notes) — or a **directory** of related docs — and split it into the file trio ridgeline expects:
 
 - `spec.md` — **what** to build (outcomes, behaviors, interfaces, success criteria)
 - `constraints.md` — **non-negotiable** technical guardrails + a check command
 - `taste.md` — **best-effort** style preferences and design philosophy
 - `design.md` *(optional)* — visual design tokens; only emit when the project has a visual surface (web UI, game, mobile, print)
 
-The source spec is left untouched. The four files are written into a target directory the user names.
+The source material is left untouched. The output files are written into a target directory the user names.
 
 ## Inputs the user must supply (or you must ask for)
 
-1. **Source spec path** — the single file to convert (markdown, plaintext, etc.)
+1. **Source path** — either a single file (markdown, plaintext, etc.) **or** a directory containing related source docs (multiple PRDs, RFCs, design notes, etc.). For a directory, recursively gather `.md`, `.markdown`, `.txt`, `.rst` files; skip `node_modules`, `.git`, `.ridgeline`, `dist`, `build`, `coverage`. Read each file and treat the concatenated content (with `## File: <relpath>` headers) as the source spec.
 2. **Target directory** — where to write `spec.md` / `constraints.md` / `taste.md` (e.g. `./mk1-ai/`)
 3. **Project context** *(infer from source; only ask if missing)* — language/runtime, framework, package name, existing codebase to align with
 4. **Design.md needed?** — default no. Only yes if the source describes a visual surface
@@ -94,7 +94,7 @@ Visual tokens and conventions: color palette, typography, spacing scale, compone
 
 ## Process
 
-1. **Read** the source spec end-to-end.
+1. **Read** the source spec end-to-end. If the source is a directory, list it recursively and read every applicable file; treat the union as one logical spec but keep mental note of which file claims what (helps gap-flagging in step 9).
 2. **Read** the reference example at `mk1-comp/` (all three files) if you have not in this conversation.
 3. **Inventory** the source: list every distinct claim, rule, interface, principle, failure mode, and rationale. Tag each with `C` (constraint), `S` (spec), `T` (taste), or `D` (design).
 4. **Draft `constraints.md` first.** It is the smallest and the most rigid; getting it right anchors the others. Always include `## Check Command` near the top.
@@ -102,8 +102,9 @@ Visual tokens and conventions: color palette, typography, spacing scale, compone
 6. **Draft `taste.md` last.** Numbered design principles, each with **Rule** + **Why**. Close with "what this rules out" and "what good code looks like".
 7. *(Optional)* Draft `design.md` only if the source has visual scope.
 8. **Cross-check**: read the three drafts together. No content should appear in two files. Every load-bearing fact from the source should appear in exactly one.
-9. **Write** to the target directory. Do not modify the source.
-10. **Report**: a short summary listing each output file, its line count, and any items from the source you intentionally dropped (with one-line reasons).
+9. **Append `## Inferred / Gaps`** as the last section of every output file (`constraints.md`, `spec.md`, `taste.md`, and `design.md` if present). Under that heading, list every load-bearing fact in *that file* you wrote without the source directly stating it. One bullet per item, in the form `- <fact> — inferred because: <one-line reason>`. If every fact in the file is source-backed, write `(none)`. This is the most important deliverable for the user — it's how they patch holes by editing markdown instead of answering chat questions.
+10. **Write** to the target directory. Do not modify the source.
+11. **Report**: a short summary listing each output file, its line count, total `## Inferred / Gaps` count per file, and any items from the source you intentionally dropped (with one-line reasons).
 
 ## House-style notes (from the reference example)
 
