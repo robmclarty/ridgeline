@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.9.1 — 2026-04-26
+
+### Added
+
+- New `ridgeline ingest <name> <path-or-dir>` command — non-interactive
+  pipeline kickoff. Converts a single PRD/RFC/design doc, or a
+  directory of related docs (concatenated with `## File: <relpath>`
+  provenance headers), into shape.md + spec.md + constraints.md +
+  taste.md (plus design.md when visual shapes match) in one run, no
+  Q&A. The synthesizer flags inferred facts in a `## Inferred / Gaps`
+  section per output file so users patch holes by editing markdown
+  rather than answering chat questions.
+
+### Changed
+
+- `spec-to-ridgeline` skill now accepts a directory of source docs as
+  input and mandates `## Inferred / Gaps` sections in every output
+  file, mirroring the new `ingest` command so the skill (chat-driven)
+  and the command (CLI-driven) stay in sync.
+
 ## v0.9.0 — 2026-04-25
 
 ### Added
