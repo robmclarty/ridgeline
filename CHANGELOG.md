@@ -1,5 +1,61 @@
 # Changelog
 
+## v0.9.0 — 2026-04-25
+
+### Added
+
+- New `planner.phaseBudgetLimit` and `planner.phaseTokenLimit` settings
+  (defaults: $15 / 80k output tokens) advise the planner on per-phase
+  output ceilings — addresses the v0 weft retrospective where phases 03
+  and 05 each emitted 138k–173k output tokens at $33–44.
+- New adversarial plan-reviewer agent audits the synthesized plan
+  before phases are written and triggers a one-shot revision when
+  issues are found, with a deterministic per-phase output-token
+  estimate as a soft warning regardless of the verdict.
+- Sandbox gains a `semi-locked` mode (now the default) that composes
+  the broad greywall toolchain set (python/ruby/go/rust/containers/scm)
+  plus path holes for chromium, agent-browser, uv, and pip caches.
+  Strict mode is opt-in via `--sandbox=strict`.
+- `sandbox.{extraWritePaths,extraReadPaths,extraProfiles,extraNetworkAllowlist}`
+  settings expose per-build escape hatches when the active mode doesn't
+  quite cover what a build needs.
+- Pre-flight launches the playwright sensor's chromium probe under the
+  active sandbox before phase 1 runs; phases can declare a `## Required
+  Tools` section and the harness re-probes before the builder starts.
+  Halts the build with a clear remediation message when a required
+  tool can't launch.
+- New `--specialists <n>` CLI flag (1, 2, or 3) and corresponding
+  `planner.specialistCount` setting; new `--sandbox <mode>` CLI flag.
+- New `spec-to-ridgeline` skill at `.claude/skills/` for splitting a
+  freeform spec/PRD/RFC into a ridgeline-ready `spec.md` +
+  `constraints.md` + `taste.md` trio.
+
+### Changed
+
+- Default ensemble size for planner, researcher, and specifier is now
+  3 specialists (was 2). `--thorough` is preserved as a back-compat
+  alias for `--specialists 3`.
+- Planner sizing rule rewritten to target output tokens (the actual
+  cost driver) rather than input context window. Includes explicit
+  "split signals" — files, subsystems, acceptance-criteria count.
+- `--unsafe` is now an alias for `--sandbox=off`. The legacy flag
+  prints a deprecation notice but still works.
+- Builder, reviewer, and retrospective agents now treat tool-failure
+  workarounds (jsdom-for-chromium, skipped MCP integrations, etc.) as
+  build defects rather than acceptable adaptations. The reviewer fails
+  phases whose handoff reports a tool failure; the retrospective
+  surfaces them under a dedicated "Build Defects" heading.
+- `FATAL_PATTERNS` extended with CLI configuration errors (`cannot use
+  both`, `unknown option`, `mutually exclusive`) so misconfigurations
+  stop being retried as transient. v0 weft retried the
+  `--append-system-prompt` mutual-exclusion three times before giving
+  up.
+
+### Fixed
+
+- Default Claude-CLI stall timeout raised from 5 to 10 minutes to
+  reduce false stalls on long-running builds.
+
 ## v0.8.5 — 2026-04-25
 
 ### Changed
