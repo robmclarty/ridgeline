@@ -172,7 +172,13 @@ interface PlaywrightPage {
   screenshot(options: { path: string; fullPage?: boolean }): Promise<Buffer>
   close(): Promise<void>
   addScriptTag(options: { path: string }): Promise<unknown>
-  evaluate<R>(fn: string | (() => R)): Promise<R>
+  evaluate<R>(fn: string | (() => R), arg?: unknown): Promise<R>
+  setViewportSize(size: { width: number; height: number }): Promise<unknown>
+}
+
+export const sanitizeViewLabel = (label: string): string => {
+  const cleaned = label.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "")
+  return cleaned.length > 0 ? cleaned : "view"
 }
 
 type LoadPlaywright = () => PlaywrightModule
@@ -206,12 +212,79 @@ interface PlaywrightRunInternals {
   launchTimeoutMs?: number
 }
 
+type LoadResult =
+  | { ok: true; module: PlaywrightModule }
+  | { ok: false; finding: SensorFinding }
+
+const loadPlaywrightSafe = (load: LoadPlaywright): LoadResult => {
+  try {
+    return { ok: true, module: load() }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (message.toLowerCase().includes("cannot find module")) {
+      return { ok: false, finding: unresolvableFinding() }
+    }
+    return { ok: false, finding: launchFailureFinding(message) }
+  }
+}
+
+type LaunchResult =
+  | { ok: true; browser: PlaywrightBrowser }
+  | { ok: false; finding: SensorFinding }
+
+const launchBrowserSafe = async (
+  module: PlaywrightModule,
+  args: string[],
+  timeout: number,
+): Promise<LaunchResult> => {
+  try {
+    const browser = await module.chromium.launch({ args, timeout, headless: true })
+    return { ok: true, browser }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (/executable doesn.?t exist|browser not found|playwright install/i.test(message)) {
+      return { ok: false, finding: unresolvableFinding() }
+    }
+    return { ok: false, finding: launchFailureFinding(message) }
+  }
+}
+
+const resolveArtifactsDir = (input: SensorInput): string => {
+  if (input.artifactsDir) return input.artifactsDir
+  if (input.buildDir) return path.join(input.buildDir, "artifacts")
+  return path.join(input.cwd, ".ridgeline", "artifacts")
+}
+
+const captureViewToFile = async (
+  browser: PlaywrightBrowser,
+  url: string,
+  screenshotPath: string,
+  input: SensorInput,
+  launchTimeout: number,
+): Promise<{ ok: true } | { ok: false; message: string }> => {
+  try {
+    const page = await browser.newPage()
+    if (input.viewport) {
+      await page.setViewportSize({ width: input.viewport.width, height: input.viewport.height })
+    }
+    await page.goto(url, { waitUntil: "load", timeout: launchTimeout })
+    if (typeof input.zoom === "number" && input.zoom > 0 && input.zoom !== 1) {
+      await page.evaluate(`document.body.style.zoom = ${JSON.stringify(String(input.zoom))}`)
+    }
+    await page.screenshot({ path: screenshotPath, fullPage: true })
+    await page.close()
+    return { ok: true }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, message }
+  }
+}
+
 export const runPlaywrightSensor = async (
   input: SensorInput,
   internals: PlaywrightRunInternals = {},
 ): Promise<SensorFinding[]> => {
-  const resolvable = (internals.isResolvable ?? isPlaywrightResolvable)()
-  if (!resolvable) {
+  if (!(internals.isResolvable ?? isPlaywrightResolvable)()) {
     return [unresolvableFinding()]
   }
 
@@ -220,79 +293,46 @@ export const runPlaywrightSensor = async (
     attempts: [] as readonly number[],
     reason: "no-probe-match" as const,
   }))
+  if (port.source === "none") return [noDevServerFinding(port.attempts)]
 
-  if (port.source === "none") {
-    return [noDevServerFinding(port.attempts)]
-  }
+  const loaded = loadPlaywrightSafe(internals.loadPlaywright ?? defaultLoadPlaywright)
+  if (!loaded.ok) return [loaded.finding]
 
-  const load = internals.loadPlaywright ?? defaultLoadPlaywright
   const sandboxed = (internals.isSandboxed ?? isSandboxDetected)()
-  const launchTimeout = internals.launchTimeoutMs ?? LAUNCH_TIMEOUT_MS
   const launchArgs = sandboxed ? ["--no-sandbox", "--disable-setuid-sandbox"] : []
+  const launchTimeout = internals.launchTimeoutMs ?? LAUNCH_TIMEOUT_MS
 
-  let playwright: PlaywrightModule
-  try {
-    playwright = load()
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (message.toLowerCase().includes("cannot find module")) {
-      return [unresolvableFinding()]
-    }
-    return [launchFailureFinding(message)]
-  }
+  const launched = await launchBrowserSafe(loaded.module, launchArgs, launchTimeout)
+  if (!launched.ok) return [launched.finding]
+  const browser = launched.browser
 
-  let browser: PlaywrightBrowser
-  try {
-    browser = await playwright.chromium.launch({
-      args: launchArgs,
-      timeout: launchTimeout,
-      headless: true,
-    })
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
-    if (/executable doesn.?t exist|browser not found|playwright install/i.test(message)) {
-      return [unresolvableFinding()]
-    }
-    return [launchFailureFinding(message)]
-  }
-
-  const artifactsDir =
-    input.artifactsDir ??
-    (input.buildDir ? path.join(input.buildDir, "artifacts") : path.join(input.cwd, ".ridgeline", "artifacts"))
+  const artifactsDir = resolveArtifactsDir(input)
   try {
     fs.mkdirSync(artifactsDir, { recursive: true })
   } catch {
     // directory creation failed — fall through; screenshot will fail non-fatally
   }
 
-  const screenshotPath = path.join(artifactsDir, `screenshot-${Date.now()}.png`)
+  const labelPart = input.viewLabel ? `-${sanitizeViewLabel(input.viewLabel)}` : ""
+  const screenshotPath = path.join(artifactsDir, `screenshot${labelPart}-${Date.now()}.png`)
   const url = input.url ?? `http://127.0.0.1:${port.port}`
 
-  try {
-    const page = await browser.newPage()
-    await page.goto(url, { waitUntil: "load", timeout: launchTimeout })
-    await page.screenshot({ path: screenshotPath, fullPage: true })
-    await page.close()
-  } catch (err) {
-    await browser.close().catch(() => {})
-    const message = err instanceof Error ? err.message : String(err)
+  const captured = await captureViewToFile(browser, url, screenshotPath, input, launchTimeout)
+  await browser.close().catch(() => {})
+
+  if (!captured.ok) {
     return [
-      {
-        kind: "screenshot",
-        severity: "warning",
-        summary: `screenshot failed at ${url}: ${message}`,
-      },
+      { kind: "screenshot", severity: "warning", summary: `screenshot failed at ${url}: ${captured.message}` },
     ]
   }
 
-  await browser.close().catch(() => {})
-
+  const labelDescription = input.viewLabel ? ` [view: ${input.viewLabel}]` : ""
   return [
     {
       kind: "screenshot",
       severity: "info",
       path: screenshotPath,
-      summary: `captured screenshot of ${url} (port source: ${port.source})`,
+      summary: `captured screenshot of ${url}${labelDescription} (port source: ${port.source})`,
     },
   ]
 }

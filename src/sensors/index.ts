@@ -13,6 +13,11 @@ export interface ColorPair {
   background: string
 }
 
+export interface Viewport {
+  width: number
+  height: number
+}
+
 export interface SensorInput {
   cwd: string
   ridgelineDir?: string
@@ -23,6 +28,12 @@ export interface SensorInput {
   url?: string
   screenshotPath?: string
   contrastPairs?: readonly ColorPair[]
+  /** Label used to name the screenshot file (e.g., `default`, `zoomed-in`). */
+  viewLabel?: string
+  /** Override viewport dimensions for the captured page. */
+  viewport?: Viewport
+  /** CSS zoom factor applied to document.body before capture. 1 = default. */
+  zoom?: number
 }
 
 export interface SensorAdapter {

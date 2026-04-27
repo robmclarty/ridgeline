@@ -1,5 +1,31 @@
 # Changelog
 
+## v0.9.2 — 2026-04-26
+
+### Added
+
+- New `visual-reviewer` specialist (sonnet) that scores rendered UI output
+  against five dimensions — taste fidelity, motion discipline, information
+  hierarchy, convention adherence, anti-slop — and returns Keep / Fix / Quick
+  Wins. The reviewer dispatches it when a phase touches visual code and
+  composes its JSON critique into the pass/fail verdict per configurable
+  thresholds (default: any dimension ≤ 3 fails; 4+ Fix items fails).
+- Phase specs gain an optional `## Required Views` section. The harness loops
+  the playwright sensor over each declared view and persists labelled
+  screenshots, giving the visual-reviewer multi-view input rather than a
+  single full-page shot. Each view supports `<width>x<height>`, `zoom <n>`,
+  and `url <path>` attributes.
+- `plan-reviewer` now flags visual phases that omit `## Required Views`.
+- Sandbox fail-fast extended: phases declaring `## Required Views` must be
+  able to launch playwright, mirroring the existing `## Required Tools`
+  probe.
+
+### Changed
+
+- `SensorInput` gains optional `viewLabel`, `viewport`, and `zoom` fields.
+  The playwright sensor uses them to name the screenshot file and apply
+  viewport / zoom overrides before capture.
+
 ## v0.9.1 — 2026-04-26
 
 ### Added

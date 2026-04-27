@@ -8,6 +8,7 @@ import playwrightSensor, {
   probeDevServer,
   resolveDevServerPort,
   runPlaywrightSensor,
+  sanitizeViewLabel,
 } from "../playwright"
 
 describe("parsePortFromShape", () => {
@@ -303,5 +304,133 @@ describe("sandbox launch args", () => {
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true })
     }
+  })
+})
+
+describe("sanitizeViewLabel", () => {
+  it("lowercases and replaces non-alphanumeric runs with single dashes", () => {
+    expect(sanitizeViewLabel("Canvas Default")).toBe("canvas-default")
+    expect(sanitizeViewLabel("Node_Zoomed-IN!")).toBe("node-zoomed-in")
+  })
+
+  it("trims leading and trailing dashes", () => {
+    expect(sanitizeViewLabel("--foo--")).toBe("foo")
+  })
+
+  it("falls back to 'view' for empty or fully-stripped labels", () => {
+    expect(sanitizeViewLabel("")).toBe("view")
+    expect(sanitizeViewLabel("!!!")).toBe("view")
+  })
+})
+
+describe("runPlaywrightSensor view options", () => {
+  let tmpDir: string
+  const startStubServer = () => {
+    const created: { capturedViewport: { width: number; height: number } | null; capturedEvalArgs: unknown[]; screenshotPath: string | null } = {
+      capturedViewport: null,
+      capturedEvalArgs: [],
+      screenshotPath: null,
+    }
+    const stubPlaywright = {
+      chromium: {
+        launch: async () => ({
+          newPage: async () => ({
+            setViewportSize: async (size: { width: number; height: number }) => {
+              created.capturedViewport = size
+            },
+            goto: async () => {},
+            evaluate: async (fn: unknown) => {
+              created.capturedEvalArgs.push(fn)
+            },
+            screenshot: async (opts: { path: string }) => {
+              created.screenshotPath = opts.path
+              fs.writeFileSync(opts.path, "stub-png")
+            },
+            close: async () => {},
+            addScriptTag: async () => {},
+          }),
+          close: async () => {},
+        }),
+      },
+    }
+    return { stubPlaywright, created }
+  }
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "ridgeline-pwt-views-"))
+    fs.writeFileSync(path.join(tmpDir, "shape.md"), "## Runtime\n\n- **Dev server port:** 5173\n")
+  })
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it("includes the sanitized view label in the screenshot filename", async () => {
+    const { stubPlaywright, created } = startStubServer()
+    const findings = await runPlaywrightSensor(
+      { cwd: tmpDir, buildDir: tmpDir, viewLabel: "Canvas Default" },
+      {
+        isResolvable: () => true,
+        loadPlaywright: () => stubPlaywright as never,
+      },
+    )
+    expect(findings).toHaveLength(1)
+    expect(findings[0].path).toMatch(/screenshot-canvas-default-\d+\.png$/)
+    expect(created.screenshotPath).toBe(findings[0].path)
+  })
+
+  it("applies viewport when provided", async () => {
+    const { stubPlaywright, created } = startStubServer()
+    await runPlaywrightSensor(
+      {
+        cwd: tmpDir,
+        buildDir: tmpDir,
+        viewLabel: "wide",
+        viewport: { width: 1920, height: 1080 },
+      },
+      {
+        isResolvable: () => true,
+        loadPlaywright: () => stubPlaywright as never,
+      },
+    )
+    expect(created.capturedViewport).toEqual({ width: 1920, height: 1080 })
+  })
+
+  it("evaluates a zoom assignment when zoom is set and not 1", async () => {
+    const { stubPlaywright, created } = startStubServer()
+    await runPlaywrightSensor(
+      { cwd: tmpDir, buildDir: tmpDir, zoom: 2.0 },
+      {
+        isResolvable: () => true,
+        loadPlaywright: () => stubPlaywright as never,
+      },
+    )
+    expect(created.capturedEvalArgs).toHaveLength(1)
+    expect(String(created.capturedEvalArgs[0])).toContain("document.body.style.zoom")
+    expect(String(created.capturedEvalArgs[0])).toContain('"2"')
+  })
+
+  it("skips zoom evaluation when zoom is 1 or unset", async () => {
+    const { stubPlaywright, created } = startStubServer()
+    await runPlaywrightSensor(
+      { cwd: tmpDir, buildDir: tmpDir, zoom: 1 },
+      {
+        isResolvable: () => true,
+        loadPlaywright: () => stubPlaywright as never,
+      },
+    )
+    expect(created.capturedEvalArgs).toHaveLength(0)
+  })
+
+  it("uses the provided url instead of the dev-server origin", async () => {
+    const { stubPlaywright } = startStubServer()
+    const findings = await runPlaywrightSensor(
+      { cwd: tmpDir, buildDir: tmpDir, url: "http://example.test/path" },
+      {
+        isResolvable: () => true,
+        loadPlaywright: () => stubPlaywright as never,
+      },
+    )
+    expect(findings[0].summary).toContain("http://example.test/path")
   })
 })

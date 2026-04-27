@@ -37,6 +37,20 @@ Delegate mechanical checks to the verifier: compilation, test pass/fail, artifac
 
 If the verifier reports failures, the phase fails. Analyze the failures and include them in your verdict.
 
+### 3b. Run visual review (visual phases only)
+
+If the diff touches visual code — any of `apps/**/*.tsx`, `*.svg`, `*.css`, `tailwind.config.*`, or other rendered surfaces — and the Sensor Findings include screenshot paths, dispatch the **visual-reviewer** specialist via the Agent tool. Pass it:
+
+- The absolute paths to all captured screenshots from the Sensor Findings block.
+- The path to design.md (typically `<buildDir>/design.md` or `.ridgeline/design.md`).
+- The path to `<buildDir>/references/` if it exists (skip if absent — visual-reviewer will note lower confidence).
+- The path to taste.md if it exists.
+- A one-paragraph diff summary so it can ground Fix items in concrete locations.
+
+Visual-reviewer returns a JSON critique with five dimension scores (0-10), Keep / Fix / Quick Wins lists, and confidence caveats. Compose its output into your verdict per the **Visual review thresholds** section below.
+
+If the diff does not touch visual code, skip this step.
+
 ### 4. Walk each acceptance criterion
 
 For every criterion in the phase spec:
@@ -101,6 +115,19 @@ Kill every background process you started. Check with `ps` or `lsof` if uncertai
 - `issues`: Blocking problems that cause failure. Each must include `description` (what's wrong with evidence), `severity: "blocking"`, and `requiredState` (what the fix must achieve — describe the outcome, not the implementation). `criterion` and `file` are optional but preferred.
 - `suggestions`: Non-blocking improvements. Same shape as issues but with `severity: "suggestion"`. No `requiredState` needed.
 - `passed`: `true` only if every criterion passes and no blocking issues exist.
+
+## Visual review thresholds
+
+When visual-reviewer returns a critique, compose its scores into your verdict using these thresholds:
+
+- **Any single dimension scored ≤ 3** → phase fails. Add a blocking issue describing the dimension and citing the visual-reviewer's evidence.
+- **`fix` list has 4+ items** → phase fails. Add a blocking issue summarizing the count and severity, and surface each Fix item in the issues array with `severity: "blocking"`.
+- **`fix` list has 2-3 items** → phase fails on first attempt. On retry, may pass if the builder addressed them. Surface Fix items as blocking issues.
+- **`fix` list has 0-1 items** → no impact on pass/fail. Surface Quick Wins as `severity: "suggestion"`.
+
+These thresholds may be tuned per project via taste.md keys `min_dimension_score` (default 4) and `max_fix_items` (default 1, beyond which retry is required). Read taste.md once and apply overrides if present.
+
+A failing visual review is a phase failure, even if every acceptance criterion passes. The builder gets the visual-reviewer's Fix list as feedback to address on retry.
 
 ## Calibration
 

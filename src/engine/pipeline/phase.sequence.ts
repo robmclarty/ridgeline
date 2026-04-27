@@ -14,7 +14,7 @@ import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
 import { detect } from "../detect"
 import { collectSensorFindings } from "./sensors.collect"
-import type { SensorFinding } from "../../sensors"
+import type { SensorFinding, SensorInput, Viewport } from "../../sensors"
 import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "../../ui/preflight.toolprobe"
 
 const sleep = (ms: number): Promise<void> =>
@@ -99,6 +99,76 @@ export const parseRequiredTools = (phaseContent: string): string[] => {
   return items
 }
 
+interface ViewSpec {
+  label: string
+  url?: string
+  viewport?: Viewport
+  zoom?: number
+}
+
+const parseViewAttributes = (rest: string): Pick<ViewSpec, "url" | "viewport" | "zoom"> => {
+  const out: Pick<ViewSpec, "url" | "viewport" | "zoom"> = {}
+  for (const raw of rest.split(",")) {
+    const part = raw.trim()
+    if (!part) continue
+    const viewportMatch = part.match(/^(\d+)\s*x\s*(\d+)$/i)
+    if (viewportMatch) {
+      out.viewport = { width: parseInt(viewportMatch[1], 10), height: parseInt(viewportMatch[2], 10) }
+      continue
+    }
+    const zoomMatch = part.match(/^zoom\s+(\d+(?:\.\d+)?)$/i)
+    if (zoomMatch) {
+      const z = parseFloat(zoomMatch[1])
+      if (Number.isFinite(z) && z > 0) out.zoom = z
+      continue
+    }
+    const urlMatch = part.match(/^url\s+(\S+)$/i)
+    if (urlMatch) {
+      out.url = urlMatch[1]
+      continue
+    }
+  }
+  return out
+}
+
+/**
+ * Parse a `## Required Views` section from a phase spec. Each list item is
+ * `<label>: <attr>, <attr>, ...` where attributes may be:
+ *   - `<width>x<height>` — viewport size (e.g., `1280x800`)
+ *   - `zoom <n>` — CSS zoom factor (e.g., `zoom 2.0`)
+ *   - `url <path>` — URL or path appended to the dev-server origin
+ * Bare labels (no colon) are accepted for back-compat.
+ */
+export const parseRequiredViews = (phaseContent: string): ViewSpec[] => {
+  const blockMatch = phaseContent.match(/##\s+Required Views([\s\S]*?)(?=^##\s+|$(?![\r\n]))/m)
+  if (!blockMatch) return []
+  const views: ViewSpec[] = []
+  for (const line of blockMatch[1].split("\n")) {
+    const m = line.match(/^\s*(?:[-*]|\d+[.)])\s+(.+)$/)
+    if (!m) continue
+    const body = m[1].trim().replace(/`/g, "")
+    if (!body) continue
+    const colonIdx = body.indexOf(":")
+    if (colonIdx === -1) {
+      views.push({ label: body })
+      continue
+    }
+    const label = body.slice(0, colonIdx).trim()
+    const rest = body.slice(colonIdx + 1).trim()
+    if (!label) continue
+    views.push({ label, ...parseViewAttributes(rest) })
+  }
+  return views
+}
+
+const resolveViewUrl = (view: ViewSpec, baseUrl: string | undefined): string | undefined => {
+  if (!view.url) return baseUrl
+  if (/^https?:\/\//i.test(view.url)) return view.url
+  if (!baseUrl) return view.url
+  const path = view.url.startsWith("/") ? view.url : `/${view.url}`
+  return `${baseUrl.replace(/\/+$/, "")}${path}`
+}
+
 /**
  * If a phase declares `## Required Tools` and any of them can't launch under
  * the active sandbox, abort the phase with a clear message. Returns true when
@@ -117,11 +187,14 @@ const probePhaseRequiredTools = async (
     return true
   }
   const required = parseRequiredTools(phaseContent)
-  if (required.length === 0) return true
+  const declaredViews = parseRequiredViews(phaseContent)
+  if (required.length === 0 && declaredViews.length === 0) return true
 
   // Today only playwright/browser-bound tools have a probe path. As more
   // probes (MCP servers, agent-browser, etc.) come online, they'd plug in here.
-  const wantsBrowser = required.some((t) => t === "playwright" || t === "chromium" || t === "a11y" || t === "browser")
+  const wantsBrowser =
+    required.some((t) => t === "playwright" || t === "chromium" || t === "a11y" || t === "browser") ||
+    declaredViews.length > 0
   if (!wantsBrowser) return true
 
   const results = await probeSensorsUnderSandbox(["playwright"], {
@@ -138,6 +211,14 @@ const probePhaseRequiredTools = async (
   return false
 }
 
+const readPhaseContent = (phase: PhaseInfo): string | null => {
+  try {
+    return fs.readFileSync(phase.filepath, "utf-8")
+  } catch {
+    return null
+  }
+}
+
 const runSensorsForPhase = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
@@ -146,15 +227,42 @@ const runSensorsForPhase = async (
   try {
     const report = await detect(cwd)
     if (report.suggestedSensors.length === 0) return []
-    const findings = await collectSensorFindings(report.suggestedSensors, {
+
+    const baseInput: SensorInput = {
       cwd,
       ridgelineDir: config.ridgelineDir,
       buildDir: config.buildDir,
       shapeMdPath: path.join(config.buildDir, "shape.md"),
       model: config.model,
-    }, {
-      onWarn: (line) => printWarn(line),
-    })
+    }
+    const onWarn = (line: string): void => printWarn(line)
+
+    const phaseContent = readPhaseContent(phase)
+    const declaredViews = phaseContent ? parseRequiredViews(phaseContent) : []
+    const wantsPlaywrightViews =
+      declaredViews.length > 0 && report.suggestedSensors.includes("playwright")
+
+    if (!wantsPlaywrightViews) {
+      return await collectSensorFindings(report.suggestedSensors, baseInput, { onWarn })
+    }
+
+    const findings: SensorFinding[] = []
+    const nonPlaywrightSensors = report.suggestedSensors.filter((s) => s !== "playwright")
+    if (nonPlaywrightSensors.length > 0) {
+      findings.push(
+        ...(await collectSensorFindings(nonPlaywrightSensors, baseInput, { onWarn })),
+      )
+    }
+    for (const view of declaredViews) {
+      const viewInput: SensorInput = {
+        ...baseInput,
+        viewLabel: view.label,
+        url: resolveViewUrl(view, baseInput.url),
+        viewport: view.viewport,
+        zoom: view.zoom,
+      }
+      findings.push(...(await collectSensorFindings(["playwright"], viewInput, { onWarn })))
+    }
     return findings
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)

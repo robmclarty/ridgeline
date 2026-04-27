@@ -65,6 +65,28 @@ Every phase file must follow this structure exactly:
 <Relevant sections of spec.md for this phase, quoted or summarized.>
 ```
 
+## Required Views (visual phases only)
+
+Phases that change visual code (any of `apps/**/*.tsx`, `*.svg`, `*.css`, `tailwind.config.*`, or other rendered surfaces) should declare a `## Required Views` section listing the screenshots the reviewer needs to score taste, hierarchy, and motion. Each item is a label optionally followed by viewport/zoom/url attributes:
+
+```markdown
+## Required Views
+
+- canvas-default: 1280x800, url /
+- node-zoomed-in: 1280x800, zoom 2.0, url /flow/hello
+- mid-flow: 1280x800, url /flow/hello?demo=mid-flow
+```
+
+Attributes are comma-separated and optional:
+
+- `<width>x<height>` — viewport size (e.g., `1280x800`).
+- `zoom <n>` — CSS zoom factor applied to `document.body` before capture.
+- `url <path-or-absolute>` — overrides the dev-server root path.
+
+When a phase declares Required Views, the harness loops the playwright sensor over each view and persists per-view screenshots for the reviewer. When the section is absent, the harness captures a single default screenshot (back-compat).
+
+For non-visual phases, omit this section entirely.
+
 ## Phase Dependencies (Parallel Execution)
 
 Phases can declare dependencies to enable parallel execution. When a phase depends only on a subset of prior phases (not the immediately preceding one), add YAML frontmatter:

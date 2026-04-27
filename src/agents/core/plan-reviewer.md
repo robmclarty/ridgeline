@@ -35,7 +35,9 @@ For each item, write down concrete findings — name the offending phase, quote 
 
 7. **Required tools are declared.** If a phase needs specific tools (Playwright, an MCP server, a binary like agent-browser), the phase spec should declare them in a `## Required Tools` section. Flag phases that need tools but don't declare them.
 
-8. **No implementation details.** Phases must describe destinations, not routes. Flag phases that prescribe creation order, internal structure, or specific patterns.
+8. **Required views are declared on visual phases.** A phase that changes rendered surfaces (acceptance criteria reference screens, components, layouts, or any of `apps/**/*.tsx`, `*.svg`, `*.css`, `tailwind.config.*`) should declare a `## Required Views` section listing the screenshots the reviewer needs to score taste fidelity, motion, and hierarchy. Flag visual phases that omit this section. The default single-view fallback exists for back-compat but produces weaker visual reviews; explicit views are preferred.
+
+9. **No implementation details.** Phases must describe destinations, not routes. Flag phases that prescribe creation order, internal structure, or specific patterns.
 
 ## Your output
 
