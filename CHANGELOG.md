@@ -1,5 +1,34 @@
 # Changelog
 
+## v0.9.3 — 2026-04-26
+
+### Added
+
+- New `ridgeline directions <build-name>` command — opt-in stage that runs
+  before `ridgeline design` to generate 2-3 differentiated visual direction
+  options as self-contained HTML demos under
+  `.ridgeline/builds/<name>/directions/<id>/`. Each direction includes
+  `brief.md`, `tokens.md`, and a `demo/index.html` the user can open in a
+  browser. The user picks one, and the picked direction's tokens.md and
+  brief.md become seed context for the design Q&A.
+- New `direction-advisor` core agent (opus, one-shot) generates the
+  options. Each direction must come from a different visual school with a
+  named reference work — three variations on one theme = one direction.
+- `--thorough` flag generates 3 directions instead of 2; `--skip` is an
+  explicit no-op.
+
+### Changed
+
+- The `designer` agent now reads a `## Picked Direction` context block when
+  `directions/picked.txt` exists, using the picked direction's tokens as
+  `suggestedAnswer` defaults during Q&A.
+
+### Notes
+
+- Web-visual shapes only in this release. Backend / non-visual shapes exit
+  no-op; game-visual / print-layout currently warn and skip. Typical cost
+  is $2-5 per run with opus.
+
 ## v0.9.2 — 2026-04-26
 
 ### Added

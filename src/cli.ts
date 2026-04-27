@@ -9,6 +9,7 @@ import { disableLogger } from "./ui/logger"
 import { askBuildName } from "./ui/prompt"
 import { runShape } from "./commands/shape"
 import { runDesign } from "./commands/design"
+import { runDirections } from "./commands/directions"
 import { runSpec } from "./commands/spec"
 import { runIngest } from "./commands/ingest"
 import { runPlan } from "./commands/plan"
@@ -235,6 +236,29 @@ addPreflightOptions(program
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         input,
+      })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+addPreflightOptions(program
+  .command("directions [build-name]")
+  .description(
+    "Generate 2-3 differentiated visual direction options (HTML demos) before " +
+      "design.md Q&A. Opt-in. Web-visual shapes only. Costs ~$2-5 per run.",
+  )
+  .option("--model <name>", "Model for direction-advisor agent (defaults to settings.json model, or 'opus')")
+  .option("--timeout <minutes>", "Max duration in minutes", "15")
+  .option("--thorough", "Generate 3 directions instead of 2")
+  .option("--skip", "Explicit no-op (skip direction generation)"))
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      await runPreflightGuard()
+      await runDirections(await requireBuildName(buildName), {
+        ...parseBaseOpts(opts),
+        isThorough: opts.thorough === true,
+        isSkip: opts.skip === true,
       })
     } catch (err) {
       handleCommandError(err)

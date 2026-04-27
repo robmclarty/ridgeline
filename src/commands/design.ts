@@ -119,7 +119,44 @@ const summarizeCatalog = (catalog: AssetCatalog): string => {
   return lines.join("\n")
 }
 
-/** Collect design context (existing design.md, shape.md, matched shapes, asset catalog). */
+/** Load the picked direction's brief.md and tokens.md if a pick exists. */
+const loadPickedDirectionContext = (buildDir: string | null): string | null => {
+  if (!buildDir) return null
+  const directionsDir = path.join(buildDir, "directions")
+  const pickedFile = path.join(directionsDir, "picked.txt")
+  if (!fs.existsSync(pickedFile)) return null
+
+  let pickedId: string
+  try {
+    pickedId = fs.readFileSync(pickedFile, "utf-8").trim()
+  } catch {
+    return null
+  }
+  if (!pickedId) return null
+
+  const directionDir = path.join(directionsDir, pickedId)
+  if (!fs.existsSync(directionDir)) {
+    printInfo(`Picked direction "${pickedId}" no longer exists on disk; ignoring.`)
+    return null
+  }
+
+  const sections: string[] = [`## Picked Direction: ${pickedId}\n`]
+  const briefPath = path.join(directionDir, "brief.md")
+  if (fs.existsSync(briefPath)) {
+    sections.push("### Brief\n")
+    sections.push(fs.readFileSync(briefPath, "utf-8"))
+    sections.push("")
+  }
+  const tokensPath = path.join(directionDir, "tokens.md")
+  if (fs.existsSync(tokensPath)) {
+    sections.push("### Tokens (use as design.md seed)\n")
+    sections.push(fs.readFileSync(tokensPath, "utf-8"))
+    sections.push("")
+  }
+  return sections.join("\n")
+}
+
+/** Collect design context (existing design.md, shape.md, matched shapes, asset catalog, picked direction). */
 const gatherDesignContext = async (
   buildName: string | null,
   buildDir: string | null,
@@ -127,6 +164,12 @@ const gatherDesignContext = async (
   opts: DesignOptions,
 ): Promise<string[]> => {
   const contextParts: string[] = []
+
+  const pickedDirection = loadPickedDirectionContext(buildDir)
+  if (pickedDirection) {
+    contextParts.push(pickedDirection)
+    contextParts.push("")
+  }
 
   const projectDesign = path.join(ridgelineDir, "design.md")
   if (fs.existsSync(projectDesign)) {

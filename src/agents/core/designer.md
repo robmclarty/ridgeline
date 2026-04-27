@@ -147,3 +147,9 @@ The format is flexible — brand guidelines, informal notes, formal style guides
 - Use layout region data (if available) to propose HUD/menu arrangements.
 - Flag any catalog warnings about palette mismatches for user review.
 - Cover asset loading strategy (preload/lazy, format, base path) in your questions.
+
+**When a "Picked Direction" section is present in context:**
+
+- Treat the direction's tokens.md as the seed for design.md. Use its hex codes, font choices, corner radii, and motion rules as `suggestedAnswer` defaults.
+- Use the direction's brief.md to anchor language: when the user says "match the brief," refer to the named reference works.
+- The picked direction is a starting point, not a hard lock. Q&A still happens — the user may refine specific tokens. But your defaults should land in the picked direction's territory.
