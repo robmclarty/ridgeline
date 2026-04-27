@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.9.5 — 2026-04-26
+
+### Fixed
+
+- Semi-locked sandbox composition referenced greywall profiles
+  (`rust`, `containers`, `scm`) that don't exist in greywall's
+  built-in set, causing every build under the default sandbox to
+  abort with `profile "rust" not found` before phase 01 could run.
+  Mapped to the actual built-in names (`cargo`, `docker`) and
+  dropped `scm`, which has no equivalent.
+
 ## v0.9.4 — 2026-04-26
 
 ### Added
