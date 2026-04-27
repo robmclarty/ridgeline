@@ -4,7 +4,10 @@ import * as readline from "node:readline"
 import { printInfo, printError } from "../ui/output"
 import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
 import { advancePipeline, getMatchedShapes } from "../stores/state"
-import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../stores/settings"
+import {
+  DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
+  DEFAULT_SPECIALIST_COUNT,
+} from "../stores/settings"
 import { resolveInput } from "./input"
 import { askQuestion } from "./qa-workflow"
 
@@ -14,7 +17,7 @@ export type SpecOptions = {
   maxBudgetUsd?: number
   /** Optional path to a file (e.g., idea.md) or raw text to feed as authoritative spec guidance. */
   input?: string
-  isThorough?: boolean
+  specialistCount?: 1 | 2 | 3
   specialistTimeoutSeconds?: number
 }
 
@@ -94,7 +97,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     matchedShapes: getMatchedShapes(buildDir),
-    isThorough: opts.isThorough === true,
+    specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
     userInput,
   }
 

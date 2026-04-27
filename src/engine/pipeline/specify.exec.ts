@@ -293,7 +293,7 @@ export type SpecEnsembleConfig = {
   maxBudgetUsd: number | null
   buildDir: string
   matchedShapes: string[]
-  isThorough: boolean
+  specialistCount: 1 | 2 | 3
   /** Optional user-authored spec content treated as authoritative source material. */
   userInput: string | null
 }
@@ -401,7 +401,7 @@ export const invokeSpecifier = async (
 
   // Get standard specialists, capped at 2 (default) / 3 (thorough).
   const baseSpecialists = registry.getSpecialists("specifiers")
-  let specialists = selectSpecialists(baseSpecialists, { isThorough: config.isThorough })
+  let specialists = selectSpecialists(baseSpecialists, { specialistCount: config.specialistCount })
 
   // Conditionally add visual coherence specialist when visual shapes matched.
   if (config.matchedShapes.length > 0) {
@@ -430,7 +430,7 @@ export const invokeSpecifier = async (
     maxBudgetUsd: config.maxBudgetUsd,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
-    isTwoRound: config.isThorough,
+    isTwoRound: config.specialistCount === 3,
     buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
       const sections = [
         `You are the ${ownPerspective} specialist. You have already submitted your proposal.`,

@@ -4,10 +4,6 @@ import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 import type { RidgelineConfig, ClaudeResult, PhaseInfo, EnsembleResult } from "../../types"
 
-vi.mock("../../ui/output", () => ({
-  printInfo: vi.fn(),
-}))
-
 vi.mock("../../stores/trajectory", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
@@ -28,6 +24,27 @@ vi.mock("../../stores/budget", () => ({
 vi.mock("../../engine/pipeline/ensemble.exec", () => ({
   invokePlanner: vi.fn(),
 }))
+
+vi.mock("../../engine/pipeline/plan.review", () => ({
+  runPlanReviewer: vi.fn(async () => ({
+    verdict: { approved: true, issues: [] },
+    result: {
+      success: true,
+      result: "{}",
+      durationMs: 1000,
+      costUsd: 0.10,
+      usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+      sessionId: "review",
+    },
+  })),
+  revisePlanWithFeedback: vi.fn(),
+  reportPhaseSizeWarnings: vi.fn(() => []),
+}))
+
+vi.mock("../../ui/output", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../ui/output")>()
+  return { ...actual, printInfo: vi.fn(), printWarn: vi.fn() }
+})
 
 import { runPlan } from "../plan"
 import { invokePlanner } from "../../engine/pipeline/ensemble.exec"
@@ -68,10 +85,14 @@ describe("commands/plan", () => {
       checkCommand: null,
       maxBudgetUsd: null,
       unsafe: false,
+      sandboxMode: "semi-locked",
+      sandboxExtras: { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
       networkAllowlist: [],
       extraContext: null,
-      isThorough: false,
+      specialistCount: 2,
       specialistTimeoutSeconds: 180,
+      phaseBudgetLimit: 15,
+      phaseTokenLimit: 80000,
     }
   })
 

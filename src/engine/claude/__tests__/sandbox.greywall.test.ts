@@ -9,10 +9,12 @@ vi.mock("node:fs", async () => {
 
 vi.mock("node:child_process", async () => {
   const actual = await vi.importActual<typeof import("node:child_process")>("node:child_process")
-  return { ...actual, execSync: vi.fn() }
+  return { ...actual, execFileSync: vi.fn() }
 })
 
 import { greywallProvider } from "../sandbox.greywall"
+
+const EMPTY_EXTRAS = { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] }
 
 const mockFetch = vi.fn()
 
@@ -29,8 +31,12 @@ describe("greywallProvider", () => {
     expect(greywallProvider.command).toBe("greywall")
   })
 
-  it("writes a settings file with allowWrite for repo, /tmp, and additional paths", () => {
-    greywallProvider.buildArgs("/my/repo", [], ["/extra/scratch"])
+  it("strict mode writes allowWrite for repo, /tmp, additional paths, and extras", () => {
+    greywallProvider.buildArgs("/my/repo", [], {
+      mode: "strict",
+      extras: EMPTY_EXTRAS,
+      additionalWritePaths: ["/extra/scratch"],
+    })
 
     expect(fs.writeFileSync).toHaveBeenCalledOnce()
     const [path, content] = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls[0]
@@ -39,8 +45,8 @@ describe("greywallProvider", () => {
     expect(settings.filesystem.allowWrite).toEqual(["/my/repo", "/tmp", "/extra/scratch"])
   })
 
-  it("passes --profile claude,node, --no-credential-protection, --settings, and -- separator", () => {
-    const args = greywallProvider.buildArgs("/repo", [])
+  it("strict mode passes --profile claude,node, --no-credential-protection, --settings, and -- separator", () => {
+    const args = greywallProvider.buildArgs("/repo", [], { mode: "strict", extras: EMPTY_EXTRAS })
     expect(args[0]).toBe("--profile")
     expect(args[1]).toBe("claude,node")
     expect(args[2]).toBe("--no-credential-protection")
@@ -48,8 +54,45 @@ describe("greywallProvider", () => {
     expect(args[args.length - 1]).toBe("--")
   })
 
+  it("semi-locked mode (default) widens profile composition and write paths", () => {
+    const args = greywallProvider.buildArgs("/repo", [], { mode: "semi-locked", extras: EMPTY_EXTRAS })
+    const profiles = args[1].split(",")
+    expect(profiles).toContain("claude")
+    expect(profiles).toContain("node")
+    expect(profiles).toContain("python")
+    expect(profiles).toContain("containers")
+
+    const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
+    const [, content] = calls[calls.length - 1]
+    const settings = JSON.parse(content as string)
+    expect(settings.filesystem.allowWrite.some((p: string) => p.endsWith("/.agent-browser"))).toBe(true)
+    expect(settings.filesystem.allowWrite.some((p: string) => p.endsWith("/.cache/uv"))).toBe(true)
+  })
+
+  it("merges extraProfiles, extraWritePaths, and extraReadPaths into the spawn args", () => {
+    const args = greywallProvider.buildArgs("/repo", [], {
+      mode: "semi-locked",
+      extras: {
+        writePaths: ["/custom/write"],
+        readPaths: ["/custom/read"],
+        profiles: ["custom-profile"],
+        networkAllowlist: [],
+      },
+    })
+    expect(args[1]).toContain("custom-profile")
+
+    const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
+    const [, content] = calls[calls.length - 1]
+    const settings = JSON.parse(content as string)
+    expect(settings.filesystem.allowWrite).toContain("/custom/write")
+    expect(settings.filesystem.allowRead).toContain("/custom/read")
+  })
+
   it("does not include network key in settings file (rules managed via greyproxy API)", () => {
-    greywallProvider.buildArgs("/repo", ["api.anthropic.com", "registry.npmjs.org"])
+    greywallProvider.buildArgs("/repo", ["api.anthropic.com", "registry.npmjs.org"], {
+      mode: "strict",
+      extras: EMPTY_EXTRAS,
+    })
 
     const calls = (fs.writeFileSync as ReturnType<typeof vi.fn>).mock.calls
     const [, content] = calls[calls.length - 1]
@@ -59,31 +102,31 @@ describe("greywallProvider", () => {
 
   describe("checkReady", () => {
     it("returns null when greyproxy is running", () => {
-      vi.mocked(cp.execSync).mockReturnValue("✓ greyproxy running\n")
+      vi.mocked(cp.execFileSync).mockReturnValue("✓ greyproxy running\n")
 
       expect(greywallProvider.checkReady!()).toBeNull()
     })
 
     it("returns error message when greyproxy is not running", () => {
-      vi.mocked(cp.execSync).mockReturnValue("greyproxy stopped\n")
+      vi.mocked(cp.execFileSync).mockReturnValue("greyproxy stopped\n")
 
       expect(greywallProvider.checkReady!()).toContain("greyproxy is not running")
     })
 
-    it("returns null when execSync throws but output matches", () => {
+    it("returns null when execFileSync throws but output matches", () => {
       const err = new Error("exit code 1")
       ;(err as any).stdout = "✓ greyproxy running"
       ;(err as any).stderr = ""
-      vi.mocked(cp.execSync).mockImplementation(() => { throw err })
+      vi.mocked(cp.execFileSync).mockImplementation(() => { throw err })
 
       expect(greywallProvider.checkReady!()).toBeNull()
     })
 
-    it("returns error message when execSync throws and output does not match", () => {
+    it("returns error message when execFileSync throws and output does not match", () => {
       const err = new Error("command not found")
       ;(err as any).stdout = ""
       ;(err as any).stderr = "greywall: not found"
-      vi.mocked(cp.execSync).mockImplementation(() => { throw err })
+      vi.mocked(cp.execFileSync).mockImplementation(() => { throw err })
 
       expect(greywallProvider.checkReady!()).toContain("greyproxy is not running")
     })

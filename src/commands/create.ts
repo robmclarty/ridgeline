@@ -20,6 +20,7 @@ type CreateOptions = {
   checkTimeout?: string
   context?: string
   unsafe?: boolean
+  sandbox?: string
   input?: string
 }
 
@@ -106,6 +107,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         taste: opts.taste,
         context: opts.context,
         unsafe: opts.unsafe,
+        sandbox: opts.sandbox,
         maxBudgetUsd: opts.maxBudgetUsd,
       })
       await runBuild(config)

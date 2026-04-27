@@ -5,7 +5,11 @@ import { invokeResearcher, ResearchConfig } from "../engine/pipeline/research.ex
 import { advancePipeline } from "../stores/state"
 import { logTrajectory } from "../stores/trajectory"
 import { recordCost } from "../stores/budget"
-import { resolveResearchAllowlist, DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../stores/settings"
+import {
+  resolveResearchAllowlist,
+  DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
+  DEFAULT_SPECIALIST_COUNT,
+} from "../stores/settings"
 import { printResearchSummary } from "../ui/summary"
 import { runRefine } from "./refine"
 
@@ -15,7 +19,7 @@ type ResearchOptions = {
   maxBudgetUsd?: number
   isQuick: boolean
   auto: number | null
-  isThorough?: boolean
+  specialistCount?: 1 | 2 | 3
   specialistTimeoutSeconds?: number
 }
 
@@ -63,7 +67,7 @@ const runSingleResearch = async (
     maxBudgetUsd: opts.maxBudgetUsd ?? null,
     buildDir,
     isQuick: opts.isQuick,
-    isThorough: opts.isThorough === true,
+    specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
     networkAllowlist: resolveResearchAllowlist(ridgelineDir),
     existingResearchMd,
     changelogMd,

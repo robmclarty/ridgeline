@@ -24,18 +24,25 @@ import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 import { enforceFlavourRemoved } from "./utils/flavour-removed"
 import { detect } from "./engine/detect"
 import { runPreflight, type StablePromptInfo } from "./ui/preflight"
+import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "./ui/preflight.toolprobe"
+import { detectSandbox } from "./engine/claude/sandbox"
 import { resolveStablePrompt } from "./engine/pipeline/pipeline.shared"
 import { approximateTokenCount } from "./engine/claude/stable.prompt"
 
 enforceFlavourRemoved(process.argv.slice(2))
 
 // Deprecation pre-check: --deep-ensemble is renamed to --thorough.
+// --thorough is now an alias for --specialists 3 (the default).
 // Emit on every run (not once per session) so the user always sees it.
 {
   const rawArgs = process.argv.slice(2)
   const hasDeep = rawArgs.includes("--deep-ensemble")
   if (hasDeep) {
-    console.error("[deprecated] --deep-ensemble is now --thorough; continuing with --thorough")
+    console.error("[deprecated] --deep-ensemble is now --specialists 3 (default); continuing")
+  }
+  const hasUnsafe = rawArgs.includes("--unsafe")
+  if (hasUnsafe) {
+    console.error("[deprecated] --unsafe is now --sandbox=off; continuing")
   }
 }
 
@@ -84,10 +91,16 @@ const handleCommandError = (err: unknown): never => {
 
 const ridgelineDirFromCwd = (): string => path.join(process.cwd(), ".ridgeline")
 
-const detectPreflightFlags = (): { isThorough: boolean; isYes: boolean } => {
+const detectPreflightFlags = (): { specialistCount: 1 | 2 | 3; isYes: boolean } => {
   const argv = process.argv.slice(2)
+  // --thorough / --deep-ensemble are aliases for --specialists 3 (now the default)
+  const specialistsFlag = argv.indexOf("--specialists")
+  const explicit = specialistsFlag !== -1 ? parseInt(argv[specialistsFlag + 1] ?? "", 10) : NaN
+  const specialistCount: 1 | 2 | 3 = explicit === 1 || explicit === 2 || explicit === 3
+    ? explicit
+    : 3
   return {
-    isThorough: argv.includes("--thorough") || argv.includes("--deep-ensemble"),
+    specialistCount,
     isYes: argv.includes("--yes") || argv.includes("-y"),
   }
 }
@@ -103,17 +116,38 @@ const stablePromptInfoFromConfig = (config: RidgelineConfig): StablePromptInfo |
 }
 
 const runPreflightGuard = async (config?: RidgelineConfig): Promise<void> => {
-  const { isThorough, isYes } = detectPreflightFlags()
-  const report = await detect(process.cwd(), { isThorough })
+  const { specialistCount, isYes } = detectPreflightFlags()
+  const report = await detect(process.cwd(), { specialistCount })
   await runPreflight(report, {
     yes: isYes,
     isTTY: Boolean(process.stdin.isTTY),
     stablePromptInfo: config ? stablePromptInfoFromConfig(config) : undefined,
   })
+
+  // Probe required binary tools under the active sandbox before any phase
+  // burns budget. Only runs when invoked with a config (i.e., for build/plan/
+  // dry-run paths) and when there are sensors that need real binaries.
+  if (!config) return
+  if (config.sandboxMode === "off") return
+  if (report.suggestedSensors.length === 0) return
+
+  const { provider } = detectSandbox(config.sandboxMode)
+  const probeResults = await probeSensorsUnderSandbox(report.suggestedSensors, {
+    cwd: process.cwd(),
+    sandboxProvider: provider,
+    sandboxMode: config.sandboxMode,
+    sandboxExtras: config.sandboxExtras,
+  })
+  const failures = probeResults.filter((r) => !r.isLaunchable)
+  if (failures.length > 0) {
+    process.stderr.write(formatProbeAbortMessage(failures))
+    process.exit(1)
+  }
 }
 
 const addPreflightOptions = (cmd: Command): Command => cmd
-  .option("--thorough", "Use a 3-specialist ensemble (default: 2)")
+  .option("--specialists <n>", "Number of ensemble specialists (1, 2, or 3). Default: 3")
+  .option("--thorough", "Alias for --specialists 3 (the default)")
   .option("-y, --yes", "Skip the preflight confirmation prompt")
 
 const parseBaseOpts = (opts: Opts) => ({
@@ -164,7 +198,8 @@ addPreflightOptions(program
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
-  .option("--unsafe", "Disable sandbox auto-detection"))
+  .option("--sandbox <mode>", "Sandbox mode: off | semi-locked (default) | strict")
+  .option("--unsafe", "Alias for --sandbox=off (deprecated)"))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
@@ -179,6 +214,7 @@ addPreflightOptions(program
         taste: opts.taste as string | undefined,
         context: opts.context as string | undefined,
         unsafe: opts.unsafe === true,
+        sandbox: opts.sandbox as string | undefined,
         input,
       })
     } catch (err) {
@@ -231,14 +267,14 @@ addPreflightOptions(program
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
-      const { isThorough } = detectPreflightFlags()
+      const { specialistCount } = detectPreflightFlags()
       const ridgelineDir = ridgelineDirFromCwd()
       await runSpec(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDir),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         input,
-        isThorough,
+        specialistCount,
         specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
       })
     } catch (err) {
@@ -264,7 +300,7 @@ addPreflightOptions(program
         if (isNaN(auto) || auto < 1) auto = 2
       }
 
-      const { isThorough } = detectPreflightFlags()
+      const { specialistCount } = detectPreflightFlags()
       const ridgelineDir = ridgelineDirFromCwd()
       await runResearch(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDir),
@@ -272,7 +308,7 @@ addPreflightOptions(program
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         isQuick: opts.quick === true,
         auto,
-        isThorough,
+        specialistCount,
         specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
       })
     } catch (err) {
@@ -351,7 +387,8 @@ addPreflightOptions(program
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
-  .option("--unsafe", "Disable sandbox auto-detection")
+  .option("--sandbox <mode>", "Sandbox mode: off | semi-locked (default) | strict")
+  .option("--unsafe", "Alias for --sandbox=off (deprecated)")
   .option("--no-structured-log", "Disable structured logging to log.jsonl"))
   .action(withConfigAndPreflight(runBuild))
 

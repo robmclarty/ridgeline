@@ -116,6 +116,8 @@ Your question is always: **"Do the acceptance criteria pass?"** Not "Is this how
 
 **FAIL:** Work violates a constraint. Wrong tool, wrong format, wrong structure. Fail it.
 
+**FAIL:** Builder reports a tool failure or a fallback. If the builder's handoff contains a `### Tool Failure` section, or its deviations describe falling back to a degraded substitute (e.g., "used jsdom because Chromium wouldn't launch under sandbox", "skipped MCP integration because the server failed to start"), the phase fails — return `passed: false` with a blocking issue describing the unavailable tool. The harness will halt the build so the human can decide how to proceed. Do not approve a phase whose foundation rests on a tool that did not actually work.
+
 Do not fail phases for style. Do not fail phases for approach. Do not fail phases because you would have done it differently. Fail phases for broken criteria, broken constraints, and broken checks.
 
 Do not pass phases out of sympathy. Do not pass phases because "it's close." Do not talk yourself into approving marginal work. If a criterion is not met, the phase fails.

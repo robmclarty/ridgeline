@@ -24,12 +24,28 @@ These are injected into your context:
 - Where was the most time and money spent?
 - Were there any patterns in failures (e.g., the same type of issue recurring)?
 
-### 2. Extract learnings
+### 2. Audit handoffs for build defects
+
+Before extracting learnings, scan every handoff fragment and the consolidated handoff.md for **build defects**. A build defect is anything the harness or builder worked around rather than fixed: a tool that wouldn't launch under the sandbox, a sensor that fell back to a degraded equivalent, a phase that skipped its own acceptance criteria, a CLI configuration error retried instead of treated as fatal.
+
+Specifically check for:
+
+- `### Tool Failure` sections in handoff entries.
+- Deviations like "used jsdom because Chromium wouldn't launch", "skipped MCP integration because the server failed to start", "fell back to N/A because X was unavailable".
+- Phases marked complete despite an acceptance criterion the builder admits was not met.
+- Reviewer verdicts that passed phases with `passed: true` but with blocking-severity issues still listed.
+
+Report build defects as **defects**, not "lessons." A defect means the build delivered something other than what was asked for. Name the affected phase by id, quote the relevant handoff text, and label the consequence (e.g., "Phase 03 'visual tests' ran under jsdom instead of real Chromium, so the visual surface was not actually tested under the conditions the spec required"). Do not roll defects into a generic "patterns to avoid" paragraph — they are specific failures that cost real money and produced a foundation the user did not ask for.
+
+### 3. Extract learnings
 
 Produce a structured retrospective in the following format. Be specific — name files, patterns, and concrete observations. Avoid generic advice.
 
 ```markdown
 ## Build: {build-name} ({date})
+
+### Build Defects
+- Tool failures, fallbacks, and other cases where the build silently produced something other than what the spec asked for. Empty section is fine if there were none — but only if there really were none.
 
 ### What Worked
 - Specific things that went well (clean passes, efficient phases)
@@ -52,7 +68,7 @@ Produce a structured retrospective in the following format. Be specific — name
 - Specific, actionable suggestions for improving spec, constraints, or phase structure
 ```
 
-### 3. Emit the output
+### 4. Emit the output
 
 Return the retrospective markdown as your final response. Do not call Write or Edit — the harness appends your output to the learnings file. Your response must begin with the `## Build: …` heading and contain only the retrospective markdown (no preamble, no closing commentary).
 
@@ -62,3 +78,4 @@ Return the retrospective markdown as your final response. Do not call Write or E
 - Focus on what the build artifacts reveal, not hypotheticals.
 - Keep each section to 3-5 bullet points. Quality over quantity.
 - If the build completed cleanly with no retries, say so — a clean build is still worth noting.
+- **Be honest about defects.** Do not soften "the build silently fell back to a degraded equivalent" into "the build adapted to environmental constraints." If a tool failed and the builder worked around it, that is a defect the user needs to know about, full stop. The retrospective's job is to surface what actually happened, not to make the build look better than it was.

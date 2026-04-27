@@ -2,7 +2,24 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadSettings, resolveNetworkAllowlist, resolveModel, resolveSpecialistTimeoutSeconds, DEFAULT_NETWORK_ALLOWLIST, DEFAULT_SPECIALIST_TIMEOUT_SECONDS, CLAUDE_REQUIRED_DOMAINS } from "../settings"
+import {
+  loadSettings,
+  resolveNetworkAllowlist,
+  resolveModel,
+  resolveSpecialistTimeoutSeconds,
+  resolvePhaseBudgetLimit,
+  resolvePhaseTokenLimit,
+  resolveSpecialistCount,
+  resolveSandboxMode,
+  resolveSandboxExtras,
+  DEFAULT_NETWORK_ALLOWLIST,
+  DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
+  DEFAULT_PHASE_BUDGET_LIMIT_USD,
+  DEFAULT_PHASE_TOKEN_LIMIT,
+  DEFAULT_SPECIALIST_COUNT,
+  DEFAULT_SANDBOX_MODE,
+  CLAUDE_REQUIRED_DOMAINS,
+} from "../settings"
 
 describe("settings", () => {
   let tmpDir: string
@@ -125,6 +142,133 @@ describe("settings", () => {
         JSON.stringify({ specialistTimeoutSeconds: 450.7 })
       )
       expect(resolveSpecialistTimeoutSeconds(tmpDir)).toBe(450)
+    })
+  })
+
+  describe("resolvePhaseBudgetLimit", () => {
+    it("returns the default when not set", () => {
+      expect(resolvePhaseBudgetLimit(tmpDir)).toBe(DEFAULT_PHASE_BUDGET_LIMIT_USD)
+    })
+    it("reads planner.phaseBudgetLimit from settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { phaseBudgetLimit: 25 } }),
+      )
+      expect(resolvePhaseBudgetLimit(tmpDir)).toBe(25)
+    })
+    it("falls back to default for non-positive values", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { phaseBudgetLimit: 0 } }),
+      )
+      expect(resolvePhaseBudgetLimit(tmpDir)).toBe(DEFAULT_PHASE_BUDGET_LIMIT_USD)
+    })
+  })
+
+  describe("resolvePhaseTokenLimit", () => {
+    it("returns the default when not set", () => {
+      expect(resolvePhaseTokenLimit(tmpDir)).toBe(DEFAULT_PHASE_TOKEN_LIMIT)
+    })
+    it("reads planner.phaseTokenLimit from settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { phaseTokenLimit: 100000 } }),
+      )
+      expect(resolvePhaseTokenLimit(tmpDir)).toBe(100000)
+    })
+  })
+
+  describe("resolveSpecialistCount", () => {
+    it("returns the default (3) when not set", () => {
+      expect(resolveSpecialistCount(tmpDir)).toBe(DEFAULT_SPECIALIST_COUNT)
+    })
+    it("CLI override wins over settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { specialistCount: 2 } }),
+      )
+      expect(resolveSpecialistCount(tmpDir, 1)).toBe(1)
+    })
+    it("settings value used when CLI is absent", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { specialistCount: 2 } }),
+      )
+      expect(resolveSpecialistCount(tmpDir)).toBe(2)
+    })
+    it("rejects invalid values and falls back to default", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { specialistCount: 5 } }),
+      )
+      expect(resolveSpecialistCount(tmpDir)).toBe(DEFAULT_SPECIALIST_COUNT)
+    })
+  })
+
+  describe("resolveSandboxMode", () => {
+    it("defaults to semi-locked", () => {
+      expect(resolveSandboxMode(tmpDir)).toBe(DEFAULT_SANDBOX_MODE)
+      expect(DEFAULT_SANDBOX_MODE).toBe("semi-locked")
+    })
+    it("CLI override wins over settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ sandbox: { mode: "strict" } }),
+      )
+      expect(resolveSandboxMode(tmpDir, "off")).toBe("off")
+    })
+    it("reads sandbox.mode from settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ sandbox: { mode: "strict" } }),
+      )
+      expect(resolveSandboxMode(tmpDir)).toBe("strict")
+    })
+    it("rejects unknown modes and uses default", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ sandbox: { mode: "permissive" } }),
+      )
+      expect(resolveSandboxMode(tmpDir)).toBe(DEFAULT_SANDBOX_MODE)
+    })
+  })
+
+  describe("resolveSandboxExtras", () => {
+    it("returns empty arrays when nothing is configured", () => {
+      expect(resolveSandboxExtras(tmpDir)).toEqual({
+        writePaths: [],
+        readPaths: [],
+        profiles: [],
+        networkAllowlist: [],
+      })
+    })
+    it("reads each extras list from settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({
+          sandbox: {
+            extraWritePaths: ["/a"],
+            extraReadPaths: ["/b"],
+            extraProfiles: ["python"],
+            extraNetworkAllowlist: ["example.com"],
+          },
+        }),
+      )
+      expect(resolveSandboxExtras(tmpDir)).toEqual({
+        writePaths: ["/a"],
+        readPaths: ["/b"],
+        profiles: ["python"],
+        networkAllowlist: ["example.com"],
+      })
+    })
+    it("filters out non-string values", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({
+          sandbox: { extraWritePaths: ["/a", 42, null, "/b"] },
+        }),
+      )
+      expect(resolveSandboxExtras(tmpDir).writePaths).toEqual(["/a", "/b"])
     })
   })
 

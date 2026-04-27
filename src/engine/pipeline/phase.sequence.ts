@@ -15,6 +15,7 @@ import { invokeReviewer } from "./review.exec"
 import { detect } from "../detect"
 import { collectSensorFindings } from "./sensors.collect"
 import type { SensorFinding } from "../../sensors"
+import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "../../ui/preflight.toolprobe"
 
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms))
@@ -32,6 +33,10 @@ const FATAL_PATTERNS = [
   "forbidden",
   "invalid_api_key",
   "oauth token has expired",
+  // CLI configuration errors — never succeed on retry, so don't waste budget retrying them.
+  "cannot use both",
+  "unknown option",
+  "mutually exclusive",
 ]
 
 /** Classify an invocation error as fatal (don't retry) or transient (retry with backoff). */
@@ -74,6 +79,63 @@ const isBudgetExceeded = (
     `Total cost $${totalCostUsd.toFixed(2)} exceeds budget $${config.maxBudgetUsd}`)
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
   return true
+}
+
+/**
+ * Parse a `## Required Tools` section from a phase spec, returning the
+ * normalized tool names (e.g., `["playwright", "agent-browser"]`). Lines may
+ * be `- name`, `* name`, or `1. name`; everything else is ignored.
+ */
+export const parseRequiredTools = (phaseContent: string): string[] => {
+  const blockMatch = phaseContent.match(/##\s+Required Tools([\s\S]*?)(?=^##\s+|$(?![\r\n]))/m)
+  if (!blockMatch) return []
+  const items: string[] = []
+  for (const line of blockMatch[1].split("\n")) {
+    const m = line.match(/^\s*(?:[-*]|\d+[.)])\s+(.+)$/)
+    if (!m) continue
+    const name = m[1].trim().toLowerCase().replace(/`/g, "")
+    if (name) items.push(name)
+  }
+  return items
+}
+
+/**
+ * If a phase declares `## Required Tools` and any of them can't launch under
+ * the active sandbox, abort the phase with a clear message. Returns true when
+ * the probe passed (or no probe was needed); false to halt the phase.
+ */
+const probePhaseRequiredTools = async (
+  phase: PhaseInfo,
+  config: RidgelineConfig,
+  cwd: string,
+): Promise<boolean> => {
+  if (config.sandboxMode === "off") return true
+  let phaseContent: string
+  try {
+    phaseContent = fs.readFileSync(phase.filepath, "utf-8")
+  } catch {
+    return true
+  }
+  const required = parseRequiredTools(phaseContent)
+  if (required.length === 0) return true
+
+  // Today only playwright/browser-bound tools have a probe path. As more
+  // probes (MCP servers, agent-browser, etc.) come online, they'd plug in here.
+  const wantsBrowser = required.some((t) => t === "playwright" || t === "chromium" || t === "a11y" || t === "browser")
+  if (!wantsBrowser) return true
+
+  const results = await probeSensorsUnderSandbox(["playwright"], {
+    cwd,
+    sandboxProvider: config.sandboxProvider ?? null,
+    sandboxMode: config.sandboxMode,
+    sandboxExtras: config.sandboxExtras,
+  })
+  const failures = results.filter((r) => !r.isLaunchable)
+  if (failures.length === 0) return true
+
+  printPhase(phase.id, `FAILED: required tool unavailable under sandbox`)
+  process.stderr.write(formatProbeAbortMessage(failures))
+  return false
 }
 
 const runSensorsForPhase = async (
@@ -243,6 +305,14 @@ export const runPhase = async (
 
   createCheckpoint(checkpointTag, phase.id, cwd)
   ensureHandoffExists(config.buildDir)
+
+  // Per-phase pre-flight: if the phase spec declares `## Required Tools` and
+  // any of them can't launch under the sandbox, halt before burning budget.
+  const probePassed = await probePhaseRequiredTools(phase, config, cwd ?? process.cwd())
+  if (!probePassed) {
+    updatePhaseStatus(config.buildDir, state, phase.id, { status: "failed", failedAt: new Date().toISOString() })
+    return "failed"
+  }
 
   let attempt = phaseState.retries
   const maxAttempts = config.maxRetries + 1

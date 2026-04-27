@@ -11,6 +11,11 @@ vi.mock("../stores/settings", () => ({
   loadSettings: vi.fn(() => ({})),
   resolveModel: vi.fn((optModel: string | undefined) => optModel ?? "opus"),
   resolveSpecialistTimeoutSeconds: vi.fn(() => 180),
+  resolvePhaseBudgetLimit: vi.fn(() => 15),
+  resolvePhaseTokenLimit: vi.fn(() => 80000),
+  resolveSpecialistCount: vi.fn((_dir: string, cli?: number) => cli ?? 3),
+  resolveSandboxMode: vi.fn((_dir: string, cli?: string) => cli ?? "semi-locked"),
+  resolveSandboxExtras: vi.fn(() => ({ writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] })),
 }))
 
 import { resolveConfig, loadVersion } from "../config"
@@ -121,7 +126,7 @@ describe("config", () => {
       expect(config.checkCommand).toBe("npm run lint")
     })
 
-    it("defaults unsafe to false", () => {
+    it("defaults sandboxMode to semi-locked and unsafe to false", () => {
       mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
         if (filename === "constraints.md") return "/fake/constraints.md"
         return null
@@ -130,11 +135,12 @@ describe("config", () => {
 
       const config = resolveConfig("test", {})
 
+      expect(config.sandboxMode).toBe("semi-locked")
       expect(config.unsafe).toBe(false)
       expect(config.networkAllowlist).toEqual(["registry.npmjs.org"])
     })
 
-    it("sets unsafe from CLI opts", () => {
+    it("maps --unsafe to sandboxMode 'off' and unsafe true", () => {
       mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
         if (filename === "constraints.md") return "/fake/constraints.md"
         return null
@@ -143,7 +149,35 @@ describe("config", () => {
 
       const config = resolveConfig("test", { unsafe: true })
 
+      expect(config.sandboxMode).toBe("off")
       expect(config.unsafe).toBe(true)
+    })
+
+    it("honors --sandbox=strict", () => {
+      mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
+        if (filename === "constraints.md") return "/fake/constraints.md"
+        return null
+      })
+      mockParseCheckCommand.mockReturnValue(null)
+
+      const config = resolveConfig("test", { sandbox: "strict" })
+
+      expect(config.sandboxMode).toBe("strict")
+      expect(config.unsafe).toBe(false)
+    })
+
+    it("populates planner budget defaults", () => {
+      mockResolveFile.mockImplementation((_flag, _buildDir, filename) => {
+        if (filename === "constraints.md") return "/fake/constraints.md"
+        return null
+      })
+      mockParseCheckCommand.mockReturnValue(null)
+
+      const config = resolveConfig("test", {})
+
+      expect(config.specialistCount).toBe(3)
+      expect(config.phaseBudgetLimit).toBe(15)
+      expect(config.phaseTokenLimit).toBe(80000)
     })
   })
 })

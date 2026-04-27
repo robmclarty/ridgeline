@@ -15,7 +15,7 @@ describe("detect", () => {
       expect(report.detectedDeps).toEqual(expect.arrayContaining(["react", "vite"]))
       expect(report.hasDesignMd).toBe(true)
       expect(report.suggestedSensors.sort()).toEqual(["a11y", "contrast", "playwright", "vision"])
-      expect(report.suggestedEnsembleSize).toBe(2)
+      expect(report.suggestedEnsembleSize).toBe(3)
     })
 
     it("pure Node project (express only) has no sensors", async () => {
@@ -113,14 +113,19 @@ describe("detect", () => {
   })
 
   describe("ensemble size and thoroughness", () => {
-    it("defaults to ensemble size 2", async () => {
+    it("defaults to ensemble size 3", async () => {
       const report = await detect(path.join(FIXTURES, "pure-node"))
+      expect(report.suggestedEnsembleSize).toBe(3)
+    })
+
+    it("returns the requested ensemble size when specialistCount is set", async () => {
+      const report = await detect(path.join(FIXTURES, "pure-node"), { specialistCount: 2 })
       expect(report.suggestedEnsembleSize).toBe(2)
     })
 
-    it("returns ensemble size 3 when isThorough is true", async () => {
-      const report = await detect(path.join(FIXTURES, "pure-node"), { isThorough: true })
-      expect(report.suggestedEnsembleSize).toBe(3)
+    it("supports a single-specialist ensemble", async () => {
+      const report = await detect(path.join(FIXTURES, "pure-node"), { specialistCount: 1 })
+      expect(report.suggestedEnsembleSize).toBe(1)
     })
   })
 

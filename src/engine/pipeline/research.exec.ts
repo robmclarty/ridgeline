@@ -174,7 +174,7 @@ export type ResearchConfig = {
   maxBudgetUsd: number | null
   buildDir: string
   isQuick: boolean
-  isThorough: boolean
+  specialistCount: 1 | 2 | 3
   networkAllowlist: string[]
   sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
   existingResearchMd: string | null
@@ -193,11 +193,10 @@ export const invokeResearcher = async (
   const gapsMd = registry.getGaps("researchers")
   const allSpecialists = registry.getSpecialists("researchers")
 
-  // Quick mode: pick one specialist at random.
-  // Default: cap at 2 specialists; thorough mode raises to 3.
+  // Quick mode: pick one specialist at random. Otherwise the configured count (default 3).
   const specialists = config.isQuick && allSpecialists.length > 0
     ? [allSpecialists[Math.floor(Math.random() * allSpecialists.length)]]
-    : selectSpecialists(allSpecialists, { isThorough: config.isThorough })
+    : selectSpecialists(allSpecialists, { specialistCount: config.specialistCount })
 
   // Build a research agenda before dispatching specialists
   const agendaSpinner = startSpinner("Building agenda")
@@ -241,7 +240,7 @@ export const invokeResearcher = async (
     sandboxProvider: config.sandboxProvider,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
-    isTwoRound: config.isThorough,
+    isTwoRound: config.specialistCount === 3,
     buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
       const sections = [
         `You are the ${ownPerspective} research specialist. You have already submitted your report.`,

@@ -58,24 +58,29 @@ describe("selectSpecialists", () => {
     makeSpecialist("fourth"),
   ]
 
-  it("returns the first 2 specialists by default", () => {
-    const selected = selectSpecialists(all, { isThorough: false })
-    expect(selected.map((s) => s.perspective)).toEqual(["simplicity", "thoroughness"])
-  })
-
-  it("returns the first 3 specialists under --thorough", () => {
-    const selected = selectSpecialists(all, { isThorough: true })
+  it("returns the first 3 specialists by default", () => {
+    const selected = selectSpecialists(all, { specialistCount: 3 })
     expect(selected.map((s) => s.perspective)).toEqual(["simplicity", "thoroughness", "velocity"])
   })
 
+  it("can be capped at 2 specialists", () => {
+    const selected = selectSpecialists(all, { specialistCount: 2 })
+    expect(selected.map((s) => s.perspective)).toEqual(["simplicity", "thoroughness"])
+  })
+
+  it("can be capped at 1 specialist", () => {
+    const selected = selectSpecialists(all, { specialistCount: 1 })
+    expect(selected.map((s) => s.perspective)).toEqual(["simplicity"])
+  })
+
   it("does not mutate the input array", () => {
-    selectSpecialists(all, { isThorough: false })
+    selectSpecialists(all, { specialistCount: 2 })
     expect(all.length).toBe(4)
   })
 
   it("handles undersized specialist lists gracefully", () => {
     const one = [makeSpecialist("only")]
-    expect(selectSpecialists(one, { isThorough: true })).toEqual(one)
+    expect(selectSpecialists(one, { specialistCount: 3 })).toEqual(one)
   })
 })
 

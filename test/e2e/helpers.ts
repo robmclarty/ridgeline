@@ -67,10 +67,14 @@ export const setupE2eDir = (): { dir: string; config: RidgelineConfig; cleanup: 
     checkCommand: "node hello.js",
     maxBudgetUsd: 5,
     unsafe: false,
+    sandboxMode: "semi-locked",
+    sandboxExtras: { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
     networkAllowlist: [],
     extraContext: null,
-    isThorough: false,
-      specialistTimeoutSeconds: 180,
+    specialistCount: 2,
+    specialistTimeoutSeconds: 180,
+    phaseBudgetLimit: 15,
+    phaseTokenLimit: 80000,
   }
 
   const cleanup = () => {

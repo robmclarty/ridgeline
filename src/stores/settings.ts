@@ -39,6 +39,15 @@ export const DEFAULT_NETWORK_ALLOWLIST: string[] = [
   "bitbucket.org",
 ]
 
+export type SandboxMode = "off" | "semi-locked" | "strict"
+
+export type SandboxExtras = {
+  writePaths: string[]
+  readPaths: string[]
+  profiles: string[]
+  networkAllowlist: string[]
+}
+
 type RidgelineSettings = {
   network?: {
     allowlist?: string[]
@@ -50,9 +59,33 @@ type RidgelineSettings = {
    * Applies to ensemble specialist invocations (planner, specifier, researcher).
    */
   specialistTimeoutSeconds?: number
+  planner?: {
+    /** Approximate USD ceiling per phase (used to advise the planner). Default 15. */
+    phaseBudgetLimit?: number
+    /** Approximate output-token ceiling per phase (used to advise the planner). Default 80000. */
+    phaseTokenLimit?: number
+    /** Number of specialists to run for planner/researcher ensembles. Default 3. */
+    specialistCount?: 1 | 2 | 3
+  }
+  sandbox?: {
+    /** Sandbox strictness. `semi-locked` (default) composes broad toolchain profiles for binary-tool support. */
+    mode?: SandboxMode
+    /** Extra paths the sandbox can write to (e.g. ~/.agent-browser). */
+    extraWritePaths?: string[]
+    /** Extra paths the sandbox can read from (e.g. shared config dirs). */
+    extraReadPaths?: string[]
+    /** Extra greywall toolchain profiles (e.g. "python", "containers"). */
+    extraProfiles?: string[]
+    /** Extra network domains appended to the active allowlist. */
+    extraNetworkAllowlist?: string[]
+  }
 }
 
 export const DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 600
+export const DEFAULT_PHASE_BUDGET_LIMIT_USD = 15
+export const DEFAULT_PHASE_TOKEN_LIMIT = 80000
+export const DEFAULT_SPECIALIST_COUNT: 1 | 2 | 3 = 3
+export const DEFAULT_SANDBOX_MODE: SandboxMode = "semi-locked"
 
 export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number => {
   const raw = loadSettings(ridgelineDir).specialistTimeoutSeconds
@@ -60,6 +93,65 @@ export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number =>
     return DEFAULT_SPECIALIST_TIMEOUT_SECONDS
   }
   return Math.floor(raw)
+}
+
+export const resolvePhaseBudgetLimit = (ridgelineDir: string): number => {
+  const raw = loadSettings(ridgelineDir).planner?.phaseBudgetLimit
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_PHASE_BUDGET_LIMIT_USD
+  }
+  return raw
+}
+
+export const resolvePhaseTokenLimit = (ridgelineDir: string): number => {
+  const raw = loadSettings(ridgelineDir).planner?.phaseTokenLimit
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+    return DEFAULT_PHASE_TOKEN_LIMIT
+  }
+  return Math.floor(raw)
+}
+
+const isValidSpecialistCount = (n: unknown): n is 1 | 2 | 3 =>
+  n === 1 || n === 2 || n === 3
+
+/** CLI override wins; settings.json is consulted next; default is 3. */
+export const resolveSpecialistCount = (
+  ridgelineDir: string,
+  cliOverride?: number,
+): 1 | 2 | 3 => {
+  if (isValidSpecialistCount(cliOverride)) return cliOverride
+  const raw = loadSettings(ridgelineDir).planner?.specialistCount
+  if (isValidSpecialistCount(raw)) return raw
+  return DEFAULT_SPECIALIST_COUNT
+}
+
+const isValidSandboxMode = (m: unknown): m is SandboxMode =>
+  m === "off" || m === "semi-locked" || m === "strict"
+
+/** CLI override wins; settings.json is consulted next; default is "semi-locked". */
+export const resolveSandboxMode = (
+  ridgelineDir: string,
+  cliOverride?: string,
+): SandboxMode => {
+  if (isValidSandboxMode(cliOverride)) return cliOverride
+  const raw = loadSettings(ridgelineDir).sandbox?.mode
+  if (isValidSandboxMode(raw)) return raw
+  return DEFAULT_SANDBOX_MODE
+}
+
+const sanitizeStringArray = (raw: unknown): string[] => {
+  if (!Array.isArray(raw)) return []
+  return raw.filter((v): v is string => typeof v === "string" && v.length > 0)
+}
+
+export const resolveSandboxExtras = (ridgelineDir: string): SandboxExtras => {
+  const sandbox = loadSettings(ridgelineDir).sandbox ?? {}
+  return {
+    writePaths: sanitizeStringArray(sandbox.extraWritePaths),
+    readPaths: sanitizeStringArray(sandbox.extraReadPaths),
+    profiles: sanitizeStringArray(sandbox.extraProfiles),
+    networkAllowlist: sanitizeStringArray(sandbox.extraNetworkAllowlist),
+  }
 }
 
 /** Resolve the model to use: CLI opt wins, then settings.json, then built-in default. */

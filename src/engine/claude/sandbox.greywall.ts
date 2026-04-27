@@ -1,18 +1,41 @@
-import { execSync } from "node:child_process"
+import { execFileSync } from "node:child_process"
 import { writeFileSync } from "node:fs"
+import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
-import { tmpdir } from "node:os"
-import { SandboxProvider } from "./sandbox.types"
+import { SandboxBuildArgsOptions, SandboxProvider } from "./sandbox.types"
+import type { SandboxMode } from "../../stores/settings"
 
 const GREYPROXY_API = "http://localhost:43080"
 
-// Profiles loaded via `greywall --profile`. `claude` is the agent profile
-// (Claude config dirs + Anthropic/GitHub/npm endpoints); `node` is the
-// toolchain profile (npm/pnpm/yarn/bun/deno caches, ~/.npmrc, node-gyp,
-// Playwright/Cypress browser caches, ...). To support builds that need
-// other toolchains, append names like `python`, `go`, `rust`, `ruby`,
-// `java`, `containers`, `iac`, or `scm`.
-const GREYWALL_PROFILES = "claude,node"
+// Greywall profiles compose two halves: an agent profile (claude config dirs +
+// Anthropic/GitHub endpoints) and toolchain profiles (npm/pnpm/yarn/bun/deno,
+// python via uv, ruby, go, rust, container runtimes, generic SCM). Strict mode
+// stays minimal; semi-locked mode (default) opts into the broad ecosystem set
+// so binary tools the build needs (Playwright, MCP servers, agent-browser)
+// generally just work without per-build configuration.
+const STRICT_PROFILES = ["claude", "node"]
+const SEMI_LOCKED_PROFILES = ["claude", "node", "python", "ruby", "go", "rust", "containers", "scm"]
+
+const resolveProfiles = (mode: SandboxMode, extra: string[]): string => {
+  const base = mode === "strict" ? STRICT_PROFILES : SEMI_LOCKED_PROFILES
+  return Array.from(new Set([...base, ...extra])).join(",")
+}
+
+// Path-specific holes the semi-locked mode opens beyond what greywall's
+// built-in profiles cover. Each entry was a known break in the strict mode
+// during v0 weft (chromium cache, agent-browser socket dir, uv cache, etc.).
+// Users can layer more via `sandbox.extraWritePaths` in settings.json.
+const semiLockedWritePaths = (): string[] => {
+  const home = homedir()
+  return [
+    `${home}/.agent-browser`,
+    `${home}/.cache/uv`,
+    `${home}/.cache/pip`,
+    `${home}/.cache/playwright`,
+    `${home}/Library/Caches/Cypress`,
+    `${home}/Library/Caches/ms-playwright`,
+  ]
+}
 
 /** Ensure a greyproxy allow rule exists for the given domain. */
 const ensureRule = async (domain: string, existingDestinations: Set<string>): Promise<void> => {
@@ -41,15 +64,15 @@ export const greywallProvider: SandboxProvider = {
   command: "greywall",
   checkReady(): string | null {
     try {
-      const output = execSync("greywall check", { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] })
+      const output = execFileSync("greywall", ["check"], { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] })
       if (/✓.*greyproxy running/i.test(output)) {
         return null
       }
       return "greyproxy is not running. Start it with: greywall setup"
     } catch (err: unknown) {
       // greywall check exits non-zero when not ready — check stdout/stderr in the error
-      const output = (err as { stdout?: string; stderr?: string }).stdout ?? ""
-        + ((err as { stdout?: string; stderr?: string }).stderr ?? "")
+      const e = err as { stdout?: string; stderr?: string }
+      const output = (e.stdout ?? "") + (e.stderr ?? "")
       if (/✓.*greyproxy running/i.test(output)) {
         return null
       }
@@ -69,11 +92,27 @@ export const greywallProvider: SandboxProvider = {
 
     await Promise.all(networkAllowlist.map((domain) => ensureRule(domain, existing)))
   },
-  buildArgs(repoRoot: string, _networkAllowlist: string[], additionalWritePaths?: string[]): string[] {
-    const writePaths = [repoRoot, "/tmp", ...(additionalWritePaths ?? [])]
+  buildArgs(
+    repoRoot: string,
+    _networkAllowlist: string[],
+    options?: SandboxBuildArgsOptions,
+  ): string[] {
+    const mode: SandboxMode = options?.mode ?? "semi-locked"
+    const extras = options?.extras ?? { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] }
+    const additionalWritePaths = options?.additionalWritePaths ?? []
+
+    const writePaths = [
+      repoRoot,
+      "/tmp",
+      ...(mode === "semi-locked" ? semiLockedWritePaths() : []),
+      ...extras.writePaths,
+      ...additionalWritePaths,
+    ]
+
     const settings: Record<string, unknown> = {
       filesystem: {
         allowWrite: writePaths,
+        ...(extras.readPaths.length > 0 ? { allowRead: extras.readPaths } : {}),
       },
     }
 
@@ -81,7 +120,7 @@ export const greywallProvider: SandboxProvider = {
     writeFileSync(settingsPath, JSON.stringify(settings))
 
     return [
-      "--profile", GREYWALL_PROFILES,
+      "--profile", resolveProfiles(mode, extras.profiles),
       "--no-credential-protection",
       "--settings", settingsPath,
       "--",

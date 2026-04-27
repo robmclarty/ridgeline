@@ -483,15 +483,12 @@ export const invokeEnsemble = async <TDraft>(
 
 /**
  * Cap a registered specialist list to the configured ensemble size.
- * Default size: 2; thorough mode: 3.
+ * Default size: 3 (use all). Pass 1 or 2 to opt out of the deeper ensemble.
  */
 export const selectSpecialists = (
   all: SpecialistDef[],
-  { isThorough }: { isThorough: boolean },
-): SpecialistDef[] => {
-  const size = isThorough ? 3 : 2
-  return all.slice(0, size)
-}
+  { specialistCount }: { specialistCount: 1 | 2 | 3 },
+): SpecialistDef[] => all.slice(0, specialistCount)
 
 /**
  * Append the audit note that marks an agreement-based synthesis skip.
@@ -692,7 +689,7 @@ export const invokePlanner = async (
   const registry = buildAgentRegistry()
   const context = registry.getContext("planners") ?? ""
   const availableSpecialists = registry.getSpecialists("planners")
-  const specialists = selectSpecialists(availableSpecialists, { isThorough: config.isThorough })
+  const specialists = selectSpecialists(availableSpecialists, { specialistCount: config.specialistCount })
 
   const ensemble = await invokeEnsemble<SpecialistProposal>({
     label: "Planning",
@@ -713,7 +710,7 @@ export const invokePlanner = async (
     maxBudgetUsd: config.maxBudgetUsd,
     stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
 
-    isTwoRound: config.isThorough,
+    isTwoRound: config.specialistCount === 3,
     buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
       const sections = [
         `You are the ${ownPerspective} specialist. You have already submitted your proposal.`,

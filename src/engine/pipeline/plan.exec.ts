@@ -13,6 +13,11 @@ export const appendBaseUserPrompt = (doc: PromptDocument, config: RidgelineConfi
   appendDesign(doc, config)
 
   doc.instruction("Target Model", `The builder will use the \`${config.model}\` model.`)
+  doc.instruction(
+    "Phase Budget",
+    `Target ~${config.phaseTokenLimit.toLocaleString()} output tokens (~$${config.phaseBudgetLimit} USD) per phase. ` +
+      `If a phase would exceed the ceiling, split it. Splitting is cheap; a too-large phase risks timeout and cost overruns.`,
+  )
 }
 
 /** Assemble the shared portion of the user prompt as a rendered string. */

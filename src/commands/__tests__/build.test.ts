@@ -108,10 +108,14 @@ describe("commands/run", () => {
       checkCommand: null,
       maxBudgetUsd: null,
       unsafe: false,
+      sandboxMode: "semi-locked",
+      sandboxExtras: { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
       networkAllowlist: [],
       extraContext: null,
-      isThorough: false,
+      specialistCount: 2,
       specialistTimeoutSeconds: 180,
+      phaseBudgetLimit: 15,
+      phaseTokenLimit: 80000,
     }
 
     // Mock process.exit to throw instead of exiting
@@ -201,7 +205,7 @@ describe("commands/run", () => {
     expect(printInfo).toHaveBeenCalledWith(expect.stringContaining("Budget limit reached"))
   })
 
-  it("skips sandbox detection when unsafe is true", async () => {
+  it("skips sandbox detection when sandboxMode is 'off'", async () => {
     const phases = [
       { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },
     ]
@@ -211,6 +215,7 @@ describe("commands/run", () => {
     vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
 
     config.unsafe = true
+    config.sandboxMode = "off"
     try { await runBuild(config) } catch { /* process.exit mock throws */ }
 
     expect(detectSandbox).not.toHaveBeenCalled()

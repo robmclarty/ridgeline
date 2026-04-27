@@ -83,4 +83,12 @@ describe("detectSandbox", () => {
     const { provider } = detectSandbox()
     expect(provider).toBeNull()
   })
+
+  it("returns null with no warning when mode is 'off'", () => {
+    const { provider, warning } = detectSandbox("off")
+    expect(provider).toBeNull()
+    expect(warning).toBeNull()
+    // No tool probes should run when sandbox is explicitly off
+    expect(execFileSync).not.toHaveBeenCalled()
+  })
 })

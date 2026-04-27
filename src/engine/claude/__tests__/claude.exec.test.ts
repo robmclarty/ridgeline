@@ -299,7 +299,10 @@ describe("claudeInvoker", () => {
         networkAllowlist: ["registry.npmjs.org"],
       })
 
-      expect(mockProvider.buildArgs).toHaveBeenCalledWith("/tmp", ["registry.npmjs.org"], undefined)
+      expect(mockProvider.buildArgs).toHaveBeenCalledWith("/tmp", ["registry.npmjs.org"], expect.objectContaining({
+        mode: "semi-locked",
+        extras: { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
+      }))
       expect(spawn).toHaveBeenCalledWith(
         "bwrap",
         expect.arrayContaining(["--ro-bind", "--unshare-net", "claude"]),

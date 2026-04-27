@@ -168,6 +168,8 @@ export const commonInvokeOptions = (
   onStdout,
   onStderr: createStderrHandler(),
   sandboxProvider: config.sandboxProvider,
+  sandboxMode: config.sandboxMode,
+  sandboxExtras: config.sandboxExtras,
   networkAllowlist: config.networkAllowlist,
   additionalWritePaths: [config.buildDir],
   stablePrompt: resolveStablePrompt(config) ?? undefined,

@@ -13,12 +13,26 @@ export type RidgelineConfig = {
   checkTimeoutSeconds: number
   checkCommand: string | null
   maxBudgetUsd: number | null
+  /** @deprecated Equivalent to `sandboxMode === "off"`. Retained for back-compat. */
   unsafe: boolean
+  sandboxMode: import("./stores/settings").SandboxMode
+  sandboxExtras: import("./stores/settings").SandboxExtras
   networkAllowlist: string[]
   sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
   extraContext: string | null
-  isThorough: boolean
+  /** Number of specialists for ensemble stages (planner, researcher). 1, 2, or 3. */
+  specialistCount: 1 | 2 | 3
   specialistTimeoutSeconds: number
+  /** Approximate USD ceiling per phase, advised to the planner. */
+  phaseBudgetLimit: number
+  /** Approximate output-token ceiling per phase, advised to the planner. */
+  phaseTokenLimit: number
+}
+
+/** Verdict from the adversarial plan reviewer. */
+export type PlanVerdict = {
+  approved: boolean
+  issues: string[]
 }
 
 // Phase metadata parsed from filesystem

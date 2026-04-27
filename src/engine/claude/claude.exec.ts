@@ -63,6 +63,8 @@ export type InvokeOptions = {
   onStdout?: (chunk: string) => void
   onStderr?: (chunk: string) => void
   sandboxProvider?: SandboxProvider | null
+  sandboxMode?: import("../../stores/settings").SandboxMode
+  sandboxExtras?: import("../../stores/settings").SandboxExtras
   networkAllowlist?: string[]
   additionalWritePaths?: string[]
   /**
@@ -182,8 +184,15 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
     assertSystemPromptFlagsExclusive(args)
 
     const spawnCmd = provider ? provider.command : "claude"
-    const spawnArgs = provider
-      ? [...provider.buildArgs(opts.cwd, opts.networkAllowlist ?? [], opts.additionalWritePaths), "claude", ...args]
+    const sandboxBuildOptions = provider
+      ? {
+          mode: opts.sandboxMode ?? "semi-locked" as const,
+          extras: opts.sandboxExtras ?? { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
+          additionalWritePaths: opts.additionalWritePaths,
+        }
+      : undefined
+    const spawnArgs = provider && sandboxBuildOptions
+      ? [...provider.buildArgs(opts.cwd, opts.networkAllowlist ?? [], sandboxBuildOptions), "claude", ...args]
       : args
 
     const proc: ChildProcess = spawn(spawnCmd, spawnArgs, {

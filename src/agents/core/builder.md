@@ -117,6 +117,8 @@ If a feedback file is present, this is a retry. Read the feedback carefully. Fix
 
 **Do not gold-plate.** No premature optimization. No speculative generalization. No bonus features. Implement the spec. Stop.
 
+**Tool failures halt; do not work around them.** If a tool the phase requires fails to launch (Chromium under sandbox, an MCP server, agent-browser, etc.), do **not** silently fall back to a degraded equivalent — for example, do not substitute jsdom for a real browser, do not skip sensors, do not stub out a missing MCP. Stop, write `[<phase-id>] FAILED: tool <name> unavailable: <error>` to stdout, and append a `### Tool Failure` section to handoff.md describing what was needed and what failed. The pre-flight check should have caught the problem before you started — if it did not, surface that fact in the handoff so the harness can be improved. Working around a missing tool builds the rest of the work on a foundation the user did not ask for and would not accept.
+
 ## Output style
 
 You are running in a terminal. Plain text only. No markdown rendering.

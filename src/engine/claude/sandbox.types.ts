@@ -1,7 +1,19 @@
+import type { SandboxMode, SandboxExtras } from "../../stores/settings"
+
+export type SandboxBuildArgsOptions = {
+  mode: SandboxMode
+  extras: SandboxExtras
+  additionalWritePaths?: string[]
+}
+
 export type SandboxProvider = {
   name: "bwrap" | "greywall"
   command: string
-  buildArgs: (repoRoot: string, networkAllowlist: string[], additionalWritePaths?: string[]) => string[]
+  buildArgs: (
+    repoRoot: string,
+    networkAllowlist: string[],
+    options?: SandboxBuildArgsOptions,
+  ) => string[]
   /** Check if the sandbox is ready to use. Returns null if ready, or an error message. */
   checkReady?: () => string | null
   /** Sync network allowlist rules with the proxy before spawning the sandboxed process. */

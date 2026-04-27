@@ -2,7 +2,16 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { RidgelineConfig } from "./types"
 import { resolveFile, parseCheckCommand } from "./stores/inputs"
-import { resolveNetworkAllowlist, resolveModel, resolveSpecialistTimeoutSeconds } from "./stores/settings"
+import {
+  resolveNetworkAllowlist,
+  resolveModel,
+  resolveSpecialistTimeoutSeconds,
+  resolvePhaseBudgetLimit,
+  resolvePhaseTokenLimit,
+  resolveSpecialistCount,
+  resolveSandboxMode,
+  resolveSandboxExtras,
+} from "./stores/settings"
 
 // Load version from package.json at runtime
 export const loadVersion = (): string => {
@@ -55,6 +64,19 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
 
   const checkCommand = (opts.check as string) ?? parseCheckCommand(constraintsPath)
 
+  const specialistCliOverride = opts.specialists !== undefined
+    ? parseInt(String(opts.specialists), 10)
+    : opts.thorough === true || opts.deepEnsemble === true
+      ? 3
+      : undefined
+  const specialistCount = resolveSpecialistCount(ridgelineDir, specialistCliOverride)
+
+  // --unsafe is the legacy alias for --sandbox=off
+  const sandboxCliOverride = opts.unsafe === true
+    ? "off"
+    : (opts.sandbox as string | undefined)
+  const sandboxMode = resolveSandboxMode(ridgelineDir, sandboxCliOverride)
+
   return {
     buildName,
     ridgelineDir,
@@ -69,10 +91,14 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),
     checkCommand,
     maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,
-    unsafe: opts.unsafe === true,
+    unsafe: sandboxMode === "off",
+    sandboxMode,
+    sandboxExtras: resolveSandboxExtras(ridgelineDir),
     networkAllowlist: resolveNetworkAllowlist(ridgelineDir),
     extraContext: (opts.context as string) ?? null,
-    isThorough: opts.thorough === true || opts.deepEnsemble === true,
+    specialistCount,
     specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
+    phaseBudgetLimit: resolvePhaseBudgetLimit(ridgelineDir),
+    phaseTokenLimit: resolvePhaseTokenLimit(ridgelineDir),
   }
 }

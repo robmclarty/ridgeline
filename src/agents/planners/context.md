@@ -7,18 +7,29 @@ You receive the following documents injected into your context:
 1. **spec.md** — Requirements describing deliverables as outcomes.
 2. **constraints.md** — Guardrails: tools, formats, structure, naming conventions, boundaries, dependencies. Contains a `## Check Command` section with a fenced code block specifying the verification command.
 3. **taste.md** (optional) — Style preferences: conventions, patterns, organizational standards.
-4. **Target model name** — The model the builder will use (e.g., "opus" or "sonnet"). Use this to estimate context budget per phase.
+4. **Target Model** — The model the builder will use (e.g., `opus` or `sonnet`).
+5. **Phase Budget** — Approximate per-phase output-token and USD ceilings (advisory).
 
 Read every input document before producing any output.
 
 ## Phase Sizing
 
-Size each phase to consume roughly 50% of the builder model's context window. Estimates:
+**Target each phase to produce roughly the advised output-token ceiling.** The Phase Budget instruction in the user prompt names the concrete numbers for this build (typical default: ~80,000 output tokens / ~$15 USD per phase).
 
-- **opus** (~1M tokens): large phases, broad scope per phase
-- **sonnet** (~200K tokens): smaller phases, narrower scope per phase
+Output volume is the primary driver of cost, latency, and timeout risk. Input context is a soft secondary constraint — the model can read more than it can write.
 
-Err on the side of fewer, larger phases over many small ones. Each phase gets a fresh context window — the builder reads only that phase's spec plus accumulated handoff from prior phases.
+If a phase's acceptance criteria suggest more output than the ceiling, **split it**. Splitting a phase costs roughly $2 in extra reviewer overhead — trivial against the alternative of a $40 phase that may also fail.
+
+### Split signals
+
+Split a phase when any of these are true:
+
+- More than ~10 new files would be created.
+- More than ~3 distinct subsystems are touched (e.g., data layer + UI + CLI in one phase).
+- More than ~25 acceptance criteria.
+- The acceptance criteria list reads like two coherent groups joined by "and also."
+
+Err on the side of more, smaller phases over fewer, larger ones. A phase that fits inside the budget will more reliably finish than one that strains it.
 
 ## Rules
 
@@ -32,6 +43,8 @@ Err on the side of fewer, larger phases over many small ones. Each phase gets a 
 
 **Each phase must be self-contained.** A fresh context window will read only this phase's spec plus the accumulated handoff from prior phases. The phase must make sense without reading other phase specs. Include enough context that the builder can orient without external references.
 
-**Be ambitious about scope.** Look for opportunities to add depth beyond what the user literally specified. Richer detail, better edge-case coverage, more complete deliverables — expand where it makes the result meaningfully better without bloating scope.
+**Be ambitious about scope, but stay inside the budget.** Look for opportunities to add depth beyond what the user literally specified — richer detail, better edge-case coverage, more complete deliverables. Expand where it makes the result meaningfully better. But if expansion pushes a phase over the per-phase output budget, split rather than bloat.
 
 **Use constraints.md for scoping, not for repetition.** Read constraints.md to make informed decisions about how to size and sequence phases. Do not parrot constraints back into phase specs — the builder receives constraints.md separately.
+
+**Declare required tools per phase.** If a phase requires specific binary tools or MCP servers (e.g., Playwright/Chromium for visual tests, an MCP server for code analysis, a daemon like agent-browser), include an optional `## Required Tools` section listing them. The harness will probe each tool under the active sandbox before launching the builder, and abort with a clear error if any can't start. This prevents wasted budget on phases that would silently fall back to a degraded equivalent.

@@ -110,10 +110,14 @@ const config: RidgelineConfig = {
   checkCommand: "npm test",
   maxBudgetUsd: null,
   unsafe: false,
+  sandboxMode: "semi-locked",
+  sandboxExtras: { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
   networkAllowlist: [],
   extraContext: null,
-  isThorough: false,
+  specialistCount: 2,
   specialistTimeoutSeconds: 180,
+  phaseBudgetLimit: 15,
+  phaseTokenLimit: 80000,
 }
 
 const phase: PhaseInfo = {

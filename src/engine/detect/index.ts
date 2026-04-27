@@ -11,11 +11,11 @@ export interface DetectionReport {
   hasDesignMd: boolean
   hasAssetDir: boolean
   suggestedSensors: SensorName[]
-  suggestedEnsembleSize: 2 | 3
+  suggestedEnsembleSize: 1 | 2 | 3
 }
 
 export interface DetectOptions {
-  isThorough?: boolean
+  specialistCount?: 1 | 2 | 3
 }
 
 const VISUAL_DEPS = [
@@ -126,7 +126,7 @@ export const detect = async (cwd: string, opts: DetectOptions = {}): Promise<Det
   else projectType = "node"
 
   const suggestedSensors: SensorName[] = isVisualSurface ? [...SENSOR_ORDER] : []
-  const suggestedEnsembleSize: 2 | 3 = opts.isThorough ? 3 : 2
+  const suggestedEnsembleSize: 1 | 2 | 3 = opts.specialistCount ?? 3
 
   return {
     projectType,

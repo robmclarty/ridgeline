@@ -9,6 +9,53 @@ see [sandboxing-and-access-control.md](./sandboxing-and-access-control.md).
 
 ---
 
+## Three modes
+
+Ridgeline exposes three sandbox modes via the `--sandbox <mode>` CLI flag and
+the `sandbox.mode` field in `.ridgeline/settings.json`:
+
+| Mode | Profile composition | When to use |
+|------|---------------------|-------------|
+| `semi-locked` (default) | `claude,node,python,ruby,go,rust,containers,scm` | The right default for most builds. Worktree boundary is still kernel-enforced; network still goes through greyproxy; but the broad toolchain set lets binary tools (Playwright, MCP servers, agent-browser) launch without per-build configuration. |
+| `strict` | `claude,node` | Maximum lockdown. Use when you've audited exactly what the build needs and are willing to add `extraProfiles` / `extraWritePaths` for anything else. This is what `--sandbox=strict` mode is — equivalent to v0.8.5's behavior. |
+| `off` | _no sandbox_ | The escape hatch. `--sandbox=off` (or the deprecated `--unsafe`) disables OS-level enforcement entirely. Worktree isolation still applies. Use this only when greywall is broken or unavailable. |
+
+The legacy `--unsafe` flag is preserved as an alias for `--sandbox=off` and
+prints a deprecation notice.
+
+## Extension knobs
+
+When the active mode doesn't quite cover what your build needs, layer on
+overrides via `.ridgeline/settings.json`:
+
+```json
+{
+  "sandbox": {
+    "mode": "semi-locked",
+    "extraWritePaths": ["~/.my-tool/state"],
+    "extraReadPaths": ["~/shared-config"],
+    "extraProfiles": ["java"],
+    "extraNetworkAllowlist": ["my-private-registry.example.com"]
+  }
+}
+```
+
+- `extraWritePaths` — additional paths greywall will allow writes to.
+- `extraReadPaths` — additional paths greywall will allow reads from (mapped to `allowRead` in the settings file).
+- `extraProfiles` — additional greywall toolchain profile names (anything registered upstream in `internal/profiles/`).
+- `extraNetworkAllowlist` — additional domains pushed to greyproxy. Stacks on top of the default research allowlist.
+
+## Pre-flight tool probe
+
+Before any phase runs, the harness probes the binary tools the build needs
+(today: Playwright/Chromium when a visual surface is detected) under the
+active sandbox configuration. If a tool can't launch, the build aborts with
+a clear remediation message — fix the tool, loosen the sandbox via the knobs
+above, or drop to `--sandbox=off`. The probe runs only when there's something
+to probe; on pure-node builds with no visual surface, it's a no-op.
+
+---
+
 ## What it does
 
 Every Claude subprocess Ridgeline spawns is wrapped in `greywall -- claude
@@ -44,7 +91,7 @@ both registered upstream in `internal/profiles/`:
   `api.anthropic.com`, `mcp-proxy.anthropic.com`, `github.com`,
   `registry.npmjs.org`, and a handful of others.
 - **Toolchain profiles** (`node`, `python`, `go`, `rust`, `ruby`, `java`,
-  `containers`, `iac`, `scm`) — what a *language ecosystem* needs to
+  `containers`, `iac`, `scm`) — what a _language ecosystem_ needs to
   install packages and run binaries. The `node` profile (registered for
   the names `node|npm|npx|yarn|pnpm|bun|deno`) covers `~/.npm`, `~/.npmrc`,
   `~/.pnpm-store`, `~/.config/pnpm`, `~/.local/share/pnpm`,
@@ -163,7 +210,7 @@ Three places to look:
    isn't being passed to `buildArgs` correctly — a Ridgeline bug, not a
    greywall config issue.
 2. **A standard toolchain cache?** Check the `node` profile (linked
-   above) — if the path *should* be covered but isn't, file an issue
+   above) — if the path _should_ be covered but isn't, file an issue
    upstream rather than working around it locally. The toolchain profile
    is the right place to fix it for everyone.
 3. **An unusual global path** like `~/.local/bin` or a tool-specific

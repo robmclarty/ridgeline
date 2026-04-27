@@ -152,13 +152,16 @@ export const ensurePhases = async (config: RidgelineConfig) => {
 }
 
 const configureSandbox = (config: RidgelineConfig): void => {
-  if (config.unsafe) return
-  const { provider, warning } = detectSandbox()
+  if (config.sandboxMode === "off") {
+    printInfo("Sandbox: off (--sandbox=off)")
+    return
+  }
+  const { provider, warning } = detectSandbox(config.sandboxMode)
   config.sandboxProvider = provider
   if (warning) {
     printInfo(`Warning: ${warning}`)
   } else if (provider) {
-    printInfo(`Sandbox: ${provider.name}`)
+    printInfo(`Sandbox: ${provider.name} (${config.sandboxMode})`)
   } else {
     printInfo("Warning: no sandbox available (install greywall or bwrap)")
   }
