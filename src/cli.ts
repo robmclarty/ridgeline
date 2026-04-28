@@ -3,7 +3,7 @@
 import * as path from "node:path"
 import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config"
-import { resolveModel, resolveSpecialistTimeoutSeconds } from "./stores/settings"
+import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings"
 import { RidgelineConfig } from "./types"
 import { disableLogger } from "./ui/logger"
 import { askBuildName } from "./ui/prompt"
@@ -242,7 +242,7 @@ addPreflightOptions(program
     }
   })
 
-addPreflightOptions(program
+program
   .command("directions [build-name]")
   .description(
     "Generate 2-3 differentiated visual direction options (HTML demos) before " +
@@ -250,14 +250,20 @@ addPreflightOptions(program
   )
   .option("--model <name>", "Model for direction-advisor agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "15")
-  .option("--thorough", "Generate 3 directions instead of 2")
-  .option("--skip", "Explicit no-op (skip direction generation)"))
+  .option("--count <n>", "Number of directions to generate (2 or 3). Overrides settings.directions.count")
+  .option("--thorough", "Alias for --count 3")
+  .option("--skip", "Explicit no-op (skip direction generation)")
+  .option("-y, --yes", "Skip the preflight confirmation prompt")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
+      const cliOverride = opts.thorough === true
+        ? 3
+        : opts.count !== undefined ? parseInt(String(opts.count), 10) : undefined
+      const count = resolveDirectionCount(ridgelineDirFromCwd(), cliOverride)
       await runDirections(await requireBuildName(buildName), {
         ...parseBaseOpts(opts),
-        isThorough: opts.thorough === true,
+        count,
         isSkip: opts.skip === true,
       })
     } catch (err) {

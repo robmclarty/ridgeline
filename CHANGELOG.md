@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.9.6 — 2026-04-27
+
+### Fixed
+
+- `ridgeline` CLI failed to start on v0.9.5 with
+  `Cannot add option '--thorough' to command 'directions'` because the
+  `directions` command was wrapped in `addPreflightOptions(...)` (which
+  registers `--thorough` as an alias for `--specialists 3`) and also
+  declared its own `--thorough` flag with a different meaning. The
+  `directions` stage is a one-shot agent, not an ensemble, so the
+  preflight ensemble options don't apply — dropped the wrapper and kept
+  the directions-specific `--thorough` flag.
+
+### Added
+
+- `directions.count` setting in `.ridgeline/settings.json` (2 or 3,
+  default 2) so users can pin their preferred number of visual direction
+  options without passing a flag every run.
+- `--count <n>` CLI flag on `ridgeline directions` for explicit
+  per-invocation override. Resolution order: `--thorough` or
+  `--count <n>` → `settings.directions.count` → built-in default 2.
+
 ## v0.9.5 — 2026-04-26
 
 ### Fixed

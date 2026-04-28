@@ -113,13 +113,13 @@ describe("commands/directions", () => {
     expect(fs.readFileSync(path.join(outputDir, "picked.txt"), "utf-8").trim()).toBe("01-foo")
   })
 
-  it("invokes one-shot agent with 3 directions when --thorough", async () => {
+  it("invokes one-shot agent with 3 directions when count is 3", async () => {
     vi.mocked(getMatchedShapes).mockReturnValue(["web-visual"])
     const outputDir = path.join(buildDir, "directions")
     stubAgentRun(outputDir, ["01-a", "02-b", "03-c"])
     stubReadlinePick("02-b")
     const { runDirections: rerun } = await import("../directions")
-    await rerun(buildName, { model: "opus", timeout: 15, isThorough: true })
+    await rerun(buildName, { model: "opus", timeout: 15, count: 3 })
 
     const call = vi.mocked(runOneShotCall).mock.calls[0][0]
     expect(call.userPrompt).toContain("Generate 3 differentiated visual direction(s)")

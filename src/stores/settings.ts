@@ -67,6 +67,10 @@ type RidgelineSettings = {
     /** Number of specialists to run for planner/researcher ensembles. Default 3. */
     specialistCount?: 1 | 2 | 3
   }
+  directions?: {
+    /** Number of visual direction options to generate (2 or 3). Default 2. */
+    count?: 2 | 3
+  }
   sandbox?: {
     /** Sandbox strictness. `semi-locked` (default) composes broad toolchain profiles for binary-tool support. */
     mode?: SandboxMode
@@ -85,6 +89,7 @@ export const DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 600
 export const DEFAULT_PHASE_BUDGET_LIMIT_USD = 15
 export const DEFAULT_PHASE_TOKEN_LIMIT = 80000
 export const DEFAULT_SPECIALIST_COUNT: 1 | 2 | 3 = 3
+export const DEFAULT_DIRECTION_COUNT: 2 | 3 = 2
 export const DEFAULT_SANDBOX_MODE: SandboxMode = "semi-locked"
 
 export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number => {
@@ -123,6 +128,19 @@ export const resolveSpecialistCount = (
   const raw = loadSettings(ridgelineDir).planner?.specialistCount
   if (isValidSpecialistCount(raw)) return raw
   return DEFAULT_SPECIALIST_COUNT
+}
+
+const isValidDirectionCount = (n: unknown): n is 2 | 3 => n === 2 || n === 3
+
+/** CLI override wins; settings.json is consulted next; default is 2. */
+export const resolveDirectionCount = (
+  ridgelineDir: string,
+  cliOverride?: number,
+): 2 | 3 => {
+  if (isValidDirectionCount(cliOverride)) return cliOverride
+  const raw = loadSettings(ridgelineDir).directions?.count
+  if (isValidDirectionCount(raw)) return raw
+  return DEFAULT_DIRECTION_COUNT
 }
 
 const isValidSandboxMode = (m: unknown): m is SandboxMode =>

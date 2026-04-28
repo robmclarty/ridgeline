@@ -9,7 +9,7 @@ import { getMatchedShapes } from "../stores/state"
 type DirectionsOptions = {
   model: string
   timeout: number
-  isThorough?: boolean
+  count?: 2 | 3
   isSkip?: boolean
 }
 
@@ -136,7 +136,7 @@ export const runDirections = async (
     return
   }
 
-  const numDirections = opts.isThorough ? 3 : 2
+  const numDirections = opts.count ?? 2
   const outputDir = resolveDirectionsDir(buildDir, ridgelineDir)
   fs.mkdirSync(outputDir, { recursive: true })
 

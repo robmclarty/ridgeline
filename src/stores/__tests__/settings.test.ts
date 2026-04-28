@@ -10,6 +10,7 @@ import {
   resolvePhaseBudgetLimit,
   resolvePhaseTokenLimit,
   resolveSpecialistCount,
+  resolveDirectionCount,
   resolveSandboxMode,
   resolveSandboxExtras,
   DEFAULT_NETWORK_ALLOWLIST,
@@ -17,6 +18,7 @@ import {
   DEFAULT_PHASE_BUDGET_LIMIT_USD,
   DEFAULT_PHASE_TOKEN_LIMIT,
   DEFAULT_SPECIALIST_COUNT,
+  DEFAULT_DIRECTION_COUNT,
   DEFAULT_SANDBOX_MODE,
   CLAUDE_REQUIRED_DOMAINS,
 } from "../settings"
@@ -202,6 +204,41 @@ describe("settings", () => {
         JSON.stringify({ planner: { specialistCount: 5 } }),
       )
       expect(resolveSpecialistCount(tmpDir)).toBe(DEFAULT_SPECIALIST_COUNT)
+    })
+  })
+
+  describe("resolveDirectionCount", () => {
+    it("returns the default (2) when not set", () => {
+      expect(resolveDirectionCount(tmpDir)).toBe(DEFAULT_DIRECTION_COUNT)
+      expect(DEFAULT_DIRECTION_COUNT).toBe(2)
+    })
+    it("CLI override wins over settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ directions: { count: 2 } }),
+      )
+      expect(resolveDirectionCount(tmpDir, 3)).toBe(3)
+    })
+    it("settings value used when CLI is absent", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ directions: { count: 3 } }),
+      )
+      expect(resolveDirectionCount(tmpDir)).toBe(3)
+    })
+    it("rejects invalid values and falls back to default", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ directions: { count: 4 } }),
+      )
+      expect(resolveDirectionCount(tmpDir)).toBe(DEFAULT_DIRECTION_COUNT)
+    })
+    it("ignores invalid CLI override and uses settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ directions: { count: 3 } }),
+      )
+      expect(resolveDirectionCount(tmpDir, 99)).toBe(3)
     })
   })
 
