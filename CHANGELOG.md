@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.9.7 — 2026-04-27
+
+### Internal
+
+- Removed obsolete planning notes (mastra redesign, monorepo
+  restructure, block library, composable-layers refactor, scratch
+  notes) that no longer reflect the project's direction.
+
 ## v0.9.6 — 2026-04-27
 
 ### Fixed
