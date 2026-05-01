@@ -1,5 +1,29 @@
 # Changelog
 
+## v0.9.8 — 2026-04-30
+
+### Changed
+
+- License switched from MIT to Apache 2.0.
+
+### Internal
+
+- New docs covering directions, visual review, references and anchors,
+  ingest, the UI dashboard, and shape detection — features that had no
+  dedicated coverage previously.
+- Existing docs (help, design, review-and-feedback, ensemble-flows,
+  build-lifecycle, troubleshooting, sandboxing-and-access-control)
+  brought in line with the current CLI: directions/ingest/design
+  command sections added, --unsafe references replaced with --sandbox
+  modes, plan-reviewer adversarial revision and visual-reviewer
+  dispatch documented.
+- SECURITY.md permission matrix expanded to cover designer,
+  direction-advisor, reference-finder, plan-reviewer, and
+  visual-reviewer; soft-gated agents (prompt-only allowlists) called
+  out honestly.
+- README synced with current commands and flags.
+- End-to-end pipeline diagram added in both ASCII and Mermaid.
+
 ## v0.9.7 — 2026-04-27
 
 ### Internal
