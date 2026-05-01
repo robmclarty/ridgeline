@@ -22,35 +22,75 @@ Each agent is invoked with an explicit `--allowedTools` flag that limits which
 Claude CLI tools it can use. The permission matrix:
 
 | Agent | Read | Write | Edit | Bash | Glob | Grep | Agent | Web* |
-|------------|------|-------|------|------|------|------|-------|------|
-| Shaper     | yes  | --    | --   | --   | yes  | yes  | --    | --   |
-| Specifier  | yes  | yes   | --   | --   | yes  | yes  | --    | --   |
-| Researcher | --   | yes†  | --   | yes‡ | --   | --   | --    | yes‡ |
-| Refiner    | yes  | yes   | --   | --   | --   | --   | --    | --   |
-| Planner    | --   | yes   | --   | --   | --   | --   | --    | --   |
-| Builder    | yes  | yes   | yes  | yes  | yes  | yes  | yes   | --   |
-| Reviewer   | yes  | --    | --   | yes  | yes  | yes  | yes   | --   |
+|---------------------|------|-------|------|------|------|------|-------|------|
+| Shaper              | yes  | --    | --   | --   | yes  | yes  | --    | --   |
+| Designer            | yes  | --    | --   | --   | yes  | yes  | --    | --   |
+| Direction-advisor   | yes  | yes   | --   | --   | yes  | yes  | --    | --   |
+| Reference-finder    | --   | --    | --   | --   | --   | --   | --    | yes¹ |
+| Specifier           | --²  | yes³  | --   | --   | --   | --   | --    | --   |
+| Researcher          | --   | yes³  | --   | yes⁴ | --   | --   | --    | yes⁴ |
+| Refiner             | yes  | yes   | --   | --   | --   | --   | --    | --   |
+| Planner             | --²  | yes³  | --   | --   | --   | --   | --    | --   |
+| Plan-reviewer       | --⁵  | --⁵   | --⁵  | --⁵  | --⁵  | --⁵  | --⁵   | --⁵  |
+| Builder             | yes  | yes   | yes  | yes  | yes  | yes  | yes   | --   |
+| Reviewer            | yes  | --    | --   | yes  | yes  | yes  | yes   | --   |
+| Visual-reviewer     | yes  | --    | --   | --   | yes  | yes  | --    | --   |
 
-*\* Web = WebFetch + WebSearch. † Synthesizer only. ‡ Specialists only.*
+*\* Web = WebFetch + WebSearch.*
+*¹ WebSearch only.*
+*² Specialists have no tools (JSON output only).*
+*³ Synthesizer only.*
+*⁴ Specialists only.*
+*⁵ Plan-reviewer is invoked without an explicit `--allowedTools` allowlist; tool
+   restraint is enforced by prompt only (the agent's instructions require pure
+   JSON output). See "Soft-gated agents" below.*
 
-The **shaper** can read the codebase to gather context but cannot write files
-or run commands. The **researcher** specialists have web access (WebFetch,
-WebSearch, Bash) for retrieving external sources; the synthesizer can only
-write `research.md`. The research agenda step (sonnet) has no tools — it
-reasons from inputs only. The **refiner** reads `research.md`, `spec.md`, and
-`spec.changelog.md`, and writes the revised `spec.md` and `spec.changelog.md`
-— it has no Bash or web access. The **planner**
-can only write phase files — it cannot read the codebase or execute commands.
-The **reviewer** cannot write or edit files, enforcing a read-only review
-posture. These restrictions are enforced by the Claude CLI at the tool-call
-level, not just by prompt instructions.
+The **shaper** and **designer** can read the codebase to gather context but
+cannot write files or run commands. The **direction-advisor** writes the
+generated direction folders (`brief.md`, `tokens.md`, `demo/index.html`)
+under `<buildDir>/directions/` and otherwise has read-only access. The
+**reference-finder** has only `WebSearch` — it returns image URLs and never
+downloads them; the harness performs downloads in TypeScript with a
+content-type-aware fetcher (`src/references/download.ts`).
 
-Specialist sub-agents (verifier, explorer, auditor, tester) are also constrained by
-their parent's tool allowlist and by their own system prompts which instruct
-read-only behavior.
+The **researcher** specialists have web access (WebFetch, WebSearch, Bash)
+for retrieving external sources; the synthesizer can only write
+`research.md`. The research agenda step (sonnet) has no tools — it reasons
+from inputs only. The **refiner** reads `research.md`, `spec.md`, and
+`spec.changelog.md`, and writes the revised `spec.md` and
+`spec.changelog.md` — no Bash or web access.
 
-No invocation uses `--dangerously-skip-permissions` or any flag that bypasses
-the Claude CLI's permission system.
+The **specifier** and **planner** specialists run with no tools and emit
+JSON drafts; only their synthesizers can write to disk. The **reviewer**
+cannot write or edit files, enforcing a read-only review posture. The
+**visual-reviewer** specialist is dispatched by the reviewer via the
+`Agent` tool when a phase touches visual code; its allowlist (Read, Glob,
+Grep) is enforced by both the reviewer's tool grant and the agent's
+frontmatter, so it cannot run commands or modify files.
+
+These restrictions are enforced by the Claude CLI at the tool-call level,
+not just by prompt instructions, with the exception of the plan-reviewer
+described below.
+
+### Soft-gated agents
+
+The **plan-reviewer** is invoked without an explicit `--allowedTools`
+allowlist. Its system prompt requires JSON-only output and forbids any
+preamble or commentary, but this is a prompt-level constraint, not a
+CLI-enforced one. The plan-reviewer receives only the synthesized plan
+plus spec/constraints/taste in its user prompt (no codebase access is
+mediated by the harness), so the practical attack surface is limited to
+what the model could request through tools the CLI default exposes — but
+the harness does not gate this with `--allowedTools`. Tightening this is
+tracked as a follow-up.
+
+Specialist sub-agents dispatched at runtime (verifier, explorer, auditor,
+tester, visual-reviewer, reference-finder) are constrained by **both**
+their parent agent's `--allowedTools` and by their own frontmatter
+allowlists. The intersection is what actually applies.
+
+No invocation uses `--dangerously-skip-permissions` or any flag that
+bypasses the Claude CLI's permission system.
 
 ## Git checkpoints
 
@@ -106,17 +146,56 @@ At build start, Ridgeline auto-detects an available sandbox provider:
    used instead. bwrap blocks all outbound network via Linux network namespaces
    with no domain-level filtering.
 
-When a provider is found, sandboxing is **on by default**. Pass `--unsafe` to
-opt out. If no provider is found, Ridgeline prints a warning and proceeds
-without a sandbox.
+When a provider is found, sandboxing is **on by default**. The mode is
+controlled by `--sandbox <mode>`:
 
-The network allowlist for Greywall is configured in
+| Mode | Default? | Description |
+|------|----------|-------------|
+| `semi-locked` | yes | Composes a broad toolchain set (python, ruby, go, rust, cargo, docker) plus path holes for Chromium, agent-browser, uv, and pip caches. Suitable for most builds. |
+| `strict` | no | Tighter isolation. Use when you don't need the toolchain expansions and want the smallest possible attack surface. |
+| `off` | no | Disables the OS-level sandbox entirely. Falls back to the soft PreToolUse network guard hook. |
+
+`--unsafe` is retained as a deprecated alias for `--sandbox=off`; the legacy
+flag prints a deprecation notice and still works.
+
+If no provider is found on the host, Ridgeline prints a warning and proceeds
+without a sandbox regardless of the requested mode.
+
+### Network allowlist
+
+The base network allowlist for Greywall is configured in
 `.ridgeline/settings.json` under `network.allowlist`. Sensible defaults
 (npm, PyPI, GitHub, etc.) are included; extend or restrict them per project.
 
-bwrap additionally mounts the filesystem read-only, with only the worktree
-and `/tmp` writable. `--die-with-parent` ensures the sandbox is torn down if
-Ridgeline exits unexpectedly.
+### Per-build escape hatches
+
+When the active mode doesn't quite cover what a build needs, four keys under
+`sandbox.*` in `.ridgeline/settings.json` extend (rather than replace) the
+active mode's defaults:
+
+```json
+{
+  "sandbox": {
+    "extraWritePaths": ["/path/the/build/needs/to/write"],
+    "extraReadPaths": ["/usr/local/share/some-binary"],
+    "extraProfiles": ["additional-greywall-profile"],
+    "extraNetworkAllowlist": ["api.example.com"]
+  }
+}
+```
+
+Use these when a phase declares a `## Required Tools` section the active
+sandbox mode doesn't satisfy. Prefer extras over `--sandbox=off`: the
+extras keep the rest of the protection in place.
+
+### Filesystem isolation
+
+bwrap additionally mounts the host filesystem read-only, with only the
+worktree and `/tmp` writable. `--die-with-parent` ensures the sandbox is
+torn down if Ridgeline exits unexpectedly. Greywall does not provide
+filesystem isolation below the worktree layer; the Claude CLI's tool
+allowlists and worktree boundaries are the primary filesystem mechanisms
+on macOS.
 
 ## Verdict parsing
 
@@ -191,15 +270,16 @@ provider:
 
 - **Greywall** allows outbound connections only to domains in the
   `.ridgeline/settings.json` allowlist. All other outbound traffic is blocked
-  at the network layer.
+  at the network layer. This applies in both `semi-locked` and `strict` modes.
 - **bwrap** blocks all outbound network with no domain filtering — the builder
   cannot reach the network at all unless the sandbox is bypassed.
-- In **`--unsafe` mode**, no sandbox network restriction applies. A PreToolUse
-  hook runs as a soft layer that intercepts and blocks obvious network commands
-  (`curl`, `wget`, `git clone` to remote URLs, etc.), but this is not a
-  kernel-level enforcement and can be circumvented by a determined builder.
+- With **`--sandbox=off`** (or its deprecated alias `--unsafe`), no sandbox
+  network restriction applies. A PreToolUse hook runs as a soft layer that
+  intercepts and blocks obvious network commands (`curl`, `wget`,
+  `git clone` to remote URLs, etc.), but this is not a kernel-level
+  enforcement and can be circumvented by a determined builder.
 
-**Tradeoff:** In `--unsafe` mode, there is no hard mechanism to prevent the
+**Tradeoff:** With `--sandbox=off`, there is no hard mechanism to prevent the
 builder from exfiltrating repository contents or downloading untrusted code.
 Users should review phase specs before building and use budget limits to bound
 the scope of any single invocation.
@@ -236,8 +316,9 @@ boundary.
 
 **Tradeoff:** Worktree isolation does not prevent the builder from writing
 outside the worktree on the host filesystem when running without bwrap (e.g.,
-macOS or `--unsafe`). Git checkpoints within the worktree protect tracked
-files; files outside the worktree are not covered.
+macOS, or any mode falling back to no provider, or `--sandbox=off`). Git
+checkpoints within the worktree protect tracked files; files outside the
+worktree are not covered.
 
 ### Encrypted state files
 
@@ -258,10 +339,16 @@ same visibility rules as the rest of the repo.
 - **Install a sandbox provider** — on macOS, install Greywall
   (`brew install greywall`) for domain-level network allowlisting. On Linux,
   install `bwrap` if Greywall is not available. Sandbox mode is on by default
-  when a provider is detected.
-- **Use `--unsafe` only when necessary** — opting out of sandboxing removes
-  kernel-level network and filesystem protections. Understand the reduced
-  guarantees before using it.
+  (`semi-locked`) when a provider is detected.
+- **Use `--sandbox=off` only when necessary** — opting out removes
+  kernel-level network and filesystem protections and falls back to a
+  prompt-based PreToolUse hook only. Prefer `sandbox.extra*` settings to
+  punch precise holes rather than disabling the sandbox wholesale. The
+  `--unsafe` flag is a deprecated alias for `--sandbox=off`.
+- **Try `--sandbox=strict` for sensitive builds** — strict mode trims the
+  toolchain expansions in `semi-locked` and minimizes the attack surface.
+  Fall back to `semi-locked` if a phase needs a tool the strict mode
+  doesn't permit.
 - **Set a budget limit** — use `--max-budget-usd` to cap spending, especially
   on first runs or large specs.
 - **Preview before building** — use `ridgeline dry-run` to inspect the plan
