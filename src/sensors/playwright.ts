@@ -147,7 +147,6 @@ export const resolveDevServerPort = async (
 const isSandboxDetected = (env: NodeJS.ProcessEnv = process.env): boolean => {
   if (env.RIDGELINE_SANDBOX) return true
   if (env.GREYWALL_ACTIVE) return true
-  if (env.BWRAP_DETECTED) return true
   if (env.container) return true
   return false
 }

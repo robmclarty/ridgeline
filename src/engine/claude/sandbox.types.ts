@@ -7,7 +7,7 @@ export type SandboxBuildArgsOptions = {
 }
 
 export type SandboxProvider = {
-  name: "bwrap" | "greywall"
+  name: "greywall"
   command: string
   buildArgs: (
     repoRoot: string,

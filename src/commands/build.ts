@@ -163,7 +163,7 @@ const configureSandbox = (config: RidgelineConfig): void => {
   } else if (provider) {
     printInfo(`Sandbox: ${provider.name} (${config.sandboxMode})`)
   } else {
-    printInfo("Warning: no sandbox available (install greywall or bwrap)")
+    printInfo("Warning: no sandbox available (install greywall)")
   }
 }
 

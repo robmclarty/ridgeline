@@ -63,7 +63,7 @@ const unresolvableFinding = (): SensorFinding => ({
 })
 
 const isSandboxDetected = (env: NodeJS.ProcessEnv = process.env): boolean =>
-  Boolean(env.RIDGELINE_SANDBOX || env.GREYWALL_ACTIVE || env.BWRAP_DETECTED || env.container)
+  Boolean(env.RIDGELINE_SANDBOX || env.GREYWALL_ACTIVE || env.container)
 
 const severityFromImpact = (impact: string | null | undefined): SensorFinding["severity"] => {
   switch (impact) {

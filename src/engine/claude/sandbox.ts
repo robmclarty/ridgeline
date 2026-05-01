@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process"
-import { bwrapProvider } from "./sandbox.bwrap"
 import { greywallProvider } from "./sandbox.greywall"
 import type { SandboxProvider } from "./sandbox.types"
 import type { SandboxMode } from "../../stores/settings"
@@ -23,13 +22,12 @@ type SandboxDetectionResult = {
  * Resolve a sandbox provider for the requested mode.
  *
  * - `off`: explicit opt-out, returns no provider with no warning.
- * - `strict` / `semi-locked`: prefer greywall (cross-platform, domain allowlist),
- *   then bwrap on Linux. Both are configured by `mode` later via `buildArgs`.
+ * - `strict` / `semi-locked`: use greywall (cross-platform, domain allowlist),
+ *   configured by `mode` later via `buildArgs`.
  */
 export const detectSandbox = (mode: SandboxMode = "semi-locked"): SandboxDetectionResult => {
   if (mode === "off") return { provider: null, warning: null }
 
-  // Prefer greywall (cross-platform, supports domain allowlisting)
   if (isAvailable("greywall")) {
     const readyError = greywallProvider.checkReady?.() ?? null
     if (readyError) {
@@ -39,11 +37,6 @@ export const detectSandbox = (mode: SandboxMode = "semi-locked"): SandboxDetecti
       }
     }
     return { provider: greywallProvider, warning: null }
-  }
-
-  // Fall back to bwrap (Linux only, binary network toggle)
-  if (process.platform === "linux" && isAvailable("bwrap")) {
-    return { provider: bwrapProvider, warning: null }
   }
 
   return { provider: null, warning: null }

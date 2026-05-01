@@ -4,11 +4,6 @@ vi.mock("node:child_process", () => ({
   execFileSync: vi.fn(),
 }))
 
-// Mock the provider modules so detectSandbox can require them
-vi.mock("../sandbox.bwrap", () => ({
-  bwrapProvider: { name: "bwrap", command: "bwrap", buildArgs: vi.fn(() => []) },
-}))
-
 vi.mock("../sandbox.greywall", () => ({
   greywallProvider: { name: "greywall", command: "greywall", buildArgs: vi.fn(() => []), checkReady: vi.fn(() => null) },
 }))
@@ -16,16 +11,6 @@ vi.mock("../sandbox.greywall", () => ({
 import { execFileSync } from "node:child_process"
 import { detectSandbox } from "../sandbox"
 import { greywallProvider } from "../sandbox.greywall"
-
-const withPlatform = (platform: string, fn: () => void) => {
-  const orig = Object.getOwnPropertyDescriptor(process, "platform")
-  Object.defineProperty(process, "platform", { value: platform, configurable: true })
-  try {
-    fn()
-  } finally {
-    if (orig) Object.defineProperty(process, "platform", orig)
-  }
-}
 
 describe("detectSandbox", () => {
   beforeEach(() => {
@@ -51,31 +36,7 @@ describe("detectSandbox", () => {
     expect(warning).toContain("Running without sandbox")
   })
 
-  it("returns bwrap provider on linux when greywall is absent", () => {
-    vi.mocked(execFileSync).mockImplementation((_cmd: unknown, args: unknown) => {
-      if (Array.isArray(args) && args.includes("greywall")) throw new Error("not found")
-      return "/usr/bin/bwrap"
-    })
-
-    withPlatform("linux", () => {
-      const { provider } = detectSandbox()
-      expect(provider).not.toBeNull()
-      expect(provider!.name).toBe("bwrap")
-    })
-  })
-
-  it("returns null on macOS when greywall is absent", () => {
-    vi.mocked(execFileSync).mockImplementation(() => {
-      throw new Error("not found")
-    })
-
-    withPlatform("darwin", () => {
-      const { provider } = detectSandbox()
-      expect(provider).toBeNull()
-    })
-  })
-
-  it("returns null when neither tool is available", () => {
+  it("returns null when greywall is absent", () => {
     vi.mocked(execFileSync).mockImplementation(() => {
       throw new Error("not found")
     })

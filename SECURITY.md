@@ -136,17 +136,14 @@ single build, even when the builder repeatedly fails review.
 
 ## Sandbox mode
 
-At build start, Ridgeline auto-detects an available sandbox provider:
+At build start, Ridgeline detects whether Greywall is available:
 
-1. **Greywall** (macOS and Linux) — if `greywall` is found on PATH, it is used
-   as the sandbox provider. Greywall provides domain-level network allowlisting,
-   permitting outbound connections only to explicitly listed domains.
-2. **bwrap** (Linux) — if Greywall is not available but
-   [bubblewrap](https://github.com/containers/bubblewrap) is installed, it is
-   used instead. bwrap blocks all outbound network via Linux network namespaces
-   with no domain-level filtering.
+**Greywall** (macOS and Linux) — if `greywall` is found on PATH, it is used
+as the sandbox provider. Greywall provides domain-level network allowlisting,
+permitting outbound connections only to explicitly listed domains, and
+filesystem write restrictions to the worktree and `/tmp`.
 
-When a provider is found, sandboxing is **on by default**. The mode is
+When Greywall is found, sandboxing is **on by default**. The mode is
 controlled by `--sandbox <mode>`:
 
 | Mode | Default? | Description |
@@ -158,7 +155,7 @@ controlled by `--sandbox <mode>`:
 `--unsafe` is retained as a deprecated alias for `--sandbox=off`; the legacy
 flag prints a deprecation notice and still works.
 
-If no provider is found on the host, Ridgeline prints a warning and proceeds
+If Greywall is not installed, Ridgeline prints a warning and proceeds
 without a sandbox regardless of the requested mode.
 
 ### Network allowlist
@@ -190,12 +187,10 @@ extras keep the rest of the protection in place.
 
 ### Filesystem isolation
 
-bwrap additionally mounts the host filesystem read-only, with only the
-worktree and `/tmp` writable. `--die-with-parent` ensures the sandbox is
-torn down if Ridgeline exits unexpectedly. Greywall does not provide
-filesystem isolation below the worktree layer; the Claude CLI's tool
-allowlists and worktree boundaries are the primary filesystem mechanisms
-on macOS.
+Greywall blocks writes outside the worktree (and a small set of cache and
+config paths the toolchain needs) at the kernel level. Combined with the
+git-worktree-per-build model, this means a runaway or compromised agent
+cannot modify files outside its worktree.
 
 ## Verdict parsing
 
@@ -245,10 +240,9 @@ marker).
 The builder agent has access to `Bash`, `Write`, and `Edit` — it can execute
 arbitrary commands and modify any file in the repository. Full container
 isolation (Docker/VM) would sandbox the filesystem and network completely, but
-adds substantial setup complexity. Instead, Ridgeline uses auto-detected
-sandbox providers (Greywall or bwrap) that provide network and filesystem
-restrictions without containerization overhead. See [Sandbox mode](#sandbox-mode)
-above.
+adds substantial setup complexity. Instead, Ridgeline uses Greywall as a
+sandbox provider that provides network and filesystem restrictions without
+containerization overhead. See [Sandbox mode](#sandbox-mode) above.
 
 **Why not full Docker:** Ridgeline is designed for local development workflows
 where the builder needs to interact with the project's real toolchain — running
@@ -257,11 +251,10 @@ mirroring the host's language runtimes, package caches, and environment
 configuration, adding substantial setup complexity for marginal benefit in the
 intended use case (your own repo, on your own machine).
 
-**Tradeoff:** bwrap filesystem sandboxing is Linux-only. On macOS, Greywall
-provides network-level restrictions but not filesystem isolation below the
-worktree layer. The Claude CLI's permission system (tool allowlists), worktree
-isolation, and git checkpoints remain the primary safety mechanisms on all
-platforms.
+**Tradeoff:** Greywall is a third-party tool that must be installed
+separately. When Greywall is not available, the Claude CLI's permission
+system (tool allowlists), worktree isolation, and git checkpoints are the
+only safety mechanisms.
 
 ### Network access restrictions by default
 
@@ -271,8 +264,6 @@ provider:
 - **Greywall** allows outbound connections only to domains in the
   `.ridgeline/settings.json` allowlist. All other outbound traffic is blocked
   at the network layer. This applies in both `semi-locked` and `strict` modes.
-- **bwrap** blocks all outbound network with no domain filtering — the builder
-  cannot reach the network at all unless the sandbox is bypassed.
 - With **`--sandbox=off`** (or its deprecated alias `--unsafe`), no sandbox
   network restriction applies. A PreToolUse hook runs as a soft layer that
   intercepts and blocks obvious network commands (`curl`, `wget`,
@@ -309,14 +300,14 @@ agent writes:
 - On failure, the worktree is left in place for inspection. Run
   `ridgeline clean` to remove stale worktrees once you are done.
 
-When running under bwrap, the sandbox additionally mounts the host filesystem
-read-only, restricting writes to the worktree and `/tmp` at the kernel level.
-Under Greywall (no bwrap), worktree isolation is the primary filesystem
+When running under Greywall, the sandbox blocks writes outside the
+worktree (and a small set of toolchain cache/config paths) at the kernel
+level. Without Greywall, worktree isolation is the primary filesystem
 boundary.
 
-**Tradeoff:** Worktree isolation does not prevent the builder from writing
-outside the worktree on the host filesystem when running without bwrap (e.g.,
-macOS, or any mode falling back to no provider, or `--sandbox=off`). Git
+**Tradeoff:** Worktree isolation alone does not prevent the builder from
+writing outside the worktree on the host filesystem when running without
+Greywall (e.g., when Greywall is not installed, or `--sandbox=off`). Git
 checkpoints within the worktree protect tracked files; files outside the
 worktree are not covered.
 
@@ -336,10 +327,9 @@ same visibility rules as the rest of the repo.
 
 ## Recommendations for users
 
-- **Install a sandbox provider** — on macOS, install Greywall
-  (`brew install greywall`) for domain-level network allowlisting. On Linux,
-  install `bwrap` if Greywall is not available. Sandbox mode is on by default
-  (`semi-locked`) when a provider is detected.
+- **Install Greywall** — `brew install greywall` (macOS or Linux) enables
+  domain-level network allowlisting and filesystem isolation. Sandbox mode
+  is on by default (`semi-locked`) when Greywall is detected.
 - **Use `--sandbox=off` only when necessary** — opting out removes
   kernel-level network and filesystem protections and falls back to a
   prompt-based PreToolUse hook only. Prefer `sandbox.extra*` settings to

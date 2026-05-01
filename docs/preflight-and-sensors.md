@@ -94,9 +94,9 @@ warnings — the phase continues even if every sensor is unavailable.
 | `a11y` | Injects `axe-core` into the Playwright page and reports WCAG-AA violations with impact, description, and node counts. Fully offline. | `axe-core` (direct dep) |
 | `contrast` | Scores design-token hex pairs from `.ridgeline/design.md` with `wcag-contrast` and flags pairs below 4.5:1. Runs independently of Playwright. | `wcag-contrast` (direct dep) |
 
-Sandbox-compatible: when ridgeline detects a greywall / bwrap / container
-environment (`RIDGELINE_SANDBOX`, `GREYWALL_ACTIVE`, `BWRAP_DETECTED`, or
-`container` env markers), the Playwright launcher switches to
+Sandbox-compatible: when ridgeline detects a greywall / container
+environment (`RIDGELINE_SANDBOX`, `GREYWALL_ACTIVE`, or `container` env
+markers), the Playwright launcher switches to
 `--no-sandbox --disable-setuid-sandbox`. If the browser still cannot launch,
 the sensor emits a `sandbox-incompatible` warning and the phase continues.
 

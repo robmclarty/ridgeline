@@ -85,7 +85,7 @@ disabling the network does not degrade it:
 This matters for two reasons:
 
 1. The dashboard works inside sandboxes that block all outbound network
-   traffic (greywall, bwrap with no-net).
+   traffic (e.g. greywall with no allowlisted domains).
 2. There is no analytics, no telemetry, no third-party content. The
    dashboard cannot exfiltrate anything because it cannot reach anything.
 

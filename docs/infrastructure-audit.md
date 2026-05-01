@@ -13,7 +13,7 @@ Anthropic's Mythos).
 
 | Layer | What ridgeline uses | Durability | Risk | Notes |
 |---|---|---|---|---|
-| Compute / sandboxing | Local Node.js + Claude CLI subprocesses. Git worktrees for build isolation. Greywall (macOS) / bwrap (Linux) for network and filesystem sandboxing. | High | Low | Correct for a local CLI tool. Worktrees are a strong isolation primitive. Sandboxing is optional but well-layered. |
+| Compute / sandboxing | Local Node.js + Claude CLI subprocesses. Git worktrees for build isolation. Greywall (macOS/Linux) for network and filesystem sandboxing. | High | Low | Correct for a local CLI tool. Worktrees are a strong isolation primitive. Sandboxing is optional but well-layered. |
 | Identity / communication | Implicit via Claude CLI OAuth. No agent identity. File-based handoffs (handoff.md, feedback.md). | N/A | Low | Agents are prompt templates, not entities. No identity needed at current scope. Only becomes a problem if ridgeline goes distributed. |
 | Memory / state | File-based: state.json, budget.json, trajectory.jsonl, markdown artifacts. Git tags as transactional checkpoints. No database. | High | Low | Git-as-transaction-log is durable and inspectable. Strongest choice for single-user local execution. |
 | Tool access / integration | Claude CLI native tools (Read, Write, Bash, Glob, Grep, Agent). Per-role permission matrix enforced at CLI level. No MCP. | Medium | High | Hard-coupled to Claude CLI's tool surface and output format. The permission matrix is well-designed, but ridgeline owns none of the execution substrate. |
@@ -37,9 +37,9 @@ releases.
   version-pin the CLI, add integration tests against CLI output format, and treat
   any CLI upgrade as a breaking-change candidate.
 
-**Greywall / bwrap as sandbox providers (compute layer).** Third-party tools
-with small user bases. Greywall is macOS-specific; bwrap is Linux-only. The
-sandbox abstraction already supports swappable providers.
+**Greywall as sandbox provider (compute layer).** Third-party tool with a
+small user base. Cross-platform (macOS and Linux). The sandbox abstraction
+keeps the door open for additional providers.
 
 - Migration cost: low. Adding a new provider is straightforward.
 - Recommendation: keep for now. Swap when a more durable sandbox primitive
@@ -100,7 +100,7 @@ vLLM) have inconsistent or absent tool-use support.
   schema. For models with native tool-use (Claude API, OpenAI, Gemini), map to
   their native format.
 
-**Sandbox model changes.** Greywall and bwrap hook into the Claude CLI's process
+**Sandbox model changes.** Greywall hooks into the Claude CLI's process
 model. Local model inference may need GPU access, shared memory, or long-running
 server processes that don't fit the same sandbox assumptions.
 

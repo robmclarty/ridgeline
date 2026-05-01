@@ -336,17 +336,12 @@ The user prompt is piped via stdin. Stdout emits newline-delimited JSON events,
 including streaming assistant text and a final result event containing the
 response, cost, token usage, duration, and session ID.
 
-Sandboxing is on by default when a provider is detected. The harness
-auto-detects providers in preference order:
+Sandboxing is on by default when Greywall is detected on the host:
+domain-level network allowlisting via `greyproxy`, filesystem write
+restrictions to repo + `/tmp`. Works on macOS and Linux.
 
-1. **Greywall** (macOS/Linux) -- domain-level network allowlisting via
-   `greyproxy`, filesystem write restrictions to repo + `/tmp`.
-2. **bwrap** (Linux) -- entire filesystem mounted read-only except repo root
-   and `/tmp`, all network blocked via `--unshare-net`, process dies with
-   parent (`--die-with-parent`).
-
-Pass `--unsafe` to opt out of sandboxing. If no provider is found, the harness
-prints a warning and proceeds without a sandbox.
+Pass `--unsafe` to opt out of sandboxing. If Greywall is not installed, the
+harness prints a warning and proceeds without a sandbox.
 
 [^1]: **Further reading:** [Multi-Agent Design Patterns](https://www.infoq.com/news/2026/01/multi-agent-design-patterns/) — Google's catalog of multi-agent design patterns, including the orchestrator-specialist decomposition Ridgeline uses.
 [^2]: **Further reading:** [Building Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — Anthropic's engineering guidance on state management, checkpointing, and resumability in agent harnesses.

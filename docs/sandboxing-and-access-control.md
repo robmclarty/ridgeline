@@ -6,13 +6,12 @@ Ridgeline build agents, with a survey of community tools and patterns.
 ## Problem Statement
 
 Ridgeline orchestrates Claude CLI agents that can read, write, and execute
-arbitrary code. The current security model has a gap:
-
-- **Linux** -- `bwrap` sandbox provides filesystem isolation (repo + /tmp
-  writable, everything else read-only) and network blocking via namespaces.
-- **macOS** -- No equivalent enforcement. Agents rely on `--allowedTools` and
-  prompt instructions, neither of which prevents `Bash(curl ...)` or writing
-  outside the repo.
+arbitrary code. The current security model uses Greywall (cross-platform)
+to provide filesystem isolation (repo + /tmp writable, everything else
+read-only) and domain-level network allowlisting via `greyproxy`. When
+Greywall is not installed, agents rely only on `--allowedTools` and prompt
+instructions, neither of which prevents `Bash(curl ...)` or writing outside
+the repo.
 
 This creates a fundamental tension. Builders need broad tool access to be
 effective -- installing packages, running servers, executing tests, exploring the
@@ -41,7 +40,7 @@ The defense layers stack from outermost (strongest) to innermost (softest):
 flowchart TB
     subgraph layer1 ["Layer 1: OS Sandbox (Hard)"]
         direction TB
-        sandbox["Greywall (macOS/Linux)\nor bwrap (Linux)\nauto-detected, on by default"]
+        sandbox["Greywall (macOS/Linux)\nauto-detected, on by default"]
         net["Network allowlist\n(settings.json domains)"]
         sandbox --- net
     end
@@ -70,15 +69,15 @@ flowchart TB
 |-------|-----------|-------------|
 | Tool allowlist | `--allowedTools` per role | Hard -- Claude CLI strips disallowed tools |
 | Prompt instructions | Agent system prompts | Soft -- model compliance only |
-| Sandbox auto-detection | Greywall (macOS/Linux) or bwrap (Linux) | Hard -- OS-level isolation |
+| Sandbox auto-detection | Greywall (macOS/Linux) | Hard -- OS-level isolation |
 | Network allowlist | `.ridgeline/settings.json` via sandbox | Hard -- sandbox enforces domain list |
 | Worktree isolation | Git worktrees per build | Hard -- filesystem isolation |
 | Budget cap | `--max-budget-usd` | Hard -- CLI enforces |
 | Timeout | `--timeout`, `--check-timeout` | Hard -- SIGTERM/SIGKILL |
 | Network guard hook | PreToolUse hook in `--sandbox=off` only | Soft -- prompt-based judgment |
 
-Sandboxing is **on by default** when a provider (Greywall or bwrap) is detected
-in the environment. Default mode is `semi-locked`; pass `--sandbox=strict` for
+Sandboxing is **on by default** when Greywall is detected in the environment.
+Default mode is `semi-locked`; pass `--sandbox=strict` for
 tighter isolation or `--sandbox=off` (legacy alias: `--unsafe`) to opt out.
 Worktrees are always used.
 
@@ -527,13 +526,13 @@ exactly what OS-level sandboxing provides.
 
 The layered defense strategy has been implemented:
 
-1. **OS-level sandbox** (Greywall/bwrap) -- auto-detected, on by default
-   in `semi-locked` mode. Pass `--sandbox=strict` for tighter isolation or
+1. **OS-level sandbox** (Greywall) -- auto-detected, on by default in
+   `semi-locked` mode. Pass `--sandbox=strict` for tighter isolation or
    `--sandbox=off` (legacy alias: `--unsafe`) to opt out. Greywall provides
-   domain-level network allowlisting; bwrap provides binary network blocking.
-   Provider interface in
-   `src/engine/claude/sandbox.ts` with implementations in `sandbox.bwrap.ts`
-   and `sandbox.greywall.ts`. See [greywall-sandbox.md](./greywall-sandbox.md)
+   domain-level network allowlisting and filesystem write restrictions on
+   both macOS and Linux. Provider interface in
+   `src/engine/claude/sandbox.ts` with the implementation in
+   `sandbox.greywall.ts`. See [greywall-sandbox.md](./greywall-sandbox.md)
    for the profile composition model and what the Greywall integration
    actually allows in practice.
 

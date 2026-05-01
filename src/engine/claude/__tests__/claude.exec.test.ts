@@ -288,9 +288,9 @@ describe("claudeInvoker", () => {
 
     it("spawns via sandbox provider when one is given", () => {
       const mockProvider = {
-        name: "bwrap" as const,
-        command: "bwrap",
-        buildArgs: vi.fn(() => ["--ro-bind", "/", "/", "--unshare-net", "--die-with-parent"]),
+        name: "greywall" as const,
+        command: "greywall",
+        buildArgs: vi.fn(() => ["--profile", "claude,node", "--"]),
       }
 
       const promise = invokeClaude({
@@ -304,8 +304,8 @@ describe("claudeInvoker", () => {
         extras: { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] },
       }))
       expect(spawn).toHaveBeenCalledWith(
-        "bwrap",
-        expect.arrayContaining(["--ro-bind", "--unshare-net", "claude"]),
+        "greywall",
+        expect.arrayContaining(["--profile", "--", "claude"]),
         expect.objectContaining({ cwd: "/tmp" })
       )
 

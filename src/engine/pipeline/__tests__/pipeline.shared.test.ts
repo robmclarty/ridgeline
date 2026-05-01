@@ -85,7 +85,7 @@ describe("prepareAgentsAndPlugins", () => {
   it("does not append core plugin dir when sandbox is set", () => {
     vi.mocked(discoverPluginDirs).mockReturnValue([])
 
-    const provider = { name: "bwrap" as const, command: "bwrap", checkReady: () => null, buildArgs: () => [] as string[] }
+    const provider = { name: "greywall" as const, command: "greywall", checkReady: () => null, buildArgs: () => [] as string[] }
     const result = prepareAgentsAndPlugins(makeConfig({ unsafe: true, sandboxProvider: provider }))
     expect(result.pluginDirs).toEqual([])
   })
@@ -307,7 +307,7 @@ describe("commonInvokeOptions", () => {
   })
 
   it("passes through sandbox and network config", () => {
-    const provider = { name: "bwrap" as const, command: "bwrap", checkReady: () => null, buildArgs: () => [] as string[] }
+    const provider = { name: "greywall" as const, command: "greywall", checkReady: () => null, buildArgs: () => [] as string[] }
     const prepared = { agents: undefined, pluginDirs: [] as { dir: string; createdPluginJson: boolean }[] }
 
     const result = commonInvokeOptions(

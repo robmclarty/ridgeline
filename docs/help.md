@@ -5,8 +5,7 @@
 - **Claude CLI** -- installed and authenticated (`claude` must be on PATH)
 - **Node.js** -- for running ridgeline itself
 - **Git** -- the project directory must be a git repository
-- **Greywall** (optional) -- for network allowlist sandboxing on macOS/Linux (`brew install greywall`)
-- **bwrap** (optional) -- for network and filesystem sandboxing on Linux
+- **Greywall** (optional) -- for network allowlist and filesystem sandboxing on macOS/Linux (`brew install greywall`)
 
 ## Install
 
@@ -377,7 +376,7 @@ ridgeline build my-feature --max-budget-usd 10
 **Sandbox-disabled build (opt-out):**
 
 ```sh
-# Sandbox is on by default when Greywall or bwrap is detected.
+# Sandbox is on by default when Greywall is detected.
 # Use --sandbox=off (or the deprecated --unsafe alias) to opt out.
 ridgeline build my-feature --sandbox=off
 ```
