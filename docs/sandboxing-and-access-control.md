@@ -59,7 +59,7 @@ flowchart TB
 
     subgraph layer4 ["Layer 4: Behavioral (Soft)"]
         prompts["Agent system prompts"]
-        hook["Network guard hook\n(--unsafe mode only)"]
+        hook["Network guard hook\n(--sandbox=off only)"]
         prompts --- hook
     end
 
@@ -75,10 +75,12 @@ flowchart TB
 | Worktree isolation | Git worktrees per build | Hard -- filesystem isolation |
 | Budget cap | `--max-budget-usd` | Hard -- CLI enforces |
 | Timeout | `--timeout`, `--check-timeout` | Hard -- SIGTERM/SIGKILL |
-| Network guard hook | PreToolUse hook in `--unsafe` mode only | Soft -- prompt-based judgment |
+| Network guard hook | PreToolUse hook in `--sandbox=off` only | Soft -- prompt-based judgment |
 
 Sandboxing is **on by default** when a provider (Greywall or bwrap) is detected
-in the environment. Use `--unsafe` to opt out. Worktrees are always used.
+in the environment. Default mode is `semi-locked`; pass `--sandbox=strict` for
+tighter isolation or `--sandbox=off` (legacy alias: `--unsafe`) to opt out.
+Worktrees are always used.
 
 ---
 
@@ -525,9 +527,11 @@ exactly what OS-level sandboxing provides.
 
 The layered defense strategy has been implemented:
 
-1. **OS-level sandbox** (Greywall/bwrap) -- auto-detected, on by default,
-   `--unsafe` to opt out. Greywall provides domain-level network allowlisting;
-   bwrap provides binary network blocking. Provider interface in
+1. **OS-level sandbox** (Greywall/bwrap) -- auto-detected, on by default
+   in `semi-locked` mode. Pass `--sandbox=strict` for tighter isolation or
+   `--sandbox=off` (legacy alias: `--unsafe`) to opt out. Greywall provides
+   domain-level network allowlisting; bwrap provides binary network blocking.
+   Provider interface in
    `src/engine/claude/sandbox.ts` with implementations in `sandbox.bwrap.ts`
    and `sandbox.greywall.ts`. See [greywall-sandbox.md](./greywall-sandbox.md)
    for the profile composition model and what the Greywall integration
@@ -544,8 +548,8 @@ The layered defense strategy has been implemented:
    `src/engine/worktree.ts`.
 
 4. **PreToolUse network guard hook** -- blocks `curl`, `wget`, `ssh`, etc.
-   while allowing package managers. Only active in `--unsafe` mode (no
-   sandbox). Shipped at `src/agents/core/hooks/network-guard.md`.
+   while allowing package managers. Only active when `--sandbox=off` (no
+   OS sandbox). Shipped at `src/agents/core/hooks/network-guard.md`.
 
 5. **MCP filtering** -- not yet implemented. Could be a future addition for
    controlled external access (docs, packages) via a filtered MCP server.

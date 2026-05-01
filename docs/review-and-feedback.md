@@ -60,20 +60,29 @@ The reviewer follows a structured sequence:
    run the check command directly. Mechanical verification catches the obvious
    problems.
 
-4. **Walk each acceptance criterion.** This is the core of the review. For each
+4. **Run visual review** (visual phases only). When the diff touches visual
+   code (`apps/**/*.tsx`, `*.svg`, `*.css`, `tailwind.config.*`, or other
+   rendered surfaces) and the sensor findings include screenshot paths, the
+   reviewer dispatches the **visual-reviewer** specialist. Visual-reviewer
+   scores taste fidelity, motion discipline, information hierarchy,
+   convention adherence, and anti-slop on a 0-10 scale and returns
+   Keep / Fix / Quick Wins lists. The reviewer composes its critique into
+   the verdict per the thresholds in [Visual Review](visual-review.md).
+
+5. **Walk each acceptance criterion.** This is the core of the review. For each
    criterion in the phase spec, the reviewer verifies observable behavior --
    starting servers, hitting endpoints, running specific tests, inspecting file
    contents. Every claim must be backed by evidence: file paths, line numbers,
    command output.
 
-5. **Check constraint adherence.** Verify that the builder's implementation
+6. **Check constraint adherence.** Verify that the builder's implementation
    matches the language, framework, directory structure, naming conventions,
    and dependency restrictions specified in constraints.md.
 
-6. **Clean up.** Kill all background processes started during review (servers,
+7. **Clean up.** Kill all background processes started during review (servers,
    watchers, etc.).
 
-7. **Produce verdict.** The structured JSON verdict is the reviewer's final
+8. **Produce verdict.** The structured JSON verdict is the reviewer's final
    output. Nothing comes after it.
 
 ## Structured Verdicts
@@ -135,6 +144,48 @@ Second, the builder on retry gets actionable information -- specific criteria,
 specific files, specific required states -- rather than a wall of text to
 interpret.[^1] Third, the structured format is auditable: the trajectory log records
 each verdict, making it possible to trace exactly why a phase passed or failed.
+
+## Required Tools and Required Views
+
+Phase specs may declare two optional sections that drive preflight and
+visual review:
+
+**`## Required Tools`** lists tools a phase needs (e.g., `playwright`,
+`agent-browser`, an MCP server). Before a declared phase runs, the harness
+re-probes the listed tools under the active sandbox. If any tool can't
+launch — for example, if the sandbox doesn't expose Chromium and the phase
+needs Playwright — the phase aborts with a remediation message before any
+budget is spent.
+
+```markdown
+## Required Tools
+
+- playwright
+- agent-browser
+```
+
+**`## Required Views`** lists screenshots the visual-reviewer needs to
+score the phase. Each item is a label optionally followed by viewport,
+zoom, or URL attributes:
+
+```markdown
+## Required Views
+
+- canvas-default: 1280x800, url /
+- node-zoomed-in: 1280x800, zoom 2.0, url /flow/hello
+- mid-flow: 1280x800, url /flow/hello?demo=mid-flow
+```
+
+When `Required Views` is declared, the harness loops the playwright sensor
+over each view and persists per-view screenshots under
+`<buildDir>/sensors/<phaseId>/`. The visual-reviewer reads each one and
+grounds its Fix items in concrete screenshot paths. When the section is
+absent, the harness captures a single default screenshot (back-compat); the
+visual-reviewer notes lower confidence in its `confidence_caveats`.
+
+The plan-reviewer flags visual phases that omit `Required Views` during
+plan synthesis — the default fallback exists, but explicit views produce
+stronger reviews.
 
 ## Acceptance Criteria as the Only Gate
 

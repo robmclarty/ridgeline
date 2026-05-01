@@ -80,7 +80,7 @@ Research agents produce incomplete or missing results due to blocked network req
 
 **Cause:** The sandbox blocks requests to domains not on the allowlist.
 
-**Fix:** Add the required domains to `.ridgeline/settings.json` under the `researchAllowlist` array. Alternatively, use `--unsafe` to disable sandboxing entirely (not recommended for untrusted projects).
+**Fix:** Add the required domains to `.ridgeline/settings.json` under the `researchAllowlist` array (or use `sandbox.extraNetworkAllowlist` for build-wide additions). Alternatively, pass `--sandbox=off` to disable sandboxing entirely (not recommended for untrusted projects). The legacy `--unsafe` flag is still accepted as a deprecated alias for `--sandbox=off`.
 
 ## Sandbox detection
 
@@ -90,4 +90,4 @@ The build fails at startup because the required sandbox tool is not available.
 
 **Cause:** The recommended sandbox tool (Greywall or bubblewrap) is not installed on the system.
 
-**Fix:** Install the appropriate sandbox tool for your platform. On macOS, install Greywall. On Linux, install bubblewrap. If sandboxing is not needed, pass `--unsafe` to skip sandbox detection.
+**Fix:** Install the appropriate sandbox tool for your platform. On macOS, install Greywall. On Linux, install bubblewrap. If sandboxing is not needed, pass `--sandbox=off` (or the deprecated `--unsafe` alias) to skip sandbox detection.

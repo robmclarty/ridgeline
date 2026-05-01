@@ -213,7 +213,11 @@ flowchart LR
 
     specialists --> proposals["Structured\nJSON proposals"]
     proposals --> synthesizer[Planner\nSynthesizer]
-    synthesizer -->|writes| phases["phases/\n01-scaffold.md\n02-core.md\n..."]
+    synthesizer --> draft["Draft\nphase specs"]
+    draft --> reviewer["plan-reviewer\n(adversarial)"]
+    reviewer -->|approved| phases["phases/\n01-scaffold.md\n02-core.md\n..."]
+    reviewer -->|issues| revision["One-shot\nrevision pass"]
+    revision -->|writes| phases
 ```
 
 ### Specialist Perspectives
@@ -264,6 +268,32 @@ The planner synthesizer applies the same five-step judgment process:
 4. **Trim excess** -- remove marginal-value phases
 5. **Respect phase sizing** -- target ~50% of the builder model's context window,
    leaving headroom for codebase exploration and tool use
+
+### Adversarial plan review
+
+After the synthesizer produces draft phase specs but **before** they are
+written to disk, an adversarial **plan-reviewer** agent audits the plan
+against a checklist:
+
+1. Per-phase budget — flags phases that look likely to blow past the
+   advised output-token / USD ceiling.
+2. Acceptance criteria are verifiable.
+3. Phase boundaries are coherent (no "do X, and also Y" phases).
+4. Sequencing dependencies are honored.
+5. No scope creep beyond spec.md.
+6. Phase 1 is appropriate to the project state (brownfield ≠ scaffold).
+7. `## Required Tools` declared when phases need specific tools.
+8. `## Required Views` declared on visual phases.
+9. No implementation details prescribing internal structure.
+
+Output is `{ approved: boolean, issues: string[] }`. When `approved: false`,
+the harness invokes the synthesizer once more with the issues list as
+guidance. The revised draft is re-checked, then written. The synthesizer
+gets exactly one revision attempt — beyond that, the issues become surface
+warnings rather than blocking the build.
+
+This catches expensive plan defects (oversized phases, ambiguous criteria,
+missing tool declarations) before any builder budget is spent.
 
 ### Verification
 

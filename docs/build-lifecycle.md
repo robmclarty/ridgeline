@@ -8,7 +8,11 @@ user sees, and where the user can intervene.
 
 ```mermaid
 flowchart TB
-    shape[Shape] --> spec[Spec]
+    shape[Shape] --> visual_decision{Visual\nshape?}
+    visual_decision -->|web-visual| directions[Directions]
+    visual_decision -->|game/print/none| spec
+    directions --> design[Design]
+    design --> spec[Spec]
     spec --> research_decision{Research?}
     research_decision -->|yes| research[Research]
     research_decision -->|no| plan
@@ -30,8 +34,9 @@ flowchart TB
     done -->|no| merge[Merge]
 ```
 
-Research and refine are optional. Skipping them goes straight from spec to
-plan.
+Directions, design, research, and refine are optional. The visual stages
+(directions, design) only apply to projects with a visual surface. Skipping
+research/refine goes straight from spec to plan.
 
 The user describes what to build. The shaper gathers context. The specifier
 ensemble produces spec files. The planner ensemble decomposes the spec into
@@ -57,6 +62,29 @@ its understanding and skip or reduce its clarification rounds.
 **What to review before proceeding:** Read `shape.md`. The shape document is
 the primary input to the specifier ensemble -- inaccuracies here cascade
 through the entire pipeline.
+
+## Step 1.5: Directions and Design (optional, visual builds)
+
+For builds whose `shape.md` matches a visual category (web-visual,
+game-visual, or print-layout), two optional stages run before spec:
+
+**Directions** (`ridgeline directions <name>`, web-visual only) generates
+2-3 differentiated visual direction options as self-contained HTML demos.
+Each direction lives in a different visual school with a named reference
+work. You open the demos in a browser, pick one, and the picked direction's
+tokens.md and brief.md become seed context for the design Q&A. See
+[Directions](directions.md).
+
+**Design** (`ridgeline design <name>`) runs an interactive Q&A focused on
+visual concerns -- color, typography, spacing, motion, asset conventions.
+Produces `design.md`. If a picked direction or `references/visual-anchors.md`
+is present, the designer uses them as seed context. See [Design](design.md)
+and [References and Anchors](references-and-anchors.md).
+
+**What to review before proceeding:** Read `design.md`. Hard tokens (with
+imperative language like "must", "always", "required") become non-negotiable
+gate checks during visual review. Soft guidance ("prefer", "lean toward") is
+best-effort. Get the hard/soft distinction right before planning.
 
 ## Step 2: Spec
 
@@ -140,7 +168,12 @@ ridgeline plan my-feature
 
 The planner decomposes the spec into sequential phases. Ridgeline uses ensemble
 planning: three specialist planners (simplicity, velocity, thoroughness) run in
-parallel, then a synthesizer merges their proposals into final phase files.
+parallel, then a synthesizer merges their proposals. An adversarial
+**plan-reviewer** then audits the synthesized plan against a checklist
+(per-phase budget, verifiable acceptance criteria, coherent boundaries,
+declared `## Required Tools` and `## Required Views`, no scope creep,
+no implementation details). If issues are found, the synthesizer runs a
+one-shot revision pass before the phase files are written to disk.
 
 Phase files land in `.ridgeline/builds/my-feature/phases/`:
 
@@ -204,17 +237,27 @@ indicators, and per-phase cost summaries.
 
 After the builder completes each phase, the reviewer runs automatically.
 
-The reviewer receives the phase spec, the git diff from checkpoint to HEAD, and
-constraints. It walks each acceptance criterion, runs verification commands, and
-produces a structured JSON verdict with per-criterion pass/fail, blocking issues,
-and suggestions.
+The reviewer receives the phase spec, the git diff from checkpoint to HEAD,
+and constraints. It walks each acceptance criterion, runs verification
+commands, and produces a structured JSON verdict with per-criterion
+pass/fail, blocking issues, and suggestions.
 
-- **PASS:** All criteria met, no blocking issues. The harness creates a
-  completion tag and advances to the next phase.
+For phases that touch visual code, the reviewer dispatches the
+**visual-reviewer** specialist before producing its verdict. Visual-reviewer
+scores rendered output against design.md and any visual anchors across
+five dimensions (taste fidelity, motion discipline, information hierarchy,
+convention adherence, anti-slop) and returns Keep / Fix / Quick Wins. The
+reviewer composes the critique into the final verdict per the thresholds
+documented in [Visual Review](visual-review.md). A failing visual review is
+a phase failure even if every acceptance criterion passes.
+
+- **PASS:** All criteria met, no blocking issues, visual review (when
+  applicable) within thresholds. The harness creates a completion tag and
+  advances to the next phase.
 - **FAIL:** The harness generates a feedback file and retries the builder.
 
-**What the user sees:** A verdict summary showing which criteria passed, which
-failed, and any blocking issues with evidence.
+**What the user sees:** A verdict summary showing which criteria passed,
+which failed, and any blocking issues with evidence.
 
 ## Step 8: Retry or Advance
 
