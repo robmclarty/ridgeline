@@ -88,6 +88,6 @@ The build fails at startup because the required sandbox tool is not available.
 
 **Symptoms:** Sandbox-related error immediately at build start.
 
-**Cause:** The recommended sandbox tool (Greywall or bubblewrap) is not installed on the system.
+**Cause:** Greywall is not installed on the system.
 
-**Fix:** Install the appropriate sandbox tool for your platform. On macOS, install Greywall. On Linux, install bubblewrap. If sandboxing is not needed, pass `--sandbox=off` (or the deprecated `--unsafe` alias) to skip sandbox detection.
+**Fix:** Install Greywall (`brew install greywall`, available on macOS and Linux). If sandboxing is not needed, pass `--sandbox=off` (or the deprecated `--unsafe` alias) to skip sandbox detection.

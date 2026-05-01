@@ -218,7 +218,7 @@ handles this scheduling automatically.
 | **Cost tracking and caps**       | Per-phase metering, budget caps   | No built-in cost tracking         | No built-in cost tracking         | No built-in cost tracking         |
 | **Git-native checkpointing**     | Every phase tagged in git         | No version control integration    | Git-based but no phase checkpoints| No built-in checkpointing         |
 | **Resumable builds**             | Resume from last checkpoint       | Restart from beginning            | Restart from beginning            | Must build manually               |
-| **Sandbox security**             | Greywall + bubblewrap auto-detect | Varies by integration             | GitHub-hosted runners             | No built-in sandboxing            |
+| **Sandbox security**             | Greywall auto-detect              | Varies by integration             | GitHub-hosted runners             | No built-in sandboxing            |
 | **Phase dependency scheduling**  | DAG-based parallel execution      | Sequential only                   | Workflow-defined                  | Graph-defined (manual)            |
 | **Setup complexity**             | `npm install -g ridgeline`        | Platform account + config         | GitHub Actions YAML               | SDK integration + custom code     |
 | **Long-horizon builds**          | Purpose-built                     | Task-level orchestration          | CI/CD-oriented                    | General-purpose framework         |
@@ -235,7 +235,7 @@ resumability in a single purpose-built harness for long-horizon software builds.
 |-----------------------|--------------------------------------------------------------------------------------------|
 | **Cost overruns**     | Real-time cost metering per phase and per agent. Configurable budget caps halt the build instantly when exceeded. Full cost breakdown in `budget.json`. |
 | **Quality failures**  | Every phase is reviewed by a dedicated AI reviewer against acceptance criteria. Failed phases receive structured feedback and are retried. Phases do not advance until they pass. |
-| **Security exposure** | Builds run inside sandboxed environments (Greywall on macOS/Linux, bubblewrap on Linux). Network access is restricted to an allowlist. Filesystem access is isolated. Sandboxing is on by default. |
+| **Security exposure** | Builds run inside Greywall (macOS/Linux). Network access is restricted to an allowlist. Filesystem access is isolated. Sandboxing is on by default. |
 | **Reproducibility**   | Every phase creates a git checkpoint (tag). The full event history is logged in `trajectory.jsonl`. Build state, cost data, and all artifacts are stored in version-controlled files. Any build can be inspected, rewound, or replayed. |
 | **Wasted work**       | Builds resume from the last successful checkpoint. Interrupted builds do not repeat completed phases. Budget caps prevent spending money on builds that have already exceeded their allocation. |
 | **Vendor lock-in**    | All artifacts are plain Markdown and JSON stored in your git repository. Phase specs, constraints, and review criteria are human-readable and editable. The pipeline can be run stage-by-stage with manual intervention at any point. |

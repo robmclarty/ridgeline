@@ -71,15 +71,12 @@ npm install -g ridgeline
 Ridgeline requires the [Claude CLI](https://docs.anthropic.com/en/docs/claude-code)
 to be installed and authenticated.
 
-For sandboxing (recommended), install one of:
+For sandboxing (recommended), install
+[Greywall](https://github.com/GreyhavenHQ/greywall) on macOS or Linux:
+`brew install greywall`. Provides domain-level network allowlisting and
+filesystem isolation.
 
-- **macOS/Linux:** [Greywall](https://github.com/GreyhavenHQ/greywall) --
-  `brew install greywall` (domain-level network allowlisting + filesystem
-  isolation)
-- **Linux:** [bubblewrap](https://github.com/containers/bubblewrap) --
-  `apt install bubblewrap` (full network block + read-only filesystem)
-
-Sandboxing is on by default when a provider is detected. The default mode is
+Sandboxing is on by default when Greywall is detected. The default mode is
 `semi-locked`; pass `--sandbox=strict` for tighter isolation or
 `--sandbox=off` to disable.
 
