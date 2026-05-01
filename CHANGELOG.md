@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.9.9 — 2026-04-30
+
+### Changed
+
+- Sandbox provider is now greywall-only. The bwrap fallback for Linux has
+  been removed — greywall is cross-platform and uses bwrap + Landlock +
+  Seccomp + eBPF as its Linux backend, so install greywall to get
+  filesystem isolation and domain-level network allowlisting on both
+  macOS and Linux.
+
 ## v0.9.8 — 2026-04-30
 
 ### Changed
