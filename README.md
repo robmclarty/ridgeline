@@ -455,4 +455,4 @@ npm run typecheck    # Type-check without emitting
 
 ## License
 
-[MIT](LICENSE)
+[Apache 2.0](LICENSE)
