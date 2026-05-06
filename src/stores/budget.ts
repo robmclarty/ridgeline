@@ -50,3 +50,9 @@ export const recordCost = (
 
 export const getTotalCost = (buildDir: string): number =>
   loadBudget(buildDir).totalCostUsd
+
+/** Sum the costUsd of every entry tagged with `phaseId`. Used by the builder loop's phase-cost cap. */
+export const getPhaseCostUsd = (buildDir: string, phaseId: string): number => {
+  const budget = loadBudget(buildDir)
+  return budget.entries.reduce((sum, e) => (e.phase === phaseId ? sum + e.costUsd : sum), 0)
+}

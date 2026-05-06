@@ -23,8 +23,8 @@ export type RidgelineConfig = {
   /** Number of specialists for ensemble stages (planner, researcher). 1, 2, or 3. */
   specialistCount: 1 | 2 | 3
   specialistTimeoutSeconds: number
-  /** Approximate USD ceiling per phase, advised to the planner. */
-  phaseBudgetLimit: number
+  /** Approximate USD ceiling per phase, advised to the planner. `null` disables the cost advisory entirely (planner sizes phases by tokens only). */
+  phaseBudgetLimit: number | null
   /** Approximate output-token ceiling per phase, advised to the planner. */
   phaseTokenLimit: number
 }
@@ -45,6 +45,37 @@ export type PhaseInfo = {
   dependsOn: string[] // phase IDs this depends on; empty = depends on previous phase
 }
 
+/**
+ * One pass of the builder loop within a phase. Multiple invocations make
+ * up a single phase build attempt; each is a fresh-context Claude call
+ * that either declared `READY_FOR_REVIEW`, asked for more work, timed out,
+ * or hit a halt condition.
+ */
+export type BuilderInvocationEndReason =
+  | "ready_for_review"
+  | "more_work_explicit"
+  | "more_work_implicit"
+  | "timeout"
+  | "halt_max_continuations"
+  | "halt_no_progress"
+  | "halt_phase_cost_cap"
+  | "halt_global_budget"
+  | "error"
+
+export type BuilderInvocation = {
+  attempt: number
+  endReason: BuilderInvocationEndReason
+  outputTokens: number
+  inputTokens: number
+  costUsd: number
+  durationMs: number
+  /** Reason text from `MORE_WORK_NEEDED: <reason>`, or a synthetic reason for timeouts. */
+  windDownReason: string | null
+  /** Hash of the working-tree diff at the end of this invocation (for no-progress detection). */
+  diffHash: string | null
+  timestamp: string
+}
+
 // Per-phase state persisted in state.json
 export type PhaseState = {
   id: string
@@ -55,6 +86,10 @@ export type PhaseState = {
   duration: number | null
   completedAt: string | null
   failedAt: string | null
+  /** Per-invocation history when the builder loop is in effect. */
+  builderInvocations?: BuilderInvocation[]
+  /** Final end reason of the builder loop for this phase. */
+  builderLoopEndReason?: BuilderInvocationEndReason | null
 }
 
 // Pipeline stage status
@@ -230,6 +265,9 @@ export type TrajectoryEntry = {
     | "specialist_fail"
     | "synthesis_skipped"
     | "prompt_stable_hash"
+    | "builder_continuation"
+    | "builder_loop_complete"
+    | "builder_no_progress"
   phaseId: string | null
   duration: number | null
   tokens: { input: number; output: number } | null

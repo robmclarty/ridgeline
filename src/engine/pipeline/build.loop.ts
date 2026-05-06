@@ -2,7 +2,13 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import * as crypto from "node:crypto"
 import { execFileSync } from "node:child_process"
-import type { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
+import type {
+  RidgelineConfig,
+  PhaseInfo,
+  ClaudeResult,
+  BuilderInvocation,
+  BuilderInvocationEndReason,
+} from "../../types"
 import { computeBuilderBudget } from "./builder.budget"
 import type { BuilderBudget } from "./builder.budget"
 import { parseBuilderMarker } from "./builder.marker"
@@ -20,31 +26,8 @@ export const DEFAULT_MAX_CONTINUATIONS = 5
 export const DEFAULT_PHASE_COST_CAP_MULTIPLIER = 5
 export const PROGRESS_TRIM_THRESHOLD_TOKENS = 20_000
 
-export type BuilderInvocationEndReason =
-  | "ready_for_review"
-  | "more_work_explicit"
-  | "more_work_implicit"
-  | "timeout"
-  | "halt_max_continuations"
-  | "halt_no_progress"
-  | "halt_phase_cost_cap"
-  | "halt_global_budget"
-  | "error"
-
-export interface BuilderInvocationRecord {
-  attempt: number
-  endReason: BuilderInvocationEndReason
-  outputTokens: number
-  inputTokens: number
-  costUsd: number
-  durationMs: number
-  windDownReason: string | null
-  diffHash: string | null
-  timestamp: string
-}
-
 export interface BuilderLoopOutcome {
-  invocations: BuilderInvocationRecord[]
+  invocations: BuilderInvocation[]
   finalResult: ClaudeResult | null
   cumulativeOutputTokens: number
   cumulativeCostUsd: number
@@ -339,7 +322,7 @@ const recordInvocation = (
   outcome: InvocationOutcome,
   finalReason: BuilderInvocationEndReason,
   diffHash: string | null,
-): BuilderInvocationRecord => ({
+): BuilderInvocation => ({
   attempt,
   endReason: finalReason,
   outputTokens: outcome.result?.usage.outputTokens ?? 0,
@@ -379,7 +362,7 @@ export const runBuilderLoop = async (args: BuilderLoopArgs): Promise<BuilderLoop
 
   const progressFilePath = path.join(config.phasesDir, `${phase.id}.builder-progress.md`)
 
-  const invocations: BuilderInvocationRecord[] = []
+  const invocations: BuilderInvocation[] = []
   let cumulativeOutputTokens = 0
   let cumulativeCostUsd = cumulativeCostStart
   let prevDiffHash: string | null = null

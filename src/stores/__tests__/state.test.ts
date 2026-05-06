@@ -124,6 +124,72 @@ describe("state", () => {
       // State should be unchanged
       expect(state.phases.every((p) => p.status === "pending")).toBe(true)
     })
+
+    it("persists builderInvocations and builderLoopEndReason fields", () => {
+      const state = initState("build", samplePhases)
+      saveState(tmpDir, state)
+
+      updatePhaseStatus(tmpDir, state, "01-scaffold", {
+        status: "reviewing",
+        builderInvocations: [
+          {
+            attempt: 1,
+            endReason: "more_work_explicit",
+            outputTokens: 12_000,
+            inputTokens: 5_000,
+            costUsd: 1.5,
+            durationMs: 90_000,
+            windDownReason: "tests pending",
+            diffHash: "abc",
+            timestamp: "2026-05-06T05:00:00.000Z",
+          },
+          {
+            attempt: 2,
+            endReason: "ready_for_review",
+            outputTokens: 8_000,
+            inputTokens: 4_500,
+            costUsd: 0.9,
+            durationMs: 60_000,
+            windDownReason: null,
+            diffHash: "def",
+            timestamp: "2026-05-06T05:02:00.000Z",
+          },
+        ],
+        builderLoopEndReason: "ready_for_review",
+      })
+
+      const loaded = loadState(tmpDir)!
+      const phase = loaded.phases.find((p) => p.id === "01-scaffold")!
+      expect(phase.builderInvocations).toHaveLength(2)
+      expect(phase.builderInvocations?.[0].endReason).toBe("more_work_explicit")
+      expect(phase.builderInvocations?.[1].endReason).toBe("ready_for_review")
+      expect(phase.builderLoopEndReason).toBe("ready_for_review")
+    })
+
+    it("loads existing PhaseState records that omit the optional builder fields", () => {
+      // Simulate a state.json written by an older ridgeline (before commit 3).
+      const legacyState: BuildState = {
+        buildName: "build",
+        startedAt: "2026-01-01T00:00:00.000Z",
+        pipeline: { ...defaultPipeline },
+        phases: [
+          {
+            id: "01-scaffold",
+            status: "complete",
+            checkpointTag: "ridgeline/checkpoint/build/01-scaffold",
+            completionTag: "ridgeline/phase/build/01-scaffold",
+            retries: 0,
+            duration: 12345,
+            completedAt: "2026-01-01T00:05:00.000Z",
+            failedAt: null,
+          },
+        ],
+      }
+      fs.writeFileSync(path.join(tmpDir, "state.json"), JSON.stringify(legacyState))
+      const loaded = loadState(tmpDir)!
+      expect(loaded.phases[0].builderInvocations).toBeUndefined()
+      expect(loaded.phases[0].builderLoopEndReason).toBeUndefined()
+    })
   })
 
   describe("getNextIncompletePhase", () => {

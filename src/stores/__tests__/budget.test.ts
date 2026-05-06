@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
-import { loadBudget, saveBudget, recordCost, getTotalCost } from "../budget"
+import { loadBudget, saveBudget, recordCost, getTotalCost, getPhaseCostUsd } from "../budget"
 import type { ClaudeResult, BudgetState } from "../../types"
 
 const makeClaudeResult = (cost: number, inputTokens = 100, outputTokens = 50): ClaudeResult => ({
@@ -107,6 +107,23 @@ describe("budget", () => {
     it("returns total from existing budget", () => {
       recordCost(tmpDir, "phase", "builder", 0, makeClaudeResult(0.50))
       expect(getTotalCost(tmpDir)).toBe(0.50)
+    })
+  })
+
+  describe("getPhaseCostUsd", () => {
+    it("returns 0 when no budget exists", () => {
+      expect(getPhaseCostUsd(tmpDir, "01-scaffold")).toBe(0)
+    })
+
+    it("sums only entries for the requested phase", () => {
+      recordCost(tmpDir, "01-scaffold", "builder", 1, makeClaudeResult(0.30))
+      recordCost(tmpDir, "01-scaffold", "builder", 2, makeClaudeResult(0.45))
+      recordCost(tmpDir, "01-scaffold", "reviewer", 1, makeClaudeResult(0.10))
+      recordCost(tmpDir, "02-api", "builder", 1, makeClaudeResult(1.00))
+
+      expect(getPhaseCostUsd(tmpDir, "01-scaffold")).toBeCloseTo(0.85)
+      expect(getPhaseCostUsd(tmpDir, "02-api")).toBeCloseTo(1.00)
+      expect(getPhaseCostUsd(tmpDir, "missing-phase")).toBe(0)
     })
   })
 })
