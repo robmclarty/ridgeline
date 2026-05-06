@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.11.2 — 2026-05-05
+
+### Fixed
+
+- Auto-mode preflight no longer treats ridgeline's own repo as a visual surface. The detector now excludes `coverage/` (vitest istanbul output) and `fixtures/` directories, eliminating the spurious Playwright install hint when running `ridgeline --auto` against repos that ship visual test fixtures.
+
+### Changed
+
+- `DetectionReport` gains a `visualFileExts: string[]` field listing the matched extensions when the file scan is the only visual-surface trigger. The preflight banner now names them (e.g. `html/tsx files`) instead of saying `no project signals` while still enabling visual sensors.
+
+### Internal
+
+- Scaffolded the ridgeline → fascicle migration build under `.ridgeline/builds/fascicle-migration/`: a single-input spec aligned with fascicle's public API, including the composites layer (`phase`, `graph_drain`, `worktree_isolated`, `diff_review`, `cost_capped`).
+- Tuned `.claude/settings.json` permissions for the fascicle migration build.
+
 ## v0.11.1 — 2026-05-05
 
 ### Fixed
