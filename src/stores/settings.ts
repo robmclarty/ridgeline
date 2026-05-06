@@ -60,13 +60,31 @@ type RidgelineSettings = {
    */
   specialistTimeoutSeconds?: number
   planner?: {
-    /** Approximate USD ceiling per phase (used to advise the planner). Default 15. */
-    phaseBudgetLimit?: number
-    /** Approximate output-token ceiling per phase (used to advise the planner). Default 80000. */
+    /**
+     * Approximate USD ceiling per phase (used to advise the planner). Default 15.
+     * Set to `null` (or the string `"unlimited"`) to disable the cost advisory entirely;
+     * the planner will size phases purely by `phaseTokenLimit` (context-window-driven).
+     */
+    phaseBudgetLimit?: number | null | "unlimited"
+    /** Approximate output-token ceiling per phase (used to advise the planner). Default 50000. */
     phaseTokenLimit?: number
     /** Number of specialists to run for planner/researcher ensembles. Default 3. */
     specialistCount?: 1 | 2 | 3
   }
+  /**
+   * Per-Claude-invocation timeout in minutes. Number, or `"unlimited"` to disable
+   * the per-call timeout (a 24-hour catchall still applies to recover from truly
+   * hung processes). CLI `--timeout` overrides this.
+   */
+  timeoutMinutes?: number | "unlimited"
+  /**
+   * Per-model context-window override (in tokens). Distinct from
+   * `phaseTokenLimit` — this is the model's HARD ceiling; exceeding it
+   * truncates output. Defaults to 200,000 for unknown models.
+   *
+   * Example: `{ "claude-sonnet-4-6": 1000000 }` for the 1M-context variant.
+   */
+  contextWindows?: Record<string, number>
   directions?: {
     /** Number of visual direction options to generate (2 or 3). Default 2. */
     count?: 2 | 3
@@ -87,10 +105,16 @@ type RidgelineSettings = {
 
 export const DEFAULT_SPECIALIST_TIMEOUT_SECONDS = 600
 export const DEFAULT_PHASE_BUDGET_LIMIT_USD = 15
-export const DEFAULT_PHASE_TOKEN_LIMIT = 80000
+export const DEFAULT_PHASE_TOKEN_LIMIT = 50000
 export const DEFAULT_SPECIALIST_COUNT: 1 | 2 | 3 = 3
 export const DEFAULT_DIRECTION_COUNT: 2 | 3 = 2
 export const DEFAULT_SANDBOX_MODE: SandboxMode = "semi-locked"
+/**
+ * Catchall timeout applied when the user requests `"unlimited"` per-call timeout.
+ * Far above any normal phase, but bounded so a truly hung Claude process eventually
+ * dies instead of running forever.
+ */
+export const UNLIMITED_TIMEOUT_CATCHALL_MINUTES = 1440
 
 export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number => {
   const raw = loadSettings(ridgelineDir).specialistTimeoutSeconds
@@ -100,12 +124,36 @@ export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number =>
   return Math.floor(raw)
 }
 
-export const resolvePhaseBudgetLimit = (ridgelineDir: string): number => {
+export const resolvePhaseBudgetLimit = (ridgelineDir: string): number | null => {
   const raw = loadSettings(ridgelineDir).planner?.phaseBudgetLimit
+  if (raw === null || raw === "unlimited") return null
   if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
     return DEFAULT_PHASE_BUDGET_LIMIT_USD
   }
   return raw
+}
+
+/**
+ * Resolve the per-Claude-invocation timeout in minutes.
+ *
+ * Precedence: CLI override → settings.json → default. CLI `"unlimited"` and
+ * settings.json `"unlimited"` (or `null`) both map to {@link UNLIMITED_TIMEOUT_CATCHALL_MINUTES}.
+ */
+export const resolveTimeoutMinutes = (
+  ridgelineDir: string,
+  cliOverride: string | undefined,
+  defaultMinutes: number,
+): number => {
+  if (cliOverride !== undefined) {
+    if (cliOverride === "unlimited") return UNLIMITED_TIMEOUT_CATCHALL_MINUTES
+    const parsed = parseInt(cliOverride, 10)
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+    return defaultMinutes
+  }
+  const raw = loadSettings(ridgelineDir).timeoutMinutes
+  if (raw === "unlimited" || raw === null) return UNLIMITED_TIMEOUT_CATCHALL_MINUTES
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return Math.floor(raw)
+  return defaultMinutes
 }
 
 export const resolvePhaseTokenLimit = (ridgelineDir: string): number => {
