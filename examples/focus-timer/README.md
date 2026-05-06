@@ -4,107 +4,112 @@ A detailed `idea.md` for a Pomodoro SPA — written deliberately to exercise
 ridgeline's full pipeline (including the visual / design path) from a single
 input file, with no Q&A.
 
-## What this example demonstrates
-
-- **One-shot ingest from a single spec doc** — `idea.md` is detailed enough
-  that the shaper, designer, and specifier can run non-interactively and
-  still produce a coherent build kickoff.
-- **Visual auto-chain** — the spec mentions "frontend / SPA / responsive /
-  CSS" so the `web-visual` shape matches and `runShapeOneShot` auto-chains
-  to `runDesignOneShot`. `design.md` is generated alongside `shape.md`,
-  `spec.md`, `constraints.md`, and `taste.md`.
-- **Inferred-vs-source visibility** — every output file gets an
-  `## Inferred / Gaps` section listing what the agent guessed. Edit those
-  by hand before running `plan` to patch holes.
-
-## What this example does NOT trigger
-
-- **Directions stage.** The visual-direction-advisor (which generates 2-3
-  HTML demos in different aesthetic schools for you to pick from) is opt-in
-  and is **not** part of `ingest` or the default auto-advance. To use it,
-  run `ridgeline directions focus-timer` after `ingest` and before `plan`.
-- **Plan and build.** `ingest` stops after writing the four (or five) input
-  files. You run `plan` and `build` explicitly so you can review and edit
-  the generated specs first.
-- **Visual reviewer specialist.** This *does* run, but only inside `build`,
-  when a phase touches files like `*.tsx`, `*.css`, `*.svg`, etc. The
-  reviewer agent dispatches it automatically — nothing to configure.
-
-## One-shot end-to-end command (from this directory)
+## Recommended path: `--auto` end-to-end (from this directory)
 
 ```bash
-# 1. Kickoff: shape + design (auto-chained) + spec from idea.md, no Q&A
-node ../../dist/cli.js ingest focus-timer ./idea.md
+# Build name auto-derived from ./idea.md → "idea". Drives the whole
+# pipeline: shape → design → spec → plan → build → retro → retro-refine.
+node ../../dist/cli.js ./idea.md --auto
 
-# 2. (optional) Pick a visual direction before locking in design.md
-#    Generates 2-3 self-contained HTML demos under
-#    .ridgeline/builds/focus-timer/directions/. Open them in a browser, then
-#    enter the picked id when prompted.
-node ../../dist/cli.js directions focus-timer
-
-# 3. Review & edit the generated files (especially "Inferred / Gaps" sections):
-#      .ridgeline/builds/focus-timer/shape.md
-#      .ridgeline/builds/focus-timer/design.md
-#      .ridgeline/builds/focus-timer/spec.md
-#      .ridgeline/builds/focus-timer/constraints.md
-#      .ridgeline/builds/focus-timer/taste.md
-
-# 4. Plan: generate phase specs
-node ../../dist/cli.js plan focus-timer
-
-# 5. (optional) Preview the plan before burning build budget
-node ../../dist/cli.js dry-run focus-timer
-
-# 6. Build: execute every phase, with retries and visual review on visual phases
-node ../../dist/cli.js build focus-timer
+# Full power — opt-in research and parallel directions with inspiration:
+node ../../dist/cli.js ./idea.md --auto \
+  --research \
+  --directions 4 \
+  --inspiration ~/my-pics/
 ```
 
-If you've installed ridgeline globally (`npm install -g ridgeline`) you can
-drop the `node ../../dist/cli.js` prefix and just use `ridgeline …`.
+If you've installed ridgeline globally (`npm install -g ridgeline`) drop
+the `node ../../dist/cli.js` prefix and use `ridgeline …`.
 
-## Single-command "fire and forget" variant
+What `--auto` does on this example:
 
-If you trust the spec enough to skip the review-the-generated-files step,
-you can chain ingest → plan → build in one shell line:
+1. **shape (auto)** — produces `shape.md` non-interactively from `idea.md`.
+2. **directions (auto, opt-in)** — when `--directions N` is set and a
+   visual shape matched, dispatches N parallel `design-specialist`
+   subagents and picks one against `--inspiration`. Falls back to an
+   interactive prompt if the picker is uncertain.
+3. **design (auto)** — always runs in `--auto`, even for non-visual
+   builds. For this Pomodoro app, produces a full `design.md` keyed off
+   the picked direction (or off shape.md if directions wasn't enabled).
+4. **spec → constraints → taste** — specifier ensemble fills in the rest.
+5. **research + refine (opt-in)** — when `--research [N]` is set, runs N
+   research+refine iterations between spec and plan.
+6. **plan → build** — phase decomposition then phased build with retries
+   and visual review on visual phases.
+7. **retrospective** — appends learnings to `.ridgeline/learnings.md` so
+   future builds inherit them automatically.
+8. **retro-refine** — writes `<build-dir>/refined-input.md`, a refined
+   version of the original `idea.md` informed by what the build learned.
+   Skip with `--no-refine`.
+
+## Pause for a manual review of generated specs
+
+If you'd rather inspect (and edit) the generated `## Inferred / Gaps`
+sections before plan/build, halt the auto run early:
 
 ```bash
-node ../../dist/cli.js ingest focus-timer ./idea.md \
-  && node ../../dist/cli.js plan focus-timer \
-  && node ../../dist/cli.js build focus-timer
+node ../../dist/cli.js ./idea.md --auto --stop-after spec
+
+# Review & edit:
+#   .ridgeline/builds/idea/shape.md
+#   .ridgeline/builds/idea/design.md
+#   .ridgeline/builds/idea/spec.md
+#   .ridgeline/builds/idea/constraints.md
+#   .ridgeline/builds/idea/taste.md
+
+# Then resume:
+node ../../dist/cli.js idea --auto
 ```
 
-This is the closest ridgeline gets to a true one-shot — but the
-recommendation is still to review the generated `spec.md` and `design.md`
-between `ingest` and `plan`, because edits there are far cheaper than
-edits during `build`.
+## Stage-at-a-time (interactive) path
 
-## How does this compare to the interactive workflow?
-
-If you start from less than a full spec — say, just an idea like *"build me
-a Pomodoro timer"* — use the interactive flow instead:
+If you want the full interactive Q&A flow — useful when starting from
+less than a full spec:
 
 ```bash
 node ../../dist/cli.js focus-timer "Build a Pomodoro timer SPA"
 ```
 
-The default command auto-advances one stage at a time:
+The default command (without `--auto`) advances one stage per
+invocation. Re-invoke `ridgeline focus-timer` between stages, or run
+each stage explicitly:
 
-- `shape` runs interactively (Q&A about scope, audience, tech preferences).
-  Auto-chains to `design` if visual shapes match.
-- `spec` runs the specifier ensemble non-interactively against `shape.md`.
-- `plan` runs the planner ensemble.
-- `build` executes every phase.
+```bash
+node ../../dist/cli.js shape focus-timer "Build a Pomodoro timer SPA"
+node ../../dist/cli.js directions focus-timer       # optional, interactive
+node ../../dist/cli.js design focus-timer
+node ../../dist/cli.js spec focus-timer
+node ../../dist/cli.js plan focus-timer
+node ../../dist/cli.js build focus-timer
+node ../../dist/cli.js retrospective focus-timer    # optional
+node ../../dist/cli.js retro-refine focus-timer     # optional
+```
 
-You re-invoke `ridgeline focus-timer` between stages, or run each stage
-explicitly. Use `directions` and `research`/`refine` as opt-in extras
-between stages.
+## Trade-offs
 
-The trade-off:
+- **`--auto` from a detailed input** — fast, unattended, with a refined
+  doc waiting at the end for the next iteration. Cost: anything the
+  agents inferred goes into the build before you can review it; the
+  retro and `## Inferred / Gaps` sections surface those after the fact.
+- **`--auto --stop-after spec`** — same auto kickoff, but pause for
+  human review of the inferred specs before plan/build burn budget.
+- **Vague idea → interactive** — slowest. Best when you don't have a
+  full spec and want the shape/design Q&A to draw it out of you.
 
-- **Detailed spec → ingest** — fast, no chat, but you must edit the
-  `## Inferred / Gaps` sections to fix anything the agent guessed wrong.
-- **Vague idea → interactive** — slower, more questions, but the agent
-  pulls the spec out of you with shape and design Q&A and you don't need
-  to write `idea.md` first.
+All three converge on the same `plan → build → retro → retro-refine`
+tail. The `learnings.md` file accumulates across runs and is read
+automatically by future builds, so iteration becomes cheaper over time.
 
-Both paths converge on the same `plan → build` tail.
+## What's in this directory
+
+- `idea.md` — the spec source. Hits the `web-visual` shape category so
+  the auto pipeline runs the visual path.
+- `README.md` — this file.
+
+After you run `--auto`, you'll see:
+
+- `.ridgeline/builds/idea/` (or `focus-timer/` if you used the explicit
+  build name) — all generated artifacts.
+- `.ridgeline/learnings.md` — accumulated learnings, read by future
+  builds.
+- `<build-dir>/refined-input.md` — refined `idea.md` ready for a re-run.

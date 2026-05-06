@@ -83,8 +83,15 @@ Sandboxing is on by default when Greywall is detected. The default mode is
 ## Quick start
 
 ```sh
-# Auto-advance through the pipeline (shape → directions? → design? → spec → plan → build)
+# Step-through (one stage per invocation)
 ridgeline my-feature "Build a REST API for task management"
+
+# Unattended end-to-end (--auto)
+# Build name auto-derived from the input path (./idea.md → my-feature build "idea")
+ridgeline ./idea.md --auto
+
+# Full power: research + parallel directions + inspiration-driven picker
+ridgeline ./idea.md --auto --research --directions 4 --inspiration ~/my-pics/
 
 # Or run each stage individually
 ridgeline shape my-feature "Build a REST API for task management"
@@ -99,6 +106,9 @@ ridgeline build my-feature
 
 # One-shot kickoff from an existing spec doc (no Q&A)
 ridgeline ingest my-feature ./path/to/PRD.md
+
+# Refine the original input doc using lessons from learnings.md
+ridgeline retro-refine my-feature
 
 # Catalog media assets (images, audio, video, text)
 ridgeline catalog my-feature --classify --describe
@@ -120,13 +130,25 @@ ridgeline clean
 
 ### `ridgeline [build-name] [input]` (default)
 
-Auto-advances the build through the next incomplete pipeline stage
-(shape → directions → design → spec → plan → build; directions, design,
-research, and refine are opt-in). Accepts all flags from the individual
-commands.
+Without `--auto`, advances the build through the next incomplete required
+pipeline stage (shape → spec → plan → build). With `--auto`, drives the
+entire pipeline end-to-end including retrospective and (by default)
+retro-refine. Accepts all flags from the individual commands.
+
+The first positional argument is treated as the build name **unless** it
+resolves to an existing file or directory on disk, in which case it's
+treated as input and the build name is derived from `path.basename`.
+Both `ridgeline my-name ./idea.md --auto` and `ridgeline ./idea.md
+--auto` work.
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--auto` | off | Run the full orchestrator end-to-end without Q&A |
+| `--stop-after <stage>` | `build` | In `--auto`, halt after this stage (`shape\|design\|spec\|plan\|build`) |
+| `--no-refine` | off | In `--auto`, skip retro-refine at end of run |
+| `--research [N]` | off | In `--auto`, run N research+refine iterations (default 1) |
+| `--directions [N]` | off | In `--auto`, run N parallel design-specialists then a picker (default 3) |
+| `--inspiration <src>` | none | Inspiration source for the directions picker (file/dir/text) |
 | `--model <name>` | from settings, else `opus` | Model for all stages |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this |
@@ -140,6 +162,13 @@ commands.
 | `--specialists <n>` | `3` | Ensemble specialists per stage (1, 2, or 3) |
 | `--thorough` | -- | Alias for `--specialists 3` (the default) |
 | `-y, --yes` | off | Skip the preflight confirmation prompt |
+
+In `--auto` mode the pipeline always produces a `design.md` (even for
+non-visual builds, where it's a short placeholder) so downstream agents
+have a consistent slot for visual data. After a successful build, a
+retrospective runs and is appended to `learnings.md`; then
+`retro-refine` produces a refined version of the input doc at
+`<build-dir>/refined-input.md` for use in a re-run.
 
 ### `ridgeline shape [build-name] [input]`
 
@@ -155,25 +184,36 @@ description.
 
 ### `ridgeline directions [build-name]`
 
-Generates 2-3 differentiated visual direction options before the design
-Q&A. Web-visual shapes only -- exits no-op for backend / non-visual builds
-and warns/skips for game-visual / print-layout. Each direction lives in a
-separate visual school (with a named reference work) under
-`directions/<NN>-<slug>/`, containing `brief.md`, `tokens.md`, and a
-`demo/index.html`. Open each demo in a browser, then enter the picked id
-when prompted; the harness writes `directions/picked.txt` so the designer
-agent can use it as seed context.
+Generates differentiated visual direction options before the design Q&A.
+Web-visual shapes only — exits no-op for backend / non-visual builds and
+warns/skips for game-visual / print-layout.
+
+In **interactive mode** (default), the direction-advisor produces N
+directions in one call and prompts the user to pick by id. Each
+direction lives in a separate visual school (with a named reference
+work) under `directions/<NN>-<slug>/`, containing `brief.md`,
+`tokens.md`, and a `demo/index.html`.
+
+In **`--auto` mode**, the harness dispatches N parallel
+`design-specialist` subagents — each generates one direction in a
+distinct visual school — then `direction-advisor` runs in picker mode
+to choose the best fit against `--inspiration`. If no inspiration is
+provided or the picker returns ambiguous, it falls back to an
+interactive prompt.
 
 | Flag | Default | Description |
 |------|---------|-------------|
+| `--auto` | off | Run parallel specialists + auto picker (uses `--inspiration`) |
+| `--inspiration <src>` | none | File, directory, or inline text the picker matches against |
 | `--model <name>` | from settings, else `opus` | Model for direction-advisor agent |
 | `--timeout <minutes>` | `15` | Max duration in minutes |
-| `--count <n>` | from settings, else `2` | Number of directions to generate (2 or 3) |
+| `--count <n>` | from settings, else `2` | Number of directions to generate |
 | `--thorough` | -- | Alias for `--count 3` |
 | `--skip` | -- | Explicit no-op (skip direction generation) |
 | `-y, --yes` | off | Skip the preflight confirmation prompt |
 
-Typical cost is $2-5 per run with opus.
+Typical cost is $2-5 per run with opus (interactive); $1.50-$2.50 per
+specialist in `--auto` mode.
 
 ### `ridgeline design [build-name]`
 
@@ -361,6 +401,21 @@ automatically pick up these learnings if the file exists.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--model <name>` | from settings, else `opus` | Model for retrospective agent |
+| `--timeout <minutes>` | `10` | Max duration |
+
+### `ridgeline retro-refine [build-name]`
+
+Reads `.ridgeline/learnings.md` plus the build's spec/constraints/taste
+and any phase feedback, then writes a refined version of the original
+input doc to `<build-dir>/refined-input.md`. The original input is never
+mutated — the refined doc is a separate file the user can review and
+copy back over the source for a re-run that starts from a sharper spec.
+Runs automatically at the tail of `--auto` (unless `--no-refine`); also
+runnable manually after `retrospective`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--model <name>` | from settings, else `opus` | Model for retro-refiner agent |
 | `--timeout <minutes>` | `10` | Max duration |
 
 ### `ridgeline ui [build-name]`
