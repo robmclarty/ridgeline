@@ -19,7 +19,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 15383,
+          "inputTokens": 35,
+          "costUsd": 2.7947214999999996,
+          "durationMs": 235880,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-06T23:12:18.030Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "02-sandbox-policy",

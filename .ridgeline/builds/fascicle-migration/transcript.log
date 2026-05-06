@@ -3,3 +3,79 @@
 [ridgeline] Phase dependencies detected — using wave-based scheduling
 
 [ridgeline] ── Phase 1/12: 01-foundation-baseline ──
+[ridgeline] [01-foundation-baseline] Building...
+[01-foundation-baseline] Starting: Foundation and baseline corpus phase
+[Bash] ls .ridgeline/builds/fascicle-migration/
+[Read] .ridgeline/builds/fascicle-migration/handoff.md
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/ 2>/dev/null || echo "no baseline dir"
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/help/ .ridgeline/builds/fascicle-migration/bas…
+[Read] .ridgeline/builds/fascicle-migration/baseline/README.md
+[Read] .ridgeline/builds/fascicle-migration/baseline/mutation-score.json
+[Read] .ridgeline/builds/fascicle-migration/baseline/capability-matrix.md
+[Read] package.json
+[Bash] ls .github/workflows/ 2>/dev/null
+[Bash] ls src/engine/
+[ToolSearch]
+[Bash] ls .github/ 2>/dev/null && ls src/engine/ 2>/dev/null
+[Glob] .github/workflows/*
+[Glob] src/engine/*
+[Glob] src/engine/flows/*
+[Glob] src/engine/atoms/*
+[Glob] src/engine/composites/*
+[Glob] src/engine/adapters/*
+[Read] src/engine/flows/index.ts
+[Read] src/engine/atoms/index.ts
+[Read] src/engine/composites/index.ts
+[Read] src/engine/adapters/index.ts
+[Bash] ls src/engine/pipeline/ src/engine/claude/
+[Bash] ls -la .github 2>/dev/null && echo "---" && ls CHANGELOG.md 2>/dev/null && echo "exists"
+[TodoWrite]
+[Bash] ls -la .github 2>&1 || echo "no .github"; ls CHANGELOG.md 2>&1 || echo "no CHANGELOG"
+[Bash] cat .npmrc 2>&1
+[Read] CHANGELOG.md
+[Read] CHANGELOG.md
+[Bash] ls .ridgeline/builds/fascicle-migration/phase-*.json 2>&1; echo "---"; ls .ridgeline/builds/fas…
+[Read] .ridgeline/builds/fascicle-migration/baseline/fixtures/error-shapes.json
+[Read] .ridgeline/builds/fascicle-migration/baseline/exit-codes.md
+[Read] .ridgeline/builds/fascicle-migration/baseline/sandbox-allowlist.semi-locked.json
+[Read] .ridgeline/builds/fascicle-migration/baseline/greywall-tests.txt
+All baseline files look in place. Now let me check the CHANGELOG more carefully and verify other criteria.
+[Bash] git log --oneline -20
+[Bash] git status
+[Read] CHANGELOG.md
+Let me restructure the v0.12.0 entry to put the Breaking section first to satisfy criterion 7 strictly.
+[Edit] CHANGELOG.md
+[Edit] CHANGELOG.md
+[TodoWrite]
+[Bash] npm run check 2>&1 | tail -100
+All checks green. Now let me verify the summary.json and check ridgeline build operation.
+[Read] .check/summary.json
+Let me verify the binary is operational and capture the phase-1-check.json artifact.
+[Bash] node dist/cli.js --version 2>&1 | head -5
+[Bash] node dist/cli.js build --help 2>&1 | head -20
+Binary is operational. Now copy the summary as the phase-1-check.json artifact.
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-1-check.json && ls -la /Users…
+Now let me verify the final acceptance criteria walk-through:
+[Bash] echo "=== Criterion 1: fascicle 0.3.x and zod 4.x exact-pinned ==="; grep -E '"fascicle"|"zod"' package.json; echo ""; echo "=== Criterion 2: NO @a…
+All acceptance criteria verified. Now write the handoff and commit.
+[Write] .ridgeline/builds/fascicle-migration/handoff.md
+[TodoWrite]
+[Bash] npm run check 2>&1 | tail -20
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-1-check.json
+[TodoWrite]
+All ten acceptance criteria verified:
+
+1. ✅ `fascicle: 0.3.8` and `zod: 4.1.8` in dependencies (both 0.3.x / 4.x, exact-pinned)
+2. ✅ No `@ai-sdk/anthropic` or `ai` in any dependency block
+3. ✅ `engines.node: ">=24.0.0"` (semantically `>=24`)
+4. ✅ No `.github/workflows/` directory exists (zero Node 20 references trivially)
+5. ✅ All four scaffold directories (`flows/`, `atoms/`, `composites/`, `adapters/`) contain empty `index.ts` (`export {}`); old `pipeline/` and `claude/{claude.exec,stream.*}` remain unchanged
+6. ✅ Baseline corpus complete: `help/` (22 files), `dts/` (22 files), `fixtures/` (trajectory.jsonl, state.json, budget.json, phases/, error-shapes.json, builder-modelcall-input.json), `mutation-score.json` (placeholder + unblock recipe), `capability-matrix.md`, `sandbox-allowlist.{semi-locked,strict}.json`, `exit-codes.md`, `greywall-tests.txt`
+7. ✅ CHANGELOG `v0.12.0` entry restructured: `Breaking — for consumers` is now the first section with the Node 24 BREAKING callout; `Internal` section lists substrate migration to fascicle and "Public CLI behavior is unchanged"
+8. ✅ `npm run check` exits zero; `.check/summary.json` shows all 8 checks `ok: true`
+9. ✅ `node dist/cli.js --version` and `--help` work — binary operational
+10. ✅ `.ridgeline/builds/fascicle-migration/phase-1-check.json` is a verbatim copy of `.check/summary.json`
+
+Handoff appended to `handoff.md` with what was built, decisions, deviations (none), and notes for the next phase.
+
+READY_FOR_REVIEW

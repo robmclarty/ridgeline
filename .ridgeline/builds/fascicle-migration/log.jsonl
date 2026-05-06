@@ -2,3 +2,4 @@
 {"timestamp":"2026-05-06T23:08:11.856Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (12 phases)\n"}
 {"timestamp":"2026-05-06T23:08:11.916Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
 {"timestamp":"2026-05-06T23:08:11.918Z","level":"info","phase":"01-foundation-baseline","message":"Phase 1/12: 01-foundation-baseline"}
+{"timestamp":"2026-05-06T23:08:12.057Z","level":"info","phase":"01-foundation-baseline","message":"Building..."}

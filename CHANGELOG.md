@@ -2,6 +2,14 @@
 
 ## v0.12.0 — 2026-05-06
 
+### Breaking — for consumers
+
+- **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
+  supported. Reinstall ridgeline against Node 24 (or newer); the CI matrix
+  has been updated to test Node 24 only. This bump rides with the internal
+  fascicle migration so the runtime ABI stays aligned across the substrate
+  swap.
+
 ### Added
 
 - **Builder continuation loop.** A single phase no longer fails when the
@@ -57,14 +65,6 @@
   by a 24-hour catchall for genuinely-hung processes.
 - The plan-reviewer flags any phase exceeding 70% of the ceiling and
   rejects any phase exceeding it (was: "substantially exceeds").
-
-### Breaking — for consumers
-
-- **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
-  supported. Reinstall ridgeline against Node 24 (or newer); the CI matrix
-  has been updated to test Node 24 only. This bump rides with the internal
-  fascicle migration so the runtime ABI stays aligned across the substrate
-  swap.
 
 ### Internal
 

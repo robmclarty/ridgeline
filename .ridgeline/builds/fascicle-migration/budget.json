@@ -71,7 +71,19 @@
       "cacheCreationInputTokens": 93076,
       "durationMs": 690522,
       "timestamp": "2026-05-06T22:49:03.107Z"
+    },
+    {
+      "phase": "01-foundation-baseline",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 2.7947214999999996,
+      "inputTokens": 35,
+      "outputTokens": 15383,
+      "cacheReadInputTokens": 2278267,
+      "cacheCreationInputTokens": 201620,
+      "durationMs": 235880,
+      "timestamp": "2026-05-06T23:12:18.030Z"
     }
   ],
-  "totalCostUsd": 9.584403
+  "totalCostUsd": 12.3791245
 }
