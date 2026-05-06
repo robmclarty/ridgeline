@@ -436,3 +436,24 @@ export const getMatchedShapes = (buildDir: string): string[] => {
   const state = loadState(buildDir)
   return state?.matchedShapes ?? []
 }
+
+/** Record the absolute path of the original input source. */
+export const recordInputSource = (buildDir: string, buildName: string, sourcePath: string): void => {
+  let state = loadState(buildDir)
+  if (!state) {
+    state = {
+      buildName,
+      startedAt: new Date().toISOString(),
+      pipeline: { ...DEFAULT_PIPELINE },
+      phases: [],
+    }
+  }
+  state.inputSource = sourcePath
+  saveState(buildDir, state)
+}
+
+/** Read the recorded input source path. Returns null if none recorded. */
+export const getInputSource = (buildDir: string): string | null => {
+  const state = loadState(buildDir)
+  return state?.inputSource ?? null
+}

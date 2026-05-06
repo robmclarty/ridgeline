@@ -77,6 +77,12 @@ export type BuildState = {
   pipeline: PipelineState
   matchedShapes?: string[]
   phases: PhaseState[]
+  /**
+   * Absolute path to the source the user passed as input (file or directory).
+   * Persisted by ingest and the default command so retro-refine can read it
+   * back later. Absent when input was inline text or no input was given.
+   */
+  inputSource?: string
 }
 
 // Parsed result from claude --print --output-format json

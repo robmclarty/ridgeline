@@ -105,7 +105,7 @@ type OneShotOpts = {
 
 /**
  * Single-call Claude invocation with the standard display callbacks. Used by
- * non-interactive paths (`runShapeOneShot`, `runDesignOneShot`) where there
+ * non-interactive paths (`runShapeAuto`, `runDesignAuto`) where there
  * is no resumable session — just one prompt, one output.
  */
 export const runOneShotCall = async (

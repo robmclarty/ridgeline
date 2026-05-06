@@ -44,9 +44,9 @@ existing PRD/RFC/dir → ridgeline ingest → shape.md + spec.md + constraints.m
 ```mermaid
 flowchart TB
     input["Input arg:\nfile, directory, or raw text"] --> resolve["Resolve bundle"]
-    resolve --> shape["runShapeOneShot:\nshape.md (no Q&A)"]
+    resolve --> shape["runShapeAuto:\nshape.md (no Q&A)"]
     shape --> visual{"Visual\nshape\nmatched?"}
-    visual -->|yes| oneshot_design["runDesignOneShot:\ndesign.md (no Q&A)"]
+    visual -->|yes| oneshot_design["runDesignAuto:\ndesign.md (no Q&A)"]
     visual -->|no| skip["Skip design"]
     oneshot_design --> spec
     skip --> spec

@@ -159,3 +159,29 @@ The format is flexible — brand guidelines, informal notes, formal style guides
 - Treat the direction's tokens.md as the seed for design.md. Use its hex codes, font choices, corner radii, and motion rules as `suggestedAnswer` defaults.
 - Use the direction's brief.md to anchor language: when the user says "match the brief," refer to the named reference works.
 - The picked direction is a starting point, not a hard lock. Q&A still happens — the user may refine specific tokens. But your defaults should land in the picked direction's territory.
+
+## Non-visual fallback (auto mode)
+
+The auto orchestrator runs you for every build, even ones with no visual surface (CLI tools, libraries, backend-only services). When the matched-shape categories list is empty AND no visual context exists in the input, produce a minimal `design.md` instead of refusing or asking questions:
+
+```text
+# Design
+
+No visual surface — this is a non-visual build (CLI / library / backend / etc.).
+
+## Output medium
+
+ASCII / terminal text only. No graphical UI to design.
+
+## Conventions
+
+- Output formatting: <inferred from spec, e.g., "plain text, line-buffered">
+- Color in terminal output: <e.g., "minimal; only for warnings/errors">
+- Help text style: <inferred>
+
+## Inferred / Gaps
+
+- Every load-bearing fact in the document above that you inferred without the source input directly stating it. One bullet per item. If everything is source-backed, write `(none)`.
+```
+
+The point of always producing `design.md` is so downstream agents (reviewer, builder) always have a single place to look for visual/output conventions. For non-visual builds the doc is short and may be barely more than a placeholder — that's fine.

@@ -6,7 +6,7 @@ import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { advancePipeline, recordMatchedShapes } from "../stores/state"
 import { resolveBuildDir } from "../config"
 import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
-import { runDesign, runDesignOneShot } from "./design"
+import { runDesign, runDesignAuto } from "./design"
 import { askQuestion, runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow"
 import { resolveInput } from "./input"
 
@@ -188,7 +188,7 @@ export const formatShapeMd = (shape: ShapeOutput): string => {
 /**
  * Parse the shape JSON, write shape.md, advance pipeline state, run shape
  * detection, and either chain to design (when visual shapes match) or print
- * the next-step hint. Shared by interactive `runShape` and `runShapeOneShot`.
+ * the next-step hint. Shared by interactive `runShape` and `runShapeAuto`.
  */
 const finalizeShape = async (
   buildName: string,
@@ -225,6 +225,33 @@ const finalizeShape = async (
   }
 
   const matchedNames = matchedShapes.map((s) => s.name)
+
+  if (matchedShapes.length === 0) {
+    console.log("")
+    printInfo("Created:")
+    console.log(`  ${path.join(buildDir, "shape.md")}`)
+    console.log("")
+
+    if (opts.interactive) {
+      // Interactive flow: design is opt-in for non-visual builds.
+      printInfo(`Next: ridgeline spec ${buildName}`)
+      return
+    }
+
+    // Auto flow: design.md always runs (even for non-visual builds) so every
+    // build has a consistent slot for visual data. The designer agent
+    // produces a minimal "no visual surface" doc in this case.
+    printInfo("No visual shape matched; running design (auto) for completeness.")
+    console.log("")
+    await runDesignAuto(buildName, {
+      model: opts.model,
+      timeout: opts.timeout,
+      matchedShapes: [],
+      inferGapFlagging: true,
+    })
+    return
+  }
+
   recordMatchedShapes(buildDir, buildName, matchedNames)
 
   console.log("")
@@ -242,7 +269,7 @@ const finalizeShape = async (
       matchedShapes: matchedNames,
     })
   } else {
-    await runDesignOneShot(buildName, {
+    await runDesignAuto(buildName, {
       model: opts.model,
       timeout: opts.timeout,
       matchedShapes: matchedNames,
@@ -303,7 +330,7 @@ export const runShape = async (buildName: string, opts: ShapeOptions): Promise<v
   }
 }
 
-type ShapeOneShotOptions = ShapeOptions & {
+type ShapeAutoOptions = ShapeOptions & {
   /** Pre-resolved source content. Required — callers must supply input. */
   inputContent: string
   /** Optional human-readable label for status output (e.g. file path). */
@@ -316,9 +343,9 @@ type ShapeOneShotOptions = ShapeOptions & {
  * `ingest` command so users with a written-out PRD don't have to answer
  * back-and-forth questions.
  */
-export const runShapeOneShot = async (
+export const runShapeAuto = async (
   buildName: string,
-  opts: ShapeOneShotOptions,
+  opts: ShapeAutoOptions,
 ): Promise<void> => {
   const buildDir = resolveBuildDir(buildName, { ensure: true })
   printInfo(`Build directory: ${buildDir}`)

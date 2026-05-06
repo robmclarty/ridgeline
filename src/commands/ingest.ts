@@ -1,10 +1,11 @@
 import * as path from "node:path"
 import { printInfo, printError } from "../ui/output"
 import { resolveInputBundle, ResolvedBundle } from "./input"
-import { runShapeOneShot } from "./shape"
+import { runShapeAuto } from "./shape"
 import { runSpec, SpecOptions } from "./spec"
 import { resolveBuildDir } from "../config"
 import { resolveSpecialistTimeoutSeconds } from "../stores/settings"
+import { recordInputSource } from "../stores/state"
 
 type IngestOptions = {
   model: string
@@ -52,13 +53,16 @@ export const runIngest = async (
   }
 
   const buildDir = resolveBuildDir(buildName, { ensure: true })
+  if (bundle.type === "file" || bundle.type === "directory") {
+    recordInputSource(buildDir, buildName, bundle.path)
+  }
   printInfo(`Build: ${buildName}`)
   printInfo(`Source: ${describeBundle(bundle)}`)
   console.log("")
 
   // --- Shape (one-shot, no Q&A) ---
-  // runShapeOneShot auto-chains to runDesignOneShot if visual shapes match.
-  await runShapeOneShot(buildName, {
+  // runShapeAuto auto-chains to runDesignAuto if visual shapes match.
+  await runShapeAuto(buildName, {
     model: opts.model,
     timeout: opts.timeout,
     inputContent: bundle.content,

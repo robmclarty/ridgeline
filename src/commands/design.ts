@@ -46,7 +46,7 @@ type DesignOptions = {
   matchedShapes?: string[]
 }
 
-type DesignOneShotOptions = DesignOptions & {
+type DesignAutoOptions = DesignOptions & {
   /** When true, append a `## Inferred / Gaps` section to design.md. */
   inferGapFlagging?: boolean
 }
@@ -460,9 +460,9 @@ export const runDesign = async (
  * Non-interactive design: produce design.md from shape.md + catalog context
  * in a single LLM call, no Q&A. Used by `ingest` when visual shapes match.
  */
-export const runDesignOneShot = async (
+export const runDesignAuto = async (
   buildName: string | null,
-  opts: DesignOneShotOptions,
+  opts: DesignAutoOptions,
 ): Promise<void> => {
   const { buildDir, outputPath, timeoutMs, systemPrompt, contextParts } =
     await setupDesignRun(buildName, opts)
