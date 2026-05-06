@@ -1,0 +1,65 @@
+{
+  "entries": [
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 0,
+      "costUsd": 1.3952635,
+      "inputTokens": 7,
+      "outputTokens": 35186,
+      "cacheReadInputTokens": 72582,
+      "cacheCreationInputTokens": 73654,
+      "durationMs": 541572,
+      "timestamp": "2026-05-06T04:23:39.073Z"
+    },
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 1,
+      "costUsd": 1.642674,
+      "inputTokens": 8,
+      "outputTokens": 42254,
+      "cacheReadInputTokens": 115018,
+      "cacheCreationInputTokens": 81572,
+      "durationMs": 626369,
+      "timestamp": "2026-05-06T04:23:39.074Z"
+    },
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 2,
+      "costUsd": 0.9661947499999999,
+      "inputTokens": 7,
+      "outputTokens": 18336,
+      "cacheReadInputTokens": 55607,
+      "cacheCreationInputTokens": 73761,
+      "durationMs": 277024,
+      "timestamp": "2026-05-06T04:23:39.074Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 0,
+      "costUsd": 2.1840254999999997,
+      "inputTokens": 13,
+      "outputTokens": 34677,
+      "cacheReadInputTokens": 984220,
+      "cacheCreationInputTokens": 123598,
+      "durationMs": 533488,
+      "timestamp": "2026-05-06T04:23:39.075Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 1,
+      "costUsd": 0.45759875000000005,
+      "inputTokens": 6,
+      "outputTokens": 18,
+      "cacheReadInputTokens": 16190,
+      "cacheCreationInputTokens": 65739,
+      "durationMs": 2502,
+      "timestamp": "2026-05-06T04:23:44.494Z"
+    }
+  ],
+  "totalCostUsd": 6.645756499999999
+}

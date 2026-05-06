@@ -1,0 +1,3 @@
+{"timestamp":"2026-05-06T04:03:37.283Z","type":"plan_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Planning started"}
+{"timestamp":"2026-05-06T04:23:39.075Z","type":"plan_complete","phaseId":null,"duration":1192248,"tokens":{"input":35,"output":130453},"costUsd":6.587908499999999,"summary":"Generated 8 phases"}
+{"timestamp":"2026-05-06T04:23:44.493Z","type":"plan_complete","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Plan reviewer verdict: approved","reason":"approved"}
