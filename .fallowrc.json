@@ -33,8 +33,8 @@
     { "file": "src/stores/trajectory.ts", "exports": ["TrajectoryOpts"] },
     { "file": "src/engine/claude/stable.prompt.ts", "exports": ["StablePromptParts", "StablePromptFile", "HelpRunner"] },
     { "file": "src/ui/preflight.ts", "exports": ["StablePromptInfo"] },
-    { "file": "src/engine/pipeline/builder.budget.ts", "exports": ["BuilderBudget"] },
-    { "file": "src/engine/pipeline/builder.marker.ts", "exports": ["BuilderMarker"] }
+    { "file": "src/engine/pipeline/builder.marker.ts", "exports": ["BuilderMarker"] },
+    { "file": "src/engine/pipeline/build.loop.ts", "exports": ["BuilderInvocationEndReason", "BuilderInvocationRecord", "BuilderLoopOutcome", "BuilderLoopOptions", "BuilderInvocationContext", "BuilderInvoker", "DiffHasher", "BuilderLoopArgs", "DEFAULT_MAX_CONTINUATIONS", "DEFAULT_PHASE_COST_CAP_MULTIPLIER", "PROGRESS_TRIM_THRESHOLD_TOKENS", "defaultDiffHasher", "defaultInvoker"] }
   ],
   "duplicates": {
     "ignore": [

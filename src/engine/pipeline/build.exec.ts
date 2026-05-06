@@ -22,7 +22,7 @@ const resolveHandoffTarget = (config: RidgelineConfig, phase: PhaseInfo, cwd?: s
   return path.join(cwd, ".ridgeline", "builds", config.buildName, `handoff-${phase.id}.md`)
 }
 
-const assembleUserPrompt = (
+export const assembleUserPrompt = (
   config: RidgelineConfig,
   phase: PhaseInfo,
   feedbackPath: string | null,
