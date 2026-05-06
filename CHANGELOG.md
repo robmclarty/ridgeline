@@ -1,5 +1,27 @@
 # Changelog
 
+## v0.11.0 — 2026-05-06
+
+### Added
+
+- `--auto` flag on the default command runs the entire pipeline end-to-end from a single input — shape → design (always) → spec → plan → build → retrospective → retro-refine — with build name auto-derived from the input path's basename when not supplied explicitly.
+- `--stop-after <stage>`, `--no-refine`, `--research [N]`, `--directions [N]`, and `--inspiration <src>` flags on the default command for opt-in research+refine loops, parallel direction generation, and inspiration-driven design picking.
+- New `ridgeline retro-refine <name>` command (and core agent) that reads `learnings.md` plus the build's spec/feedback and writes a refined version of the original input to `<build-dir>/refined-input.md`, never mutating the user's source. Runs automatically at the tail of `--auto` unless `--no-refine` is passed.
+- New `design-specialist` subagent and `direction-advisor` picker mode: in directions auto mode the harness dispatches N parallel specialists (each anchored in a distinct visual school) and then picks one against `--inspiration`, falling back to interactive prompt when uncertain.
+- Uniform `--auto` flag on every relevant subcommand for scripting consistency (no-op on already-non-interactive stages).
+- New `examples/focus-timer/` showcase: a detailed `idea.md` plus walkthrough README that exercises the full visual pipeline from one input.
+
+### Changed
+
+- `runShapeOneShot` → `runShapeAuto` and `runDesignOneShot` → `runDesignAuto` for naming convention parity. Existing OneShot signatures otherwise preserved.
+- In `--auto` mode, `design.md` is always produced (even for non-visual builds) so downstream agents have a consistent slot for visual data; the designer prompt has a new non-visual fallback section that emits a minimal placeholder for CLI/library/backend builds.
+- `BuildState` gains an optional `inputSource` field; `ingest` and the default command persist the original input path so retro-refine can later read it back.
+- The default command's first positional argument is now treated as input (build name auto-derived) when it resolves to an existing file or directory; the explicit `<build-name> <input>` form still works.
+
+### Internal
+
+- Added unit tests for `runCreate` (closing an existing gap), `runAuto`, `runRetroRefine`, and `runDirectionsAuto`; baseline rises from 1036 to 1064 tests.
+
 ## v0.10.1 — 2026-05-05
 
 ### Internal
