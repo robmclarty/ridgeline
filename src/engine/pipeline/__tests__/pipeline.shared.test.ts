@@ -28,7 +28,7 @@ vi.mock("node:fs", async () => {
 })
 
 import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "../pipeline.shared"
-import { PromptDocument } from "../prompt.document"
+import { createPromptDocument } from "../prompt.document"
 import { buildAgentRegistry } from "../../discovery/agent.registry"
 import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan"
 import { printError } from "../../../ui/output"
@@ -133,7 +133,7 @@ describe("createStderrHandler", () => {
 describe("appendConstraintsAndTaste", () => {
   it("appends constraints section", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints content")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendConstraintsAndTaste(doc, makeConfig())
 
@@ -147,7 +147,7 @@ describe("appendConstraintsAndTaste", () => {
     vi.mocked(fs.readFileSync)
       .mockReturnValueOnce("constraints")
       .mockReturnValueOnce("taste content")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendConstraintsAndTaste(doc, makeConfig({ tastePath: "/tmp/taste.md" }))
 
@@ -158,7 +158,7 @@ describe("appendConstraintsAndTaste", () => {
 
   it("omits taste section when tastePath is null", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendConstraintsAndTaste(doc, makeConfig({ tastePath: null }))
 
@@ -167,7 +167,7 @@ describe("appendConstraintsAndTaste", () => {
 
   it("appends extra context when present", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendConstraintsAndTaste(doc, makeConfig({ extraContext: "additional info" }))
 
@@ -178,7 +178,7 @@ describe("appendConstraintsAndTaste", () => {
 
   it("omits extra context when null", () => {
     vi.mocked(fs.readFileSync).mockReturnValue("constraints")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendConstraintsAndTaste(doc, makeConfig({ extraContext: null }))
 
@@ -190,7 +190,7 @@ describe("appendDesign", () => {
   it("injects feature-level design.md when it exists", () => {
     vi.mocked(fs.existsSync).mockImplementation((p: any) => String(p).includes("/tmp/build"))
     vi.mocked(fs.readFileSync).mockReturnValue("feature design content")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendDesign(doc, makeConfig())
 
@@ -205,7 +205,7 @@ describe("appendDesign", () => {
       return s.includes("ridgeline/design.md") && !s.includes("/tmp/build")
     })
     vi.mocked(fs.readFileSync).mockReturnValue("project design content")
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendDesign(doc, makeConfig())
 
@@ -220,7 +220,7 @@ describe("appendDesign", () => {
       if (String(p).includes("/tmp/build")) return "feature design"
       return "project design"
     })
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendDesign(doc, makeConfig())
 
@@ -231,7 +231,7 @@ describe("appendDesign", () => {
 
   it("does nothing when no design.md exists", () => {
     vi.mocked(fs.existsSync).mockReturnValue(false)
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendDesign(doc, makeConfig())
 
@@ -244,7 +244,7 @@ describe("appendAssetCatalog", () => {
     vi.mocked(fs.existsSync).mockImplementation((p: any) =>
       String(p).includes("asset-catalog.json") && String(p).includes("/tmp/build"),
     )
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendAssetCatalog(doc, makeConfig())
 
@@ -260,7 +260,7 @@ describe("appendAssetCatalog", () => {
       const s = String(p)
       return s.includes("asset-catalog.json") && s.includes("ridgeline/asset-catalog") && !s.includes("/tmp/build")
     })
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendAssetCatalog(doc, makeConfig())
 
@@ -269,7 +269,7 @@ describe("appendAssetCatalog", () => {
 
   it("does nothing when no catalog exists", () => {
     vi.mocked(fs.existsSync).mockReturnValue(false)
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
 
     appendAssetCatalog(doc, makeConfig())
 

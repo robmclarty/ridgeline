@@ -7,7 +7,7 @@ import { readHandoff } from "../../stores/handoff"
 import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument } from "./prompt.document"
 
 /**
  * Resolve the file path the builder should append handoff notes to.
@@ -28,7 +28,7 @@ const assembleUserPrompt = (
   feedbackPath: string | null,
   cwd?: string,
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   appendConstraintsAndTaste(doc, config)
   appendDesign(doc, config)

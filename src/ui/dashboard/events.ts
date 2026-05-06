@@ -6,40 +6,41 @@ export interface DashboardEvent {
   data: string
 }
 
-export class EventBuffer {
-  private events: DashboardEvent[] = []
-  private lastId = 0
-  private readonly perTypeCap: number
+interface EventBuffer {
+  push(name: EventName, payload: unknown): DashboardEvent
+  replayAfter(id: number): DashboardEvent[]
+}
 
-  constructor(perTypeCap: number = 200) {
-    this.perTypeCap = perTypeCap
-  }
+export const createEventBuffer = (perTypeCap: number = 200): EventBuffer => {
+  let events: DashboardEvent[] = []
+  let lastId = 0
 
-  push(name: EventName, payload: unknown): DashboardEvent {
-    this.lastId += 1
-    const event: DashboardEvent = {
-      id: this.lastId,
-      name,
-      data: JSON.stringify(payload),
-    }
-    this.events.push(event)
-    this.prune()
-    return event
-  }
-
-  private prune(): void {
+  const prune = (): void => {
     const byName: Record<EventName, DashboardEvent[]> = { state: [], budget: [], trajectory: [] }
-    for (const ev of this.events) byName[ev.name].push(ev)
+    for (const ev of events) byName[ev.name].push(ev)
     const keep = new Set<number>()
     for (const name of ["state", "budget", "trajectory"] as const) {
       const arr = byName[name]
-      const slice = arr.slice(-this.perTypeCap)
+      const slice = arr.slice(-perTypeCap)
       for (const ev of slice) keep.add(ev.id)
     }
-    this.events = this.events.filter((ev) => keep.has(ev.id))
+    events = events.filter((ev) => keep.has(ev.id))
   }
 
-  replayAfter(id: number): DashboardEvent[] {
-    return this.events.filter((ev) => ev.id > id)
+  const push = (name: EventName, payload: unknown): DashboardEvent => {
+    lastId += 1
+    const event: DashboardEvent = {
+      id: lastId,
+      name,
+      data: JSON.stringify(payload),
+    }
+    events.push(event)
+    prune()
+    return event
   }
+
+  const replayAfter = (id: number): DashboardEvent[] =>
+    events.filter((ev) => ev.id > id)
+
+  return { push, replayAfter }
 }

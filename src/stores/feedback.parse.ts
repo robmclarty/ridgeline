@@ -9,7 +9,7 @@ const normalizeIssue = (item: unknown, severity: "blocking" | "suggestion"): Rev
     const obj = item as Record<string, unknown>
     return {
       criterion: typeof obj.criterion === "number" ? obj.criterion : undefined,
-      description: typeof obj.description === "string" ? obj.description : String(obj.description ?? ""),
+      description: typeof obj.description === "string" ? obj.description : "",
       file: typeof obj.file === "string" ? obj.file : undefined,
       severity,
       requiredState: typeof obj.requiredState === "string" ? obj.requiredState : undefined,

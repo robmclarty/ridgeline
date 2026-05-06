@@ -28,6 +28,8 @@
   "duplicates": {
     "ignore": [
       "**/__tests__/**",
+      "scripts/**",
+      "src/cli.ts",
       "src/engine/pipeline/ensemble.exec.ts",
       "src/engine/pipeline/specify.exec.ts",
       "src/sensors/playwright.ts",

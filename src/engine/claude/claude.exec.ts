@@ -282,7 +282,7 @@ export const invokeClaude = async (opts: InvokeOptions): Promise<ClaudeResult> =
       try {
         resolve(extractResult(stdoutData))
       } catch (err) {
-        reject(new Error(`Failed to parse claude output: ${err}`))
+        reject(new Error(`Failed to parse claude output: ${String(err)}`))
       }
     })
 

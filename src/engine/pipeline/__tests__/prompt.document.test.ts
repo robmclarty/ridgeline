@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest"
-import { PromptDocument } from "../prompt.document"
+import { createPromptDocument, PromptDocument } from "../prompt.document"
 
 describe("PromptDocument", () => {
   it("renders an instruction section as bare markdown", () => {
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
     doc.instruction("Check Command", "Run npm test after changes.")
     expect(doc.render()).toBe("## Check Command\n\nRun npm test after changes.")
   })
 
   it("renders a data section with role marker", () => {
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
     doc.data("constraints.md", "Use TypeScript strict mode.")
     expect(doc.render()).toBe(
       "## constraints.md\n\n<!-- role: data -->\nUse TypeScript strict mode.",
@@ -17,7 +17,7 @@ describe("PromptDocument", () => {
   })
 
   it("renders a data-fenced section with lang tag", () => {
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
     doc.dataFenced("Git Diff", "+added line", "diff")
     expect(doc.render()).toBe(
       "## Git Diff\n\n<!-- role: data -->\n```diff\n+added line\n```",
@@ -25,7 +25,7 @@ describe("PromptDocument", () => {
   })
 
   it("joins multiple sections with double newlines", () => {
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
     doc.instruction("Heading A", "Content A")
     doc.data("Heading B", "Content B")
     const rendered = doc.render()
@@ -35,11 +35,11 @@ describe("PromptDocument", () => {
   })
 
   it("returns empty string for an empty document", () => {
-    expect(new PromptDocument().render()).toBe("")
+    expect(createPromptDocument().render()).toBe("")
   })
 
   it("supports fluent chaining", () => {
-    const rendered = new PromptDocument()
+    const rendered = createPromptDocument()
       .instruction("A", "1")
       .data("B", "2")
       .dataFenced("C", "3", "json")
@@ -51,7 +51,7 @@ describe("PromptDocument", () => {
   })
 
   it("inspect() returns structured sections in order", () => {
-    const doc = new PromptDocument()
+    const doc = createPromptDocument()
       .instruction("A", "1")
       .data("B", "2")
       .dataFenced("C", "3", "diff")
@@ -64,7 +64,7 @@ describe("PromptDocument", () => {
   })
 
   it("inspect() returns a read-only view", () => {
-    const doc = new PromptDocument().instruction("A", "1")
+    const doc = createPromptDocument().instruction("A", "1")
     const sections = doc.inspect()
     // TypeScript prevents mutation at compile time; verify the array is a snapshot
     expect(sections).toHaveLength(1)

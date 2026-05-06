@@ -4,9 +4,6 @@ severity: error
 language: typescript
 files:
   - "src/**/*.ts"
-ignores:
-  - "src/ui/dashboard/events.ts"
-  - "src/engine/pipeline/prompt.document.ts"
 rule:
   any:
     - kind: class_declaration

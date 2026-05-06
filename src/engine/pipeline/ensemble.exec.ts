@@ -9,7 +9,7 @@ import { appendTranscript } from "../../ui/transcript"
 import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
 import { appendBaseUserPrompt } from "./plan.exec"
 import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument } from "./prompt.document"
 import { logTrajectory } from "../../stores/trajectory"
 import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../../stores/settings"
 import { parseSpecialistVerdict, skeletonsAgree } from "./specialist.verdict"
@@ -598,7 +598,7 @@ const buildPlannerSpecialistPrompt = (context: string, overlay: string): string 
 }
 
 const assemblePlannerSpecialistUserPrompt = (config: RidgelineConfig): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
   appendBaseUserPrompt(doc, config)
   doc.instruction("Output Format", "IMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON.")
   return doc.render()
@@ -608,7 +608,7 @@ const assemblePlannerSynthesizerUserPrompt = (
   config: RidgelineConfig,
   drafts: { perspective: string; draft: SpecialistProposal }[],
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
   appendBaseUserPrompt(doc, config)
 
   const proposalLines: string[] = []

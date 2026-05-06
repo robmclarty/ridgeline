@@ -228,9 +228,9 @@ describe.skipIf(!isClaudeAvailable())("e2e: planner specialist", () => {
                 } else if (b.type === "thinking") {
                   console.log(`[assistant/message/thinking] ${(b.thinking as string)?.slice(0, 200)}...`)
                 } else if (b.type === "tool_use") {
-                  console.log(`[assistant/message/tool_use] name=${b.name}, input=${JSON.stringify(b.input)?.slice(0, 300)}`)
+                  console.log(`[assistant/message/tool_use] name=${String(b.name)}, input=${JSON.stringify(b.input)?.slice(0, 300)}`)
                 } else {
-                  console.log(`[assistant/message/${b.type}] ${JSON.stringify(b).slice(0, 200)}`)
+                  console.log(`[assistant/message/${String(b.type)}] ${JSON.stringify(b).slice(0, 200)}`)
                 }
               }
             }

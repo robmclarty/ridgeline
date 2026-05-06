@@ -119,7 +119,7 @@ describe("commands/run", () => {
     }
 
     // Mock process.exit to throw instead of exiting
-    origExit = process.exit
+    origExit = process.exit.bind(process)
     process.exit = vi.fn(() => { throw new Error("process.exit") }) as any
   })
 

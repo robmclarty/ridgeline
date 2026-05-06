@@ -6,7 +6,7 @@ import { createDisplayCallbacks } from "../claude/stream.display"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { createStderrHandler } from "./pipeline.shared"
 import { SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // Refine executor
@@ -30,7 +30,7 @@ export const invokeRefiner = async (
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("refiner.md")
 
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   doc.data("spec.md", specMd)
   doc.data("research.md", researchMd)

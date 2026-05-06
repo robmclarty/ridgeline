@@ -10,7 +10,7 @@ import { buildAgentRegistry } from "../discovery/agent.registry"
 import { prepareAgentsAndPlugins, commonInvokeOptions, appendDesign } from "./pipeline.shared"
 import { getMatchedShapes } from "../../stores/state"
 import { loadShapeDefinitions } from "../../shapes/detect"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument } from "./prompt.document"
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -19,7 +19,7 @@ const assembleUserPrompt = (
   cwd?: string,
   sensorFindings?: SensorFinding[],
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   doc.data("Phase Spec", fs.readFileSync(phase.filepath, "utf-8"))
 

@@ -264,7 +264,7 @@ async function main() {
   } else {
     write_line(process.stderr, "")
     const status = summary.ok ? "✔ all checks passed" : "✘ one or more checks failed"
-    write_line(process.stderr, `${status} in ${summary.total_duration_ms}ms`)
+    write_line(process.stderr, `${status} in ${String(summary.total_duration_ms)}ms`)
     write_line(process.stderr, `report: ${OUTPUT_DIR}/summary.json`)
     write_line(process.stderr, "")
   }

@@ -7,7 +7,7 @@ import { readTrajectory } from "../../stores/trajectory"
 import type { BudgetState, BuildState, TrajectoryEntry } from "../../types"
 import { renderHtml } from "./html"
 import { buildSnapshot, DashboardSnapshot } from "./snapshot"
-import { EventBuffer, EventName } from "./events"
+import { createEventBuffer, EventName } from "./events"
 import { watchAppend, watchJson } from "./watcher"
 
 export interface StartDashboardOptions {
@@ -75,7 +75,7 @@ export const createDashboardApp = (opts: StartDashboardOptions): DashboardApp =>
   const renderSnapshot = (): DashboardSnapshot =>
     buildSnapshot(buildName, cachedState, cachedBudget, cachedTrajectory)
 
-  const buffer = new EventBuffer(200)
+  const buffer = createEventBuffer(200)
   const clients = new Set<Client>()
 
   const broadcast = (name: EventName, payload: unknown): void => {

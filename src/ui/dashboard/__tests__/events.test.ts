@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { EventBuffer } from "../events"
+import { createEventBuffer } from "../events"
 
 describe("EventBuffer", () => {
   it("assigns monotonic ids across event types", () => {
-    const buf = new EventBuffer()
+    const buf = createEventBuffer()
     const a = buf.push("state", { a: 1 })
     const b = buf.push("budget", { b: 2 })
     const c = buf.push("trajectory", { c: 3 })
@@ -13,7 +13,7 @@ describe("EventBuffer", () => {
   })
 
   it("replayAfter returns only events with id greater than requested", () => {
-    const buf = new EventBuffer()
+    const buf = createEventBuffer()
     buf.push("state", { a: 1 })
     buf.push("budget", { b: 2 })
     const third = buf.push("trajectory", { c: 3 })
@@ -23,7 +23,7 @@ describe("EventBuffer", () => {
   })
 
   it("caps each event type at its per-type cap (>= 200 per spec)", () => {
-    const buf = new EventBuffer(3)
+    const buf = createEventBuffer(3)
     for (let i = 0; i < 5; i++) buf.push("state", i)
     for (let i = 0; i < 5; i++) buf.push("budget", i)
     for (let i = 0; i < 5; i++) buf.push("trajectory", i)

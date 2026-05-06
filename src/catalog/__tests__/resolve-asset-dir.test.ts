@@ -4,7 +4,7 @@ import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup"
 
 // Mock process.cwd() to use temp directories
-const originalCwd = process.cwd
+const originalCwd = process.cwd.bind(process)
 let tmpDir: string
 
 beforeEach(() => {

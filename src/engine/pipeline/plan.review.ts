@@ -3,7 +3,7 @@ import * as path from "node:path"
 import { RidgelineConfig, PlanVerdict, ClaudeResult } from "../../types"
 import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument } from "./prompt.document"
 import { appendBaseUserPrompt } from "./plan.exec"
 import { scanPhases } from "../../stores/phases"
 import { logTrajectory } from "../../stores/trajectory"
@@ -54,7 +54,7 @@ export const reportPhaseSizeWarnings = (config: RidgelineConfig): PhaseEstimate[
 }
 
 const buildReviewerUserPrompt = (config: RidgelineConfig, phasesMd: string): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
   appendBaseUserPrompt(doc, config)
   doc.data("Synthesized Plan (phase files)", phasesMd)
   doc.instruction(
@@ -148,7 +148,7 @@ export const revisePlanWithFeedback = async (
     fs.unlinkSync(path.join(config.phasesDir, f))
   }
 
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
   appendBaseUserPrompt(doc, config)
   doc.data(
     "Reviewer Feedback (must be addressed)",

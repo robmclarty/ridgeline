@@ -26,7 +26,7 @@ describe.skipIf(!isClaudeAvailable())("e2e: full pipeline", () => {
     process.chdir(dir)
 
     // Mock process.exit to throw instead of killing the test runner
-    originalExit = process.exit
+    originalExit = process.exit.bind(process)
     process.exit = vi.fn((code?: number) => {
       throw new Error(`process.exit(${code})`)
     }) as never

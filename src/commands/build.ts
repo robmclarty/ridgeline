@@ -192,7 +192,7 @@ const runParallelWave = async (
       const wtPath = createPhaseWorktree(config.buildName, phase.id, mainCwd)
       worktreePaths.set(phase.id, wtPath)
     } catch (err) {
-      printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : err}`)
+      printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : String(err)}`)
       worktreesFailed = true
       break
     }
@@ -371,7 +371,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   try {
     failed = await executeWaveLoop(config, phases, state)
   } catch (err) {
-    printError(`Unexpected error: ${err instanceof Error ? err.message : err}`)
+    printError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`)
     cleanupAllWorktrees(config.buildName)
     failed++
   }

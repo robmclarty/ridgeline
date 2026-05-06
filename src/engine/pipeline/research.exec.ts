@@ -6,7 +6,7 @@ import { invokeClaude } from "../claude/claude.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { createStderrHandler } from "./pipeline.shared"
 import { startSpinner } from "../../ui/spinner"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument, PromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // Shared prompt helpers
@@ -39,7 +39,7 @@ const buildAgendaUserPrompt = (
   existingResearchMd: string | null,
   changelogMd: string | null,
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   doc.data("spec.md", specMd)
 
@@ -97,7 +97,7 @@ const assembleSpecialistUserPrompt = (
   tasteMd: string | null,
   agenda: string | null,
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
   appendInputSections(doc, specMd, constraintsMd, tasteMd)
 
   if (agenda) {
@@ -133,7 +133,7 @@ const assembleSynthesizerUserPrompt = (
   changelogMd: string | null,
   iterationNumber: number,
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   doc.data("spec.md", specMd)
 

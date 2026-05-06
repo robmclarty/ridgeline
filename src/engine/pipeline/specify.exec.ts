@@ -4,7 +4,7 @@ import { SpecifierDraft, EnsembleResult } from "../../types"
 import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { formatProposalHeading } from "./pipeline.shared"
-import { PromptDocument } from "./prompt.document"
+import { createPromptDocument } from "./prompt.document"
 
 // ---------------------------------------------------------------------------
 // JSON schema for structured spec specialist output
@@ -144,7 +144,7 @@ const assembleSpecialistUserPrompt = (
   shapeMd: string,
   config: SpecEnsembleConfig,
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   doc.data("shape.md", shapeMd)
 
@@ -260,7 +260,7 @@ const assembleSynthesizerUserPrompt = (
   userInput: string | null,
   inferGapFlagging: boolean,
 ): string => {
-  const doc = new PromptDocument()
+  const doc = createPromptDocument()
 
   doc.data("shape.md", shapeMd)
 
