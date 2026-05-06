@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.1 — 2026-05-05
+
+### Internal
+
+- Document the `npm run check` orchestrator in `docs/development-checks.md`: the eight default checks, the `.check/` output layout, the `summary.json` schema, and how to extend the pipeline with new structural rules, wordlist entries, or whole new checks. README's Development section now leads with `npm run check`, and `CLAUDE.md`'s workflow guidance points future Claude Code sessions at the canonical gate.
+
 ## v0.10.0 — 2026-05-05
 
 ### Internal
