@@ -340,3 +340,46 @@ Phase 0 (file id `01-scaffold-and-baselines`) is complete. All 23 acceptance cri
 Two pre-existing fallow gaps fixed in scope: clones in `retro-refine.ts`/`retrospective.ts`/`rewind.ts` added to `duplicates.ignore` (verified pre-existing at checkpoint `00de3d0`); placeholder `index.ts` files marked as `entry` (the `// fallow-ignore-next-line` directive doesn't suppress file-level unused-files).
 
 Handoff appended to `.ridgeline/builds/fascicle-migration/handoff.md` with decisions, deviations, and Phase 1 starting notes.
+[ridgeline] [01-scaffold-and-baselines] Reviewing...
+[review:01-scaffold-and-baselines] Starting review
+
+I'll verify the Phase 0 deliverables against the 23 acceptance criteria. Let me start by inspecting the diff scope and state of the repo.
+[Bash] git log --oneline -5 && echo "---branch---" && git branch --show-current
+[Bash] git diff 00de3d0..HEAD --stat | tail -30
+[review] Now I'll verify each acceptance criterion. Starting with package.json and Node version.
+[Read] package.json
+[Bash] ls .github 2>&1; echo "---"; ls .github/workflows 2>&1
+[review] Verifying scaffold directories, baseline help and dts files.
+[Bash] ls -la src/engine/flows src/engine/atoms src/engine/composites src/engine/adapters 2>&1
+[Read] src/engine/flows/index.ts
+[Read] src/engine/atoms/index.ts
+[Read] src/engine/composites/index.ts
+[Read] src/engine/adapters/index.ts
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/help/ 2>&1 | wc -l; echo "---list---"; ls .ridgeline/builds/fascicle-migration/baseline/help/
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/dts/ 2>&1 | wc -l; echo "---list---"; ls .ridgeline/builds/fascicle-migration/baseline/dts/
+[review] Now checking fixtures, mutation-score, capability matrix, and other baselines.
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/fixtures/ 2>&1; echo "---phases---"; ls .ridgeline/builds/fascicle-migration/baseline/fixtures/phases/ 2>&1
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/ 2>&1
+[Read] .ridgeline/builds/fascicle-migration/baseline/mutation-score.json
+[review] Inspecting key fixtures and ast-grep rules.
+[Read] .ridgeline/builds/fascicle-migration/phase-0-check.json
+[Bash] ls rules/ 2>&1; echo "---staged---"; grep -l "severity: hint" rules/*.yml 2>&1
+[Read] CHANGELOG.md
+[review] Verifying check status and the fixture-replay surfaces.
+[Agent] Run `npm run check` from /Users/robmclarty/Projects/ridgeline/code/ridgeline and report whether it exits 0 with all 8 checks passing (types, lint, struct, agents, dead, docs, spell, test). Also repor…
+[Bash] cat .ridgeline/builds/fascicle-migration/baseline/fixtures/error-shapes.json | head -20
+[Bash] cat .ridgeline/builds/fascicle-migration/baseline/fixtures/builder-modelcall-input.json | head -20
+[Bash] npm run check 2>&1
+[Read] .check/summary.json
+[review] Verifying commit subject and remaining criteria.
+[Bash] git log -1 --pretty=format:'%s%n%n%b' HEAD
+[Bash] grep -E "process\.on\(['\"]SIGINT" src/cli.ts | head -5; echo "---"; grep -c "@ai-sdk\|\"ai\":" package.json
+[Read] .ridgeline/builds/fascicle-migration/baseline/help/auto.txt
+[review] All criteria inspected. Compiling verdict.
+
+The work is broadly comprehensive — the baseline corpus, scaffolding, ast-grep rules, and CHANGELOG are well-executed. However, three acceptance criteria fail. Two stem from genuine substrate vs. spec conflicts (zod version, Stryker IPC blocked by sandbox); one is a commit-subject mismatch from the builder harness.
+[ridgeline] [01-scaffold-and-baselines] FAILED: Phase 0 lands ~20 of 23 acceptance criteria including the full baseline corpus (help, dts, fixtures, error-shapes, sandbox allowlists, capability matrix, exit codes, greywall tests, README), the four empty scaffold directories, the five staged ast-grep rules, the CHANGELOG entry with BREAKING callout, and a green `npm run check`. Three criteria fail: (12) `mutation-score.json` is a placeholder with `score: null` because Stryker's worker IPC was blocked by greywall — the builder fell back to a documented stub rather than capturing the actual baseline; (2) `zod` is pinned at `^4.1.8`, not `^3.` as the criterion requires (fascicle 0.3.8 peer-deps `zod ^4.0.0`, so the criterion conflicts with the substrate); (23) the HEAD commit subject is `ridgeline: builder work for 01-scaffold-and-baselines (attempt 3)`, not the required `phase-0:` prefix. The Stryker fallback in particular is a tool-failure deviation per the reviewer rubric and warrants halting so the human can decide whether to relax the sandbox, defer the baseline to Phase 7, or amend the spec.
+[ridgeline] [01-scaffold-and-baselines]   - .ridgeline/builds/fascicle-migration/baseline/mutation-score.json: baseline/mutation-score.json records `score: null` and `captured: false` — Stryker's worker IPC was blocked by the greywall sandbox (EPERM AggregateError on internalConnectMultiple). The file is a documented placeholder, not a captured baseline. Per the reviewer rubric, this is a tool-failure fallback that warrants halting Phase 0 so the human can decide whether to (a) re-run Stryker outside the sandbox now and capture the real number, (b) amend the spec to defer the baseline to Phase 7, or (c) accept the placeholder. The handoff itself flags this as `_blocking_for_phase_8: true` — surfacing it now matches that intent.
+[ridgeline] [01-scaffold-and-baselines]   - package.json: package.json declares `zod: ^4.1.8`, but the acceptance criterion mandates `^3.`. The deviation has a defensible reason — fascicle 0.3.8 peer-deps require `zod ^4.0.0`, so satisfying the criterion strictly would break the substrate — but the criterion as written is unambiguously not met. This is a spec/substrate conflict the orchestrator should resolve before Phase 1 imports start consuming zod.
+[ridgeline] [01-scaffold-and-baselines]   - git HEAD (commit 0a0e3af): HEAD commit subject is `ridgeline: builder work for 01-scaffold-and-baselines (attempt 3)`, generated by the migration harness's builder loop. The acceptance criterion explicitly requires the phase exit commit subject to begin with `phase-0:`. As-is, downstream automation that filters phase-exit commits by subject prefix will not match this commit.
+[ridgeline] [01-scaffold-and-baselines] FAILED: retries exhausted
