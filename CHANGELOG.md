@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.10.0 — 2026-05-05
+
+### Internal
+
+- New `npm run check` orchestrator runs the full pipeline (types, lint, struct, agents, dead, docs, spell, test) as a single command and writes normalized per-tool output to `.check/` plus a top-level `summary.json` agents can parse. Add `--json`, `--bail`, `--only`, `--skip`, `--include`, and `--all` modifiers; `check:mutation` is opt-in.
+- Add `ast-grep` with a `rules/` folder enforcing `no-test-only`, `no-default-export`, and `no-class` (globally — no class ignores).
+- Add `cspell` with a project wordlist covering current technical and whimsical terms used across `src/` and docs.
+- Switch oxlint to `--type-aware` via `oxlint-tsgolint`; surfaced and cleared 10 warnings (`unbound-method`, `restrict-template-expressions`, `no-base-to-string`).
+- Add `stryker` mutation testing (opt-in, vitest runner, incremental).
+- Replace `EventBuffer` and `PromptDocument` classes with closure-based factories so the no-class rule can apply project-wide. Public type names (`PromptDocument`) preserved as interfaces.
+- Drop redundant NOTICE file.
+- Replace lingering bubblewrap references in docs with greywall.
+
 ## v0.9.9 — 2026-04-30
 
 ### Changed
