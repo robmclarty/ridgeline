@@ -143,6 +143,7 @@ describe("phase.sequence cache-token logging", () => {
       specialistTimeoutSeconds: 180,
       phaseBudgetLimit: 15,
       phaseTokenLimit: 80000,
+      requirePhaseApproval: false,
     }
     const state = makeState()
     const phase = makePhase()

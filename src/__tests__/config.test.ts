@@ -19,6 +19,7 @@ vi.mock("../stores/settings", () => ({
   resolveTimeoutMinutes: vi.fn((_dir: string, cli: string | undefined, defaultMinutes: number) =>
     cli !== undefined ? parseInt(cli, 10) : defaultMinutes,
   ),
+  resolveRequirePhaseApproval: vi.fn((_dir: string, cli: boolean | undefined) => cli === true),
 }))
 
 import { resolveConfig, loadVersion } from "../config"

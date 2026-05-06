@@ -75,6 +75,7 @@ export const setupE2eDir = (): { dir: string; config: RidgelineConfig; cleanup: 
     specialistTimeoutSeconds: 180,
     phaseBudgetLimit: 15,
     phaseTokenLimit: 80000,
+    requirePhaseApproval: false,
   }
 
   const cleanup = () => {

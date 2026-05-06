@@ -16,6 +16,7 @@ import { consolidateHandoffs } from "../stores/handoff"
 import { runPlan } from "./plan"
 import { runRetrospective } from "./retrospective"
 import { ensureGitRepo } from "../engine/worktree"
+import { runPhaseApproval } from "../ui/phase-prompt"
 import * as fs from "node:fs"
 import * as path from "node:path"
 
@@ -323,9 +324,13 @@ const executeWaveLoop = async (
     return true
   }
 
-  while (!isBudgetExceeded) {
+  let userStopRequested = false
+
+  while (!isBudgetExceeded && !userStopRequested) {
     const readyPhases = getReadyPhases(graph, completedIds)
     if (readyPhases.length === 0) break
+
+    const lastCompletedPhase = readyPhases[readyPhases.length - 1]
 
     if (readyPhases.length === 1) {
       if (!await runAndTrackPhase(readyPhases[0])) { failed++; break }
@@ -347,6 +352,27 @@ const executeWaveLoop = async (
     }
 
     if (failed > 0) break
+
+    if (config.requirePhaseApproval) {
+      const stillReady = getReadyPhases(graph, completedIds)
+      if (stillReady.length > 0) {
+        const completedIndex = phases.findIndex((p) => p.id === lastCompletedPhase.id) + 1
+        const decision = await runPhaseApproval({
+          isTTY: Boolean(process.stdin.isTTY),
+          completedIndex,
+          totalPhases: phases.length,
+          completedPhaseId: lastCompletedPhase.id,
+          nextPhaseId: stillReady[0].id,
+        })
+        if (decision === "stop") {
+          printInfo(
+            `Build paused at phase ${completedIndex}/${phases.length}. ` +
+            `Resume with: ridgeline build ${config.buildName}`,
+          )
+          userStopRequested = true
+        }
+      }
+    }
   }
 
   return failed

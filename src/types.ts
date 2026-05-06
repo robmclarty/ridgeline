@@ -27,6 +27,8 @@ export type RidgelineConfig = {
   phaseBudgetLimit: number | null
   /** Approximate output-token ceiling per phase, advised to the planner. */
   phaseTokenLimit: number
+  /** When true, the orchestrator pauses between phases for explicit user approval. */
+  requirePhaseApproval: boolean
 }
 
 /** Verdict from the adversarial plan reviewer. */

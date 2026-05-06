@@ -93,6 +93,7 @@ describe("commands/plan", () => {
       specialistTimeoutSeconds: 180,
       phaseBudgetLimit: 15,
       phaseTokenLimit: 80000,
+      requirePhaseApproval: false,
     }
   })
 

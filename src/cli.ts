@@ -218,7 +218,8 @@ addAutoOrchestratorOptions(addAutoOption(addPreflightOptions(program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--sandbox <mode>", "Sandbox mode: off | semi-locked (default) | strict")
-  .option("--unsafe", "Alias for --sandbox=off (deprecated)"))))
+  .option("--unsafe", "Alias for --sandbox=off (deprecated)")
+  .option("--require-phase-approval", "Pause between phases for explicit user confirmation before continuing"))))
   .action(async (arg1: string | undefined, arg2: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
@@ -238,6 +239,7 @@ addAutoOrchestratorOptions(addAutoOption(addPreflightOptions(program
         context: opts.context as string | undefined,
         unsafe: opts.unsafe === true,
         sandbox: opts.sandbox as string | undefined,
+        requirePhaseApproval: opts.requirePhaseApproval === true,
         input,
         specialistCount,
       }
@@ -513,6 +515,7 @@ addAutoOption(addPreflightOptions(program
   .command("build [build-name]")
   .description("Execute the build pipeline (automatically resumes from last successful phase)")
   .option("--timeout <minutes>", "Max duration per phase in minutes (or 'unlimited' for a 24h catchall)", "120")
+  .option("--require-phase-approval", "Pause between phases for explicit user confirmation before continuing")
   .option("--check-timeout <seconds>", "Max duration for check command in seconds", "1200")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")
   .option("--check <command>", "Baseline check command (overrides constraints.md)")

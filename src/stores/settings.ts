@@ -85,6 +85,13 @@ type RidgelineSettings = {
    * Example: `{ "claude-sonnet-4-6": 1000000 }` for the 1M-context variant.
    */
   contextWindows?: Record<string, number>
+  build?: {
+    /**
+     * Pause between phases for explicit user confirmation.
+     * Default `false`. CLI `--require-phase-approval` overrides this.
+     */
+    requirePhaseApproval?: boolean
+  }
   directions?: {
     /** Number of visual direction options to generate (2 or 3). Default 2. */
     count?: 2 | 3
@@ -131,6 +138,20 @@ export const resolvePhaseBudgetLimit = (ridgelineDir: string): number | null => 
     return DEFAULT_PHASE_BUDGET_LIMIT_USD
   }
   return raw
+}
+
+/**
+ * Resolve whether to gate phase advancement on user approval.
+ *
+ * Precedence: CLI override (true → on) → settings.json → default false.
+ */
+export const resolveRequirePhaseApproval = (
+  ridgelineDir: string,
+  cliOverride: boolean | undefined,
+): boolean => {
+  if (cliOverride === true) return true
+  const raw = loadSettings(ridgelineDir).build?.requirePhaseApproval
+  return raw === true
 }
 
 /**

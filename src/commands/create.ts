@@ -33,6 +33,8 @@ export type CreateOptions = {
   isQuiet?: boolean
   /** Number of specialists for ensemble stages (forwarded to runSpec). */
   specialistCount?: 1 | 2 | 3
+  /** Pause between phases for explicit user confirmation; forwarded to runBuild. */
+  requirePhaseApproval?: boolean
 }
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
@@ -164,6 +166,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         unsafe: opts.unsafe,
         sandbox: opts.sandbox,
         maxBudgetUsd: opts.maxBudgetUsd,
+        requirePhaseApproval: opts.requirePhaseApproval,
       })
       await runBuild(config)
       break
