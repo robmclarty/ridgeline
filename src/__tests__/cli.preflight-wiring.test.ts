@@ -48,11 +48,17 @@ describe("cli preflight wiring", () => {
     })
   }
 
-  it("default action (create) invokes runPreflightGuard", () => {
-    // Default action lives outside .command() — match the action that calls runCreate
-    const idx = CLI_SRC.indexOf("await runCreate(")
-    expect(idx).toBeGreaterThan(-1)
-    const window = CLI_SRC.slice(Math.max(0, idx - 800), idx)
+  it("default action invokes runPreflightGuard before runCreate or runAuto", () => {
+    // Default action lives outside .command(); look for the preflight call
+    // within the same action body that dispatches to runCreate or runAuto.
+    // The action grew (auto orchestrator branch + opt resolution) so the
+    // window is larger than per-subcommand actions.
+    const createIdx = CLI_SRC.indexOf("await runCreate(")
+    const autoIdx = CLI_SRC.indexOf("await runAuto(")
+    expect(createIdx).toBeGreaterThan(-1)
+    expect(autoIdx).toBeGreaterThan(-1)
+    const earliest = Math.min(createIdx, autoIdx)
+    const window = CLI_SRC.slice(Math.max(0, earliest - 2500), earliest)
     expect(window).toContain("runPreflightGuard()")
   })
 })

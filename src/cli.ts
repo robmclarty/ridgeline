@@ -7,21 +7,25 @@ import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } 
 import { RidgelineConfig } from "./types"
 import { disableLogger } from "./ui/logger"
 import { askBuildName } from "./ui/prompt"
-import { runShape } from "./commands/shape"
-import { runDesign } from "./commands/design"
-import { runDirections } from "./commands/directions"
+import { runShape, runShapeAuto } from "./commands/shape"
+import { runDesign, runDesignAuto } from "./commands/design"
+import { runDirections, runDirectionsAuto } from "./commands/directions"
 import { runSpec } from "./commands/spec"
 import { runIngest } from "./commands/ingest"
 import { runPlan } from "./commands/plan"
 import { runDryRun } from "./commands/dry-run"
 import { runBuild } from "./commands/build"
 import { runCreate } from "./commands/create"
+import { runAuto, StopAfter } from "./commands/auto"
 import { runRewind } from "./commands/rewind"
 import { runRetrospective } from "./commands/retrospective"
+import { runRetroRefine } from "./commands/retro-refine"
 import { runResearch } from "./commands/research"
 import { runRefine } from "./commands/refine"
 import { runCatalog } from "./commands/catalog"
 import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui"
+import { resolveInputBundle } from "./commands/input"
+import * as fs from "node:fs"
 import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
 import { enforceFlavourRemoved } from "./utils/flavour-removed"
 import { detect } from "./engine/detect"
@@ -152,6 +156,55 @@ const addPreflightOptions = (cmd: Command): Command => cmd
   .option("--thorough", "Alias for --specialists 3 (the default)")
   .option("-y, --yes", "Skip the preflight confirmation prompt")
 
+/** Adds the uniform `--auto` flag to a subcommand. */
+const addAutoOption = (cmd: Command): Command =>
+  cmd.option("--auto", "Non-interactive mode: skip Q&A; use Auto variants where applicable")
+
+/** Adds the orchestrator-only flags (default command). */
+const addAutoOrchestratorOptions = (cmd: Command): Command => cmd
+  .option("--stop-after <stage>", "Halt the auto run after this stage (shape|design|spec|plan|build)")
+  .option("--no-refine", "Skip retro-refine at the end of an --auto run")
+  .option("--research [n]", "Run N research+refine iterations between spec and plan (default 1)")
+  .option("--directions [n]", "Generate N parallel directions between shape and design (default 3)")
+  .option("--inspiration <src>", "Source for the directions picker: file path, directory, or inline text")
+
+const slugify = (s: string): string =>
+  s.toLowerCase().replace(/\.[^./]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+
+/**
+ * Resolve the build-name + input pair from positional args, supporting both
+ * forms:
+ *
+ * - explicit: `ridgeline my-name ./spec.md`
+ * - derived:  `ridgeline ./spec.md`  (build name = slugified basename of input)
+ *
+ * The derived form fires only when the first arg resolves to an existing file
+ * or directory. Otherwise the first arg is treated as a build name.
+ */
+const resolveNameAndInput = (
+  arg1: string | undefined,
+  arg2: string | undefined,
+): { buildName: string | undefined; input: string | undefined } => {
+  if (arg1 && arg2) return { buildName: arg1, input: arg2 }
+  if (arg1 && !arg2) {
+    const resolved = path.resolve(arg1)
+    if (fs.existsSync(resolved)) {
+      const base = path.basename(resolved)
+      return { buildName: slugify(base), input: arg1 }
+    }
+    return { buildName: arg1, input: undefined }
+  }
+  return { buildName: undefined, input: undefined }
+}
+
+const parseAutoCount = (raw: string | boolean | undefined, defaultN: number): number | undefined => {
+  if (raw === undefined) return undefined
+  if (raw === true) return defaultN
+  const n = parseInt(String(raw), 10)
+  if (isNaN(n) || n < 1) return defaultN
+  return n
+}
+
 const parseBaseOpts = (opts: Opts) => ({
   model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
   timeout: parseInt(String(opts.timeout ?? "10"), 10),
@@ -187,10 +240,11 @@ program
   .version(loadVersion())
 
 // Default command: `ridgeline <build-name> [input]`
-// Dispatches to the next incomplete pipeline stage
-addPreflightOptions(program
-  .argument("[build-name]", "Build name")
-  .argument("[input]", "Description text or path to input file")
+// Dispatches to the next incomplete pipeline stage. With --auto, runs the
+// full orchestrator end-to-end.
+addAutoOrchestratorOptions(addAutoOption(addPreflightOptions(program
+  .argument("[build-name]", "Build name (or input path; build name derived from basename)")
+  .argument("[input]", "Description text or path to input file/directory")
   .option("--model <name>", "Model for all stages (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
@@ -201,11 +255,15 @@ addPreflightOptions(program
   .option("--taste <path>", "Path to taste.md")
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--sandbox <mode>", "Sandbox mode: off | semi-locked (default) | strict")
-  .option("--unsafe", "Alias for --sandbox=off (deprecated)"))
-  .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
+  .option("--unsafe", "Alias for --sandbox=off (deprecated)"))))
+  .action(async (arg1: string | undefined, arg2: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
-      await runCreate(await requireBuildName(buildName), {
+      const { buildName, input } = resolveNameAndInput(arg1, arg2)
+      const resolvedName = await requireBuildName(buildName)
+      const { specialistCount } = detectPreflightFlags()
+
+      const baseCreateOpts = {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: String(opts.timeout ?? "10"),
         maxBudgetUsd: opts.maxBudgetUsd as string | undefined,
@@ -218,42 +276,78 @@ addPreflightOptions(program
         unsafe: opts.unsafe === true,
         sandbox: opts.sandbox as string | undefined,
         input,
-      })
+        specialistCount,
+      }
+
+      if (opts.auto === true) {
+        await runAuto(resolvedName, {
+          ...baseCreateOpts,
+          stopAfter: opts.stopAfter as StopAfter | undefined,
+          isNoRefine: opts.refine === false,
+          research: parseAutoCount(opts.research, 1),
+          directions: parseAutoCount(opts.directions, 3),
+          inspiration: opts.inspiration as string | undefined,
+        })
+        return
+      }
+
+      await runCreate(resolvedName, baseCreateOpts)
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("shape [build-name] [input]")
   .description("Gather project context and produce shape.md")
   .option("--model <name>", "Model for shaper agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration per turn in minutes", "10"))
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
-      await runShape(await requireBuildName(buildName), {
+      const resolvedName = await requireBuildName(buildName)
+      const baseOpts = {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         input,
-      })
+      }
+      if (opts.auto === true) {
+        if (!input) {
+          console.error("--auto requires an input argument for shape")
+          process.exit(1)
+        }
+        const bundle = resolveInputBundle(input)
+        await runShapeAuto(resolvedName, {
+          ...baseOpts,
+          inputContent: bundle.content,
+          inputLabel: bundle.type === "file"
+            ? bundle.path
+            : bundle.type === "directory"
+              ? `${bundle.path} (${bundle.files.length} files)`
+              : "inline text",
+        })
+        return
+      }
+      await runShape(resolvedName, baseOpts)
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-program
+addAutoOption(program
   .command("directions [build-name]")
   .description(
-    "Generate 2-3 differentiated visual direction options (HTML demos) before " +
-      "design.md Q&A. Opt-in. Web-visual shapes only. Costs ~$2-5 per run.",
+    "Generate differentiated visual direction options (HTML demos) before " +
+      "design.md Q&A. Opt-in. Web-visual shapes only. With --auto, dispatches " +
+      "N parallel design-specialists then picks one against --inspiration.",
   )
   .option("--model <name>", "Model for direction-advisor agent (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "15")
-  .option("--count <n>", "Number of directions to generate (2 or 3). Overrides settings.directions.count")
+  .option("--count <n>", "Number of directions to generate. Overrides settings.directions.count")
   .option("--thorough", "Alias for --count 3")
   .option("--skip", "Explicit no-op (skip direction generation)")
-  .option("-y, --yes", "Skip the preflight confirmation prompt")
+  .option("--inspiration <src>", "Inspiration source for the auto picker: file path, directory, or inline text")
+  .option("-y, --yes", "Skip the preflight confirmation prompt"))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
@@ -261,31 +355,45 @@ program
         ? 3
         : opts.count !== undefined ? parseInt(String(opts.count), 10) : undefined
       const count = resolveDirectionCount(ridgelineDirFromCwd(), cliOverride)
-      await runDirections(await requireBuildName(buildName), {
+      const resolvedName = await requireBuildName(buildName)
+      const baseOpts = {
         ...parseBaseOpts(opts),
         count,
         isSkip: opts.skip === true,
-      })
+      }
+      if (opts.auto === true) {
+        await runDirectionsAuto(resolvedName, {
+          ...baseOpts,
+          inspiration: opts.inspiration as string | undefined,
+        })
+        return
+      }
+      await runDirections(resolvedName, baseOpts)
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("design [build-name]")
   .description("Establish or update visual design system (design.md)")
   .option("--model <name>", "Model for designer agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration per turn in minutes", "10"))
+  .option("--timeout <minutes>", "Max duration per turn in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
-      await runDesign(buildName ? await requireBuildName(buildName) : null, parseBaseOpts(opts))
+      const resolvedName = buildName ? await requireBuildName(buildName) : null
+      if (opts.auto === true) {
+        await runDesignAuto(resolvedName, { ...parseBaseOpts(opts), inferGapFlagging: true })
+        return
+      }
+      await runDesign(resolvedName, parseBaseOpts(opts))
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("spec [build-name] [input]")
   .description(
     "Generate spec.md, constraints.md, and taste.md from shape.md via ensemble. " +
@@ -294,7 +402,7 @@ addPreflightOptions(program
   )
   .option("--model <name>", "Model for specialists and synthesizer (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount"))
+  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
@@ -313,7 +421,7 @@ addPreflightOptions(program
     }
   })
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("ingest [build-name] [input]")
   .description(
     "One-shot pipeline kickoff: convert a freeform spec (file or directory of " +
@@ -324,7 +432,7 @@ addPreflightOptions(program
   )
   .option("--model <name>", "Model for shaper, designer, and specifier (defaults to settings.json model, or 'opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
-  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount"))
+  .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
@@ -379,11 +487,11 @@ addPreflightOptions(program
     }
   })
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("refine [build-name]")
   .description("Merge research.md findings into spec.md")
   .option("--model <name>", "Model for refiner agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration in minutes", "10"))
+  .option("--timeout <minutes>", "Max duration in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
@@ -428,9 +536,9 @@ const addPlanOptions = (cmd: Command): Command => cmd
   .option("--taste <path>", "Path to taste.md")
   .addOption(new Option("--deep-ensemble", "deprecated: use --thorough").hideHelp())
 
-addPreflightOptions(addPlanOptions(program
+addAutoOption(addPreflightOptions(addPlanOptions(program
   .command("plan [build-name]")
-  .description("Generate phase specs from spec.md and constraints.md")))
+  .description("Generate phase specs from spec.md and constraints.md"))))
   .action(withConfigAndPreflight(runPlan))
 
 addPlanOptions(program
@@ -438,7 +546,7 @@ addPlanOptions(program
   .description("Display the plan without executing"))
   .action(withConfig(runDryRun))
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("build [build-name]")
   .description("Execute the build pipeline (automatically resumes from last successful phase)")
   .option("--timeout <minutes>", "Max duration per phase in minutes", "120")
@@ -452,7 +560,7 @@ addPreflightOptions(program
   .option("--context <text>", "Extra context appended to builder and planner prompts")
   .option("--sandbox <mode>", "Sandbox mode: off | semi-locked (default) | strict")
   .option("--unsafe", "Alias for --sandbox=off (deprecated)")
-  .option("--no-structured-log", "Disable structured logging to log.jsonl"))
+  .option("--no-structured-log", "Disable structured logging to log.jsonl")))
   .action(withConfigAndPreflight(runBuild))
 
 addPreflightOptions(program
@@ -468,15 +576,36 @@ addPreflightOptions(program
     }
   })
 
-addPreflightOptions(program
+addAutoOption(addPreflightOptions(program
   .command("retrospective [build-name]")
   .description("Analyze a completed build and extract learnings for future builds")
   .option("--model <name>", "Model for retrospective agent (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration in minutes", "10"))
+  .option("--timeout <minutes>", "Max duration in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
       await runRetrospective(await requireBuildName(buildName), {
+        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
+      })
+    } catch (err) {
+      handleCommandError(err)
+    }
+  })
+
+addAutoOption(addPreflightOptions(program
+  .command("retro-refine [build-name]")
+  .description(
+    "Produce a refined version of the original input spec from learnings.md " +
+      "and the just-completed build's artifacts. Writes refined-input.md to " +
+      "the build directory.",
+  )
+  .option("--model <name>", "Model for retro-refiner agent (defaults to settings.json model, or 'opus')")
+  .option("--timeout <minutes>", "Max duration in minutes", "10")))
+  .action(async (buildName: string | undefined, opts: Opts) => {
+    try {
+      await runPreflightGuard()
+      await runRetroRefine(await requireBuildName(buildName), {
         model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
       })

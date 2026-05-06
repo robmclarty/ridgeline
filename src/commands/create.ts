@@ -1,15 +1,20 @@
 import * as path from "node:path"
 import { printInfo } from "../ui/output"
-import { getPipelineStatus, getNextPipelineStage } from "../stores/state"
+import {
+  getPipelineStatus,
+  getNextPipelineStage,
+  recordInputSource,
+} from "../stores/state"
 import { PipelineStage } from "../types"
-import { runShape, ShapeOptions } from "./shape"
+import { runShape, runShapeAuto, ShapeOptions } from "./shape"
 import { runSpec, SpecOptions } from "./spec"
 import { resolveBuildDir, resolveConfig } from "../config"
 import { resolveSpecialistTimeoutSeconds } from "../stores/settings"
 import { runPlan } from "./plan"
 import { runBuild } from "./build"
+import { resolveInputBundle } from "./input"
 
-type CreateOptions = {
+export type CreateOptions = {
   model: string
   timeout: string
   maxBudgetUsd?: string
@@ -22,6 +27,12 @@ type CreateOptions = {
   unsafe?: boolean
   sandbox?: string
   input?: string
+  /** Skip Q&A; route shape to runShapeAuto. spec/plan/build are already non-interactive. */
+  isAuto?: boolean
+  /** Suppress the status table — used when called from the runAuto orchestrator. */
+  isQuiet?: boolean
+  /** Number of specialists for ensemble stages (forwarded to runSpec). */
+  specialistCount?: 1 | 2 | 3
 }
 
 const STAGE_LABELS: Record<PipelineStage, string> = {
@@ -40,31 +51,58 @@ const STATUS_ICONS: Record<string, string> = {
   pending: "---",
 }
 
-export const runCreate = async (buildName: string, opts: CreateOptions): Promise<void> => {
-  const buildDir = resolveBuildDir(buildName, { ensure: true })
+const DISPLAY_STAGES: PipelineStage[] = [
+  "shape", "design", "spec", "research", "refine", "plan", "build",
+]
 
+const printStatusTable = (buildName: string, buildDir: string): void => {
   const status = getPipelineStatus(buildDir)
-  const nextStage = getNextPipelineStage(buildDir)
-
-  // Display status table
   console.log("")
   printInfo(`Build: ${buildName}`)
   console.log("")
-  const DISPLAY_STAGES: PipelineStage[] = ["shape", "design", "spec", "research", "refine", "plan", "build"]
   for (const stage of DISPLAY_STAGES) {
     const icon = STATUS_ICONS[status[stage]] ?? (status[stage] === "skipped" ? "skip" : "---")
-    const label = STAGE_LABELS[stage]
-    console.log(`  ${label.padEnd(16)} ${icon}`)
+    console.log(`  ${STAGE_LABELS[stage].padEnd(16)} ${icon}`)
   }
   console.log("")
+}
+
+/**
+ * Persist the original input path to state.json when the user supplied a
+ * file or directory as input. Inline text inputs are not recorded — there
+ * is no source path to come back to.
+ */
+export const persistInputSourceIfPath = (buildDir: string, buildName: string, input?: string): void => {
+  if (!input) return
+  try {
+    const bundle = resolveInputBundle(input)
+    if (bundle.type === "file" || bundle.type === "directory") {
+      recordInputSource(buildDir, buildName, bundle.path)
+    }
+  } catch {
+    // Bad path / unreadable directory: don't fail the run; just skip recording.
+  }
+}
+
+export const runCreate = async (buildName: string, opts: CreateOptions): Promise<void> => {
+  const buildDir = resolveBuildDir(buildName, { ensure: true })
+  persistInputSourceIfPath(buildDir, buildName, opts.input)
+
+  const nextStage = getNextPipelineStage(buildDir)
+
+  if (!opts.isQuiet) {
+    printStatusTable(buildName, buildDir)
+  }
 
   if (!nextStage) {
-    printInfo("All stages complete.")
+    if (!opts.isQuiet) printInfo("All stages complete.")
     return
   }
 
-  printInfo(`Starting: ridgeline ${nextStage} ${buildName}`)
-  console.log("")
+  if (!opts.isQuiet) {
+    printInfo(`Starting: ridgeline ${nextStage} ${buildName}`)
+    console.log("")
+  }
 
   switch (nextStage) {
     case "shape": {
@@ -73,7 +111,23 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         timeout: parseInt(opts.timeout, 10),
         input: opts.input,
       }
-      await runShape(buildName, shapeOpts)
+      if (opts.isAuto) {
+        if (!opts.input) {
+          throw new Error("Auto mode requires an input argument for the shape stage.")
+        }
+        const bundle = resolveInputBundle(opts.input)
+        await runShapeAuto(buildName, {
+          ...shapeOpts,
+          inputContent: bundle.content,
+          inputLabel: bundle.type === "file"
+            ? bundle.path
+            : bundle.type === "directory"
+              ? `${bundle.path} (${bundle.files.length} files)`
+              : "inline text",
+        })
+      } else {
+        await runShape(buildName, shapeOpts)
+      }
       break
     }
     case "spec": {
@@ -81,6 +135,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
         model: opts.model,
         timeout: parseInt(opts.timeout, 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(opts.maxBudgetUsd) : undefined,
+        specialistCount: opts.specialistCount,
         specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(path.join(process.cwd(), ".ridgeline")),
       }
       await runSpec(buildName, specOpts)
