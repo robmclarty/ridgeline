@@ -440,15 +440,25 @@ on the sandbox model.
 
 ```sh
 npm install
-npm run build        # Compile TypeScript and copy agent prompts
-npm run dev          # Watch mode
-npm test             # Typecheck, lint, and run unit tests
-npm run test:unit    # Unit tests only (vitest)
-npm run test:e2e     # End-to-end tests
-npm run test:watch   # Watch mode
-npm run lint         # Run all linters (oxlint, markdownlint, agnix, fallow)
-npm run typecheck    # Type-check without emitting
+npm run build         # Compile TypeScript and copy agent prompts
+npm run dev           # Watch mode
+npm run check         # Single command for the full quality pipeline
+npm run check:bail    # Stop at the first failing step
+npm run check:json    # Machine-readable summary on stdout (for agents)
+npm run check:all     # Default checks plus stryker mutation testing
+npm run test:unit     # Unit tests only (vitest)
+npm run test:e2e      # End-to-end tests
+npm run test:watch    # Watch mode
 ```
+
+`npm run check` is the canonical pre-commit gate. It runs eight checks
+(typecheck, oxlint with type-aware tsgolint, ast-grep structural rules,
+agnix agent metadata, fallow dead code / duplication / complexity,
+markdownlint, cspell, and vitest), captures per-tool output to
+`.check/`, and writes a normalized `summary.json` for agent ingestion.
+See [docs/development-checks.md](docs/development-checks.md) for the
+full breakdown, output schema, and how to add new structural rules or
+words to the spell-check dictionary.
 
 ## License
 
