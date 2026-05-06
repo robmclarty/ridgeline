@@ -1,0 +1,14 @@
+{
+  "buildName": "fascicle-migration",
+  "startedAt": "2026-05-06T22:49:03.115Z",
+  "pipeline": {
+    "shape": "pending",
+    "design": "skipped",
+    "spec": "pending",
+    "research": "skipped",
+    "refine": "skipped",
+    "plan": "complete",
+    "build": "pending"
+  },
+  "phases": []
+}

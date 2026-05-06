@@ -1,0 +1,77 @@
+{
+  "entries": [
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 0,
+      "costUsd": 1.2116285,
+      "inputTokens": 7,
+      "outputTokens": 25963,
+      "cacheReadInputTokens": 56490,
+      "cacheCreationInputTokens": 82370,
+      "durationMs": 394906,
+      "timestamp": "2026-05-06T22:35:24.923Z"
+    },
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 1,
+      "costUsd": 1.32134725,
+      "inputTokens": 7,
+      "outputTokens": 29537,
+      "cacheReadInputTokens": 56475,
+      "cacheCreationInputTokens": 85631,
+      "durationMs": 402532,
+      "timestamp": "2026-05-06T22:35:24.926Z"
+    },
+    {
+      "phase": "plan",
+      "role": "specialist",
+      "attempt": 2,
+      "costUsd": 1.1938452499999999,
+      "inputTokens": 7,
+      "outputTokens": 25409,
+      "cacheReadInputTokens": 56461,
+      "cacheCreationInputTokens": 81747,
+      "durationMs": 376066,
+      "timestamp": "2026-05-06T22:35:24.926Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 0,
+      "costUsd": 2.7110725,
+      "inputTokens": 17,
+      "outputTokens": 38905,
+      "cacheReadInputTokens": 1646604,
+      "cacheCreationInputTokens": 137050,
+      "durationMs": 579647,
+      "timestamp": "2026-05-06T22:35:24.927Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 1,
+      "costUsd": 0.6614095,
+      "inputTokens": 6,
+      "outputTokens": 8233,
+      "cacheReadInputTokens": 16190,
+      "cacheCreationInputTokens": 65506,
+      "durationMs": 121746,
+      "timestamp": "2026-05-06T22:37:29.634Z"
+    },
+    {
+      "phase": "plan",
+      "role": "synthesizer",
+      "attempt": 2,
+      "costUsd": 2.4850999999999996,
+      "inputTokens": 22,
+      "outputTokens": 48015,
+      "cacheReadInputTokens": 1364686,
+      "cacheCreationInputTokens": 93076,
+      "durationMs": 690522,
+      "timestamp": "2026-05-06T22:49:03.107Z"
+    }
+  ],
+  "totalCostUsd": 9.584403
+}
