@@ -11,7 +11,7 @@
 
 - **fascicle** `^0.3.x` — orchestration core (runtime dependency). Provides composition primitives (`step`, `sequence`, `parallel`, `branch`, `map`, `pipe`, `retry`, `fallback`, `timeout`, `loop`, `compose`, `checkpoint`, `suspend`, `scope`, `stash`, `use`, `describe`), composites (`adversarial`, `ensemble`, `consensus`, `tournament`), engine (`create_engine`, `model_call`), runner (`run`, `run.stream`), typed errors (`aborted_error`, `engine_config_error`, `model_not_found_error`, `provider_error`, `provider_capability_error`, `provider_not_configured_error`, `rate_limit_error`, `schema_validation_error`, `tool_error`, `tool_approval_denied_error`, `on_chunk_error`), and the built-in `claude_cli` provider.
 - **fascicle/adapters** subpath — `filesystem_logger`, `http_logger`, `noop_logger`, `tee_logger`, `filesystem_store`. `TrajectoryLogger` and `CheckpointStore` contracts re-exported from fascicle root.
-- **zod** `^3.x` — runtime peer of fascicle, used for `review_verdict`, `plan_artifact`, `specialist_verdict` schemas passed to `model_call({ schema })`.
+- **zod** `^4.x` — runtime peer of fascicle 0.3.x (major version dictated by fascicle's peer-dependency, not a project choice), used for `review_verdict`, `plan_artifact`, `specialist_verdict` schemas passed to `model_call({ schema })`.
 - **claude_cli provider** (built into fascicle) — owns Claude subprocess spawn, greywall/bwrap sandbox kinds, auth modes (`auto | oauth | api_key`), `plugin_dirs`, `setting_sources`, `default_cwd`, `startup_timeout_ms`, `stall_timeout_ms`, `skip_probe`. Defaults: `auth_mode: 'auto'`, `startup_timeout_ms: 120_000`, `stall_timeout_ms: 300_000` (or `timeoutMinutes * 60_000` when `--timeout` is set).
 - **commander** `13.0.0` — kept as the CLI parser; no parser swap is introduced as a side effect.
 - **fascicle-viewer** — NOT a runtime dependency; consumed via its bin and via `start_viewer`/`run_viewer_cli` imports when a user opts in.
@@ -114,14 +114,14 @@ The naming-convention boundary is explicit and visible at every call site — no
 - Each atom: ≥ 1 unit test using a stub Engine that returns canned `GenerateResult` values; no live `claude_cli` provider invocations in unit tests.
 - Test fixtures pass `skip_probe: true` to fascicle's `claude_cli` provider.
 - Stryker config's `mutate` glob covers exactly `src/engine/{flows,atoms,composites,adapters}/**/*.ts` at Phase 7.
-- Mutation score on the new scope must be ≥ Phase 0 baseline mutation score on `src/engine/pipeline/` (recorded in `baseline/mutation-score.json`).
+- Mutation score on the new scope must be ≥ the Phase 0 baseline mutation score on `src/engine/pipeline/` (recorded in `baseline/mutation-score.json`). If Phase 0's Stryker run was blocked by the active sandbox (recorded as `captured: false`), capture the absolute pre-migration score at Phase 7 outside the sandbox before asserting the new-scope gate.
 - Snapshot tests for `ridgeline --help` and per-subcommand `--help` lock byte equality against `baseline/help/`.
 - Snapshot tests for command external signatures via `tsc --emitDeclarationOnly` lock byte equality against `baseline/dts/`.
 - Fixture-replay tests for state.json, phases/<id>.md, trajectory.jsonl (existing event types), budget.json against `baseline/fixtures/`.
 
 ## Phase Discipline
 
-- Each phase exits with a single commit on the fascicle branch whose subject starts with `phase-N:` followed by a short imperative summary (e.g., `phase-2: tier 1 composites + greywall integration tests green`).
+- Each phase produces at least one commit on the fascicle branch (the ridgeline builder loop owns commit naming — no specific subject prefix is required). The phase-exit gate is the `phase-<N>-check.json` artifact, not the commit subject.
 - Each phase's exit commit must have: (a) `npm run check` green; (b) `ridgeline build` operational against this build's `.ridgeline/builds/fascicle-migration/` directory; (c) `.ridgeline/builds/fascicle-migration/phase-<N>-check.json` artifact captured (the `.check/summary.json` snapshot at that commit).
 - Each phase-`<N>`-check.json must show zero failures across types, lint, struct, agents, dead code, docs, spell, tests.
 - Intermediate commits within a phase use any descriptive subject, follow Conventional Commits style matching repo history (`feat(scope):`, `fix(scope):`, `chore:`, `docs:`, `refactor:`).

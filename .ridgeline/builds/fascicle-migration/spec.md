@@ -13,10 +13,10 @@ Done means src/engine/pipeline/ is deleted, src/engine/claude/{claude.exec,strea
 
 ### Phase 0 — Scaffold, dependencies, and baseline capture
 
-Add fascicle (^0.3.x) and zod (^3.x) as runtime dependencies, bump engines.node from `>=20` to `>=24`, drop Node 20 from the CI matrix, create the new directory tree under src/engine/ (flows/, atoms/, composites/, adapters/) with empty index.ts files, and capture every pre-migration baseline that later phases verify against.
+Add fascicle (^0.3.x) and zod (^4.x — major version dictated by fascicle's peer-dependency) as runtime dependencies, bump engines.node from `>=20` to `>=24`, drop Node 20 from the CI matrix, create the new directory tree under src/engine/ (flows/, atoms/, composites/, adapters/) with empty index.ts files, and capture every pre-migration baseline that later phases verify against.
 
 Acceptance criteria:
-- package.json declares fascicle and zod under `dependencies` (not devDependencies); fascicle version range starts with `^0.3.`; zod version range starts with `^3.`.
+- package.json declares fascicle and zod under `dependencies` (not devDependencies); fascicle version range starts with `^0.3.`; zod version range matches fascicle 0.3.x's required peer (currently `^4.`).
 - package.json `engines.node` is `>=24`.
 - package.json does NOT include `@ai-sdk/anthropic` or `ai` in dependencies, devDependencies, or peerDependencies.
 - CI workflow files under .github/workflows/ contain no reference to `node-version: 20` or `node: 20`; only Node 24 (or 24+) is exercised.
@@ -26,7 +26,7 @@ Acceptance criteria:
   - `dts/` containing the `tsc --emitDeclarationOnly` output of every src/commands/*.ts external function signature.
   - `fixtures/trajectory.jsonl`, `fixtures/state.json`, `fixtures/budget.json`, and `fixtures/phases/` from a recorded pre-migration build.
   - `fixtures/error-shapes.json` recording `error.name` and `error.message` for adversarial round-cap exhaustion, schema-validation failure, auth failure, and budget-exceeded paths.
-  - `mutation-score.json` recording the Stryker mutation score on src/engine/pipeline/ at this commit.
+  - `mutation-score.json` recording the Stryker mutation score on src/engine/pipeline/ at this commit. If the active sandbox blocks Stryker (greywall blocks the TCP-localhost IPC Stryker uses for child-proxy workers — EPERM on `internalConnectMultiple`), record `{ "score": null, "captured": false }` plus a documented unblock recipe (run outside greywall with `RIDGELINE_SANDBOX=0`, or `vitest pool: 'forks'` for `coverageAnalysis: 'perTest'`); the absolute pre-migration score is then captured at Phase 7 exit before the new-scope gate is asserted. The placeholder is acceptable for Phase 0 only.
   - `capability-matrix.md` recording the verified fascicle version and its claude_cli provider capabilities (sandbox kinds, auth modes, streaming events, cost reporting, AbortSignal propagation, model alias set, startup_timeout_ms, stall_timeout_ms, skip_probe).
 - CHANGELOG.md contains a new entry under the next minor version (after 0.11.2) with at least three bullets: (1) `engines.node` bumped to `>=24` (BREAKING for consumers), prominently called out at the top of the entry; (2) internal substrate migration to fascicle; (3) public CLI behavior unchanged.
 - `npm run check` is green; `ridgeline build` runs end-to-end against an existing build.
@@ -135,7 +135,7 @@ Acceptance criteria:
 - Retry policies use fascicle's `retry({ on_error })` where `on_error` returns true exactly for {`rate_limit_error`, `provider_error` when status ∈ 5xx or network, `on_chunk_error`} and false for {`aborted_error`, `engine_config_error`, `model_not_found_error`, `schema_validation_error`, `tool_approval_denied_error`, `provider_capability_error`, `provider_not_configured_error`, `tool_error`}; verified by a unit test that constructs each error class and calls `on_error`.
 - A unit test asserts `aborted_error` always returns false from `on_error` regardless of any wrapping retry policy (it short-circuits all retry layers and propagates cancellation).
 - User-facing error messages for auth, schema-validation, and budget-exceeded paths match `.ridgeline/builds/fascicle-migration/baseline/fixtures/error-shapes.json` (snapshot test).
-- Stryker mutation testing scoped via `mutate` glob to `src/engine/{flows,atoms,composites,adapters}/**/*.ts` runs at Phase 7 exit; mutation score is ≥ the score recorded in `.ridgeline/builds/fascicle-migration/baseline/mutation-score.json`.
+- Stryker mutation testing scoped via `mutate` glob to `src/engine/{flows,atoms,composites,adapters}/**/*.ts` runs at Phase 7 exit (outside the sandbox if necessary). If the Phase 0 baseline `mutation-score.json` recorded `captured: false`, capture the absolute pre-migration score on src/engine/pipeline/ first, write it to the file, and assert the new-scope score is ≥ that number. Otherwise, assert directly against the recorded baseline.
 - Each of the five composites has at least four unit tests covering abort, trajectory, cleanup, and error surfacing (verified by counting `test()` / `it()` calls per file).
 - Each of the seven atoms has at least one unit test under src/engine/atoms/__tests__/<atom>.test.ts.
 - docs/architecture.md, docs/build-lifecycle.md, docs/ensemble-flows.md, docs/extending-ridgeline.md, and docs/long-horizon.md each contain the literal phrase `fascicle` at least once and describe the shell+core layering.
@@ -187,7 +187,7 @@ Acceptance criteria:
 - Each Tier 1 composite has ≥ 4 unit tests (abort, trajectory, cleanup, error surfacing).
 - Each atom has ≥ 1 unit test using a stub Engine.
 - Stryker config's `mutate` glob covers exactly `src/engine/{flows,atoms,composites,adapters}/**/*.ts` at Phase 7.
-- Mutation score on the new scope is ≥ Phase 0 baseline mutation score on src/engine/pipeline/.
+- Mutation score on the new scope is ≥ Phase 0 baseline mutation score on src/engine/pipeline/ (captured at Phase 7 if Phase 0's run was blocked by the active sandbox).
 - vitest.e2e.config.ts is unchanged; existing E2E fixtures remain the primary regression net for §7 invariants.
 - Test fixtures pass `skip_probe: true` to fascicle's claude_cli provider so unit tests don't make network probes.
 - Snapshot tests for `ridgeline --help` and per-subcommand `--help` capture commander's output and assert byte equality against the Phase 0 baseline at every later phase exit.
@@ -221,7 +221,7 @@ Acceptance criteria:
 
 ## In Scope
 
-- Adding fascicle (^0.3.x) and zod (^3.x) as runtime dependencies; bumping `engines.node` from `>=20` to `>=24`; updating CI matrix to drop Node 20.
+- Adding fascicle (^0.3.x) and zod (^4.x — major version dictated by fascicle's peer-dependency) as runtime dependencies; bumping `engines.node` from `>=20` to `>=24`; updating CI matrix to drop Node 20.
 - New directory tree under src/engine: `flows/`, `atoms/`, `composites/`, `adapters/`, plus `engine.factory.ts` and `claude/sandbox.policy.ts`.
 - Engine factory `makeRidgelineEngine(cfg)` calling fascicle's `create_engine` with a `claude_cli` provider configured for greywall sandbox + `auth_mode: 'auto'` + plugin_dirs + setting_sources + startup_timeout_ms + stall_timeout_ms + skip_probe (under vitest).
 - Exactly one Engine per command invocation, disposed in a `try { ... } finally { await engine.dispose() }` block at the command entry point.
@@ -245,7 +245,7 @@ Acceptance criteria:
 - Mapping `--timeout <minutes>` to `claude_cli`'s `startup_timeout_ms` and `stall_timeout_ms` in the engine factory.
 - Coordinating `plugin_dirs` / `setting_sources` with `discoverPluginDirs` / `cleanupPluginDirs` lifecycle without double-discovery.
 - Capturing Phase 0 baseline artifacts under `.ridgeline/builds/fascicle-migration/baseline/`: --help snapshots, .d.ts snapshots, trajectory/state/budget/phases fixtures, error-shape snapshots, mutation-score baseline, claude_cli capability matrix.
-- Phase exit gates: each phase ends with one commit on the fascicle branch whose subject starts with `phase-N:`; each phase captures `.ridgeline/builds/fascicle-migration/phase-<N>-check.json` containing the `.check/summary.json` snapshot.
+- Phase exit gates: each phase produces at least one commit on the fascicle branch (the ridgeline builder loop names its own commits — no specific subject prefix is required) and captures `.ridgeline/builds/fascicle-migration/phase-<N>-check.json` containing the `.check/summary.json` snapshot. The check-JSON artifact is the canonical phase-exit signal; commit subject formatting is not part of the gate.
 - Dogfood evidence: `ridgeline build --auto` driven by a separately installed stable ridgeline binary against a worktree of main, recorded in `.ridgeline/builds/fascicle-migration/dogfood-evidence.md` as a Phase 6 exit gate.
 - Plugin surface audit: `.ridgeline/builds/fascicle-migration/phase-5-plugin-surface-audit.md` enumerates every consumer of soon-to-be-deleted exports before Phase 7 deletion.
 
