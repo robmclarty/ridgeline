@@ -1,6 +1,6 @@
 {
-  "entry": ["examples/**", "scripts/**", "test/fixtures/**"],
-  "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast"],
+  "entry": ["examples/**", "scripts/**", "test/fixtures/**", "stryker.config.mjs"],
+  "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast", "@stryker-mutator/vitest-runner"],
   "ignoreExports": [
     { "file": "src/engine/claude/stream.types.ts", "exports": ["StreamEvent"] },
     { "file": "src/commands/spec.ts", "exports": ["SpecOptions"] },

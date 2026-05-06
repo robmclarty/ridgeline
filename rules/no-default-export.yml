@@ -1,0 +1,15 @@
+id: no-default-export
+message: Avoid default exports. Named exports give agents and humans stable, discoverable identifiers.
+severity: error
+language: typescript
+files:
+  - "src/**/*.ts"
+ignores:
+  - "src/sensors/a11y.ts"
+  - "src/sensors/contrast.ts"
+  - "src/sensors/playwright.ts"
+  - "src/sensors/vision.ts"
+  - "src/catalog/colorthief.d.ts"
+rule:
+  any:
+    - pattern: export default $$$

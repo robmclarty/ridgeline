@@ -12,11 +12,18 @@
   "scripts": {
     "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/plugin && cp -r plugin dist/plugin && cp src/shapes/*.json dist/shapes/",
     "dev": "tsc --watch",
-    "lint": "npm run lint:code && npm run lint:markdown && npm run lint:agents && npm run lint:fallow",
-    "lint:code": "oxlint --ignore-pattern examples --ignore-pattern .ridgeline",
+    "check": "node scripts/check.mjs",
+    "check:all": "node scripts/check.mjs --all",
+    "check:json": "node scripts/check.mjs --json",
+    "check:bail": "node scripts/check.mjs --bail",
+    "check:mutation": "stryker run",
+    "lint": "npm run lint:code && npm run lint:markdown && npm run lint:agents && npm run lint:fallow && npm run lint:struct && npm run lint:spell",
+    "lint:code": "oxlint --type-aware --ignore-pattern examples --ignore-pattern .ridgeline",
     "lint:markdown": "markdownlint-cli2 '**/*.md'",
     "lint:agents": "agnix",
     "lint:fallow": "npx fallow",
+    "lint:struct": "ast-grep scan",
+    "lint:spell": "cspell --no-progress --no-summary",
     "typecheck": "tsc --noEmit --pretty -p tsconfig.check.json",
     "prepublishOnly": "npm run build",
     "coverage": "vitest run --coverage",
@@ -45,12 +52,17 @@
     }
   },
   "devDependencies": {
+    "@ast-grep/cli": "0.42.1",
+    "@stryker-mutator/core": "9.6.1",
+    "@stryker-mutator/vitest-runner": "9.6.1",
     "@types/node": "22.19.17",
     "@vitest/coverage-v8": "4.1.2",
     "agnix": "0.17.0",
+    "cspell": "10.0.0",
     "fallow": "2.13.0",
     "markdownlint-cli2": "0.21.0",
     "oxlint": "1.58.0",
+    "oxlint-tsgolint": "0.21.1",
     "typescript": "5.9.3",
     "vitest": "4.1.2"
   }

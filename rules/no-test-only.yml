@@ -1,0 +1,12 @@
+id: no-test-only
+message: Remove `.only` before committing — focused tests silently skip the rest of the suite.
+severity: error
+language: typescript
+files:
+  - "src/**/__tests__/**/*.ts"
+  - "test/**/*.ts"
+rule:
+  any:
+    - pattern: it.only($$$)
+    - pattern: test.only($$$)
+    - pattern: describe.only($$$)
