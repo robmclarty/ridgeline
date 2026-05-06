@@ -21,8 +21,9 @@ After the migration:
 - `src/engine/pipeline/*` is gone; its intent lives as fascicle compositions
   inside `src/engine/flows/*.ts`.
 - `src/engine/claude/*` is reduced to the ridgeline-specific concerns
-  (greywall sandbox, stable prompt, sensor probe). The Claude subprocess
-  itself is invoked through fascicle's `claude_cli` adapter.
+  (greywall sandbox **policy**, stable prompt, sensor probe). The Claude
+  subprocess itself is owned by fascicle's `claude_cli` provider, which
+  ships greywall as a built-in sandbox kind.
 - `src/commands/*` is unchanged externally; internally each command builds a
   fascicle flow and calls `run(flow, input, { trajectory, checkpoint_store })`.
 - The CLI surface (`ridgeline build`, `ridgeline auto`, `ridgeline plan`, …)
@@ -69,15 +70,90 @@ Ridgeline becomes a **shell** around a fascicle-driven **core**.
 │  │  • retry, fallback, timeout, loop                    │    │
 │  │  • adversarial, ensemble, tournament, consensus      │    │
 │  │  • checkpoint, suspend, scope/stash/use              │    │
-│  │  • generate (engine), trajectory, abort, ctx         │    │
-│  │  • claude_cli adapter (wrapped by ridgeline sandbox) │    │
+│  │  • model_call (engine), trajectory, abort, ctx       │    │
+│  │  • claude_cli provider (greywall sandbox built-in)   │    │
 │  └──────────────────────────────────────────────────────┘    │
+│                                                              │
+│  Ridgeline composites (Step<i,o> → Step<i,o>, §6.1):         │
+│    phase · graph_drain · worktree_isolated ·                 │
+│    diff_review · cost_capped                                 │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 The shell is everything ridgeline does that fascicle doesn't know about
-(file layout, sandbox, prompts, sensors, UI). The core is everything that's
-"just orchestration" — the part that should not be reinvented per harness.
+(file layout, sandbox policy, prompts, sensors, UI). The core is everything
+that's "just orchestration" — the part that should not be reinvented per
+harness.
+
+### 3.1 Fascicle API surface (reference)
+
+The exports the migration relies on, all from `fascicle` (npm) unless
+noted. Fascicle is `snake_case` throughout:
+
+- **Composition primitives** (from `fascicle`):
+  `step`, `sequence`, `parallel`, `branch`, `map`, `pipe`, `retry`,
+  `fallback`, `timeout`, `loop`, `compose`, `checkpoint`, `suspend`,
+  `scope`, `stash`, `use`, `describe`.
+- **Composites** (from `fascicle`):
+  `adversarial`, `ensemble`, `ensemble_step`, `consensus`, `tournament`,
+  `improve`, `learn`, `bench`, `judge_equals`, `judge_llm`, `judge_with`.
+- **Engine** (from `fascicle`):
+  `create_engine`, `model_call`, `forward_standard_env`. Types:
+  `Engine`, `EngineConfig`, `GenerateResult`, `Tool`, `StreamChunk`,
+  `RetryPolicy`, `EffortLevel`, `Message`, `UsageTotals`.
+- **Errors** (from `fascicle`):
+  `aborted_error`, `engine_config_error`, `model_not_found_error`,
+  `provider_error`, `provider_capability_error`,
+  `provider_not_configured_error`, `rate_limit_error`,
+  `schema_validation_error`, `tool_error`, `tool_approval_denied_error`,
+  `on_chunk_error`. Use these via `instanceof` to replace ridgeline's
+  current regex-based error classification.
+- **Runner** (from `fascicle`):
+  `run(flow, input, { trajectory?, checkpoint_store?, install_signal_handlers?, resume_data? })`,
+  `run.stream(flow, input, opts)` for incremental events.
+- **Adapters** (from `fascicle/adapters`):
+  `filesystem_logger`, `http_logger`, `noop_logger`, `tee_logger`,
+  `filesystem_store`. Contracts (`TrajectoryLogger`, `CheckpointStore`)
+  exported from `fascicle` root for ridgeline's custom adapters.
+- **Viewer** (from `fascicle`):
+  `start_viewer`, `run_viewer_cli` — for the long-running observability
+  dashboard. `fascicle-viewer` is also available as a `bin`.
+
+### 3.2 Canonical call shape
+
+```ts
+import { create_engine, model_call, run, sequence, step, pipe } from 'fascicle'
+
+const engine = create_engine({
+  providers: {
+    claude_cli: {
+      auth_mode: 'auto',
+      sandbox: { kind: 'greywall', network_allowlist: [...], additional_write_paths: [...] },
+      plugin_dirs: [...],
+      setting_sources: ['project', 'local'],
+    },
+  },
+  defaults: { model: 'cli-sonnet' },
+})
+
+const builderAtom = pipe(
+  step('shapeBuilderInput', (args: BuilderArgs) => buildBuilderPrompt(args)),
+  model_call({ engine, system: BUILDER_SYSTEM, tools: BUILDER_TOOLS }),
+)
+
+try {
+  const result = await run(builderFlow, input, {
+    trajectory: ridgelineTrajectoryLogger(buildDir),
+    checkpoint_store: ridgelineCheckpointStore(buildDir),
+    // install_signal_handlers defaults to true
+  })
+} finally {
+  await engine.dispose()
+}
+```
+
+This is the only shape ridgeline needs to learn; every concrete atom and
+flow is a variation on it.
 
 ## 4. What ridgeline keeps (the shell)
 
@@ -91,7 +167,7 @@ where they touch the core, but their responsibilities are unchanged.
 | Build state | `src/stores/state.ts`, `src/stores/phases.ts`, `src/stores/tags.ts`, `src/stores/handoff.ts` | `state.json` + phase files + git tags are ridgeline's resume contract; outlives fascicle's per-step `checkpoint`. |
 | Feedback | `src/stores/feedback.*.ts` | Feedback file archival between adversarial rounds is ridgeline-specific. |
 | Settings | `src/stores/settings.ts`, `src/config.ts` | Resolves models, timeouts, direction counts. |
-| Sandbox | `src/engine/claude/sandbox.ts`, `sandbox.greywall.ts`, `sandbox.types.ts` | Greywall is ridgeline's security story; wraps fascicle's `claude_cli` spawn. |
+| Sandbox policy | `src/engine/claude/sandbox.ts`, `sandbox.greywall.ts`, `sandbox.types.ts` | Ridgeline owns the *policy* (`--sandbox` flag mapping, default allowlists, per-build path resolution); fascicle's `claude_cli` provider owns the *mechanism* (`sandbox: { kind: 'greywall', ... }`). The greywall file is rewritten as a policy builder in Phase 1. |
 | Stable prompt | `src/engine/claude/stable.prompt.ts` | Cache-budget logic ridgeline tunes around model context. |
 | Agent prompt | `src/engine/claude/agent.prompt.ts` | Domain prompt assembly. |
 | Agent discovery | `src/engine/discovery/*` | Reads `agents/*` markdown into a registry. |
@@ -107,18 +183,18 @@ where they touch the core, but their responsibilities are unchanged.
 
 | Concern | Today (ridgeline) | After (fascicle) |
 |---|---|---|
-| Top-level orchestration | `commands/build.ts` (~404 LOC) | `flows/build.flow.ts`: `sequence([ensure_repo, scan_or_plan, wave_loop, retrospective])` |
+| Top-level orchestration | `commands/build.ts` (~404 LOC) | `flows/build.flow.ts`: `cost_capped(sequence([ensure_repo, scan_or_plan, graph_drain({...}), retrospective]), { max_usd })` |
 | Per-phase loop | `engine/pipeline/phase.sequence.ts` (~494 LOC) | `adversarial({ build, critique, accept, max_rounds })` wrapped in `checkpoint({ key })` |
 | Plan ensemble | `engine/pipeline/ensemble.exec.ts` (~767 LOC) | `ensemble({ members, score })` over planner steps |
 | Specialist verdict | `engine/pipeline/specialist.verdict.ts` | `parallel({...specialists})` + reduce step |
-| Phase graph + waves | `engine/pipeline/phase.graph.ts`, `worktree.parallel.ts`, `commands/build.ts:runParallelWave` | Imperative `wave_loop_step` that invokes `map({ concurrency, do })` per ready batch |
-| Plan / build / review / refine / research / specify exec | `engine/pipeline/*.exec.ts` | Each becomes a `step('name', async (input, ctx) => generate({...}))` |
-| Plan review | `engine/pipeline/plan.review.ts` | A reviewer step composed inline. |
+| Phase graph + waves | `engine/pipeline/phase.graph.ts`, `worktree.parallel.ts`, `commands/build.ts:runParallelWave` | `graph_drain({ nodes, deps_of, do: worktree_isolated({...}), concurrency, on_failure })` — see §6.1 |
+| Plan / build / review / refine / research / specify exec | `engine/pipeline/*.exec.ts` | Each becomes a `Step` produced by `model_call({ engine, model, system, schema?, tools? })`, optionally wrapped with `pipe(prompt_step, model_call(...), (r) => r.content)`. |
+| Plan review | `engine/pipeline/plan.review.ts` | A `model_call` step composed inline. |
 | Sensors collect | `engine/pipeline/sensors.collect.ts` | A `step` invoked from the planner flow. |
-| Transient/fatal classification | `phase.sequence.ts` (`FATAL_PATTERNS`, `classifyError`) | `retry({ max_attempts, backoff_ms, on_error })` with `is_fatal_error` rethrow |
-| Claude subprocess | `engine/claude/claude.exec.ts` (~293 LOC), `stream.parse.ts`, `stream.result.ts`, `stream.display.ts`, `stream.types.ts` | Fascicle's `claude_cli` adapter via `generate({ model: 'cli-sonnet', ... })`; ridgeline keeps a thin spawn-options wrapper for greywall + stable prompt. |
-| Trajectory infrastructure | `stores/trajectory.ts` (file ops kept) + manual `logTrajectory(...)` calls | `ctx.trajectory` flows through `generate` and every composer; ridgeline supplies a `filesystem_logger` adapter pointed at the existing `.jsonl` path. |
-| Budget infrastructure | `stores/budget.ts` (file ops kept) + manual `recordCost(...)` calls | A trajectory subscriber tallies cost into the existing budget file. |
+| Transient/fatal classification | `phase.sequence.ts` (`FATAL_PATTERNS`, `classifyError`) | `retry({ max_attempts, backoff_ms, on_error })` with `instanceof` checks against fascicle's typed errors (`rate_limit_error`, `provider_error`, `engine_config_error`, `schema_validation_error`, etc.) replacing regex matching. |
+| Claude subprocess | `engine/claude/claude.exec.ts` (~293 LOC), `stream.parse.ts`, `stream.result.ts`, `stream.display.ts`, `stream.types.ts` | Configured at `create_engine({ providers: { claude_cli: { auth_mode, sandbox: { kind: 'greywall', network_allowlist, additional_write_paths }, plugin_dirs, setting_sources, default_cwd, ... } } })`. Per-call `Step`s via `model_call({ engine, model: 'cli-sonnet', system, ... })`. **Greywall is first-class in fascicle's provider config** — ridgeline contributes the policy (allowlist), not the mechanism. |
+| Trajectory infrastructure | `stores/trajectory.ts` (file ops kept) + manual `logTrajectory(...)` calls | `ctx.trajectory` flows through `model_call` and every composer. Ridgeline supplies a `TrajectoryLogger` adapter writing to the existing `.jsonl` path; optionally composed with fascicle's `tee_logger` to also drive `fascicle-viewer`. |
+| Budget infrastructure | `stores/budget.ts` (file ops kept) + manual `recordCost(...)` calls | A `TrajectoryLogger` wrapper that intercepts cost events and tallies into ridgeline's existing budget file. Composed via `tee_logger`. |
 | Abort / cleanup | `killAllClaude*`, `cleanupAllWorktrees`, ad-hoc try/finally | `ctx.abort` + `ctx.on_cleanup` registered per step; runner's signal handler. |
 | Engine public surface | `src/engine/index.ts` — re-exports `invokeBuilder`, `invokePlanner`, `invokeReviewer`, `runPhase`, `invokeClaude`, stream parse helpers | After cleanup: re-exports the new flows + a small ridgeline-specific helper set. The names `invokeBuilder`/`invokePlanner`/`invokeReviewer`/`runPhase` are deleted; if any external plugin code depends on them, surface that in the migration plan and update those call sites in the same PR. |
 
@@ -128,29 +204,154 @@ These are real value-adds ridgeline brings on top of fascicle. They stay in
 the ridgeline repo. If any prove generic enough to upstream, that's a
 follow-up RFC, not part of this migration.
 
-1. **Greywall sandbox.** A spawn wrapper that restricts the Claude subprocess
-   to a tool/path allowlist. Wraps fascicle's `claude_cli` adapter — passed
-   in as the `spawn_options` (or equivalent) to the adapter.
+1. **Greywall sandbox policy.** Fascicle ships the *mechanism*
+   (`sandbox: { kind: 'greywall', network_allowlist, additional_write_paths }`
+   in `claude_cli` provider config). Ridgeline owns the *policy*: the
+   `--sandbox` CLI flag mapping (`off | semi-locked | strict`), the
+   default allowlist for each mode, and any path-resolution logic that
+   computes per-build extra write paths. Existing
+   `src/engine/claude/sandbox.greywall.ts` is rewritten as a small policy
+   builder that produces a `SandboxProviderConfig` value, not a spawn
+   wrapper. Decision: if every existing line ends up redundant once
+   fascicle's provider handles the spawn, delete the file outright;
+   record under the §11 risks.
 2. **Stable-prompt cache budgeting.** Computes a context window budget and
-   shapes the prompt to maximize Anthropic prompt-cache hits. Composed on
-   top of `generate` calls in flow steps.
+   shapes the prompt to maximize Anthropic prompt-cache hits. Wraps the
+   input to `model_call` steps (the user-side `ModelCallInput`).
 3. **Sensor preflight + tool probe.** Pre-build sandbox-aware probe that
    verifies tool availability before the planner runs. Lives in `ui/`.
 4. **Structured verdicts.** Ridgeline's `review_verdict`, `plan_artifact`,
    `specialist_verdict` schemas — ridgeline-domain Zod schemas passed to
-   `generate({ schema })`.
-5. **Wave-loop composer.** The phase-graph-drains-over-ready-sets pattern
-   isn't a stock fascicle primitive; ridgeline expresses it as one
-   imperative `step` that calls `run(wave_flow, ready)` per batch. Document
-   it as a candidate upstream pattern but keep it ridgeline-side for now.
+   `model_call({ schema })`. Fascicle handles validation +
+   `schema_repair_attempts` repair loops.
+5. **Custom composites.** Several recurring ridgeline patterns are
+   genuine `Step<i, o> → Step<i, o>` composites. They live in
+   `src/engine/composites/` and follow fascicle's primitive contract
+   (named display, `ctx` plumbing, abort-aware). See §6.1 for the set.
 6. **Build-state resume.** `state.json` + tag-based git checkpoints span
    processes (resume after `Ctrl-C`); fascicle's `checkpoint` is per-step
    memoization. Ridgeline's outer resume logic stays.
-7. **Feedback file archival.** Adversarial round feedback is persisted to
-   disk between rounds for human inspection. Ridgeline-side hook on the
-   `adversarial` composer's per-round event.
-8. **Retrospective + retro-refine.** Domain commands that read the build
+7. **Retrospective + retro-refine.** Domain commands that read the build
    log post-hoc; unchanged.
+
+### 6.1 Custom composites (Tier 1)
+
+Each is a Step factory taking inner Steps and returning a composed Step,
+written against fascicle's `Step<i, o>` contract so it interoperates with
+every existing primitive. All live in `src/engine/composites/` and are
+exported under that subpath. Tagged ⬆ are upstream candidates after the
+migration settles.
+
+#### `phase` — checkpoint + adversarial + feedback archive
+
+Combines git checkpoint setup, fascicle's `adversarial`, per-round feedback
+archival, and the round-cap contract into one value. Replaces the
+imperative wrapper currently in `phase.sequence.ts`.
+
+```ts
+phase<input, candidate>({
+  checkpoint_key:    (i: input) => string,
+  setup_tag:         (i: input, ctx: RunContext) => Promise<void>,
+  build:             Step<AdversarialBuildInput<input, candidate>, candidate>,
+  critique:          Step<candidate, AdversarialCritiqueResult>,
+  accept:            (c: AdversarialCritiqueResult) => boolean,
+  archive_feedback?: (round: number, c: AdversarialCritiqueResult) => Promise<void>,
+  max_rounds:        number,
+}): Step<input, PhaseResult<candidate>>
+```
+
+#### `graph_drain` — DAG traversal with ready-sets + bounded concurrency ⬆
+
+The phase-graph-drains-over-ready-sets pattern as a value. Replaces the
+imperative `wave_loop_step` referenced in earlier drafts. Generic enough
+to upstream — useful for any dependency-ordered task pipeline.
+
+```ts
+graph_drain<node, result>({
+  nodes:        ReadonlyArray<node>,
+  id_of:        (n: node) => string,
+  deps_of:      (n: node) => ReadonlyArray<string>,
+  do:           Step<node, result>,
+  concurrency?: number,
+  on_failure?:  'abort_all' | 'skip_dependents' | 'continue',
+}): Step<unknown, ReadonlyMap<string, result>>
+```
+
+#### `worktree_isolated` — git-worktree-scoped execution with deterministic merge
+
+Wraps an inner Step in a fresh git worktree, registers cleanup via
+`ctx.on_cleanup`, and merges results back in a configurable order
+(default `index_order` to honor invariant §7.4).
+
+```ts
+worktree_isolated<input, output>({
+  worktree_path:    (i: input) => string,
+  branch_from?:     string,
+  do:               Step<input & { cwd: string }, output>,
+  merge_back:       'index_order' | 'completion_order'
+                  | ((results: ReadonlyArray<output>) => ReadonlyArray<output>),
+  cleanup_on_fail?: boolean,
+}): Step<input, output>
+```
+
+#### `diff_review` — build-then-review-on-diff
+
+The build/commit/diff/review chain as a value. Pairs cleanly inside
+`phase`'s `build` slot to express ridgeline's full per-phase loop.
+
+```ts
+diff_review<input, build_out, verdict>({
+  build:        Step<input, build_out>,
+  commit:       (out: build_out, ctx: RunContext) => Promise<{ before: string; after: string }>,
+  compute_diff: (markers: { before: string; after: string }, ctx: RunContext) => Promise<string>,
+  review:       Step<{ build_out: build_out; diff: string; input: input }, verdict>,
+}): Step<input, { build_out: build_out; verdict: verdict }>
+```
+
+#### `cost_capped` — abort when cumulative cost exceeds threshold ⬆
+
+Subscribes to cost events on `ctx.trajectory`, aborts the inner step's
+controller when total exceeds `max_usd`. Finer-grained than ridgeline's
+current per-wave check. Generic enough to upstream.
+
+```ts
+cost_capped<i, o>(
+  inner: Step<i, o>,
+  config: {
+    max_usd:      number,
+    on_exceeded?: (total_usd: number, ctx: RunContext) => void,
+  },
+): Step<i, o>
+```
+
+### 6.2 Custom composites (Tier 2 — land if Phase 4 reveals repetition)
+
+Build only if the same pattern appears 3+ times in the `flows/` tree.
+Otherwise leave imperative.
+
+- **`with_stable_prompt(inner, { strategy })`** — pre-shapes
+  `ModelCallInput` for prompt-cache hits. Replaces ad-hoc wrapping
+  inside every atom.
+- **`with_handoff(inner, { read_prior, write_next })`** — encodes the
+  inter-stage handoff I/O contract (directions → design → spec → plan
+  → build).
+- **`specialist_panel({ members, aggregate })`** — `parallel(members)`
+  + a typed reducer step. Names the panel-verdict pattern.
+- **`adversarial_archived(adversarial_config, { archive })`** —
+  decorator over fascicle's `adversarial` with a per-round side
+  effect. Pick this **or** `phase`'s `archive_feedback` slot, not
+  both.
+- **`resumable(inner, { state_path, hash_input, encode, decode })`** —
+  outer-resume across process invocations. Different from fascicle's
+  intra-run `checkpoint`. Encodes the `state.json` pattern.
+
+### 6.3 Other ridgeline-side enhancements (not composites)
+
+- **Feedback file archival.** Implemented as `phase`'s
+  `archive_feedback` slot (or `adversarial_archived`); no separate
+  module needed.
+- **Retrospective + retro-refine.** Domain commands that read the
+  trajectory post-hoc; unchanged.
 
 ## 7. Invariants (must not regress)
 
@@ -174,6 +375,12 @@ The migration is correct iff each of these holds after every phase:
    - leaves the parent repo in a consistent state (no orphan tags,
      no half-merged worktrees),
    - exits with code 130.
+
+   Fascicle's runner installs SIGINT/SIGTERM handlers by default
+   (`run(flow, input, { install_signal_handlers: true })`, the default).
+   Once migrated, ridgeline's existing `process.on("SIGINT", ...)` in
+   `src/cli.ts` becomes redundant and is removed; cleanup migrates to
+   `ctx.on_cleanup(...)` registrations inside steps.
 6. **Transient vs fatal.** Network errors, rate limits, and 5xx are
    retried with exponential backoff + jitter (current defaults). Auth
    errors, schema-violation errors, and budget-exceeded abort.
@@ -204,29 +411,30 @@ The migration is correct iff each of these holds after every phase:
 
 | File / area | Action | Notes |
 |---|---|---|
-| `src/cli.ts` | KEEP | Signal handler simplified once fascicle runner owns SIGINT; until then, both are wired (idempotent). |
+| `src/cli.ts` | EDIT | Remove the manual `process.on("SIGINT", ...)` once fascicle's runner default (`install_signal_handlers: true`) is in effect across every command. |
 | `src/commands/*.ts` | WRAP | Each command builds a fascicle flow and calls `run(flow, input, opts)`. External signature unchanged. |
 | `src/engine/index.ts` | REPLACE (incrementally) | Old re-exports stay until call sites migrate; final pass deletes them. |
-| `src/engine/pipeline/*` | REPLACE | Each `*.exec.ts` becomes a `step` in the corresponding flow. |
-| `src/engine/claude/claude.exec.ts` | REPLACE | Replaced by `generate({ model: 'cli-sonnet', ... })` over fascicle's `claude_cli` adapter. |
-| `src/engine/claude/stream.*.ts` | REPLACE | Fascicle's adapter emits structured chunks; ridgeline's stream-parse code goes away. |
-| `src/engine/claude/sandbox.greywall.ts` | KEEP / WRAP | Stays; passed into the `claude_cli` adapter as spawn options. |
-| `src/engine/claude/sandbox.ts`, `sandbox.types.ts` | KEEP | Unchanged. |
-| `src/engine/claude/stable.prompt.ts` | KEEP | Used by flow steps before `generate`. |
+| `src/engine/pipeline/*` | REPLACE | Each `*.exec.ts` becomes a `Step` (a `model_call(...)` plus framing) in the corresponding flow. |
+| `src/engine/claude/claude.exec.ts` | DELETE | Replaced by fascicle's `claude_cli` provider configured at `create_engine`; per-call `Step`s via `model_call({ engine, model: 'cli-sonnet', ... })`. |
+| `src/engine/claude/stream.*.ts` | DELETE | Fascicle's `claude_cli` provider emits typed `StreamChunk` events; ridgeline's stream-parse code goes away. |
+| `src/engine/claude/sandbox.greywall.ts` | REWRITE → policy builder | Becomes a small module that produces a `SandboxProviderConfig` value (`{ kind: 'greywall', network_allowlist, additional_write_paths }`) from ridgeline's `--sandbox` flag and per-build context. No more spawn wrapping. May be deletable if the policy ends up trivial. |
+| `src/engine/claude/sandbox.ts`, `sandbox.types.ts` | KEEP or REWRITE | Re-evaluate once `sandbox.greywall.ts` is rewritten; sandbox detection logic likely stays, the spawn-wrapping types go. |
+| `src/engine/claude/stable.prompt.ts` | KEEP | Used to shape the `ModelCallInput` passed to `model_call` steps. |
 | `src/engine/claude/agent.prompt.ts` | KEEP | Used by flow steps. |
 | `src/engine/discovery/*` | KEEP | Domain. |
 | `src/engine/detect/*` | KEEP | Domain. |
 | `src/engine/worktree.ts` | KEEP | Worktree primitives used by the wave-loop composer. |
-| `src/engine/flows/*` | NEW | New directory: `build.flow.ts`, `plan.flow.ts`, `dryrun.flow.ts`, `auto.flow.ts`, `phase.flow.ts`, `wave.flow.ts`, etc. |
-| `src/engine/atoms/*` | NEW | New directory: thin step wrappers over `generate` for builder, reviewer, planner, specialist, refiner, researcher, specifier. |
-| `src/engine/adapters/*` | NEW | Ridgeline-side trajectory/checkpoint adapters that target ridgeline's existing on-disk formats. |
-| `src/stores/state.ts` | KEEP | Outer resume logic; uses fascicle's checkpoint store internally only for per-step memoization. |
-| `src/stores/budget.ts` | WRAP | Subscribed via a fascicle trajectory listener instead of explicit `recordCost(...)` calls. |
-| `src/stores/trajectory.ts` | WRAP | Becomes a `TrajectoryLogger` adapter that writes to the existing `.jsonl` path. |
+| `src/engine/flows/*` | NEW | New directory: `build.flow.ts`, `plan.flow.ts`, `dryrun.flow.ts`, `auto.flow.ts`. Top-level `sequence`/`branch` compositions per command; reach for composites + atoms. |
+| `src/engine/atoms/*` | NEW | New directory: each atom is a `Step` produced by `model_call({ engine, model, system, schema?, tools? })` for builder, reviewer, planner, specialist, refiner, researcher, specifier. |
+| `src/engine/composites/*` | NEW | New directory of ridgeline-specific `Step<i, o> → Step<i, o>` composites: `phase.ts`, `graph_drain.ts`, `worktree_isolated.ts`, `diff_review.ts`, `cost_capped.ts` (Tier 1). Tier 2 added later if patterns repeat. See §6.1, §6.2. |
+| `src/engine/adapters/*` | NEW | Ridgeline-side `TrajectoryLogger` and `CheckpointStore` implementations that target ridgeline's existing on-disk formats. |
+| `src/stores/state.ts` | KEEP | Outer resume logic; uses fascicle's `CheckpointStore` only for per-step memoization. |
+| `src/stores/budget.ts` | WRAP | Cost events flow through `ctx.trajectory`; ridgeline supplies a `TrajectoryLogger` decorator that tallies into `budget.json`. Replaces explicit `recordCost(...)` calls. |
+| `src/stores/trajectory.ts` | WRAP | Becomes a `TrajectoryLogger` adapter that writes to the existing `.jsonl` path. Composed with fascicle's `tee_logger` if a second sink is needed. |
 | `src/stores/phases.ts`, `tags.ts`, `handoff.ts`, `feedback.*` | KEEP | Domain stores. |
 | `src/agents/*`, `src/sensors/*`, `src/ui/*`, `src/catalog/*`, `src/shapes/*`, `src/references/*` | KEEP | Domain. |
-| `package.json` | EDIT | Add `fascicle` dep. Remove now-unused deps (e.g. `chalk`-stream-parsing helpers if any) only after call sites are gone. |
-| `tsconfig.json` | EDIT (likely) | Verify Node 20 compat with fascicle's `>=24` recommended; pin per-package if needed. (See §11 risks.) |
+| `package.json` | EDIT | Add `fascicle` and `zod` runtime deps; add `@ai-sdk/anthropic` only if direct-API calls are wanted (the `claude_cli` provider needs no peer deps beyond zod). Bump `engines.node` to `>=24`. Remove `commander`-adjacent stream-parsing helpers ridgeline used for `claude.exec.ts` once the call sites are gone. |
+| `tsconfig.json` | EDIT | Confirm `target` / `lib` settle on Node 24 baseline. |
 
 ## 9. Phase ordering (safe self-bootstrap)
 
@@ -240,9 +448,22 @@ under migration is never the binary executing the migration.
 
 ### Phase 0 — Scaffold
 
-- Add `fascicle` to `package.json`. Verify Node-version compatibility.
+- Install: `npm install fascicle zod`. Fascicle is published on npm
+  ([`fascicle` on npm](https://www.npmjs.com/package/fascicle); repo:
+  [github.com/robmclarty/fascicle](https://github.com/robmclarty/fascicle)).
+  Pin to a known-good version (current at time of writing: `0.3.x`).
+- Provider peer deps: ridgeline's `claude_cli` route requires **no extra
+  peer deps**. If/when ridgeline calls direct Anthropic API
+  (e.g. `provider: 'anthropic'`), add `@ai-sdk/anthropic` and `ai` per
+  fascicle's peer dep list.
+- Bump `engines.node` in `package.json` from `>=20.0.0` to `>=24.0.0`
+  to satisfy fascicle's declared minimum (`engines.node: ">=24.0.0"`).
+- Update CI matrix to drop Node 20, add Node 24.
 - Create empty `src/engine/flows/`, `src/engine/atoms/`, `src/engine/adapters/`.
-- Add a no-op smoke test that imports `run, sequence, step` from fascicle.
+- Add a smoke test that imports `run, sequence, step, model_call,
+  create_engine` from `fascicle` and asserts they're functions. Also
+  import `filesystem_logger, filesystem_store, tee_logger` from
+  `fascicle/adapters`.
 - **Exit criteria:** `npm run check` green; no behavior change.
 
 ### Phase 1 — Adapters
@@ -253,19 +474,59 @@ under migration is never the binary executing the migration.
   `.ridgeline/builds/<name>/state/`) for per-step memoization. Keep
   `state.json` outer-resume logic untouched.
 - Implement `ridgeline_budget_subscriber` that reads cost events off the
-  trajectory and tallies into `budget.json`.
+  trajectory and tallies into `budget.json`. Compose with the trajectory
+  logger via `tee_logger`.
+- Rewrite `src/engine/claude/sandbox.greywall.ts` as a `buildSandboxPolicy(cfg):
+  SandboxProviderConfig` builder consumed by `make_ridgeline_engine`.
 - **Exit criteria:** unit tests for each adapter green; old `recordCost`,
   `logTrajectory` still in place; no production call sites moved yet.
 
+### Phase 1.5 — Composites
+
+- Implement Tier 1 composites in `src/engine/composites/` against fascicle's
+  `Step<i, o>` contract:
+  - `phase.ts` — wraps `adversarial` with checkpoint setup + per-round
+    archive hook.
+  - `graph_drain.ts` — DAG ready-set traversal with bounded concurrency
+    and configurable failure policy.
+  - `worktree_isolated.ts` — git-worktree isolation with deterministic
+    merge order; uses `ctx.on_cleanup` for worktree teardown.
+  - `diff_review.ts` — build → commit → diff → review chain.
+  - `cost_capped.ts` — trajectory-subscribed budget cap with
+    fine-grained abort.
+- Each composite ships with a unit test suite that exercises the
+  primitive contract: abort propagation, trajectory event emission,
+  cleanup registration, error surfacing. Inner Steps are stubs.
+- **Exit criteria:** all five composites green in isolation; not yet
+  wired to commands; old imperative code untouched.
+
 ### Phase 2 — Atoms
 
-- Wrap each LLM-facing exec as an `atoms/*.ts` `step`:
-  `builder_atom`, `reviewer_atom`, `planner_atom`, `specialist_atom`,
-  `refiner_atom`, `researcher_atom`, `specifier_atom`.
-- Each atom calls `generate({ model, system, prompt, schema?, abort:
-  ctx.abort, trajectory: ctx.trajectory, on_chunk })` via the
-  `claude_cli` adapter, with greywall + stable prompt applied.
-- Atoms are tested in isolation with a mocked engine.
+- One shared engine factory: `make_ridgeline_engine(cfg)` calls
+  `create_engine({ providers: { claude_cli: { auth_mode: 'auto', sandbox:
+  build_sandbox_policy(cfg), plugin_dirs, setting_sources, ... } } })`.
+  Returns the `Engine`; callers `await engine.dispose()` in a `finally`
+  block of the command entry point.
+- Each atom is a `Step` produced by `model_call`, optionally wrapped to
+  shape input/output. Sketch:
+
+  ```ts
+  // src/engine/atoms/builder.atom.ts
+  import { model_call, pipe, step } from 'fascicle'
+  import type { Engine } from 'fascicle'
+
+  export const buildBuilderAtom = (engine: Engine) =>
+    pipe(
+      step('shapeBuilderInput', (args: BuilderArgs) => buildBuilderPrompt(args)),
+      model_call({ engine, model: 'cli-sonnet', system: BUILDER_SYSTEM, tools: BUILDER_TOOLS }),
+    )
+  ```
+
+- Atom set: `builder.atom`, `reviewer.atom` (uses `model_call({ schema:
+  reviewVerdictSchema })`), `planner.atom`, `specialist.atom`,
+  `refiner.atom`, `researcher.atom`, `specifier.atom`.
+- Atoms are tested in isolation with a stub engine (a fascicle `Engine`
+  whose `generate` returns canned `GenerateResult` values).
 - **Exit criteria:** old `invoke*` functions still in use in production;
   atoms covered by unit tests but not yet wired to commands.
 
@@ -283,10 +544,15 @@ under migration is never the binary executing the migration.
 
 ### Phase 4 — Build flow
 
-- The big one. Migrate `commands/build.ts` and the per-phase loop:
-  - `flows/phase.flow.ts`: `pipe(setup_checkpoint, checkpoint(adversarial({...})))`
-  - `flows/wave.flow.ts`: `map({ concurrency, do: phase.flow })`
-  - `flows/build.flow.ts`: top-level `sequence` with `wave_loop_step`
+- The big one. Migrate `commands/build.ts` using the composites:
+  - The per-phase pattern is `phase({ checkpoint_key, setup_tag,
+    build: diff_review({ build: builder_atom, ..., review: reviewer_atom }),
+    critique, accept, archive_feedback, max_rounds })`.
+  - The wave pattern is `worktree_isolated({ ..., do: phase_flow })`
+    composed inside `graph_drain({ nodes: phases, deps_of, do: ... })`.
+  - The whole build is `cost_capped(sequence([...]), { max_usd })`.
+  - `flows/build.flow.ts` is the top-level `sequence` wiring inputs →
+    plan-if-needed → graph_drain → retrospective.
 - `commands/build.ts` becomes ~40 lines of input plumbing + `run(...)`.
 - All twelve invariants in §7 must be re-verified by tests in this phase.
 - **Exit criteria:** full build runs through the new flow; old pipeline
@@ -339,42 +605,65 @@ under migration is never the binary executing the migration.
 
 These need resolution **before** Phase 4. Flag in the build's planner:
 
-1. **Node version.** Fascicle's `package.json` declares `engines.node:
-   >=24`. Ridgeline targets `>=20`. Resolve: either bump ridgeline's
-   minimum to 24, or confirm fascicle works on 20 and downgrade its
-   declared minimum, or pin a compatible fascicle version. Decision
-   needed Phase 0.
+1. **Node version bump.** Fascicle's `package.json` declares
+   `engines.node: ">=24.0.0"`. Ridgeline targets `>=20`. Bump
+   ridgeline's `engines.node` to `>=24.0.0` and update CI; communicate
+   the bump in CHANGELOG. Fascicle also declares `engines.pnpm:
+   ">=9.0.0"` informationally — npm consumers ignore it.
 2. **Naming convention boundary.** Fascicle uses `snake_case` for all
-   exports (`create_engine`, `model_call`, `is_working_tree_dirty`).
+   exports (`create_engine`, `model_call`, `tee_logger`, `aborted_error`).
    Ridgeline uses `camelCase` (per existing memory: `isMerged`-style
    booleans). Rule: ridgeline-side identifiers stay `camelCase`;
    fascicle imports keep their `snake_case` form. No alias re-exports —
    the boundary should be visible at call sites.
-3. **`engine.dispose()`.** Fascicle's `create_engine` returns an object
-   with `dispose()`. Where is engine creation owned in ridgeline? Likely
-   one engine per `run_build` call, disposed in a `finally` block in
-   each command entry point. Confirm in Phase 1.
-4. **Wave-loop composer.** Document the imperative `wave_loop_step` as
-   a ridgeline-side pattern in `docs/architecture.md`. Decide whether to
-   propose upstreaming to fascicle as a new primitive (`graph_drain` or
-   similar) — out of scope for this migration; tracked as a follow-up.
-5. **`claude_cli` adapter capabilities.** Confirm fascicle's adapter
-   supports:
-   - custom spawn options (for greywall),
-   - structured tool-use chunks (for streaming display),
-   - cost reporting (token counts → `$`),
-   - abort propagation that actually kills the subprocess,
-   - the same model aliases ridgeline uses (`sonnet`, `opus`, `haiku`,
-     plus any custom).
-   If any are missing, file an issue against fascicle in Phase 2 and
-   ship a temporary ridgeline-side patch via a wrapper.
-6. **Trajectory event shape.** The new fascicle-emitted events must be
-   filterable into the same shape ridgeline's UI/viewer expects, or the
-   adapter translates them. Decide which in Phase 1; document the event
-   schema in `docs/long-horizon.md`.
+3. **`engine.dispose()`.** Fascicle's `create_engine` returns an `Engine`
+   with `dispose()`. Ownership: one engine per command invocation, built
+   via `make_ridgeline_engine(cfg)`, disposed in a `finally` block at
+   the command entry point.
+4. **Custom composites are ridgeline-side first.** Tier 1 composites
+   (§6.1) live in `src/engine/composites/` and are not part of fascicle.
+   `graph_drain` and `cost_capped` are flagged as upstream candidates
+   (⬆) — after the migration settles and the contracts have been
+   exercised in production, raise an RFC against fascicle. Out of
+   scope for this migration.
+5. **`claude_cli` provider capabilities (verified against fascicle docs).**
+   - Sandbox: ✅ first-class via `sandbox: { kind: 'greywall' | 'bwrap',
+     network_allowlist, additional_write_paths }`.
+   - Auth: ✅ `auto | oauth | api_key`; ridgeline likely wants `auto`
+     so subscription auth works without `ANTHROPIC_API_KEY`.
+   - Plugin dirs / setting sources: ✅ `plugin_dirs`, `setting_sources`
+     pass through.
+   - Streaming: ✅ typed `StreamChunk` events on `ctx.trajectory`.
+   - Cost reporting: ✅ flows through `ctx.trajectory` per fascicle's
+     emission rules.
+   - Abort propagation: ✅ `ctx.abort` is an `AbortSignal` honored by
+     the subprocess.
+   - Model aliases: ✅ `cli-sonnet`, `cli-opus`, `cli-haiku` (verify
+     against ridgeline's current alias set; adjust ridgeline's
+     `resolveModel` to map old → fascicle).
+   - Timeouts: `startup_timeout_ms` (default 120s), `stall_timeout_ms`
+     (default 300s) — verify these line up with ridgeline's
+     `--timeout <minutes>` flag; map appropriately.
+   - `skip_probe`: opt-out of the binary probe; relevant for tests.
+6. **Trajectory event shape.** Fascicle emits typed `TrajectoryEvent`
+   values via the `TrajectoryLogger` contract. Ridgeline's adapter
+   either (a) writes fascicle's events verbatim, breaking
+   backward-compat with old `.jsonl` consumers, or (b) translates to
+   ridgeline's existing schema. Decide in Phase 1; if (a), update
+   `docs/long-horizon.md` and any external consumers.
 7. **Plugin compatibility.** `src/engine/index.ts` is consumed by
    plugins (via `plugin/` discovery). Determine which exports are
-   load-bearing externally before deleting them in Phase 6.
+   load-bearing externally before deleting them in Phase 6. Likely
+   candidates: `parseStreamLine`, `createStreamHandler`, `extractResult`
+   — these go away with `claude.exec.ts`. If plugins depend on them,
+   surface a replacement (probably a thin reader over fascicle's
+   `StreamChunk`).
+8. **Direct API vs CLI route.** Fascicle's `claude_cli` provider is
+   sufficient for ridgeline's current behavior. If/when ridgeline wants
+   direct Anthropic API access (e.g. for cheaper Haiku calls without
+   spawning a subprocess), add the `anthropic` provider to
+   `create_engine`'s providers map and add `@ai-sdk/anthropic` + `ai`
+   peer deps. Out of scope for this migration; recorded for awareness.
 
 ## 12. Done definition
 
@@ -383,8 +672,11 @@ The migration is done when **all** are true:
 - [ ] All twelve §7 invariants verified by automated tests.
 - [ ] `src/engine/pipeline/` is deleted.
 - [ ] `src/engine/claude/{claude.exec,stream.*}.ts` are deleted.
-- [ ] `src/engine/flows/`, `src/engine/atoms/`, `src/engine/adapters/`
-      contain the new core.
+- [ ] `src/engine/flows/`, `src/engine/atoms/`, `src/engine/composites/`,
+      `src/engine/adapters/` contain the new core.
+- [ ] Tier 1 composites (`phase`, `graph_drain`, `worktree_isolated`,
+      `diff_review`, `cost_capped`) covered by isolated unit tests *and*
+      exercised by the build flow's E2E fixtures.
 - [ ] Every command in `src/commands/` runs through `run(flow, input, opts)`.
 - [ ] `npm run check` green, including mutation testing scoped to new code.
 - [ ] `docs/architecture.md`, `docs/build-lifecycle.md`,
