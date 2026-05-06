@@ -122,6 +122,44 @@ On phase success, a completion tag is created
 (`ridgeline/phase/<build>/<phase>`). When the full build completes, all
 ridgeline tags are cleaned up.
 
+## The Builder Loop
+
+A single phase rarely fits in a single Claude invocation. The orchestrator
+runs a **builder loop** per phase: each iteration is a fresh-context Claude
+call that either declares the phase ready for review, asks for more work,
+or hits a halt condition.
+
+The builder's final non-blank line is one of two markers:
+
+- `READY_FOR_REVIEW` — every acceptance criterion is met; the reviewer runs
+  next.
+- `MORE_WORK_NEEDED: <reason>` — valid work was completed but unfinished
+  items remain. The builder appends a continuation entry to
+  `phases/<id>.builder-progress.md` describing what's done, what's left,
+  and any gotchas. The orchestrator spawns a fresh-context continuation
+  that reads the progress file and picks up.
+
+Each invocation gets a budget computed from the model's context window
+minus the input prompt size. The soft target tells the builder "wind down
+around here at a natural breakpoint"; the hard target is the
+truncation-risk ceiling. Default fractions are 70% (soft) and 85% (hard)
+of available output budget; `phaseTokenLimit` from settings.json caps the
+soft target further. The context window is per-model (200K default; bump
+to 1M for the long-context Sonnet variant in `settings.contextWindows`).
+
+Halt conditions per loop, in priority order:
+
+1. Cumulative phase cost exceeds 5×`phaseBudgetLimit` (skipped when the
+   user has set `phaseBudgetLimit: "unlimited"`).
+2. Total build cost exceeds `--max-budget-usd`.
+3. Diff hash unchanged between consecutive invocations (no progress —
+   1 strike, immediate halt).
+4. Continuation count reaches `maxContinuations` (default 5).
+
+A phase that halts is failed; one that emits `READY_FOR_REVIEW` proceeds
+to the reviewer. Per-phase invocation history is persisted to `state.json`
+under `builderInvocations[]`.
+
 ## The Retry Loop
 
 The reviewer is adversarial by design. Its job is to find problems, not
@@ -139,6 +177,25 @@ Retries are capped (default: 2, configurable via `--max-retries`). If
 exhausted, the build halts with instructions for manual recovery. This prevents
 infinite loops where the builder and reviewer disagree about how to satisfy a
 criterion.
+
+## Stop Controls
+
+Two ways to pause a long-running build cleanly without losing state:
+
+**`--require-phase-approval`** — between phases (or wave boundaries) the
+orchestrator pauses and asks `Continue to phase N? [Y/n/q]`. Press Enter
+to proceed, `n` or `q` to exit. State is preserved; resume with
+`ridgeline build <name>`.
+
+**Graceful-stop keystroke (`q`)** — while a build is running in a TTY,
+press `q` (or `Ctrl-G`) to request a graceful stop. The current phase
+finishes naturally — including any in-flight builder loop continuations —
+and the orchestrator exits 0 at the next phase boundary. A second press
+within 5 seconds escalates to a regular `SIGINT` for "stop NOW."
+
+Both paths converge on the same `state.json`-based resume mechanism — the
+next `ridgeline build <name>` invocation skips completed phases and picks
+up at the first pending one.
 
 ## Tradeoffs
 

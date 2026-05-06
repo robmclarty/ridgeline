@@ -247,7 +247,7 @@ phase if previous state exists.
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--model <name>` | from settings, else `opus` | Model for builder and reviewer |
-| `--timeout <minutes>` | `120` | Max duration per phase |
+| `--timeout <minutes>` | `120` | Max duration per phase (or `unlimited` for a 24h catchall) |
 | `--check-timeout <seconds>` | `1200` | Max duration for check command |
 | `--max-retries <n>` | `2` | Max retry loops per phase |
 | `--check <command>` | from constraints | Baseline check command (overrides constraints.md) |
@@ -257,13 +257,30 @@ phase if previous state exists.
 | `--context <text>` | none | Extra context appended to builder and planner prompts |
 | `--sandbox <mode>` | `semi-locked` | Sandbox mode: `off`, `semi-locked`, or `strict` |
 | `--unsafe` | -- | Deprecated alias for `--sandbox=off` |
+| `--require-phase-approval` | off | Pause between phases for explicit user confirmation |
 | `--no-structured-log` | off | Disable structured logging to `log.jsonl` |
 
 ```sh
 ridgeline build my-feature
-ridgeline build my-feature --sandbox=strict   # tighter isolation
-ridgeline build my-feature --sandbox=off      # opt out (formerly --unsafe)
+ridgeline build my-feature --sandbox=strict          # tighter isolation
+ridgeline build my-feature --sandbox=off             # opt out (formerly --unsafe)
+ridgeline build my-feature --require-phase-approval  # step phases interactively
 ```
+
+#### Stop controls
+
+While a build is running in a TTY, two non-destructive ways to pause:
+
+- **Press `q` (or `Ctrl-G`)** — graceful stop. The current phase finishes
+  naturally (including any in-flight builder-loop continuations) and the
+  orchestrator exits 0 at the next phase boundary. A second press within
+  5 seconds escalates to `SIGINT` for "stop now."
+- **`--require-phase-approval`** — pauses between phases and asks `Continue
+  to phase N? [Y/n/q]` before advancing. Answer `n` (or `q`) to exit
+  cleanly with state preserved.
+
+Both paths use the existing `state.json` resume — the next `ridgeline
+build <name>` invocation picks up at the next pending phase.
 
 ### `ridgeline rewind <build-name>`
 
