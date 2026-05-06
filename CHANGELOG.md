@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — v0.12.0
+## v0.12.0 — 2026-05-06
 
 ### Added
 
@@ -87,6 +87,12 @@
   remain byte-stable across the migration. Plugin authors: see the
   Phase 5 plugin-surface audit (forthcoming) for any consumer-facing
   changes before Phase 7's deletions land.
+- `scripts/check.mjs` skips the opt-in `mutation` check when
+  `GREYWALL_SANDBOX=1` (or `RIDGELINE_SANDBOX=1`) is set — Stryker's
+  child-proxy IPC needs TCP localhost binds the sandbox blocks. Mutation
+  testing is now host-only; the migration handoff documents both blockers
+  (greywall TCP + vitest threads `process.chdir`) and the Phase 7
+  unblock recipe.
 
 ## v0.11.2 — 2026-05-05
 
