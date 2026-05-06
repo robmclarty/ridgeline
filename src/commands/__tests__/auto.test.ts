@@ -213,4 +213,45 @@ describe("commands/auto", () => {
     await runAuto(buildName, { ...baseOpts, input: ideaPath })
     expect(runCreate).toHaveBeenCalled()
   })
+
+  it("caps the loop at MAX_ITERATIONS (16) when no stage advances", async () => {
+    // Pre-write shape.md so validateAutoPreconditions passes; runCreate is a
+    // no-op so getNextPipelineStage keeps returning "spec" forever.
+    writeArtifact(buildDir, "shape.md", "# Shape")
+    // Explicit no-op (clearAllMocks does not reset implementations).
+    vi.mocked(runCreate).mockImplementation(async () => undefined)
+    await runAuto(buildName, baseOpts)
+    expect(runCreate).toHaveBeenCalledTimes(16)
+    // Tail hooks must not run when the loop exited via the cap (build never completed).
+    expect(runRetrospective).not.toHaveBeenCalled()
+    expect(runRetroRefine).not.toHaveBeenCalled()
+  })
+
+  it("halts the loop and skips tail hooks when a stage throws", async () => {
+    writeArtifact(buildDir, "shape.md", "# Shape")
+    vi.mocked(runCreate).mockImplementation(async () => {
+      throw new Error("spec stage exploded")
+    })
+    await runAuto(buildName, baseOpts)
+    // Single attempt before runStageWithErrorHandling returns false.
+    expect(runCreate).toHaveBeenCalledTimes(1)
+    expect(runRetrospective).not.toHaveBeenCalled()
+    expect(runRetroRefine).not.toHaveBeenCalled()
+  })
+
+  it("swallows runRetrospective errors and still attempts runRetroRefine", async () => {
+    writeAllArtifactsThroughBuild(buildDir)
+    vi.mocked(runRetrospective).mockRejectedValueOnce(new Error("retro boom"))
+    await runAuto(buildName, baseOpts)
+    expect(runRetrospective).toHaveBeenCalledTimes(1)
+    // retro-refine must still fire even if retrospective threw.
+    expect(runRetroRefine).toHaveBeenCalledTimes(1)
+  })
+
+  it("swallows runRetroRefine errors without throwing out of runAuto", async () => {
+    writeAllArtifactsThroughBuild(buildDir)
+    vi.mocked(runRetroRefine).mockRejectedValueOnce(new Error("refine boom"))
+    await expect(runAuto(buildName, baseOpts)).resolves.toBeUndefined()
+    expect(runRetroRefine).toHaveBeenCalledTimes(1)
+  })
 })

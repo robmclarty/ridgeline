@@ -215,15 +215,6 @@ const finalizeShape = async (
   const shapeDefinitions = loadShapeDefinitions()
   const matchedShapes = detectShapes(shapeMdContent, shapeDefinitions)
 
-  if (matchedShapes.length === 0) {
-    console.log("")
-    printInfo("Created:")
-    console.log(`  ${path.join(buildDir, "shape.md")}`)
-    console.log("")
-    printInfo(`Next: ridgeline spec ${buildName}`)
-    return
-  }
-
   const matchedNames = matchedShapes.map((s) => s.name)
 
   if (matchedShapes.length === 0) {
@@ -233,7 +224,6 @@ const finalizeShape = async (
     console.log("")
 
     if (opts.interactive) {
-      // Interactive flow: design is opt-in for non-visual builds.
       printInfo(`Next: ridgeline spec ${buildName}`)
       return
     }
