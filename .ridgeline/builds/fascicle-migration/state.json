@@ -1,6 +1,6 @@
 {
   "buildName": "fascicle-migration",
-  "startedAt": "2026-05-06T22:49:03.115Z",
+  "startedAt": "2026-05-06T23:08:11.299Z",
   "pipeline": {
     "shape": "pending",
     "design": "skipped",
@@ -8,7 +8,128 @@
     "research": "skipped",
     "refine": "skipped",
     "plan": "complete",
-    "build": "pending"
+    "build": "running"
   },
-  "phases": []
+  "phases": [
+    {
+      "id": "01-foundation-baseline",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/01-foundation-baseline",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "02-sandbox-policy",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "03-adapters",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-adapters",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "04-engine-factory",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/04-engine-factory",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "05-composites",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/05-composites",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "06-atoms-a",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/06-atoms-a",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "07-atoms-b",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/07-atoms-b",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "08-leaf-flows",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "09-build-auto-sigint-dogfood",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/09-build-auto-sigint-dogfood",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "10-mutation-tests",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "11-cleanup-deletions",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/11-cleanup-deletions",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    },
+    {
+      "id": "12-docs-invariants-golden",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/12-docs-invariants-golden",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
+    }
+  ]
 }
