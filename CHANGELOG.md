@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.11.1 — 2026-05-05
+
+### Fixed
+
+- `--auto` mode now correctly produces `design.md` for non-visual builds. A duplicate guard in `finalizeShape` was short-circuiting the auto-chain to `runDesignAuto` introduced in v0.11.0, so CLI/library/backend builds in auto mode silently skipped the design stage.
+
+### Internal
+
+- Closed test-coverage gaps for the v0.11.0 auto-mode work: `runShapeAuto` non-visual auto-chain, and `runAuto` defensive branches (MAX_ITERATIONS=16 cap, single-attempt halt on stage throw, tail-hook error suppression for both `runRetrospective` and `runRetroRefine`).
+- Extracted `slugify`, `resolveNameAndInput`, and `parseAutoCount` from `cli.ts` into `src/utils/cli-args.ts` with a dedicated test file (cli.ts can't be imported in tests because it calls `program.parse()` at module load).
+
 ## v0.11.0 — 2026-05-06
 
 ### Added
