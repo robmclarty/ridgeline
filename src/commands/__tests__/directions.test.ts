@@ -10,6 +10,7 @@ vi.mock("../qa-workflow", () => ({
 vi.mock("../../engine/discovery/agent.registry", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: () => "(stub system prompt)",
+    getSpecialist: () => ({ overlay: "(stub design-specialist prompt)" }),
   })),
 }))
 
@@ -154,5 +155,95 @@ describe("commands/directions", () => {
     await expect(runDirections(buildName, { model: "opus", timeout: 15 })).rejects.toThrow(
       /wrote no direction folders/,
     )
+  })
+
+  // -------------------------------------------------------------------------
+  // runDirectionsAuto
+  // -------------------------------------------------------------------------
+
+  /**
+   * Stubs N specialist calls (each writes one direction folder) plus an
+   * optional picker call. The picker is invoked only when inspiration is
+   * provided. Returns the final mock so callers can inspect calls.
+   */
+  const stubAutoSpecialistsAndPicker = (
+    outputDir: string,
+    specialistIds: string[],
+    pickerOutput: string | null,
+  ): void => {
+    let invocation = 0
+    vi.mocked(runOneShotCall).mockImplementation(async () => {
+      const idx = invocation++
+      if (idx < specialistIds.length) {
+        // Specialist call: write its assigned folder.
+        const id = specialistIds[idx]
+        const dir = path.join(outputDir, id)
+        fs.mkdirSync(path.join(dir, "demo"), { recursive: true })
+        fs.writeFileSync(path.join(dir, "brief.md"), `# ${id}\n`)
+        fs.writeFileSync(path.join(dir, "tokens.md"), `# tokens ${id}\n`)
+        fs.writeFileSync(path.join(dir, "demo", "index.html"), `<!doctype html><title>${id}</title>`)
+        return { result: "specialist done", sessionId: `s-${idx}` }
+      }
+      // Picker call.
+      return { result: pickerOutput ?? "PICKED: ambiguous", sessionId: "picker" }
+    })
+  }
+
+  it("runDirectionsAuto dispatches N parallel specialists then picker", async () => {
+    vi.mocked(getMatchedShapes).mockReturnValue(["web-visual"])
+    const outputDir = path.join(buildDir, "directions")
+    const ids = ["01-tactile", "02-brutalist", "03-gemcut"]
+    stubAutoSpecialistsAndPicker(outputDir, ids, `PICKED: ${ids[1]}`)
+    const { runDirectionsAuto } = await import("../directions")
+    await runDirectionsAuto(buildName, {
+      model: "opus",
+      timeout: 15,
+      count: 3,
+      inspiration: "I love brutalist schematic blueprints",
+    })
+
+    // 3 specialists + 1 picker = 4 calls.
+    expect(runOneShotCall).toHaveBeenCalledTimes(4)
+    expect(fs.readFileSync(path.join(outputDir, "picked.txt"), "utf-8").trim()).toBe(ids[1])
+  })
+
+  it("runDirectionsAuto falls back to interactive prompt when picker returns ambiguous", async () => {
+    vi.mocked(getMatchedShapes).mockReturnValue(["web-visual"])
+    const outputDir = path.join(buildDir, "directions")
+    stubAutoSpecialistsAndPicker(outputDir, ["01-a", "02-b"], "PICKED: ambiguous")
+    stubReadlinePick("01-a")
+    const { runDirectionsAuto } = await import("../directions")
+    await runDirectionsAuto(buildName, {
+      model: "opus",
+      timeout: 15,
+      count: 2,
+      inspiration: "vague",
+    })
+
+    expect(fs.readFileSync(path.join(outputDir, "picked.txt"), "utf-8").trim()).toBe("01-a")
+  })
+
+  it("runDirectionsAuto skips picker entirely and prompts interactively when no inspiration is provided", async () => {
+    vi.mocked(getMatchedShapes).mockReturnValue(["web-visual"])
+    const outputDir = path.join(buildDir, "directions")
+    stubAutoSpecialistsAndPicker(outputDir, ["01-a", "02-b"], null)
+    stubReadlinePick("02-b")
+    const { runDirectionsAuto } = await import("../directions")
+    await runDirectionsAuto(buildName, {
+      model: "opus",
+      timeout: 15,
+      count: 2,
+    })
+
+    // 2 specialists + 0 picker calls (skipped because no inspiration).
+    expect(runOneShotCall).toHaveBeenCalledTimes(2)
+    expect(fs.readFileSync(path.join(outputDir, "picked.txt"), "utf-8").trim()).toBe("02-b")
+  })
+
+  it("runDirectionsAuto skips entirely when shape is non-visual", async () => {
+    vi.mocked(getMatchedShapes).mockReturnValue(["backend-api"])
+    const { runDirectionsAuto } = await import("../directions")
+    await runDirectionsAuto(buildName, { model: "opus", timeout: 15, count: 3 })
+    expect(runOneShotCall).not.toHaveBeenCalled()
   })
 })

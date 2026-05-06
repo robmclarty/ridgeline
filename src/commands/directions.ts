@@ -5,12 +5,18 @@ import { printInfo, printWarn } from "../ui/output"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry"
 import { runOneShotCall } from "./qa-workflow"
 import { getMatchedShapes } from "../stores/state"
+import { resolveInputBundle, ResolvedBundle } from "./input"
 
 type DirectionsOptions = {
   model: string
   timeout: number
-  count?: 2 | 3
+  count?: number
   isSkip?: boolean
+}
+
+type DirectionsAutoOptions = DirectionsOptions & {
+  /** Source of inspiration for the picker. Path or inline text. */
+  inspiration?: string
 }
 
 const VISUAL_SHAPES: ReadonlySet<string> = new Set(["web-visual", "game-visual", "print-layout"])
@@ -102,18 +108,19 @@ const writePickedMarker = (outputDir: string, pickedId: string): void => {
   fs.writeFileSync(path.join(outputDir, "picked.txt"), pickedId + "\n")
 }
 
-export const runDirections = async (
-  buildName: string,
-  opts: DirectionsOptions,
-): Promise<void> => {
-  if (opts.isSkip) {
-    printInfo("Skipping direction-advisor (--skip).")
-    return
-  }
+type DirectionsPrelude =
+  | { ok: true; ridgelineDir: string; buildDir: string; outputDir: string; matchedShapes: string[] }
+  | { ok: false }
 
+/**
+ * Shared prelude for runDirections / runDirectionsAuto: ensure the build dir
+ * exists, verify a visual shape matched, ensure web-visual support. On any
+ * gate failure prints an info/warn line and returns { ok: false } so the
+ * caller exits early without throwing.
+ */
+const setupDirectionsRun = (buildName: string): DirectionsPrelude => {
   const ridgelineDir = path.join(process.cwd(), ".ridgeline")
   const buildDir = path.join(ridgelineDir, "builds", buildName)
-
   if (!fs.existsSync(buildDir)) {
     throw new Error(`Build directory not found: ${buildDir}. Run 'ridgeline shape ${buildName}' first.`)
   }
@@ -124,7 +131,7 @@ export const runDirections = async (
       `No visual shape categories matched (got: ${matchedShapes.join(", ") || "none"}). ` +
         `direction-advisor exits without generating directions.`,
     )
-    return
+    return { ok: false }
   }
 
   const matchedVisual = matchedShapes.filter((name) => VISUAL_SHAPES.has(name))
@@ -133,12 +140,28 @@ export const runDirections = async (
       `direction-advisor currently supports web-visual only; matched shapes (${matchedVisual.join(", ")}) ` +
         `not yet supported. Skipping.`,
     )
+    return { ok: false }
+  }
+
+  const outputDir = resolveDirectionsDir(buildDir, ridgelineDir)
+  fs.mkdirSync(outputDir, { recursive: true })
+  return { ok: true, ridgelineDir, buildDir, outputDir, matchedShapes }
+}
+
+export const runDirections = async (
+  buildName: string,
+  opts: DirectionsOptions,
+): Promise<void> => {
+  if (opts.isSkip) {
+    printInfo("Skipping direction-advisor (--skip).")
     return
   }
 
+  const setup = setupDirectionsRun(buildName)
+  if (!setup.ok) return
+  const { ridgelineDir, buildDir, outputDir, matchedShapes } = setup
+
   const numDirections = opts.count ?? 2
-  const outputDir = resolveDirectionsDir(buildDir, ridgelineDir)
-  fs.mkdirSync(outputDir, { recursive: true })
 
   printInfo(`Build directory: ${buildDir}`)
   printInfo(`Generating ${numDirections} differentiated direction(s) under: ${outputDir}`)
@@ -204,4 +227,235 @@ export const runDirections = async (
   } finally {
     rl.close()
   }
+}
+
+// ---------------------------------------------------------------------------
+// Auto mode: parallel design-specialists + picker
+// ---------------------------------------------------------------------------
+
+/**
+ * School hints rotated through the N parallel specialists. Each specialist
+ * gets a distinct hint so the picker has genuinely differentiated options.
+ * If N exceeds the list length, hints repeat — and downstream specialists
+ * are told to find a fresh angle within the same broad school.
+ */
+const DESIGN_SCHOOLS: string[] = [
+  "tactile / lived-in / FFT-warm — parchment, sepia, ochre; named references like Final Fantasy Tactics, EXAPUNKS, Edward Tufte information density",
+  "brutalist schematic / blueprint / control-room — drafted precision, heavy grid, mono type; references like Dieter Rams, NASA control panels, Swiss railway signage",
+  "gem-cut precision / heavy material / deep depth — saturated jewel tones, sharp bevels, glass-and-stone tactility",
+  "minimalist editorial / quiet luxury — type-led, generous whitespace, muted neutrals; references like Linear, Things 3, iA Writer",
+  "post-internet / crispy maximalist — saturated palette, layered gradients, expressive type; references like Figma marketing, Notion glyphs, contemporary indie zines",
+  "industrial / lab / specimen — neutral background, calibrated samples, dense annotation; references like physics lab UIs, MIT Press, Wolfram Alpha",
+]
+
+const slugForSchool = (index: number, school: string): string => {
+  const head = school.split(" ")[0].toLowerCase().replace(/\W+/g, "")
+  return `${String(index + 1).padStart(2, "0")}-${head}`
+}
+
+const buildSpecialistPrompt = (
+  buildName: string,
+  outputDir: string,
+  contextParts: string[],
+  inspirationContent: string | null,
+  index: number,
+  count: number,
+  school: string,
+  slug: string,
+): string => {
+  const lines = [
+    `Generate ONE visual direction for build "${buildName}".`,
+    "",
+    `Specialist ${index + 1} of ${count}.`,
+    `Assigned visual school: ${school}`,
+    "",
+    `Output directory (write all files here, use absolute paths):`,
+    `${path.join(outputDir, slug)}`,
+    "",
+    "Files to write:",
+    `- ${path.join(outputDir, slug, "brief.md")}`,
+    `- ${path.join(outputDir, slug, "tokens.md")}`,
+    `- ${path.join(outputDir, slug, "demo", "index.html")}`,
+    "",
+    ...(contextParts.length > 0 ? contextParts : ["No additional context found."]),
+  ]
+  if (inspirationContent) {
+    lines.push("", "## Inspiration (from --inspiration flag)\n", inspirationContent, "")
+  }
+  lines.push(
+    "",
+    "Produce exactly one direction in your assigned school. Do not generate alternatives. " +
+      "Honor the school hint even if you think a different school would fit better — diversity " +
+      "across specialists is the point, and the picker will weigh fit at the end.",
+  )
+  return lines.join("\n")
+}
+
+const buildPickerPrompt = (
+  buildName: string,
+  outputDir: string,
+  directionIds: string[],
+  inspirationContent: string | null,
+): string => {
+  const lines: string[] = [
+    `Pick the best visual direction for build "${buildName}".`,
+    "",
+    `${directionIds.length} candidate directions are available under: ${outputDir}`,
+    "",
+    "Candidate IDs:",
+    ...directionIds.map((id) => `- ${id}`),
+    "",
+    "For each candidate, read its brief.md and tokens.md (and skim demo/index.html if it helps). " +
+      "Then evaluate against the inspiration material below.",
+  ]
+  if (inspirationContent) {
+    lines.push("", "## Inspiration\n", inspirationContent, "")
+  } else {
+    lines.push(
+      "",
+      "## Inspiration",
+      "",
+      "(none provided — output PICKED: ambiguous so the orchestrator can prompt the user)",
+      "",
+    )
+  }
+  lines.push(
+    "",
+    "Output exactly one line, nothing else:",
+    "",
+    "PICKED: <id>",
+    "",
+    "…where <id> is one of the candidate IDs above, or the literal word `ambiguous` if no clear winner.",
+  )
+  return lines.join("\n")
+}
+
+const parsePickerOutput = (text: string, validIds: string[]): string | "ambiguous" | null => {
+  const match = text.match(/PICKED:\s*(\S+)/)
+  if (!match) return null
+  const value = match[1].trim()
+  if (value === "ambiguous") return "ambiguous"
+  if (validIds.includes(value)) return value
+  return null
+}
+
+const loadInspiration = (inspiration: string | undefined): { content: string | null; label: string | null } => {
+  if (!inspiration) return { content: null, label: null }
+  try {
+    const bundle: ResolvedBundle = resolveInputBundle(inspiration)
+    if (bundle.type === "file") return { content: bundle.content, label: bundle.path }
+    if (bundle.type === "directory") return { content: bundle.content, label: `${bundle.path} (${bundle.files.length} files)` }
+    return { content: bundle.content, label: "inline text" }
+  } catch (err) {
+    printWarn(`Failed to read --inspiration: ${err instanceof Error ? err.message : String(err)}`)
+    return { content: null, label: null }
+  }
+}
+
+export const runDirectionsAuto = async (
+  buildName: string,
+  opts: DirectionsAutoOptions,
+): Promise<void> => {
+  const setup = setupDirectionsRun(buildName)
+  if (!setup.ok) return
+  const { buildDir, outputDir, matchedShapes } = setup
+  const ridgelineDir = path.join(process.cwd(), ".ridgeline")
+
+  const numDirections = Math.max(2, opts.count ?? 3)
+
+  const inspiration = loadInspiration(opts.inspiration)
+  printInfo(`Build directory: ${buildDir}`)
+  printInfo(`Generating ${numDirections} direction(s) in parallel under: ${outputDir}`)
+  if (inspiration.label) {
+    printInfo(`Inspiration: ${inspiration.label}`)
+  } else {
+    printInfo("Inspiration: (none — picker will fall back to interactive prompt if needed)")
+  }
+  printInfo(`Expected cost: ~$${(numDirections * 1.5).toFixed(0)}-$${(numDirections * 2.5).toFixed(0)} with opus.`)
+
+  const registry = buildAgentRegistry()
+  const specialist = registry.getSpecialist("specialists", "design-specialist.md")
+  if (!specialist) {
+    throw new Error("design-specialist agent not found in registry")
+  }
+  const advisorPrompt = registry.getCorePrompt("direction-advisor.md")
+  const contextParts = collectDirectionsContext(buildDir, ridgelineDir, matchedShapes)
+  const timeoutMs = opts.timeout * 60 * 1000
+
+  const assignments = Array.from({ length: numDirections }, (_, i) => {
+    const school = DESIGN_SCHOOLS[i % DESIGN_SCHOOLS.length]
+    return { index: i, school, slug: slugForSchool(i, school) }
+  })
+
+  // Dispatch specialists in parallel.
+  await Promise.all(
+    assignments.map((a) =>
+      runOneShotCall({
+        systemPrompt: specialist.overlay,
+        userPrompt: buildSpecialistPrompt(
+          buildName, outputDir, contextParts, inspiration.content,
+          a.index, numDirections, a.school, a.slug,
+        ),
+        model: opts.model,
+        timeoutMs,
+        allowedTools: ["Read", "Glob", "Grep", "Write"],
+        buildDir,
+        statusMessage: `Specialist ${a.index + 1}/${numDirections} (${a.slug}) generating direction...`,
+      }),
+    ),
+  )
+
+  const directions = listDirectionFolders(outputDir)
+  if (directions.length === 0) {
+    throw new Error(
+      `No specialist produced direction folders under ${outputDir}. Inspect the output above for errors.`,
+    )
+  }
+
+  let pick: string | null = null
+
+  if (inspiration.content) {
+    const pickerResult = await runOneShotCall({
+      systemPrompt: advisorPrompt,
+      userPrompt: buildPickerPrompt(buildName, outputDir, directions, inspiration.content),
+      model: opts.model,
+      timeoutMs,
+      allowedTools: ["Read", "Glob"],
+      buildDir,
+      statusMessage: "Picking best direction against inspiration...",
+    })
+    const picked = parsePickerOutput(pickerResult.result, directions)
+    if (picked === "ambiguous" || picked === null) {
+      printInfo("Picker returned ambiguous (or invalid) result; falling back to interactive prompt.")
+    } else {
+      pick = picked
+    }
+  } else {
+    printInfo("No inspiration provided; skipping picker and prompting interactively.")
+  }
+
+  if (!pick) {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    try {
+      const answer = await promptForPick(rl, outputDir, directions)
+      if (!answer || answer.toLowerCase() === "none") {
+        console.log("")
+        printInfo("No direction picked. Re-run with adjusted inspiration or shape.md to regenerate.")
+        return
+      }
+      if (!directions.includes(answer)) {
+        throw new Error(
+          `Pick "${answer}" does not match any generated direction. Available: ${directions.join(", ")}`,
+        )
+      }
+      pick = answer
+    } finally {
+      rl.close()
+    }
+  }
+
+  writePickedMarker(outputDir, pick)
+  console.log("")
+  printInfo(`Picked: ${pick}`)
+  printInfo(`Next: ridgeline design ${buildName}`)
 }
