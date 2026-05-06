@@ -13,10 +13,13 @@ export const appendBaseUserPrompt = (doc: PromptDocument, config: RidgelineConfi
   appendDesign(doc, config)
 
   doc.instruction("Target Model", `The builder will use the \`${config.model}\` model.`)
+  const tokenPhrase = `~${config.phaseTokenLimit.toLocaleString()} output tokens`
+  const costPhrase = config.phaseBudgetLimit !== null ? ` (~$${config.phaseBudgetLimit} USD)` : ""
   doc.instruction(
     "Phase Budget",
-    `Target ~${config.phaseTokenLimit.toLocaleString()} output tokens (~$${config.phaseBudgetLimit} USD) per phase. ` +
-      `If a phase would exceed the ceiling, split it. Splitting is cheap; a too-large phase risks timeout and cost overruns.`,
+    `Stay below ${tokenPhrase}${costPhrase} per phase — treat it as a hard maximum, not a target. ` +
+      `Aim for 50–70% of the ceiling. If a phase would approach or exceed it, split. ` +
+      `Splitting is cheap; a too-large phase risks timeout and truncation.`,
   )
 }
 

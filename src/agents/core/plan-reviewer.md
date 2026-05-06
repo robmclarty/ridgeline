@@ -21,7 +21,7 @@ Read every input. Then audit the plan against the checklist below.
 
 For each item, write down concrete findings — name the offending phase, quote the offending text, and explain the problem.
 
-1. **Per-phase budget.** Estimate each phase's output volume by counting acceptance criteria, new files implied, and breadth of subsystems touched. Flag any phase that looks like it will substantially exceed the advised ceiling. A rough heuristic: ~1,500 output tokens per acceptance criterion plus ~4 tokens per word of phase spec. Use this as a sanity check, not a contract.
+1. **Per-phase budget.** Estimate each phase's output volume by counting acceptance criteria, new files implied, and breadth of subsystems touched. The advised ceiling is a hard maximum — flag any phase whose estimate exceeds **70% of the ceiling**, and reject any phase whose estimate exceeds the ceiling. A rough heuristic: ~1,500 output tokens per acceptance criterion plus ~4 tokens per word of phase spec. Apply this strictly; phases that "look fine on paper" near the ceiling routinely time out under real model output. Also flag any phase with more than ~15 acceptance criteria, more than ~6 new files, or that touches more than ~2 distinct subsystems — these are split signals regardless of the token estimate.
 
 2. **Acceptance criteria are verifiable.** Every criterion must be checkable by running a command, checking file existence, inspecting content, or observing concrete behavior. Flag vague criteria like "the system is robust" or "the UI looks clean."
 

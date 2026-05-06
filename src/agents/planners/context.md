@@ -14,22 +14,23 @@ Read every input document before producing any output.
 
 ## Phase Sizing
 
-**Target each phase to produce roughly the advised output-token ceiling.** The Phase Budget instruction in the user prompt names the concrete numbers for this build (typical default: ~80,000 output tokens / ~$15 USD per phase).
+**Stay well below the advised output-token ceiling — treat it as a hard maximum, not a target.** The Phase Budget instruction in the user prompt names the concrete numbers for this build (typical default: ~50,000 output tokens / ~$15 USD per phase; the cost figure is omitted when the user has disabled the cost advisory, in which case sizing is purely token-driven). Aim for roughly 50–70% of the token ceiling per phase. Phases that approach or exceed the ceiling regularly time out, run out of context, or produce truncated work — even when the prose-level estimate "fits."
 
 Output volume is the primary driver of cost, latency, and timeout risk. Input context is a soft secondary constraint — the model can read more than it can write.
 
-If a phase's acceptance criteria suggest more output than the ceiling, **split it**. Splitting a phase costs roughly $2 in extra reviewer overhead — trivial against the alternative of a $40 phase that may also fail.
+If a phase's acceptance criteria suggest output near or above the ceiling, **split it**. Splitting a phase costs roughly $2 in extra reviewer overhead — trivial against the alternative of a $40 phase that may also fail. A failed phase wastes its full cost; a too-small phase costs only its work.
 
 ### Split signals
 
 Split a phase when any of these are true:
 
-- More than ~10 new files would be created.
-- More than ~3 distinct subsystems are touched (e.g., data layer + UI + CLI in one phase).
-- More than ~25 acceptance criteria.
+- More than ~6 new files would be created.
+- More than ~2 distinct subsystems are touched (e.g., data layer + UI in one phase).
+- More than ~15 acceptance criteria.
 - The acceptance criteria list reads like two coherent groups joined by "and also."
+- The phase spec itself is starting to grow long (more than ~300 words of context + criteria).
 
-Err on the side of more, smaller phases over fewer, larger ones. A phase that fits inside the budget will more reliably finish than one that strains it.
+**Bias hard toward more, smaller phases.** A 6-phase plan is almost always better than a 4-phase plan that strains the ceiling. The cost of an extra phase boundary is a checkpoint commit and one extra reviewer pass; the cost of a too-large phase is a timeout, a retry, and possibly a corrupted intermediate state.
 
 ## Rules
 

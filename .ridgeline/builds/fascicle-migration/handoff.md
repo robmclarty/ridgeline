@@ -107,10 +107,21 @@
   promotes any of them, the snapshot will diverge and force an explicit
   baseline refresh.
 - **`mutation-score.json` captured as placeholder, not blocking
-  Phase 0 exit.** Stryker's worker IPC requires localhost socket binds
-  the greywall sandbox blocks. Phase 7 cannot exit until this score is
-  regenerated outside the sandbox; the file records the exact heredoc'd
-  config to reproduce.
+  Phase 0 exit.** Stryker has two independent blockers in this repo:
+  (a) under greywall, Stryker's worker IPC raises EPERM on
+  `internalConnectMultiple` because the sandbox doesn't allow the TCP
+  localhost binds Stryker uses for child-proxy IPC; (b) outside greywall,
+  the dry-run still fails — multiple `commands/__tests__/*.test.ts` call
+  `process.chdir()` in `beforeEach`, which is unsupported in
+  `worker_threads` (vitest's default `pool: 'threads'`). Stryker's
+  `coverageAnalysis: 'perTest'` instruments vitest in a way that surfaces
+  the chdir incompatibility even when regular `vitest run` tolerates it.
+  Phase 7 must (1) capture the baseline on the host (not under greywall)
+  AND (2) either switch vitest's `pool` to `'forks'` for the Stryker run
+  or refactor the chdir-using tests to mock `process.cwd()` instead. The
+  file records the exact heredoc'd config to reproduce.
+  `scripts/check.mjs` now skips the `mutation` check entirely when
+  `GREYWALL_SANDBOX=1` so future builders don't waste retry budget on (a).
 - **CHANGELOG version is `Unreleased — v0.12.0`**, not `0.11.3`, because
   the Node 24 bump is a breaking change for consumers and a minor-version
   bump matches semver discipline for that.
@@ -124,8 +135,11 @@
   fascicle upstream to widen its peer-dep range; downgrading locally
   breaks Phase 1+.
 - **`mutation-score.json` is a placeholder**, not a captured value.
-  Reason: Stryker IPC blocked by greywall. Phase 7 must regenerate
-  outside the sandbox.
+  Reason: dual blocker — Stryker IPC blocked by greywall AND vitest
+  `pool: 'threads'` rejects `process.chdir()` calls in command tests
+  under Stryker's `coverageAnalysis: 'perTest'` instrumentation. Phase 7
+  must regenerate outside the sandbox AND switch vitest pool to forks
+  (or refactor chdir tests).
 - **`fascicle/adapters` subpath is not used.** Reason: not exported in
   `fascicle@0.3.8`. Phase 1 implements ridgeline-side adapters directly
   conforming to the `TrajectoryLogger` and `CheckpointStore` contracts

@@ -108,6 +108,10 @@ const CHECKS = [
     args: ["stryker", "run"],
     output_file: null, // stryker's jsonReporter writes .check/mutation.json directly
     opt_in: true,
+    // Stryker spawns vitest workers that bind/connect on TCP localhost; greywall's
+    // sandbox blocks those with EPERM on internalConnectMultiple. Run mutation
+    // testing on the host, never inside the sandbox.
+    skip_if_sandboxed: true,
   },
 ]
 
@@ -226,8 +230,29 @@ async function main() {
     write_line(process.stderr, `\nRunning ${selected.length} check(s)...\n`)
   }
 
+  const sandboxed = process.env.GREYWALL_SANDBOX === "1" || process.env.RIDGELINE_SANDBOX === "1"
+
   const results = []
   for (const check of selected) {
+    if (check.skip_if_sandboxed && sandboxed) {
+      const skip_reason = `skipped under sandbox (${check.name} requires host network access)`
+      if (!values.json) {
+        write_line(process.stderr, `  ▸ ${check.name}  ${check.description}`)
+        write_line(process.stderr, `  ⊘ ${check.name.padEnd(8)}      0ms  ${skip_reason}`)
+      }
+      results.push({
+        name: check.name,
+        description: check.description,
+        ok: true,
+        exit_code: 0,
+        duration_ms: 0,
+        skipped: true,
+        skip_reason,
+        stdout: "",
+        stderr: "",
+      })
+      continue
+    }
     if (!values.json) {
       write_line(process.stderr, `  ▸ ${check.name}  ${check.description}`)
     }

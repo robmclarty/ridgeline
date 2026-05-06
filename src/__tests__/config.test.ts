@@ -12,10 +12,13 @@ vi.mock("../stores/settings", () => ({
   resolveModel: vi.fn((optModel: string | undefined) => optModel ?? "opus"),
   resolveSpecialistTimeoutSeconds: vi.fn(() => 180),
   resolvePhaseBudgetLimit: vi.fn(() => 15),
-  resolvePhaseTokenLimit: vi.fn(() => 80000),
+  resolvePhaseTokenLimit: vi.fn(() => 50000),
   resolveSpecialistCount: vi.fn((_dir: string, cli?: number) => cli ?? 3),
   resolveSandboxMode: vi.fn((_dir: string, cli?: string) => cli ?? "semi-locked"),
   resolveSandboxExtras: vi.fn(() => ({ writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] })),
+  resolveTimeoutMinutes: vi.fn((_dir: string, cli: string | undefined, defaultMinutes: number) =>
+    cli !== undefined ? parseInt(cli, 10) : defaultMinutes,
+  ),
 }))
 
 import { resolveConfig, loadVersion } from "../config"
@@ -177,7 +180,7 @@ describe("config", () => {
 
       expect(config.specialistCount).toBe(3)
       expect(config.phaseBudgetLimit).toBe(15)
-      expect(config.phaseTokenLimit).toBe(80000)
+      expect(config.phaseTokenLimit).toBe(50000)
     })
   })
 })

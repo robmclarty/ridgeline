@@ -11,6 +11,7 @@ import {
   resolveSpecialistCount,
   resolveSandboxMode,
   resolveSandboxExtras,
+  resolveTimeoutMinutes,
 } from "./stores/settings"
 
 // Load version from package.json at runtime
@@ -87,7 +88,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     phasesDir,
     model: resolveModel(opts.model as string | undefined, ridgelineDir),
     maxRetries: parseInt(String(opts.maxRetries ?? "2"), 10),
-    timeoutMinutes: parseInt(String(opts.timeout ?? "120"), 10),
+    timeoutMinutes: resolveTimeoutMinutes(ridgelineDir, opts.timeout as string | undefined, 120),
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),
     checkCommand,
     maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,

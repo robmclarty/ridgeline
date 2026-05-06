@@ -9,6 +9,8 @@ import {
   resolveSpecialistTimeoutSeconds,
   resolvePhaseBudgetLimit,
   resolvePhaseTokenLimit,
+  resolveTimeoutMinutes,
+  UNLIMITED_TIMEOUT_CATCHALL_MINUTES,
   resolveSpecialistCount,
   resolveDirectionCount,
   resolveSandboxMode,
@@ -164,6 +166,60 @@ describe("settings", () => {
         JSON.stringify({ planner: { phaseBudgetLimit: 0 } }),
       )
       expect(resolvePhaseBudgetLimit(tmpDir)).toBe(DEFAULT_PHASE_BUDGET_LIMIT_USD)
+    })
+    it("returns null when settings sets phaseBudgetLimit: null", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { phaseBudgetLimit: null } }),
+      )
+      expect(resolvePhaseBudgetLimit(tmpDir)).toBeNull()
+    })
+    it("returns null when settings sets phaseBudgetLimit: 'unlimited'", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ planner: { phaseBudgetLimit: "unlimited" } }),
+      )
+      expect(resolvePhaseBudgetLimit(tmpDir)).toBeNull()
+    })
+  })
+
+  describe("resolveTimeoutMinutes", () => {
+    it("returns the default when no CLI override and no settings", () => {
+      expect(resolveTimeoutMinutes(tmpDir, undefined, 120)).toBe(120)
+    })
+    it("CLI numeric string wins over settings", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ timeoutMinutes: 30 }),
+      )
+      expect(resolveTimeoutMinutes(tmpDir, "60", 120)).toBe(60)
+    })
+    it("CLI 'unlimited' maps to the catchall", () => {
+      expect(resolveTimeoutMinutes(tmpDir, "unlimited", 120)).toBe(UNLIMITED_TIMEOUT_CATCHALL_MINUTES)
+    })
+    it("settings 'unlimited' maps to the catchall", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ timeoutMinutes: "unlimited" }),
+      )
+      expect(resolveTimeoutMinutes(tmpDir, undefined, 120)).toBe(UNLIMITED_TIMEOUT_CATCHALL_MINUTES)
+    })
+    it("settings null maps to the catchall", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ timeoutMinutes: null }),
+      )
+      expect(resolveTimeoutMinutes(tmpDir, undefined, 120)).toBe(UNLIMITED_TIMEOUT_CATCHALL_MINUTES)
+    })
+    it("settings numeric value is honored", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ timeoutMinutes: 45 }),
+      )
+      expect(resolveTimeoutMinutes(tmpDir, undefined, 120)).toBe(45)
+    })
+    it("invalid CLI string falls back to default", () => {
+      expect(resolveTimeoutMinutes(tmpDir, "garbage", 120)).toBe(120)
     })
   })
 

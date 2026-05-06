@@ -1,5 +1,5 @@
 {
-  "_note": "Stryker mutation testing baseline for src/engine/pipeline/. Could not be captured under the sandboxed migration session — Stryker worker IPC requires localhost socket binds that the greywall network sandbox blocks (EPERM AggregateError on internalConnectMultiple). The baseline must be regenerated outside the sandbox before Phase 8 (Cleanup) compares the post-migration mutation score on src/engine/{flows,atoms,composites,adapters}/ against this number.",
+  "_note": "Stryker mutation testing baseline for src/engine/pipeline/. Two independent blockers prevented capture: (1) under greywall, Stryker's worker IPC raises EPERM on internalConnectMultiple because the sandbox blocks TCP localhost binds Stryker uses for child-proxy IPC; (2) outside greywall, Stryker's dry-run fails because vitest's default `pool: 'threads'` rejects the `process.chdir()` calls in src/commands/__tests__/*.test.ts when Stryker's `coverageAnalysis: 'perTest'` instruments the run. To regenerate before Phase 8: run on the host (not greywall) AND either set vitest pool to 'forks' for the Stryker run or refactor the chdir tests to mock process.cwd().",
   "scope": "src/engine/pipeline/**/*.ts",
   "instrumented_source_files": 15,
   "instrumented_mutants": 2504,

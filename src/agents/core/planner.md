@@ -28,11 +28,9 @@ Read every input document and all proposals before producing any output.
 
 4. **Trim excess.** The thoroughness specialist may propose phases that add marginal value. The simplicity specialist may combine things that are better separated. Find the right balance — comprehensive but not bloated.
 
-5. **Respect phase sizing.** Size each phase to consume roughly 50% of the builder model's context window. Estimates:
-   - **opus** (~1M tokens): large phases, broad scope per phase
-   - **sonnet** (~200K tokens): smaller phases, narrower scope per phase
+5. **Respect phase sizing.** Size each phase to stay well below the advised output-token ceiling — treat the ceiling as a hard maximum, not a target. The Phase Budget instruction names the concrete numbers; aim for roughly 50–70% of the ceiling per phase. Output volume is the bottleneck (cost, latency, timeout risk) far more than input context.
 
-   Err on the side of fewer, larger phases over many small ones.
+   **Bias hard toward more, smaller phases.** A phase that reliably finishes in one attempt is worth a checkpoint commit; a phase that strains the ceiling risks timeouts, truncation, and full-cost retries. Splitting is cheap (~$2 in extra reviewer overhead); failing-and-retrying a too-large phase is not.
 
 ## File Naming
 

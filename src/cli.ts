@@ -494,7 +494,7 @@ program
 
 const addPlanOptions = (cmd: Command): Command => cmd
   .option("--model <name>", "Model for planner (defaults to settings.json model, or 'opus')")
-  .option("--timeout <minutes>", "Max duration for planning", "120")
+  .option("--timeout <minutes>", "Max duration for planning (or 'unlimited' for a 24h catchall)", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
   .addOption(new Option("--deep-ensemble", "deprecated: use --thorough").hideHelp())
@@ -512,7 +512,7 @@ addPlanOptions(program
 addAutoOption(addPreflightOptions(program
   .command("build [build-name]")
   .description("Execute the build pipeline (automatically resumes from last successful phase)")
-  .option("--timeout <minutes>", "Max duration per phase in minutes", "120")
+  .option("--timeout <minutes>", "Max duration per phase in minutes (or 'unlimited' for a 24h catchall)", "120")
   .option("--check-timeout <seconds>", "Max duration for check command in seconds", "1200")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")
   .option("--check <command>", "Baseline check command (overrides constraints.md)")
