@@ -8,6 +8,7 @@ export interface DetectionReport {
   projectType: ProjectType
   isVisualSurface: boolean
   detectedDeps: string[]
+  visualFileExts: string[]
   hasDesignMd: boolean
   hasAssetDir: boolean
   suggestedSensors: SensorName[]
@@ -42,6 +43,8 @@ const SCAN_EXCLUDE_DIRS = new Set([
   "dist",
   "build",
   ".ridgeline",
+  "coverage",
+  "fixtures",
 ])
 const ASSET_DIR_NAMES = ["assets", "public", "static"]
 const SENSOR_ORDER: SensorName[] = ["playwright", "vision", "a11y", "contrast"]
@@ -71,7 +74,8 @@ const readPackageJson = (cwd: string): { deps: string[]; hasFile: boolean; isMal
   return { deps, hasFile: true, isMalformed: false }
 }
 
-const hasVisualFile = (cwd: string): boolean => {
+const findVisualFileExts = (cwd: string): string[] => {
+  const found = new Set<string>()
   const stack: string[] = [cwd]
   while (stack.length > 0) {
     const dir = stack.pop()!
@@ -90,11 +94,14 @@ const hasVisualFile = (cwd: string): boolean => {
       }
       if (entry.isFile()) {
         const ext = path.extname(entry.name).toLowerCase()
-        if (VISUAL_FILE_EXTS.has(ext)) return true
+        if (VISUAL_FILE_EXTS.has(ext)) {
+          found.add(ext.slice(1))
+          if (found.size === VISUAL_FILE_EXTS.size) return [...found].sort()
+        }
       }
     }
   }
-  return false
+  return [...found].sort()
 }
 
 const detectAssetDir = (cwd: string): boolean => {
@@ -118,7 +125,8 @@ export const detect = async (cwd: string, opts: DetectOptions = {}): Promise<Det
   const hasDesignMd = fs.existsSync(path.join(cwd, ".ridgeline", "design.md"))
   const hasAssetDir = detectAssetDir(cwd)
 
-  const isVisualSurface = matchedVisualDeps.length > 0 || hasVisualFile(cwd)
+  const visualFileExts = matchedVisualDeps.length > 0 ? [] : findVisualFileExts(cwd)
+  const isVisualSurface = matchedVisualDeps.length > 0 || visualFileExts.length > 0
 
   let projectType: ProjectType
   if (!hasFile) projectType = "unknown"
@@ -132,6 +140,7 @@ export const detect = async (cwd: string, opts: DetectOptions = {}): Promise<Det
     projectType,
     isVisualSurface,
     detectedDeps,
+    visualFileExts,
     hasDesignMd,
     hasAssetDir,
     suggestedSensors,

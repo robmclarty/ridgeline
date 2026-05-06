@@ -51,7 +51,7 @@ The detector (`src/engine/detect/`) returns a `DetectionReport`:
 interface DetectionReport {
   projectType: "node" | "web" | "unknown"
   detectedDeps: string[]          // sorted, from package.json
-  fileSignals: string[]           // *.html, *.tsx, *.jsx, *.vue, *.svelte
+  visualFileExts: string[]        // sorted, populated only when no visual dep matched
   isVisualSurface: boolean
   hasDesignMd: boolean            // .ridgeline/design.md present
   hasAssetDir: boolean            // assets/ | public/ | static/
@@ -64,7 +64,9 @@ A project counts as a visual surface when any of these appear: React, Vue,
 Svelte, Solid, Vite, Next, Three, Phaser, Pixi, Babylon, Electron, React
 Native, or Expo in `package.json`; or one of `*.html`, `*.tsx`, `*.jsx`,
 `*.vue`, `*.svelte` on disk (excluding `node_modules`, `.git`, `.worktrees`,
-`dist`, `build`, `.ridgeline`).
+`dist`, `build`, `.ridgeline`, `coverage`, `fixtures`). When the file scan
+is the trigger, the matched extensions surface in `visualFileExts` so the
+preflight banner can name them.
 
 ### Install hint
 

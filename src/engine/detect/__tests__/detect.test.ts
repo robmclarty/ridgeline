@@ -84,6 +84,39 @@ describe("detect", () => {
       const report = await detect(tmpDir)
       expect(report.isVisualSurface).toBe(false)
     })
+
+    it("ignores files inside coverage and test fixtures dirs", async () => {
+      for (const dir of ["coverage", "fixtures"]) {
+        fs.mkdirSync(path.join(tmpDir, dir), { recursive: true })
+        fs.writeFileSync(path.join(tmpDir, dir, "report.html"), "<html></html>\n")
+      }
+      const testFixturesDir = path.join(tmpDir, "test", "fixtures")
+      fs.mkdirSync(testFixturesDir, { recursive: true })
+      fs.writeFileSync(path.join(testFixturesDir, "App.tsx"), "export {}\n")
+      const report = await detect(tmpDir)
+      expect(report.isVisualSurface).toBe(false)
+      expect(report.visualFileExts).toEqual([])
+    })
+
+    it("populates visualFileExts when the file scan is the only signal", async () => {
+      fs.writeFileSync(path.join(tmpDir, "page.html"), "<!doctype html>\n")
+      fs.writeFileSync(path.join(tmpDir, "Component.tsx"), "export {}\n")
+      const report = await detect(tmpDir)
+      expect(report.isVisualSurface).toBe(true)
+      expect(report.visualFileExts).toEqual(["html", "tsx"])
+    })
+
+    it("leaves visualFileExts empty when a visual dep is detected (skip the scan)", async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "package.json"),
+        JSON.stringify({ dependencies: { react: "^18.0.0" } }),
+      )
+      fs.writeFileSync(path.join(tmpDir, "App.tsx"), "export {}\n")
+      const report = await detect(tmpDir)
+      expect(report.isVisualSurface).toBe(true)
+      expect(report.detectedDeps).toContain("react")
+      expect(report.visualFileExts).toEqual([])
+    })
   })
 
   describe("package.json edge cases", () => {

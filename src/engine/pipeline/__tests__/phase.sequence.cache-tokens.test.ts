@@ -11,6 +11,7 @@ vi.mock("../../detect", () => ({
     projectType: "node",
     isVisualSurface: false,
     detectedDeps: [],
+    visualFileExts: [],
     hasDesignMd: false,
     hasAssetDir: false,
     suggestedSensors: [],

@@ -11,6 +11,7 @@ const visualReport: DetectionReport = {
   projectType: "web",
   isVisualSurface: true,
   detectedDeps: ["react", "vite"],
+  visualFileExts: [],
   hasDesignMd: true,
   hasAssetDir: false,
   suggestedSensors: ["playwright", "vision", "a11y", "contrast"],
@@ -21,6 +22,7 @@ const nodeReport: DetectionReport = {
   projectType: "node",
   isVisualSurface: false,
   detectedDeps: [],
+  visualFileExts: [],
   hasDesignMd: false,
   hasAssetDir: false,
   suggestedSensors: [],
@@ -119,6 +121,22 @@ describe("preflight", () => {
       const stripped = stripAnsi(out)
       expect(stripped).toContain("no project signals")
       expect(stripped).toContain("no sensors")
+    })
+
+    it("surfaces visual file extensions when the file-scan signal is the only trigger", () => {
+      const fileOnlyReport: DetectionReport = {
+        projectType: "unknown",
+        isVisualSurface: true,
+        detectedDeps: [],
+        visualFileExts: ["html", "tsx"],
+        hasDesignMd: false,
+        hasAssetDir: false,
+        suggestedSensors: ["playwright", "vision", "a11y", "contrast"],
+        suggestedEnsembleSize: 2,
+      }
+      const stripped = stripAnsi(renderPreflight(fileOnlyReport, { isTTY: true, yes: true }))
+      expect(stripped).toContain("html/tsx files")
+      expect(stripped).not.toContain("no project signals")
     })
 
     it("renders without color when NO_COLOR is set", () => {

@@ -7,6 +7,7 @@ const visualReport: DetectionReport = {
   projectType: "web",
   isVisualSurface: true,
   detectedDeps: ["react", "vite"],
+  visualFileExts: [],
   hasDesignMd: true,
   hasAssetDir: false,
   suggestedSensors: ["playwright", "vision", "a11y", "contrast"],

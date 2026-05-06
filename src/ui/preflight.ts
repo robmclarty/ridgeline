@@ -41,6 +41,9 @@ const formatDetected = (report: DetectionReport): string => {
   for (const dep of report.detectedDeps) parts.push(dep)
   if (report.hasDesignMd) parts.push("design.md")
   if (report.hasAssetDir) parts.push("assets")
+  if (report.visualFileExts.length > 0) {
+    parts.push(`${report.visualFileExts.join("/")} files`)
+  }
   return parts.length > 0 ? parts.join(", ") : "no project signals"
 }
 
