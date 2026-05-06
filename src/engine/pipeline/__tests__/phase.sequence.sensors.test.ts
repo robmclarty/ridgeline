@@ -9,6 +9,7 @@ vi.mock("../../../stores/tags", () => ({
 vi.mock("../../../stores/budget", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.05 })),
   getTotalCost: vi.fn(() => 0.05),
+  getPhaseCostUsd: vi.fn(() => 0),
 }))
 
 vi.mock("../../../stores/handoff", () => ({ ensureHandoffExists: vi.fn() }))
@@ -18,7 +19,9 @@ vi.mock("../../../ui/output", () => ({
   printWarn: vi.fn(),
 }))
 vi.mock("../../../stores/trajectory", () => ({ logTrajectory: vi.fn() }))
-vi.mock("../build.exec", () => ({ invokeBuilder: vi.fn() }))
+vi.mock("../build.loop", () => ({
+  runBuilderLoop: vi.fn(),
+}))
 vi.mock("../review.exec", () => ({ invokeReviewer: vi.fn() }))
 vi.mock("../../../stores/feedback.verdict", () => ({
   formatIssue: vi.fn((i: { description: string }) => i.description),
@@ -50,7 +53,9 @@ vi.mock("node:fs", async () => {
 })
 
 import { runPhase } from "../phase.sequence"
-import { invokeBuilder } from "../build.exec"
+import { runBuilderLoop } from "../build.loop"
+import type { BuilderLoopOutcome } from "../build.loop"
+import type { BuilderInvocation } from "../../../types"
 import { invokeReviewer } from "../review.exec"
 import { detect } from "../../detect"
 import { collectSensorFindings } from "../sensors.collect"
@@ -58,12 +63,34 @@ import { printWarn } from "../../../ui/output"
 
 const makeResult = (): ClaudeResult => ({
   success: true,
-  result: "done",
+  result: "done\nREADY_FOR_REVIEW",
   durationMs: 1000,
   costUsd: 0.01,
   usage: { inputTokens: 10, outputTokens: 10, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
   sessionId: "sess",
 })
+
+const makeReadyOutcome = (): BuilderLoopOutcome => {
+  const result = makeResult()
+  const invocation: BuilderInvocation = {
+    attempt: 1,
+    endReason: "ready_for_review",
+    outputTokens: result.usage.outputTokens,
+    inputTokens: result.usage.inputTokens,
+    costUsd: result.costUsd,
+    durationMs: result.durationMs,
+    windDownReason: null,
+    diffHash: null,
+    timestamp: new Date().toISOString(),
+  }
+  return {
+    invocations: [invocation],
+    finalResult: result,
+    cumulativeOutputTokens: result.usage.outputTokens,
+    cumulativeCostUsd: result.costUsd,
+    endReason: "ready_for_review",
+  }
+}
 
 const passVerdict: ReviewVerdict = {
   passed: true,
@@ -145,7 +172,7 @@ describe("phase.sequence — sensor integration", () => {
   })
 
   it("phase still passes when a sensor rejects (non-fatal warning)", async () => {
-    vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+    vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(invokeReviewer).mockResolvedValue({ result: makeResult(), verdict: passVerdict })
     vi.mocked(detect).mockResolvedValue({
       projectType: "web",
@@ -169,7 +196,7 @@ describe("phase.sequence — sensor integration", () => {
   })
 
   it("runs sensors only for suggestedSensors from detect", async () => {
-    vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+    vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(invokeReviewer).mockResolvedValue({ result: makeResult(), verdict: passVerdict })
     vi.mocked(detect).mockResolvedValue({
       projectType: "node",
@@ -187,7 +214,7 @@ describe("phase.sequence — sensor integration", () => {
   })
 
   it("swallows detect() errors and continues the phase", async () => {
-    vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+    vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(invokeReviewer).mockResolvedValue({ result: makeResult(), verdict: passVerdict })
     vi.mocked(detect).mockRejectedValue(new Error("detect blew up"))
 
@@ -197,7 +224,7 @@ describe("phase.sequence — sensor integration", () => {
 
   it("passes builder-loop sensorFindings into the reviewer invocation", async () => {
     const finding = { kind: "a11y" as const, severity: "warning" as const, summary: "axe flagged a tabindex issue" }
-    vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+    vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(invokeReviewer).mockImplementation(async (_cfg, _phase, _tag, _cwd, sensorFindings) => {
       const verdict: ReviewVerdict = { ...passVerdict, sensorFindings: sensorFindings ?? [] }
       return { result: makeResult(), verdict }

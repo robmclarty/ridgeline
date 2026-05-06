@@ -12,15 +12,8 @@ import type {
 import { computeBuilderBudget } from "./builder.budget"
 import type { BuilderBudget } from "./builder.budget"
 import { parseBuilderMarker } from "./builder.marker"
-import { invokeClaude } from "../claude/claude.exec"
-import { createDisplayCallbacks } from "../claude/stream.display"
 import { buildAgentRegistry } from "../discovery/agent.registry"
-import {
-  prepareAgentsAndPlugins,
-  commonInvokeOptions,
-} from "./pipeline.shared"
-import { cleanupPluginDirs } from "../discovery/plugin.scan"
-import { assembleUserPrompt } from "./build.exec"
+import { assembleUserPrompt, invokeBuilder } from "./build.exec"
 
 export const DEFAULT_MAX_CONTINUATIONS = 5
 export const DEFAULT_PHASE_COST_CAP_MULTIPLIER = 5
@@ -59,6 +52,11 @@ export type BuilderInvoker = (
 
 export type DiffHasher = (cwd: string) => string | null
 
+export type InvocationCompleteHook = (
+  record: BuilderInvocation,
+  result: ClaudeResult | null,
+) => void
+
 export interface BuilderLoopArgs {
   config: RidgelineConfig
   phase: PhaseInfo
@@ -73,6 +71,11 @@ export interface BuilderLoopArgs {
   cumulativeCostStart?: number
   /** Predicate: did the global budget cap fire after this invocation? */
   globalBudgetCheck?: (cumulativeCostUsd: number) => boolean
+  /**
+   * Side-effect hook fired after each invocation finishes (success, timeout, or implicit).
+   * Used by the orchestrator to persist cost, log trajectory events, etc.
+   */
+  onInvocationComplete?: InvocationCompleteHook
 }
 
 const TIMEOUT_MARKER = "Claude invocation timed out"
@@ -135,9 +138,8 @@ const renderContinuationPreamble = (attempt: number, progressContent: string): s
 }
 
 /**
- * Default invoker: assembles the builder prompt, appends the budget
- * instruction (and continuation preamble if attempt > 1), and calls
- * the real `invokeClaude`. Tests override this.
+ * Default invoker: delegates to `invokeBuilder` with budget + continuation
+ * extras layered on. Tests can override this hook to bypass Claude entirely.
  */
 export const defaultInvoker: BuilderInvoker = async (
   config,
@@ -145,37 +147,14 @@ export const defaultInvoker: BuilderInvoker = async (
   feedbackPath,
   cwd,
   ctx,
-) => {
-  const registry = buildAgentRegistry()
-  const systemPrompt = registry.getCorePrompt("builder.md")
-  const baseUserPrompt = assembleUserPrompt(config, phase, feedbackPath, cwd)
-
-  const sections: string[] = [baseUserPrompt]
-  if (ctx.isContinuation) {
-    sections.push(renderContinuationPreamble(ctx.attempt, ctx.progressFileContent))
-  }
-  sections.push("## Builder Budget", renderBudgetInstruction(ctx.budget))
-  sections.push(
-    "## Builder Progress File",
-    `Append continuation entries to: ${ctx.progressFilePath}`,
-  )
-  const userPrompt = sections.join("\n\n")
-
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: cwd ?? process.cwd() })
-  const prepared = prepareAgentsAndPlugins(config)
-  try {
-    return await invokeClaude({
-      systemPrompt,
-      userPrompt,
-      model: config.model,
-      allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "Skill"],
-      ...commonInvokeOptions(config, prepared, onStdout, cwd),
-    })
-  } finally {
-    flush()
-    cleanupPluginDirs(prepared.pluginDirs)
-  }
-}
+) =>
+  invokeBuilder(config, phase, feedbackPath, cwd, {
+    budgetInstruction: renderBudgetInstruction(ctx.budget),
+    continuationPreamble: ctx.isContinuation
+      ? renderContinuationPreamble(ctx.attempt, ctx.progressFileContent)
+      : undefined,
+    progressFilePath: ctx.progressFilePath,
+  })
 
 const readProgressFile = (filePath: string): string => {
   if (!fs.existsSync(filePath)) return ""
@@ -399,7 +378,9 @@ export const runBuilderLoop = async (args: BuilderLoopArgs): Promise<BuilderLoop
       prevDiffHash,
     })
 
-    invocations.push(recordInvocation(attempt, outcome, finalReason, diffHash))
+    const record = recordInvocation(attempt, outcome, finalReason, diffHash)
+    invocations.push(record)
+    args.onInvocationComplete?.(record, outcome.result)
 
     if (isLoopExit(finalReason)) break
 

@@ -73,15 +73,30 @@ export const assembleUserPrompt = (
   return doc.render()
 }
 
+/**
+ * Optional extras the builder loop appends to the user prompt. Tests that
+ * mock `invokeBuilder` ignore these without ceremony — they're additive.
+ */
+export interface BuilderInvocationExtras {
+  /** Budget instruction block telling the builder its soft/hard targets. */
+  budgetInstruction?: string
+  /** Continuation preamble (only present on attempt > 1). */
+  continuationPreamble?: string
+  /** Path to the per-phase builder progress file the builder appends to. */
+  progressFilePath?: string
+}
+
 export const invokeBuilder = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
   feedbackPath: string | null,
   cwd?: string,
+  extras?: BuilderInvocationExtras,
 ): Promise<ClaudeResult> => {
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("builder.md")
-  const userPrompt = assembleUserPrompt(config, phase, feedbackPath, cwd)
+  const baseUserPrompt = assembleUserPrompt(config, phase, feedbackPath, cwd)
+  const userPrompt = appendBuilderExtras(baseUserPrompt, extras)
   const { onStdout, flush } = createDisplayCallbacks({ projectRoot: cwd ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
 
@@ -99,4 +114,20 @@ export const invokeBuilder = async (
     flush()
     cleanupPluginDirs(prepared.pluginDirs)
   }
+}
+
+const appendBuilderExtras = (basePrompt: string, extras?: BuilderInvocationExtras): string => {
+  if (!extras) return basePrompt
+  const sections: string[] = [basePrompt]
+  if (extras.continuationPreamble) sections.push(extras.continuationPreamble)
+  if (extras.budgetInstruction) {
+    sections.push("## Builder Budget", extras.budgetInstruction)
+  }
+  if (extras.progressFilePath) {
+    sections.push(
+      "## Builder Progress File",
+      `Append continuation entries to: ${extras.progressFilePath}`,
+    )
+  }
+  return sections.join("\n\n")
 }

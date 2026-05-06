@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../types"
+import { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict, BuilderInvocation } from "../../types"
 import { createCheckpoint, createCompletionTag } from "../../stores/tags"
-import { recordCost } from "../../stores/budget"
+import { recordCost, getPhaseCostUsd, getTotalCost } from "../../stores/budget"
 import { ensureHandoffExists, ensurePhaseHandoffExists } from "../../stores/handoff"
 import { formatIssue } from "../../stores/feedback.verdict"
 import { writeFeedback, archiveFeedback } from "../../stores/feedback.io"
@@ -10,8 +10,8 @@ import { logTrajectory } from "../../stores/trajectory"
 import { updatePhaseStatus } from "../../stores/state"
 import { printPhase, printWarn } from "../../ui/output"
 import { commitAll, isWorkingTreeDirty } from "../../git"
-import { invokeBuilder } from "./build.exec"
 import { invokeReviewer } from "./review.exec"
+import { runBuilderLoop } from "./build.loop"
 import { detect } from "../detect"
 import { collectSensorFindings } from "./sensors.collect"
 import type { SensorFinding, SensorInput, Viewport } from "../../sensors"
@@ -290,6 +290,27 @@ const persistSensorFindings = (
   }
 }
 
+const HALT_REASONS = new Set<BuilderInvocation["endReason"]>([
+  "halt_max_continuations",
+  "halt_no_progress",
+  "halt_phase_cost_cap",
+  "halt_global_budget",
+])
+
+const trajectoryClaudeMeta = (result: ClaudeResult): {
+  duration: number
+  tokens: { input: number; output: number }
+  costUsd: number
+  cacheReadInputTokens: number
+  cacheCreationInputTokens: number
+} => ({
+  duration: result.durationMs,
+  tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
+  costUsd: result.costUsd,
+  cacheReadInputTokens: result.usage.cacheReadInputTokens,
+  cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
+})
+
 const executeBuild = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
@@ -298,7 +319,7 @@ const executeBuild = async (
   feedbackFilePath: string | null,
   sandboxNote: string,
   cwd?: string,
-): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean; sensorFindings: SensorFinding[] }> => {
+): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean; sensorFindings: SensorFinding[]; halted: boolean }> => {
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
@@ -310,32 +331,71 @@ const executeBuild = async (
     ensurePhaseHandoffExists(wtBuildDir, phase.id)
   }
 
-  const wallStart = Date.now()
-  const result = await invokeBuilder(config, phase, feedbackFilePath, cwd)
-  result.durationMs = Date.now() - wallStart
+  let phaseBudgetExceeded = false
+  const cumulativeCostStart = getPhaseCostUsd(config.buildDir, phase.id)
 
-  logTrajectory(config.buildDir, "build_complete", phase.id, "Build complete", {
-    duration: result.durationMs,
-    tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-    costUsd: result.costUsd,
-    cacheReadInputTokens: result.usage.cacheReadInputTokens,
-    cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
+  const outcome = await runBuilderLoop({
+    config,
+    phase,
+    feedbackPath: feedbackFilePath,
+    cwd,
+    cumulativeCostStart,
+    globalBudgetCheck: () => {
+      const exceeded = isBudgetExceeded(getTotalCost(config.buildDir), config, phase, state)
+      if (exceeded) phaseBudgetExceeded = true
+      return exceeded
+    },
+    onInvocationComplete: (record, result) => {
+      if (record.attempt > 1) {
+        logTrajectory(config.buildDir, "builder_continuation", phase.id,
+          `Builder continuation ${record.attempt}: ${record.windDownReason ?? record.endReason}`)
+      }
+      if (result) {
+        logTrajectory(config.buildDir, "build_complete", phase.id,
+          `Builder invocation ${record.attempt} complete (${record.endReason})`,
+          trajectoryClaudeMeta(result))
+        recordCost(config.buildDir, phase.id, "builder", attempt + record.attempt - 1, result)
+      }
+      if (record.endReason === "halt_no_progress") {
+        logTrajectory(config.buildDir, "builder_no_progress", phase.id,
+          `Builder loop halted: no diff progress between attempts ${record.attempt - 1} and ${record.attempt}`)
+      }
+    },
   })
 
-  const budget = recordCost(config.buildDir, phase.id, "builder", attempt, result)
+  logTrajectory(config.buildDir, "builder_loop_complete", phase.id,
+    `Builder loop end: ${outcome.endReason} (${outcome.invocations.length} invocation(s), ` +
+    `$${outcome.cumulativeCostUsd.toFixed(2)}, ${outcome.cumulativeOutputTokens} out tokens)`)
+
+  updatePhaseStatus(config.buildDir, state, phase.id, {
+    builderInvocations: outcome.invocations,
+    builderLoopEndReason: outcome.endReason,
+  })
+
+  if (!outcome.finalResult) {
+    throw new Error(`Builder loop produced no result (endReason: ${outcome.endReason})`)
+  }
+
+  const halted = HALT_REASONS.has(outcome.endReason)
+  if (halted) {
+    printPhase(phase.id, `Builder loop halted: ${outcome.endReason}`)
+  }
 
   // Commit builder work so the reviewer can see the diff
-  if (isWorkingTreeDirty(cwd)) {
+  if (!halted && isWorkingTreeDirty(cwd)) {
     commitAll(`ridgeline: builder work for ${phase.id} (attempt ${attempt + 1})`, cwd)
   }
 
-  const sensorFindings = await runSensorsForPhase(config, phase, cwd ?? process.cwd())
-  persistSensorFindings(config, phase, sensorFindings)
+  const sensorFindings = halted
+    ? []
+    : await runSensorsForPhase(config, phase, cwd ?? process.cwd())
+  if (!halted) persistSensorFindings(config, phase, sensorFindings)
 
   return {
-    result,
-    isBudgetExceeded: isBudgetExceeded(budget.totalCostUsd, config, phase, state),
+    result: outcome.finalResult,
+    isBudgetExceeded: phaseBudgetExceeded,
     sensorFindings,
+    halted,
   }
 }
 
@@ -357,13 +417,7 @@ const executeReview = async (
   const { result, verdict } = await invokeReviewer(config, phase, checkpointTag, cwd, sensorFindings)
   result.durationMs = Date.now() - wallStart
 
-  logTrajectory(config.buildDir, "review_complete", phase.id, verdict.summary, {
-    duration: result.durationMs,
-    tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
-    costUsd: result.costUsd,
-    cacheReadInputTokens: result.usage.cacheReadInputTokens,
-    cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
-  })
+  logTrajectory(config.buildDir, "review_complete", phase.id, verdict.summary, trajectoryClaudeMeta(result))
 
   recordCost(config.buildDir, phase.id, "reviewer", attempt, result)
 
@@ -445,6 +499,15 @@ export const runPhase = async (
       const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd)
       sensorFindings = build.sensorFindings
       if (build.isBudgetExceeded) return "failed"
+      if (build.halted) {
+        updatePhaseStatus(config.buildDir, state, phase.id, {
+          status: "failed",
+          retries: attempt,
+          duration: Date.now() - startTime,
+          failedAt: new Date().toISOString(),
+        })
+        return "failed"
+      }
     } catch (err) {
       if (await retryOrFail(err, "build") === "fatal") return "failed"
       continue

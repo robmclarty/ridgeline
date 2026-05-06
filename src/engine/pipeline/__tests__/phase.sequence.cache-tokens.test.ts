@@ -25,6 +25,7 @@ vi.mock("../../../stores/tags", () => ({
 vi.mock("../../../stores/budget", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.1 })),
   getTotalCost: vi.fn(() => 0.1),
+  getPhaseCostUsd: vi.fn(() => 0),
 }))
 vi.mock("../../../stores/handoff", () => ({
   ensureHandoffExists: vi.fn(),
@@ -38,9 +39,10 @@ vi.mock("../../../ui/output", () => ({
   printWarn: vi.fn(),
 }))
 vi.mock("../build.exec", () => ({
+  assembleUserPrompt: vi.fn(() => "stub user prompt"),
   invokeBuilder: vi.fn(async () => ({
     success: true,
-    result: "done",
+    result: "done\nREADY_FOR_REVIEW",
     durationMs: 5000,
     costUsd: 0.03,
     usage: {

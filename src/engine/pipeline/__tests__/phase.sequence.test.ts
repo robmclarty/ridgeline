@@ -10,6 +10,7 @@ vi.mock("../../../stores/tags", () => ({
 vi.mock("../../../stores/budget", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.10 })),
   getTotalCost: vi.fn(() => 0.10),
+  getPhaseCostUsd: vi.fn(() => 0),
 }))
 
 vi.mock("../../../stores/handoff", () => ({
@@ -37,8 +38,8 @@ vi.mock("../../../stores/trajectory", () => ({
   })),
 }))
 
-vi.mock("../build.exec", () => ({
-  invokeBuilder: vi.fn(),
+vi.mock("../build.loop", () => ({
+  runBuilderLoop: vi.fn(),
 }))
 
 vi.mock("../review.exec", () => ({
@@ -62,7 +63,9 @@ vi.mock("../../../git", () => ({
 }))
 
 import { runPhase, backoffMs } from "../phase.sequence"
-import { invokeBuilder } from "../build.exec"
+import { runBuilderLoop } from "../build.loop"
+import type { BuilderLoopOutcome } from "../build.loop"
+import type { BuilderInvocation } from "../../../types"
 import { invokeReviewer } from "../review.exec"
 import { createCheckpoint, createCompletionTag } from "../../../stores/tags"
 import { recordCost } from "../../../stores/budget"
@@ -70,12 +73,34 @@ import { updatePhaseStatus } from "../../../stores/state"
 
 const makeResult = (cost = 0.05): ClaudeResult => ({
   success: true,
-  result: "done",
+  result: "done\nREADY_FOR_REVIEW",
   durationMs: 5000,
   costUsd: cost,
   usage: { inputTokens: 100, outputTokens: 50, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
   sessionId: "sess",
 })
+
+const makeReadyOutcome = (cost = 0.05): BuilderLoopOutcome => {
+  const result = makeResult(cost)
+  const invocation: BuilderInvocation = {
+    attempt: 1,
+    endReason: "ready_for_review",
+    outputTokens: result.usage.outputTokens,
+    inputTokens: result.usage.inputTokens,
+    costUsd: result.costUsd,
+    durationMs: result.durationMs,
+    windDownReason: null,
+    diffHash: null,
+    timestamp: new Date().toISOString(),
+  }
+  return {
+    invocations: [invocation],
+    finalResult: result,
+    cumulativeOutputTokens: result.usage.outputTokens,
+    cumulativeCostUsd: result.costUsd,
+    endReason: "ready_for_review",
+  }
+}
 
 const passVerdict: ReviewVerdict = {
   passed: true,
@@ -160,7 +185,7 @@ describe("phaseRunner", () => {
 
   describe("runPhase", () => {
     it("returns 'passed' when builder and reviewer succeed", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
@@ -171,7 +196,7 @@ describe("phaseRunner", () => {
     })
 
     it("creates checkpoint tag before building", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
@@ -182,7 +207,7 @@ describe("phaseRunner", () => {
     })
 
     it("retries on reviewer failure up to maxRetries", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer)
         .mockResolvedValueOnce({ result: makeResult(), verdict: failVerdict })
         .mockResolvedValueOnce({ result: makeResult(), verdict: failVerdict })
@@ -190,11 +215,11 @@ describe("phaseRunner", () => {
 
       const result = await runPhase(phase, config, makeState())
       expect(result).toBe("passed")
-      expect(invokeBuilder).toHaveBeenCalledTimes(3)
+      expect(runBuilderLoop).toHaveBeenCalledTimes(3)
     })
 
     it("returns 'failed' when retries exhausted", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: failVerdict,
@@ -203,35 +228,40 @@ describe("phaseRunner", () => {
       const result = await runPhase(phase, config, makeState())
       expect(result).toBe("failed")
       // 1 initial + 2 retries = 3 attempts
-      expect(invokeBuilder).toHaveBeenCalledTimes(3)
+      expect(runBuilderLoop).toHaveBeenCalledTimes(3)
     })
 
-    it("records costs for each attempt", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+    it("records reviewer cost (builder costs are recorded inside the loop hook, mocked here)", async () => {
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
 
       await runPhase(phase, config, makeState())
-      // builder + reviewer
-      expect(recordCost).toHaveBeenCalledTimes(2)
+      // reviewer only — the builder loop's onInvocationComplete hook records
+      // builder costs internally; with the loop mocked, only the reviewer
+      // recordCost call is observable here.
+      expect(recordCost).toHaveBeenCalledTimes(1)
+      expect(recordCost).toHaveBeenCalledWith(expect.any(String), "01-scaffold", "reviewer", 0, expect.any(Object))
     })
 
-    it("returns 'failed' when budget is exceeded", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
-      vi.mocked(recordCost).mockReturnValue({ entries: [], totalCostUsd: 100 })
+    it("returns 'failed' when builder loop reports halt_global_budget", async () => {
+      vi.mocked(runBuilderLoop).mockResolvedValue({
+        ...makeReadyOutcome(),
+        endReason: "halt_global_budget",
+      })
 
       const result = await runPhase(phase, { ...config, maxBudgetUsd: 50 }, makeState())
       expect(result).toBe("failed")
     })
 
     it("returns 'failed' immediately on authentication error without retrying", async () => {
-      vi.mocked(invokeBuilder).mockRejectedValue(new Error("Authentication failed. Refresh your OAuth token."))
+      vi.mocked(runBuilderLoop).mockRejectedValue(new Error("Authentication failed. Refresh your OAuth token."))
 
       const result = await runPhase(phase, config, makeState())
       expect(result).toBe("failed")
-      expect(invokeBuilder).toHaveBeenCalledTimes(1)
+      expect(runBuilderLoop).toHaveBeenCalledTimes(1)
     })
 
     it("throws when phase not found in state", async () => {
@@ -241,23 +271,22 @@ describe("phaseRunner", () => {
       await expect(runPhase(phase, config, state)).rejects.toThrow("Phase 01-scaffold not found in state")
     })
 
-    it("continues to next attempt when builder throws", async () => {
-      vi.mocked(invokeBuilder)
+    it("continues to next attempt when builder loop throws", async () => {
+      vi.mocked(runBuilderLoop)
         .mockRejectedValueOnce(new Error("builder crashed"))
-        .mockResolvedValueOnce(makeResult())
-        .mockResolvedValueOnce(makeResult())
+        .mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
       })
 
       const result = await runPhase(phase, config, makeState())
-      // First attempt fails (builder error), second succeeds
+      // First attempt fails (builder loop error), second succeeds
       expect(result).toBe("passed")
     })
 
     it("continues to next attempt when reviewer throws", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer)
         .mockRejectedValueOnce(new Error("eval crashed"))
         .mockResolvedValueOnce({ result: makeResult(), verdict: passVerdict })
@@ -267,7 +296,7 @@ describe("phaseRunner", () => {
     })
 
     it("creates completion tag on success", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
@@ -278,7 +307,7 @@ describe("phaseRunner", () => {
     })
 
     it("updates phase status to complete on success", async () => {
-      vi.mocked(invokeBuilder).mockResolvedValue(makeResult())
+      vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
       vi.mocked(invokeReviewer).mockResolvedValue({
         result: makeResult(),
         verdict: passVerdict,
