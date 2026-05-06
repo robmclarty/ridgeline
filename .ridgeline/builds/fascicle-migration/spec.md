@@ -13,10 +13,10 @@ Done means src/engine/pipeline/ is deleted, src/engine/claude/{claude.exec,strea
 
 ### Phase 0 — Scaffold, dependencies, and baseline capture
 
-Add fascicle (^0.3.x) and zod (^4.x — major version dictated by fascicle's peer-dependency) as runtime dependencies, bump engines.node from `>=20` to `>=24`, drop Node 20 from the CI matrix, create the new directory tree under src/engine/ (flows/, atoms/, composites/, adapters/) with empty index.ts files, and capture every pre-migration baseline that later phases verify against.
+Add fascicle (0.3.x) and zod (4.x — major version dictated by fascicle's peer-dependency) as runtime dependencies, bump engines.node from `>=20` to `>=24`, drop Node 20 from the CI matrix, create the new directory tree under src/engine/ (flows/, atoms/, composites/, adapters/) with empty index.ts files, and capture every pre-migration baseline that later phases verify against. Dependency versions are exact-pinned per the project's `.npmrc save-exact=true` convention; no caret/tilde range prefix is added or expected.
 
 Acceptance criteria:
-- package.json declares fascicle and zod under `dependencies` (not devDependencies); fascicle version range starts with `^0.3.`; zod version range matches fascicle 0.3.x's required peer (currently `^4.`).
+- package.json declares fascicle and zod under `dependencies` (not devDependencies); fascicle resolves to a 0.3.x version; zod resolves to a 4.x version (matching fascicle 0.3.x's required peer). Versions are exact-pinned (no `^` or `~` prefix) per `.npmrc save-exact=true`.
 - package.json `engines.node` is `>=24`.
 - package.json does NOT include `@ai-sdk/anthropic` or `ai` in dependencies, devDependencies, or peerDependencies.
 - CI workflow files under .github/workflows/ contain no reference to `node-version: 20` or `node: 20`; only Node 24 (or 24+) is exercised.
@@ -221,7 +221,7 @@ Acceptance criteria:
 
 ## In Scope
 
-- Adding fascicle (^0.3.x) and zod (^4.x — major version dictated by fascicle's peer-dependency) as runtime dependencies; bumping `engines.node` from `>=20` to `>=24`; updating CI matrix to drop Node 20.
+- Adding fascicle (0.3.x) and zod (4.x — major version dictated by fascicle's peer-dependency) as runtime dependencies, exact-pinned per `.npmrc save-exact=true`; bumping `engines.node` from `>=20` to `>=24`; updating CI matrix to drop Node 20.
 - New directory tree under src/engine: `flows/`, `atoms/`, `composites/`, `adapters/`, plus `engine.factory.ts` and `claude/sandbox.policy.ts`.
 - Engine factory `makeRidgelineEngine(cfg)` calling fascicle's `create_engine` with a `claude_cli` provider configured for greywall sandbox + `auth_mode: 'auto'` + plugin_dirs + setting_sources + startup_timeout_ms + stall_timeout_ms + skip_probe (under vitest).
 - Exactly one Engine per command invocation, disposed in a `try { ... } finally { await engine.dispose() }` block at the command entry point.

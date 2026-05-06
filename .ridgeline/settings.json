@@ -4,7 +4,6 @@
   "timeoutMinutes": "unlimited",
   "planner": {
     "phaseBudgetLimit": "unlimited",
-    "phaseTokenLimit": 120000,
     "specialistCount": 3
   },
   "build": {
