@@ -2,6 +2,62 @@
 
 ## Unreleased — v0.12.0
 
+### Added
+
+- **Builder continuation loop.** A single phase no longer fails when the
+  builder hits its per-call timeout or fills its context window. Each
+  phase now runs as a loop of fresh-context builder invocations: the
+  builder emits `READY_FOR_REVIEW` to advance, or `MORE_WORK_NEEDED:
+  <reason>` to wind down with a continuation handoff. The next
+  invocation reads `phases/<id>.builder-progress.md` and picks up
+  exactly where the previous one stopped. Halt conditions: phase cost
+  cap (5×`phaseBudgetLimit`, skipped when `unlimited`), global build
+  budget, no-progress diff hash (1 strike), and `maxContinuations`
+  (default 5). Per-invocation history persists to
+  `state.json:phases[].builderInvocations`.
+- **Per-model context-window awareness.** New `contextWindows` block in
+  `settings.json` lets users override the model's hard ceiling per
+  model name (e.g. `{ "claude-sonnet-4-6": 1000000 }` for the 1M-token
+  variant). The orchestrator uses this — minus a 5K safety margin and
+  the estimated input prompt size — to compute each invocation's soft
+  (~70%) and hard (~85%) output budgets. The hard ceiling is distinct
+  from `phaseTokenLimit` (a soft, user-tunable target).
+- **`--require-phase-approval`** flag (and `build.requirePhaseApproval`
+  settings.json equivalent) on `build` and the default orchestrator
+  command. When set, the orchestrator pauses between phases (or wave
+  boundaries) and asks `Continue to phase N? [Y/n/q]` before
+  advancing. Composes cleanly with `--auto` — `--auto` skips preflight,
+  the new flag still gates phase advancement. Auto-continues in
+  non-TTY environments.
+- **Graceful-stop keystroke (`q` or Ctrl-G).** While a build is
+  running in a TTY, press `q` to request a graceful stop. The current
+  phase finishes naturally (including any in-flight builder-loop
+  continuations); the orchestrator exits 0 at the next phase boundary
+  with state preserved for resume. A second press within 5 seconds
+  escalates to a regular SIGINT for "stop NOW." Ctrl-C still works as
+  today and is unchanged.
+- New trajectory event types: `builder_continuation` (loop iteration
+  start), `builder_loop_complete` (phase loop end + summary),
+  `builder_no_progress` (no-progress halt fired).
+
+### Changed
+
+- `phaseTokenLimit` (default lowered from 80,000 → 50,000) is now a
+  **soft** per-invocation cap, not a hard ceiling. The model's context
+  window is the hard ceiling. Phases that overshoot the soft cap
+  continue across builder invocations rather than failing — but the
+  planner is also instructed to bias hard toward smaller phases (more
+  conservative split signals at >15 acceptance criteria, >6 new files,
+  or >2 distinct subsystems).
+- `phaseBudgetLimit` accepts `null` (or the string `"unlimited"`) to
+  disable the cost advisory entirely; the planner sizes phases purely
+  by token target.
+- `timeoutMinutes` accepts `"unlimited"` (CLI `--timeout unlimited` or
+  settings.json equivalent) to disable the per-call timeout — replaced
+  by a 24-hour catchall for genuinely-hung processes.
+- The plan-reviewer flags any phase exceeding 70% of the ceiling and
+  rejects any phase exceeding it (was: "substantially exceeds").
+
 ### Breaking — for consumers
 
 - **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
