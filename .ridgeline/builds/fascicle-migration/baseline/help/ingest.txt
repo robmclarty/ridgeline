@@ -1,0 +1,18 @@
+Usage: ridgeline ingest [options] [build-name] [input]
+
+One-shot pipeline kickoff: convert a freeform spec (file or directory of files)
+into shape.md, spec.md, constraints.md, taste.md (and design.md if visual). No
+Q&A — the synthesizer flags inferred facts in a `## Inferred / Gaps` section per
+file so you can edit them by hand before running plan.
+
+Options:
+  --model <name>        Model for shaper, designer, and specifier (defaults to
+                        settings.json model, or 'opus')
+  --timeout <minutes>   Max duration per turn in minutes (default: "10")
+  --max-budget-usd <n>  Halt if cumulative cost exceeds this amount
+  --specialists <n>     Number of ensemble specialists (1, 2, or 3). Default: 3
+  --thorough            Alias for --specialists 3 (the default)
+  -y, --yes             Skip the preflight confirmation prompt
+  --auto                Non-interactive mode: skip Q&A; use Auto variants where
+                        applicable
+  -h, --help            display help for command

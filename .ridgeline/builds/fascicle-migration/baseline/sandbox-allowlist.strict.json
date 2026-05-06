@@ -1,0 +1,46 @@
+{
+  "_note": "Pre-migration network allowlist for greywall sandbox in strict mode. Identical host set to semi-locked because pre-migration ridgeline derives the allowlist from settings.ts independent of sandbox mode — mode only varies the greywall toolchain *profiles* (STRICT_PROFILES vs SEMI_LOCKED_PROFILES) and the additional write paths, not the network host filter.",
+  "_source": {
+    "module": "src/stores/settings.ts",
+    "exports_used": ["DEFAULT_NETWORK_ALLOWLIST", "CLAUDE_REQUIRED_DOMAINS"],
+    "resolver": "resolveNetworkAllowlist(ridgelineDir)",
+    "behavior": "Same resolver as semi-locked: hosts are independent of sandbox mode. Phase 3's policy builder may legitimately diverge here if strict ought to allow fewer hosts — but any divergence is a *narrowing*, never a widening."
+  },
+  "_strict_profile_callout": {
+    "STRICT_PROFILES": ["claude", "node"],
+    "SEMI_LOCKED_PROFILES": ["claude", "node", "python", "ruby", "go", "cargo", "docker"],
+    "STRICT_writePaths": ["<repoRoot>", "/tmp"],
+    "SEMI_LOCKED_writePaths": [
+      "<repoRoot>",
+      "/tmp",
+      "$HOME/.agent-browser",
+      "$HOME/.cache/uv",
+      "$HOME/.cache/pip",
+      "$HOME/.cache/playwright",
+      "$HOME/Library/Caches/Cypress",
+      "$HOME/Library/Caches/ms-playwright"
+    ],
+    "_note": "These two facets (profiles, writePaths) ARE mode-dependent and must be reproduced in Phase 3's buildSandboxPolicy via additional_write_paths. The semi-locked write paths are derived dynamically per process using homedir() — Phase 3's snapshot test must use the same resolver."
+  },
+  "mode": "strict",
+  "host_count": 16,
+  "hosts": [
+    "api.anthropic.com",
+    "downloads.claude.ai",
+    "http-intake.logs.us5.datadoghq.com",
+    "registry.npmjs.org",
+    "nodejs.org",
+    "objects.githubusercontent.com",
+    "raw.githubusercontent.com",
+    "pypi.org",
+    "files.pythonhosted.org",
+    "crates.io",
+    "static.crates.io",
+    "rubygems.org",
+    "proxy.golang.org",
+    "github.com",
+    "gitlab.com",
+    "bitbucket.org"
+  ],
+  "_phase3_assertion": "Phase 3's buildSandboxPolicy('strict') must produce a network_allowlist whose host set is a subset of (or equal to) this list. No new hosts appear without an explicit code-comment justification in sandbox.policy.ts. Strict mode may legitimately narrow the host set; this baseline captures the upper bound."
+}

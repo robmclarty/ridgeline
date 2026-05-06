@@ -1,0 +1,48 @@
+# Pre-migration greywall integration test list
+#
+# Phase 3 must keep every test in this list passing UNCHANGED at phase exit.
+# If any test needs adjustment, that signals a regression in the policy builder
+# — investigate sandbox.policy.ts, not the test.
+#
+# Captured: 2026-05-05
+# Source: ast-grep / grep over src/**/__tests__/ for greywall references.
+# Producing command (run from repo root):
+#   grep -REn '^\s*(test|it|describe)\(["'\''].*' src/engine/claude/__tests__/sandbox.greywall.test.ts \
+#     src/engine/claude/__tests__/sandbox.test.ts | sort
+
+# === src/engine/claude/__tests__/sandbox.greywall.test.ts ===
+describe("greywallProvider")
+  it("has name 'greywall' and command 'greywall'")
+  it("strict mode writes allowWrite for repo, /tmp, additional paths, and extras")
+  it("strict mode passes --profile claude,node, --no-credential-protection, --settings, and -- separator")
+  it("semi-locked mode (default) widens profile composition and write paths")
+  it("merges extraProfiles, extraWritePaths, and extraReadPaths into the spawn args")
+  it("does not include network key in settings file (rules managed via greyproxy API)")
+  describe("checkReady")
+    it("returns null when greyproxy is running")
+    it("returns error message when greyproxy is not running")
+    it("returns null when execFileSync throws but output matches")
+    it("returns error message when execFileSync throws and output does not match")
+  describe("syncRules")
+    it("creates rules for domains not already in greyproxy")
+    it("skips creation when all rules already exist")
+    it("does nothing when allowlist is empty")
+
+# === src/engine/claude/__tests__/sandbox.test.ts ===
+describe("detectSandbox")
+  it("returns greywall provider when greywall is available and ready")
+  it("returns null provider with warning when greyproxy is not running")
+  it("returns null when greywall is absent")
+  it("returns null with no warning when mode is 'off'")
+
+# === Greywall references in non-greywall-specific tests ===
+# (These are NOT integration tests for the greywall provider — they reference
+# `greywall` only as a discriminant name in fixtures. They are listed here so
+# Phase 3 can confirm they are not accidentally broken by the substrate swap.)
+src/engine/claude/__tests__/claude.exec.test.ts        — "spawns via sandbox provider when one is given" (uses { name: "greywall", buildArgs }) at L289-309
+src/engine/pipeline/__tests__/pipeline.shared.test.ts  — multiple fixture references at L86-90, L308-312 (config plumbing only; no greywall behavior asserted)
+
+# === Phase 3 assertion ===
+# After src/engine/claude/sandbox.greywall.ts is replaced by src/engine/claude/sandbox.policy.ts,
+# every `describe`/`it` listed above must continue to pass with zero modifications to the test file.
+# An adjustment to any of these tests is a red flag — investigate sandbox.policy.ts first.

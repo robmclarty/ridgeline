@@ -1,0 +1,18 @@
+Usage: ridgeline research [options] [build-name]
+
+Research the spec using web sources to find improvements (optional step between
+spec and plan)
+
+Options:
+  --model <name>        Model for research agents (defaults to settings.json
+                        model, or 'opus')
+  --timeout <minutes>   Max duration per agent in minutes (default: "15")
+  --max-budget-usd <n>  Halt if cumulative research cost exceeds this amount
+  --quick               Run a single random specialist instead of the full
+                        ensemble
+  --auto [iterations]   Auto-loop: research + refine for N iterations (default
+                        2)
+  --specialists <n>     Number of ensemble specialists (1, 2, or 3). Default: 3
+  --thorough            Alias for --specialists 3 (the default)
+  -y, --yes             Skip the preflight confirmation prompt
+  -h, --help            display help for command

@@ -1,0 +1,16 @@
+Usage: ridgeline plan [options] [build-name]
+
+Generate phase specs from spec.md and constraints.md
+
+Options:
+  --model <name>        Model for planner (defaults to settings.json model, or
+                        'opus')
+  --timeout <minutes>   Max duration for planning (default: "120")
+  --constraints <path>  Path to constraints.md
+  --taste <path>        Path to taste.md
+  --specialists <n>     Number of ensemble specialists (1, 2, or 3). Default: 3
+  --thorough            Alias for --specialists 3 (the default)
+  -y, --yes             Skip the preflight confirmation prompt
+  --auto                Non-interactive mode: skip Q&A; use Auto variants where
+                        applicable
+  -h, --help            display help for command

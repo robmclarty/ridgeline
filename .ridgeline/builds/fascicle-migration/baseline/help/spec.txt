@@ -1,0 +1,18 @@
+Usage: ridgeline spec [options] [build-name] [input]
+
+Generate spec.md, constraints.md, and taste.md from shape.md via ensemble.
+Optionally pass an input: path to a file (convention: idea.md) or raw text
+treated as authoritative source material the synthesizer preserves alongside
+shape.md.
+
+Options:
+  --model <name>        Model for specialists and synthesizer (defaults to
+                        settings.json model, or 'opus')
+  --timeout <minutes>   Max duration per turn in minutes (default: "10")
+  --max-budget-usd <n>  Halt if cumulative cost exceeds this amount
+  --specialists <n>     Number of ensemble specialists (1, 2, or 3). Default: 3
+  --thorough            Alias for --specialists 3 (the default)
+  -y, --yes             Skip the preflight confirmation prompt
+  --auto                Non-interactive mode: skip Q&A; use Auto variants where
+                        applicable
+  -h, --help            display help for command

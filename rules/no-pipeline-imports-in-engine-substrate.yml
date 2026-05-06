@@ -1,0 +1,24 @@
+id: no-pipeline-imports-in-engine-substrate
+# Activates at Phase 4 (atoms) and Phase 5 (leaf flows).
+# Rationale: atoms, composites, flows, and adapters must not import from
+# the soon-to-be-deleted `src/engine/pipeline/` or from
+# `src/engine/claude/{claude.exec,stream.parse,stream.result,stream.display,stream.types}.ts`.
+# Severity is `hint` while these directories are still empty in Phase 0.
+# Phase 4 lifts to `error` once atoms/ has content.
+message: Files under src/engine/{flows,atoms,composites,adapters}/ may not import from src/engine/pipeline/ or src/engine/claude/{claude.exec,stream.*}. Use the new fascicle-based atoms and adapters.
+severity: hint
+language: typescript
+files:
+  - "src/engine/atoms/**/*.ts"
+  - "src/engine/composites/**/*.ts"
+  - "src/engine/flows/**/*.ts"
+  - "src/engine/adapters/**/*.ts"
+rule:
+  any:
+    - pattern: import $$$ from "$$$/pipeline/$$$"
+    - pattern: import $$$ from "$$$/pipeline"
+    - pattern: import $$$ from "$$$/claude/claude.exec"
+    - pattern: import $$$ from "$$$/claude/stream.parse"
+    - pattern: import $$$ from "$$$/claude/stream.result"
+    - pattern: import $$$ from "$$$/claude/stream.display"
+    - pattern: import $$$ from "$$$/claude/stream.types"

@@ -1,0 +1,70 @@
+{
+  "_note": "Pre-migration ridgeline error fingerprints. Captured at the surfaces ridgeline emits today (stderr text + trajectory event kind), not as thrown error class names — pre-migration code uses plain Error throws and regex-based FATAL_PATTERNS classification, not typed error classes. Phase 8 (Cleanup) will re-snapshot user-facing messages and assert byte equality after the substrate swap.",
+  "_source": {
+    "phase_sequence_ts": "src/engine/pipeline/phase.sequence.ts",
+    "ensemble_exec_ts": "src/engine/pipeline/ensemble.exec.ts",
+    "build_ts": "src/commands/build.ts"
+  },
+  "adversarial_round_cap_exhaustion": {
+    "name": "Error",
+    "trigger": "phase.sequence.runPhase exits the while-loop after maxRetries+1 unsuccessful build/review cycles",
+    "stderr_message": "[<phase-id>] FAILED: retries exhausted",
+    "trajectory_event": {
+      "kind": "phase_fail",
+      "phaseId": "<phase-id>",
+      "message": "Retries exhausted"
+    },
+    "phase_status": "failed",
+    "exit_path": "runPhase returns 'failed' (no thrown error); the per-phase result propagates to the caller which decides whether to halt the build",
+    "post_message_recovery_text": [
+      "Recovery: git reset --hard <checkpointTag>",
+      "Options:",
+      "  1. Edit spec.md and re-run: ridgeline plan <build> && ridgeline build <build>",
+      "  2. Edit the phase spec directly: <phase-filepath>",
+      "  3. Resume after manual fixes: ridgeline build <buildName>"
+    ]
+  },
+  "schema_validation_failure": {
+    "name": "Error",
+    "trigger": "ensemble.exec.invokeEnsemble synthesizer output does not contain a valid JSON object",
+    "message": "No valid JSON object found in output",
+    "thrown_at": "src/engine/pipeline/ensemble.exec.ts:54",
+    "propagation": "thrown out of invokeEnsemble; surfaces as a build/review error and is classified by classifyError() as 'transient' under pre-migration regex matching"
+  },
+  "auth_failure": {
+    "name": "Error",
+    "trigger": "claude.exec invocation surfaces an authentication-failure substring in the error message",
+    "classification": "fatal",
+    "fatal_patterns_matched": [
+      "authentication failed",
+      "unauthorized",
+      "forbidden",
+      "invalid_api_key",
+      "oauth token has expired"
+    ],
+    "stderr_message_template": "[<phase-id>] {Build|Review} failed (fatal): <original error string>",
+    "trajectory_event": {
+      "kind_template": "{build_complete|review_complete}",
+      "phaseId": "<phase-id>",
+      "message_template": "{Build|Review} error (fatal): <original error string>"
+    },
+    "phase_status": "failed",
+    "exit_path": "handleInvokeError returns 'fatal'; runPhase returns 'failed' immediately, no retry"
+  },
+  "budget_exceeded": {
+    "name": "Error",
+    "trigger_a": "phase.sequence.isBudgetExceeded(): cumulative cost exceeds config.maxBudgetUsd after a build attempt",
+    "stderr_message_template_a": "[<phase-id>] Budget exceeded: $<total>.<##> > $<cap>",
+    "trajectory_event_a": {
+      "kind": "budget_exceeded",
+      "phaseId": "<phase-id>",
+      "message_template": "Total cost $<total>.<##> exceeds budget $<cap>"
+    },
+    "trigger_b": "ensemble.exec.invokeEnsemble: pre-synth cost already exceeds budget",
+    "thrown_message_template_b": "Pre-synthesis cost ($<total>.<##>) already exceeds budget ($<cap>.<##>). Skipping synthesis to avoid further cost.",
+    "trigger_c": "build.ts post-wave check: cumulative budget exceeded between waves",
+    "stdout_message_template_c": "Budget limit reached: $<total>.<##> > $<cap>",
+    "phase_status": "failed",
+    "exit_path": "build halts; phase status updated to 'failed'"
+  }
+}

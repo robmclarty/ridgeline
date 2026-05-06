@@ -1,0 +1,27 @@
+Usage: ridgeline build [options] [build-name]
+
+Execute the build pipeline (automatically resumes from last successful phase)
+
+Options:
+  --timeout <minutes>        Max duration per phase in minutes (default: "120")
+  --check-timeout <seconds>  Max duration for check command in seconds (default:
+                             "1200")
+  --max-retries <n>          Max reviewer retry loops per phase (default: "2")
+  --check <command>          Baseline check command (overrides constraints.md)
+  --model <name>             Model for builder and reviewer (defaults to
+                             settings.json model, or 'opus')
+  --max-budget-usd <n>       Halt if cumulative cost exceeds this amount
+  --constraints <path>       Path to constraints.md
+  --taste <path>             Path to taste.md
+  --context <text>           Extra context appended to builder and planner
+                             prompts
+  --sandbox <mode>           Sandbox mode: off | semi-locked (default) | strict
+  --unsafe                   Alias for --sandbox=off (deprecated)
+  --no-structured-log        Disable structured logging to log.jsonl
+  --specialists <n>          Number of ensemble specialists (1, 2, or 3).
+                             Default: 3
+  --thorough                 Alias for --specialists 3 (the default)
+  -y, --yes                  Skip the preflight confirmation prompt
+  --auto                     Non-interactive mode: skip Q&A; use Auto variants
+                             where applicable
+  -h, --help                 display help for command

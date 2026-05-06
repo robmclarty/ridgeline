@@ -1,6 +1,15 @@
 {
-  "entry": ["examples/**", "scripts/**", "test/fixtures/**", "stryker.config.mjs"],
-  "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast", "@stryker-mutator/vitest-runner"],
+  "entry": [
+    "examples/**",
+    "scripts/**",
+    "test/fixtures/**",
+    "stryker.config.mjs",
+    "src/engine/flows/index.ts",
+    "src/engine/atoms/index.ts",
+    "src/engine/composites/index.ts",
+    "src/engine/adapters/index.ts"
+  ],
+  "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast", "@stryker-mutator/vitest-runner", "fascicle", "zod"],
   "ignoreExports": [
     { "file": "src/engine/claude/stream.types.ts", "exports": ["StreamEvent"] },
     { "file": "src/commands/spec.ts", "exports": ["SpecOptions"] },
@@ -34,7 +43,10 @@
       "src/engine/pipeline/specify.exec.ts",
       "src/sensors/playwright.ts",
       "src/sensors/a11y.ts",
-      "src/sensors/vision.ts"
+      "src/sensors/vision.ts",
+      "src/commands/retro-refine.ts",
+      "src/commands/retrospective.ts",
+      "src/commands/rewind.ts"
     ],
     "minLines": 10
   },

@@ -1,0 +1,37 @@
+id: no-fascicle-alias-reexports
+# Activates at Phase 5 (leaf flows) and beyond.
+# Rationale: the snake_case (fascicle) vs camelCase (ridgeline) boundary is
+# intentionally visible at every call site. Aliasing fascicle's snake_case
+# exports to camelCase identifiers via `export ... as <camelCaseName>` hides
+# the boundary and breaks the readability invariant. Severity is `hint`
+# until Phase 5 wires up the first leaf flow that imports from fascicle;
+# Phase 5 lifts to `error`.
+message: Do not alias fascicle's snake_case exports to camelCase via `export ... as`. Keep the snake_case/camelCase boundary visible at call sites.
+severity: hint
+language: typescript
+files:
+  - "src/**/*.ts"
+ignores:
+  - "src/**/__tests__/**/*.ts"
+rule:
+  any:
+    - pattern: export { create_engine as $A } from "fascicle"
+    - pattern: export { model_call as $A } from "fascicle"
+    - pattern: export { run as $A } from "fascicle"
+    - pattern: export { sequence as $A } from "fascicle"
+    - pattern: export { parallel as $A } from "fascicle"
+    - pattern: export { branch as $A } from "fascicle"
+    - pattern: export { retry as $A } from "fascicle"
+    - pattern: export { fallback as $A } from "fascicle"
+    - pattern: export { timeout as $A } from "fascicle"
+    - pattern: export { loop as $A } from "fascicle"
+    - pattern: export { adversarial as $A } from "fascicle"
+    - pattern: export { ensemble as $A } from "fascicle"
+    - pattern: export { tournament as $A } from "fascicle"
+    - pattern: export { consensus as $A } from "fascicle"
+    - pattern: export { checkpoint as $A } from "fascicle"
+    - pattern: export { suspend as $A } from "fascicle"
+    - pattern: export { aborted_error as $A } from "fascicle"
+    - pattern: export { rate_limit_error as $A } from "fascicle"
+    - pattern: export { provider_error as $A } from "fascicle"
+    - pattern: export { schema_validation_error as $A } from "fascicle"

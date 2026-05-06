@@ -1,0 +1,15 @@
+Usage: ridgeline catalog [options] [build-name]
+
+Catalog media assets into asset-catalog.json
+
+Options:
+  --asset-dir <path>   Path to asset directory
+  --describe           Add vision-based descriptions for all assets
+  --classify           AI-classify uncategorized files into categories
+  --force              Re-process all assets ignoring content hash
+  --pack               Generate sprite atlases after cataloging
+  --batch              Batch multiple images per vision call
+  --model <name>       Model for vision and classification (defaults to
+                       settings.json model, or 'opus')
+  --timeout <minutes>  Max duration per AI call in minutes (default: "5")
+  -h, --help           display help for command

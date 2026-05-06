@@ -1,0 +1,23 @@
+id: no-emoji-in-engine-substrate
+# Activates at Phase 4 (atoms) and beyond.
+# Rationale: terminal output style across the migration must not introduce
+# emoji or new ANSI styling beyond what src/ui/* and the prior
+# stream.display.ts emitted. This rule flags emoji-bearing string literals
+# in the new substrate directories. Severity is `hint` while the
+# directories are empty; Phase 4 lifts to `error` once atoms/ has content.
+message: No emoji in src/engine/{flows,atoms,composites,adapters}/. Plain ASCII / terminal text only — match the pre-migration output medium.
+severity: hint
+language: typescript
+files:
+  - "src/engine/atoms/**/*.ts"
+  - "src/engine/composites/**/*.ts"
+  - "src/engine/flows/**/*.ts"
+  - "src/engine/adapters/**/*.ts"
+ignores:
+  - "src/engine/**/__tests__/**/*.ts"
+rule:
+  any:
+    - kind: string
+      regex: '[\u{1F300}-\u{1FAFF}]'
+    - kind: template_string
+      regex: '[\u{1F300}-\u{1FAFF}]'

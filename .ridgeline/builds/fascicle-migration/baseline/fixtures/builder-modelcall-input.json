@@ -1,0 +1,86 @@
+{
+  "_note": "Pre-migration equivalent of ModelCallInput for the builder atom. Captures the resolved system+user-prompt+tools+sandbox payload that invokeBuilder hands to invokeClaude (src/engine/pipeline/build.exec.ts:89). Phase 5 will assert that the builder atom's pipe(stable.prompt, model_call) constructs an equivalent ModelCallInput from the same frozen BuilderArgs, byte-stable for the keys/strings/array order listed below.",
+  "_source": {
+    "build_exec_ts": "src/engine/pipeline/build.exec.ts",
+    "pipeline_shared_ts": "src/engine/pipeline/pipeline.shared.ts",
+    "stable_prompt_ts": "src/engine/claude/stable.prompt.ts",
+    "prompt_document_ts": "src/engine/pipeline/prompt.document.ts"
+  },
+  "frozen_builder_args": {
+    "buildName": "phase-5-fixture",
+    "phaseId": "01-stub-phase",
+    "phaseFilepath": "<buildDir>/phases/01-stub-phase.md",
+    "phaseSpecMd": "# Phase 1: Stub\n\n## Goal\n\nFrozen fixture phase used as the stable input for the prompt-cache hit-rate baseline test.\n\n## Acceptance Criteria\n\n- This file is loaded verbatim by assembleUserPrompt.\n",
+    "constraintsMd": "# Constraints\n\nFrozen fixture constraints content.\n",
+    "tasteMd": "# Taste\n\nFrozen fixture taste content.\n",
+    "specMd": "# Spec\n\nFrozen fixture spec content.\n",
+    "designMd": null,
+    "handoffMd": "## Phase 0\n\nFrozen fixture handoff.\n",
+    "feedbackMd": null,
+    "checkCommand": "npm run check",
+    "model": "opus",
+    "extraContext": null,
+    "tastePath": "<buildDir>/taste.md",
+    "constraintsPath": "<buildDir>/constraints.md",
+    "buildDir": "<buildDir>",
+    "ridgelineDir": ".ridgeline"
+  },
+  "resolved_modelcall_input": {
+    "system_prompt_source": "src/agents/builder.md (loaded via buildAgentRegistry().getCorePrompt('builder.md'))",
+    "user_prompt_section_order": [
+      "constraints.md (data block)",
+      "taste.md (data block — present when tastePath set)",
+      "Project Design (data block — present when .ridgeline/design.md exists)",
+      "Feature Design (data block — present when buildDir/design.md exists)",
+      "Available Assets (instruction block — present when asset-catalog.json exists)",
+      "Learnings from Previous Builds (data block — present when .ridgeline/learnings.md non-empty)",
+      "handoff.md (data block — present when handoff exists)",
+      "Phase Spec (data block — always present)",
+      "Check Command (instruction block — present when config.checkCommand set)",
+      "Handoff File (instruction block — always present)",
+      "Reviewer Feedback (RETRY) (data block — present only on retry)"
+    ],
+    "stable_prompt_block_order": [
+      "constraints.md",
+      "taste.md (when present)",
+      "spec.md (when present)"
+    ],
+    "stable_prompt_separator": "\n\n",
+    "stable_prompt_section_template": "## <name>\n\n<content trimEnd>\n",
+    "model_alias": "opus",
+    "allowed_tools": [
+      "Read",
+      "Write",
+      "Edit",
+      "Bash",
+      "Glob",
+      "Grep",
+      "Agent",
+      "Skill"
+    ],
+    "tools_array_is_ordered": true,
+    "schema": null,
+    "schema_repair_attempts": null,
+    "sandbox": {
+      "kind_when_off": null,
+      "kind_when_semi_locked": "greywall",
+      "kind_when_strict": "greywall",
+      "additional_write_paths_includes_buildDir": true,
+      "network_allowlist_source": "config.networkAllowlist (resolved from sandbox.greywall.ts defaults + --network-allow overrides)"
+    },
+    "timeout_ms": "config.timeoutMinutes * 60 * 1000",
+    "agents_flag": "buildAgentRegistry().getAgentsFlag() — undefined when registry is empty"
+  },
+  "fingerprint": {
+    "_note": "Phase 5's byte-stability test will compute a sha256 over the canonical-JSON serialization of the resolved ModelCallInput for the frozen_builder_args case (after path-and-cwd substitution into deterministic placeholders) and compare it against this fingerprint. The fingerprint is left null at Phase 1 because the Phase 5 test will materialize the input from the new substrate; setting it now would lock against the legacy stringification, which differs cosmetically.",
+    "expected_keys_in_canonical_order": [
+      "system_prompt",
+      "messages",
+      "model",
+      "tools",
+      "schema",
+      "metadata"
+    ],
+    "sha256_hex": null
+  }
+}

@@ -1,0 +1,50 @@
+Usage: ridgeline [options] [command] [build-name] [input]
+
+Build harness for long-horizon software execution
+
+Arguments:
+  build-name                             Build name (or input path; build name derived from basename)
+  input                                  Description text or path to input file/directory
+
+Options:
+  -V, --version                          output the version number
+  --model <name>                         Model for all stages (defaults to settings.json model, or 'opus')
+  --timeout <minutes>                    Max duration per turn in minutes (default: "10")
+  --max-budget-usd <n>                   Halt if cumulative cost exceeds this amount
+  --max-retries <n>                      Max reviewer retry loops per phase (default: "2")
+  --check <command>                      Baseline check command (overrides constraints.md)
+  --check-timeout <seconds>              Max duration for check command in seconds (default: "1200")
+  --constraints <path>                   Path to constraints.md
+  --taste <path>                         Path to taste.md
+  --context <text>                       Extra context appended to builder and planner prompts
+  --sandbox <mode>                       Sandbox mode: off | semi-locked (default) | strict
+  --unsafe                               Alias for --sandbox=off (deprecated)
+  --specialists <n>                      Number of ensemble specialists (1, 2, or 3). Default: 3
+  --thorough                             Alias for --specialists 3 (the default)
+  -y, --yes                              Skip the preflight confirmation prompt
+  --auto                                 Non-interactive mode: skip Q&A; use Auto variants where applicable
+  --stop-after <stage>                   Halt the auto run after this stage (shape|design|spec|plan|build)
+  --no-refine                            Skip retro-refine at the end of an --auto run
+  --research [n]                         Run N research+refine iterations between spec and plan (default 1)
+  --directions [n]                       Generate N parallel directions between shape and design (default 3)
+  --inspiration <src>                    Source for the directions picker: file path, directory, or inline text
+  -h, --help                             display help for command
+
+Commands:
+  shape [options] [build-name] [input]   Gather project context and produce shape.md
+  directions [options] [build-name]      Generate differentiated visual direction options (HTML demos) before design.md Q&A. Opt-in. Web-visual shapes only. With --auto, dispatches N parallel design-specialists then picks one against --inspiration.
+  design [options] [build-name]          Establish or update visual design system (design.md)
+  spec [options] [build-name] [input]    Generate spec.md, constraints.md, and taste.md from shape.md via ensemble. Optionally pass an input: path to a file (convention: idea.md) or raw text treated as authoritative source material the synthesizer preserves alongside shape.md.
+  ingest [options] [build-name] [input]  One-shot pipeline kickoff: convert a freeform spec (file or directory of files) into shape.md, spec.md, constraints.md, taste.md (and design.md if visual). No Q&A — the synthesizer flags inferred facts in a `## Inferred / Gaps` section per file so you can edit them by hand before running plan.
+  research [options] [build-name]        Research the spec using web sources to find improvements (optional step between spec and plan)
+  refine [options] [build-name]          Merge research.md findings into spec.md
+  catalog [options] [build-name]         Catalog media assets into asset-catalog.json
+  plan [options] [build-name]            Generate phase specs from spec.md and constraints.md
+  dry-run [options] [build-name]         Display the plan without executing
+  build [options] [build-name]           Execute the build pipeline (automatically resumes from last successful phase)
+  rewind [options] <build-name>          Reset pipeline state to a given stage and clean up downstream artifacts
+  retrospective [options] [build-name]   Analyze a completed build and extract learnings for future builds
+  retro-refine [options] [build-name]    Produce a refined version of the original input spec from learnings.md and the just-completed build's artifacts. Writes refined-input.md to the build directory.
+  clean                                  Clean up build artifacts
+  ui [options] [build-name]              Open a localhost dashboard for monitoring a build
+  check                                  Check project prerequisites and tooling

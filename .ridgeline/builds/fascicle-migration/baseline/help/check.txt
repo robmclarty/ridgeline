@@ -1,0 +1,6 @@
+Usage: ridgeline check [options]
+
+Check project prerequisites and tooling
+
+Options:
+  -h, --help  display help for command

@@ -1,0 +1,20 @@
+Usage: ridgeline directions [options] [build-name]
+
+Generate differentiated visual direction options (HTML demos) before design.md
+Q&A. Opt-in. Web-visual shapes only. With --auto, dispatches N parallel
+design-specialists then picks one against --inspiration.
+
+Options:
+  --model <name>       Model for direction-advisor agent (defaults to
+                       settings.json model, or 'opus')
+  --timeout <minutes>  Max duration in minutes (default: "15")
+  --count <n>          Number of directions to generate. Overrides
+                       settings.directions.count
+  --thorough           Alias for --count 3
+  --skip               Explicit no-op (skip direction generation)
+  --inspiration <src>  Inspiration source for the auto picker: file path,
+                       directory, or inline text
+  -y, --yes            Skip the preflight confirmation prompt
+  --auto               Non-interactive mode: skip Q&A; use Auto variants where
+                       applicable
+  -h, --help           display help for command

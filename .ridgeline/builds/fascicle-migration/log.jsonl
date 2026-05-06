@@ -1,3 +1,10 @@
 {"timestamp":"2026-05-06T04:23:45.512Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
 {"timestamp":"2026-05-06T04:23:45.515Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (8 phases)\n"}
 {"timestamp":"2026-05-06T04:23:45.576Z","level":"info","phase":"01-scaffold-and-baselines","message":"Phase 1/8: 01-scaffold-and-baselines"}
+{"timestamp":"2026-05-06T04:23:45.718Z","level":"info","phase":"01-scaffold-and-baselines","message":"Building..."}
+{"timestamp":"2026-05-06T04:33:46.179Z","level":"info","phase":"01-scaffold-and-baselines","message":"Build failed (transient): Error: Claude invocation timed out"}
+{"timestamp":"2026-05-06T04:33:46.180Z","level":"info","phase":"01-scaffold-and-baselines","message":"Waiting 1.2s before retry..."}
+{"timestamp":"2026-05-06T04:33:47.410Z","level":"info","phase":"01-scaffold-and-baselines","message":"Retry 1: building..."}
+{"timestamp":"2026-05-06T04:43:47.816Z","level":"info","phase":"01-scaffold-and-baselines","message":"Build failed (transient): Error: Claude invocation timed out"}
+{"timestamp":"2026-05-06T04:43:47.816Z","level":"info","phase":"01-scaffold-and-baselines","message":"Waiting 2.1s before retry..."}
+{"timestamp":"2026-05-06T04:43:49.953Z","level":"info","phase":"01-scaffold-and-baselines","message":"Retry 2: building..."}

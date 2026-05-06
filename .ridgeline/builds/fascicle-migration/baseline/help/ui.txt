@@ -1,0 +1,8 @@
+Usage: ridgeline ui [options] [build-name]
+
+Open a localhost dashboard for monitoring a build
+
+Options:
+  --port <number>  Port to bind (default 4411, falls back to next free port if
+                   taken)
+  -h, --help       display help for command

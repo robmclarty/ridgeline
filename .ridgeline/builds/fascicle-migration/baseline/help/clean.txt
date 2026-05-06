@@ -1,0 +1,6 @@
+Usage: ridgeline clean [options]
+
+Clean up build artifacts
+
+Options:
+  -h, --help  display help for command

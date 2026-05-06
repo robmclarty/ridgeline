@@ -1,0 +1,10 @@
+Usage: ridgeline rewind [options] <build-name>
+
+Reset pipeline state to a given stage and clean up downstream artifacts
+
+Options:
+  --to <stage>       Stage to rewind to (shape, spec, research, refine, plan)
+  --specialists <n>  Number of ensemble specialists (1, 2, or 3). Default: 3
+  --thorough         Alias for --specialists 3 (the default)
+  -y, --yes          Skip the preflight confirmation prompt
+  -h, --help         display help for command

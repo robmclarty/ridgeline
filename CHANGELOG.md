@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased — v0.12.0
+
+### Breaking — for consumers
+
+- **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
+  supported. Reinstall ridgeline against Node 24 (or newer); the CI matrix
+  has been updated to test Node 24 only. This bump rides with the internal
+  fascicle migration so the runtime ABI stays aligned across the substrate
+  swap.
+
+### Internal
+
+- Begin the ridgeline → fascicle substrate migration. Orchestration
+  internals (sequence, retry, parallel, adversarial, checkpoint, abort,
+  trajectory, budget, sandbox enforcement) move from
+  `src/engine/pipeline/` and `src/engine/claude/{claude.exec,stream.*}.ts`
+  into the fascicle library across phases 0–7. Phase 0 (this entry) lands
+  the `fascicle` and `zod` runtime dependencies, the new
+  `src/engine/{flows,atoms,composites,adapters}/` directory tree, and the
+  pre-migration baseline corpus under
+  `.ridgeline/builds/fascicle-migration/baseline/` (CLI `--help` snapshots,
+  command `.d.ts` snapshots, fixture trajectory/state/budget/phases
+  recordings, error-shape fingerprints, the pinned fascicle capability
+  matrix, sandbox network-allowlist snapshots, and the greywall integration
+  test list).
+- Public CLI behavior is unchanged. The flag set, exit codes, on-disk
+  artifact formats (`state.json`, `phases/<id>.md`, `trajectory.jsonl`,
+  `budget.json`, handoff/feedback files, tags), and terminal output style
+  remain byte-stable across the migration. Plugin authors: see the
+  Phase 5 plugin-surface audit (forthcoming) for any consumer-facing
+  changes before Phase 7's deletions land.
+
 ## v0.11.2 — 2026-05-05
 
 ### Fixed

@@ -1,0 +1,25 @@
+{
+  "_note": "Stryker mutation testing baseline for src/engine/pipeline/. Could not be captured under the sandboxed migration session — Stryker worker IPC requires localhost socket binds that the greywall network sandbox blocks (EPERM AggregateError on internalConnectMultiple). The baseline must be regenerated outside the sandbox before Phase 8 (Cleanup) compares the post-migration mutation score on src/engine/{flows,atoms,composites,adapters}/ against this number.",
+  "scope": "src/engine/pipeline/**/*.ts",
+  "instrumented_source_files": 15,
+  "instrumented_mutants": 2504,
+  "captured": false,
+  "stryker_runtime_error": {
+    "kind": "AggregateError EPERM",
+    "stage": "ConcurrencyTokenProvider — child-proxy IPC connect",
+    "node_version": "v24.15.0",
+    "stryker_core_version": "9.6.1",
+    "fatal_log_excerpt": "Unexpected error occurred while running Stryker StrykerError: AggregateError: EPERM (undefined) AggregateError [EPERM] at internalConnectMultiple (node:net:1193:18)"
+  },
+  "regeneration_command": "STRYKER_CONFIG=$(mktemp -t stryker-baseline.XXXXXX.mjs) && cat > \"$STRYKER_CONFIG\" <<'EOF'\nexport default {\n  packageManager: 'npm',\n  testRunner: 'vitest',\n  plugins: ['@stryker-mutator/vitest-runner'],\n  reporters: ['clear-text', 'json'],\n  jsonReporter: { fileName: '.check/mutation.pipeline-baseline.json' },\n  mutate: [\n    'src/engine/pipeline/**/*.ts',\n    '!src/engine/pipeline/**/__tests__/**',\n    '!src/engine/pipeline/**/*.test.ts',\n    '!src/engine/pipeline/**/*.d.ts',\n  ],\n  coverageAnalysis: 'perTest',\n  incremental: false,\n  thresholds: { high: 80, low: 60, break: 0 },\n  tempDirName: '.stryker-tmp-baseline',\n  cleanTempDir: true,\n}\nEOF\nnpx stryker run \"$STRYKER_CONFIG\"",
+  "score": null,
+  "killed": null,
+  "survived": null,
+  "timeout": null,
+  "no_coverage": null,
+  "compile_errors": null,
+  "runtime_errors": null,
+  "ignored": null,
+  "_phase8_assertion": "Phase 8 must compare the recorded score (when populated) against the post-migration mutation score on src/engine/{flows,atoms,composites,adapters}/**/*.ts. The post-migration score must be >= the score captured here.",
+  "_blocking_for_phase_8": true
+}

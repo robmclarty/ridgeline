@@ -59,7 +59,19 @@
       "cacheCreationInputTokens": 65739,
       "durationMs": 2502,
       "timestamp": "2026-05-06T04:23:44.494Z"
+    },
+    {
+      "phase": "01-scaffold-and-baselines",
+      "role": "builder",
+      "attempt": 2,
+      "costUsd": 5.291404250000001,
+      "inputTokens": 8,
+      "outputTokens": 1695,
+      "cacheReadInputTokens": 476698,
+      "cacheCreationInputTokens": 1761,
+      "durationMs": 504915,
+      "timestamp": "2026-05-06T04:52:14.870Z"
     }
   ],
-  "totalCostUsd": 6.645756499999999
+  "totalCostUsd": 11.93716075
 }

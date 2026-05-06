@@ -1,0 +1,30 @@
+{
+  "_note": "Pre-migration network allowlist for greywall sandbox in semi-locked mode. Derived from src/stores/settings.ts (DEFAULT_NETWORK_ALLOWLIST + CLAUDE_REQUIRED_DOMAINS), not from src/engine/claude/sandbox.greywall.ts directly — the greywall provider receives this list at runtime via syncRules() and is independent of mode (the mode controls toolchain *profiles*, not host filtering).",
+  "_source": {
+    "module": "src/stores/settings.ts",
+    "exports_used": ["DEFAULT_NETWORK_ALLOWLIST", "CLAUDE_REQUIRED_DOMAINS"],
+    "resolver": "resolveNetworkAllowlist(ridgelineDir)",
+    "behavior": "Returns DEFAULT_NETWORK_ALLOWLIST (which already includes CLAUDE_REQUIRED_DOMAINS) when no per-build settings.json override is present. User overrides are merged with CLAUDE_REQUIRED_DOMAINS. Wildcard '*' returns []."
+  },
+  "mode": "semi-locked",
+  "host_count": 16,
+  "hosts": [
+    "api.anthropic.com",
+    "downloads.claude.ai",
+    "http-intake.logs.us5.datadoghq.com",
+    "registry.npmjs.org",
+    "nodejs.org",
+    "objects.githubusercontent.com",
+    "raw.githubusercontent.com",
+    "pypi.org",
+    "files.pythonhosted.org",
+    "crates.io",
+    "static.crates.io",
+    "rubygems.org",
+    "proxy.golang.org",
+    "github.com",
+    "gitlab.com",
+    "bitbucket.org"
+  ],
+  "_phase3_assertion": "Phase 3's buildSandboxPolicy('semi-locked') must produce a network_allowlist whose host set is a subset of (or equal to) this list. No new hosts appear without an explicit code-comment justification in sandbox.policy.ts."
+}
