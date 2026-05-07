@@ -4,6 +4,8 @@ node_modules/
 .fallow/
 .check/
 .stryker-tmp/
+.stryker-tmp-baseline/
+stryker.incremental.json
 coverage/
 .worktrees/
 .ridgeline/worktrees/

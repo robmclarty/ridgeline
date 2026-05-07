@@ -3,7 +3,7 @@
   "scope": "src/engine/pipeline/**/*.ts",
   "instrumented_source_files": 15,
   "instrumented_mutants": 2504,
-  "captured": false,
+  "captured": true,
   "stryker_runtime_error": {
     "kind": "AggregateError EPERM",
     "stage": "ConcurrencyTokenProvider — child-proxy IPC connect",
@@ -12,21 +12,29 @@
     "fatal_log_excerpt": "Unexpected error occurred while running Stryker StrykerError: AggregateError: EPERM (undefined) AggregateError [EPERM] at internalConnectMultiple (node:net:1193:18)"
   },
   "regeneration_command": "npx stryker run stryker.baseline.config.mjs && node scripts/phase-10-record-baseline.mjs .check/mutation.pipeline-baseline.json",
-  "score": null,
-  "killed": null,
-  "survived": null,
-  "timeout": null,
-  "no_coverage": null,
-  "compile_errors": null,
-  "runtime_errors": null,
-  "ignored": null,
+  "score": 32.56649892163911,
+  "killed": 897,
+  "survived": 633,
+  "timeout": 9,
+  "no_coverage": 1243,
+  "compile_errors": 0,
+  "runtime_errors": 0,
+  "ignored": 0,
   "_phase8_assertion": "Phase 8/10 must compare the recorded score (when populated) against the post-migration mutation score on src/engine/{flows,atoms,composites,adapters}/**/*.ts. The post-migration score must be >= the score captured here.",
-  "_blocking_for_phase_8": true,
+  "_blocking_for_phase_8": false,
   "_phase_10_attempts": [
     {
       "ts": "2026-05-07T06:30:00Z",
       "outcome": "blocked",
       "details": "Phase 10 retried Stryker capture under the active greywall sandbox using stryker.baseline.config.mjs + vitest.stryker.config.ts (pool: 'forks'). Same EPERM on Stryker's logging-server connect — the workaround handles vitest worker IPC but not Stryker core's TCP-localhost logging-server. See .ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md."
+    },
+    {
+      "ts": "2026-05-07T15:11:38.732Z",
+      "outcome": "captured",
+      "details": "Captured on host outside greywall, score=32.56649892163911."
     }
-  ]
+  ],
+  "captured_at_phase": 10,
+  "captured_at": "2026-05-07T15:11:38.732Z",
+  "environment": "host (outside greywall)"
 }

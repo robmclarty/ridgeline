@@ -24,11 +24,19 @@ if (!existsSync(reportPath)) {
 }
 
 const stryker = JSON.parse(readFileSync(reportPath, "utf8"))
-const score = stryker.mutationScore ?? stryker.metrics?.mutationScore
-if (typeof score !== "number") {
-  process.stderr.write(`error: stryker report at ${reportPath} has no numeric mutationScore field\n`)
+const counts = { Killed: 0, Survived: 0, Timeout: 0, NoCoverage: 0, CompileError: 0, RuntimeError: 0, Ignored: 0 }
+for (const file of Object.values(stryker.files ?? {})) {
+  for (const mutant of file.mutants ?? []) {
+    counts[mutant.status] = (counts[mutant.status] ?? 0) + 1
+  }
+}
+const detected = counts.Killed + counts.Timeout
+const valid = counts.Killed + counts.Survived + counts.Timeout + counts.NoCoverage
+if (valid <= 0) {
+  process.stderr.write(`error: stryker report at ${reportPath} has no countable mutants\n`)
   process.exit(2)
 }
+const score = (detected / valid) * 100
 
 const artifact = {
   captured: true,
@@ -36,13 +44,13 @@ const artifact = {
   scope: "src/engine/{flows,atoms,composites,adapters}/**/*.ts",
   environment: "host (outside greywall)",
   score,
-  killed: stryker.metrics?.killed ?? null,
-  survived: stryker.metrics?.survived ?? null,
-  timeout: stryker.metrics?.timeout ?? null,
-  no_coverage: stryker.metrics?.noCoverage ?? null,
-  compile_errors: stryker.metrics?.compileErrors ?? null,
-  runtime_errors: stryker.metrics?.runtimeErrors ?? null,
-  ignored: stryker.metrics?.ignored ?? null,
+  killed: counts.Killed,
+  survived: counts.Survived,
+  timeout: counts.Timeout,
+  no_coverage: counts.NoCoverage,
+  compile_errors: counts.CompileError,
+  runtime_errors: counts.RuntimeError,
+  ignored: counts.Ignored,
 }
 
 writeFileSync(ARTIFACT, `${JSON.stringify(artifact, null, 2)}\n`)

@@ -23,11 +23,19 @@ if (!existsSync(reportPath)) {
 }
 
 const stryker = JSON.parse(readFileSync(reportPath, "utf8"))
-const score = stryker.mutationScore ?? stryker.metrics?.mutationScore
-if (typeof score !== "number") {
-  process.stderr.write(`error: stryker report at ${reportPath} has no numeric mutationScore field\n`)
+const counts = { Killed: 0, Survived: 0, Timeout: 0, NoCoverage: 0, CompileError: 0, RuntimeError: 0, Ignored: 0 }
+for (const file of Object.values(stryker.files ?? {})) {
+  for (const mutant of file.mutants ?? []) {
+    counts[mutant.status] = (counts[mutant.status] ?? 0) + 1
+  }
+}
+const detected = counts.Killed + counts.Timeout
+const valid = counts.Killed + counts.Survived + counts.Timeout + counts.NoCoverage
+if (valid <= 0) {
+  process.stderr.write(`error: stryker report at ${reportPath} has no countable mutants\n`)
   process.exit(2)
 }
+const score = (detected / valid) * 100
 
 const baseline = JSON.parse(readFileSync(BASELINE, "utf8"))
 baseline.captured = true
@@ -35,13 +43,13 @@ baseline.captured_at_phase = 10
 baseline.captured_at = new Date().toISOString()
 baseline.environment = "host (outside greywall)"
 baseline.score = score
-baseline.killed = stryker.metrics?.killed ?? null
-baseline.survived = stryker.metrics?.survived ?? null
-baseline.timeout = stryker.metrics?.timeout ?? null
-baseline.no_coverage = stryker.metrics?.noCoverage ?? null
-baseline.compile_errors = stryker.metrics?.compileErrors ?? null
-baseline.runtime_errors = stryker.metrics?.runtimeErrors ?? null
-baseline.ignored = stryker.metrics?.ignored ?? null
+baseline.killed = counts.Killed
+baseline.survived = counts.Survived
+baseline.timeout = counts.Timeout
+baseline.no_coverage = counts.NoCoverage
+baseline.compile_errors = counts.CompileError
+baseline.runtime_errors = counts.RuntimeError
+baseline.ignored = counts.Ignored
 baseline._blocking_for_phase_8 = false
 baseline._phase_10_attempts = baseline._phase_10_attempts ?? []
 baseline._phase_10_attempts.push({
