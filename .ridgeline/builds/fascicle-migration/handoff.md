@@ -3070,3 +3070,147 @@ All nine ACs satisfied:
 No new code or tests were added in continuation 2 — the artifact set
 from continuation 1 was complete; only the `phase-10-check.json`
 artifact was refreshed against this commit's tree.
+
+
+## Phase 10 — Retry attempt 2 (RETRY for reviewer feedback)
+
+### Tool Failure
+
+Phase 10's ACs 2, 3, and 4 require successful Stryker mutation runs to
+populate `baseline/mutation-score.json` and
+`phase-10-mutation-score.json` with `captured: true` and numeric scores.
+The reviewer's required state is unambiguous: the gate cannot be cleared
+while either score remains `captured: false`.
+
+**Tool needed:** `@stryker-mutator/core` 9.6.1 invoked via `npx stryker
+run` (twice — once with `stryker.baseline.config.mjs` for
+`src/engine/pipeline/`, once with `stryker.config.mjs` for
+`src/engine/{flows,atoms,composites,adapters}/**/*.ts`).
+
+**What failed:** Stryker's child-process-proxy
+(`@stryker-mutator/core/dist/src/child-proxy/child-process-proxy.js:132`)
+spawns forked workers that connect back to the parent's logging-server
+via `net.createConnection(port, 'localhost')`. `localhost` resolves to
+both `::1` and `127.0.0.1`; greywall denies the connect on both. The
+connect happens during worker bootstrap, before any mutation work.
+Reproduced this attempt with `npx stryker run
+stryker.baseline.config.mjs --concurrency 1 --dryRunOnly`:
+
+```
+ERROR Stryker Unexpected error occurred while running Stryker StrykerError:
+AggregateError: EPERM (undefined) AggregateError [EPERM]:
+    at internalConnectMultiple (node:net:1193:18)
+    at internalConnectMultiple (node:net:1269:5)
+    at internalConnectMultiple (node:net:1269:5)
+    at defaultTriggerAsyncIdScope (node:internal/async_hooks:472:18)
+    at GetAddrInfoReqWrap.emitLookup [as callback] (node:net:1611:7)
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:134:8)
+    at ChildProcess.<anonymous> (... child-process-proxy.js:132:39)
+```
+
+**What was tried (this retry):**
+
+- `npx stryker run stryker.baseline.config.mjs --concurrency 1
+  --dryRunOnly` — same EPERM during ConcurrencyTokenProvider's first
+  worker spawn. Confirmed.
+
+**What was already tried in earlier attempts (not re-attempted):**
+
+- `vitest pool: 'forks'` via `vitest.stryker.config.ts`. Phase 10's
+  Required Tools section names this as a documented workaround. It
+  addresses vitest worker IPC but NOT Stryker core's logging-server,
+  which is the actual blocker.
+- `RIDGELINE_SANDBOX=0` / `GREYWALL_SANDBOX=0` env vars. These are
+  read by `scripts/check.mjs` to skip the opt-in `mutation` step; they
+  do NOT influence greywall's kernel-level enforcement.
+- `--concurrency 1 --dryRunOnly`. Same EPERM during worker bootstrap.
+
+There is no Stryker config option to swap the TCP-localhost
+logging-server for a Unix domain socket or `process.send()` IPC. The
+`pool: 'forks'` workaround documented in the spec's Required Tools
+section is insufficient on its own for this codebase, as the previous
+builder confirmed and as this retry re-confirmed.
+
+### Resolution path (operator-side)
+
+The reviewer's required state explicitly directs operator intervention:
+
+> "The harness should pause so the operator can run the documented
+> host-side recipe (stryker.baseline.config.mjs +
+> scripts/phase-10-record-baseline.mjs) and re-enter the build loop."
+
+Steps the operator runs OUTSIDE greywall (e.g., from a regular shell
+on the host, with no `greywall run` wrapper):
+
+```sh
+cd /Users/robmclarty/Projects/ridgeline/code/ridgeline
+
+# 1. Capture pre-migration baseline on src/engine/pipeline/.
+npx stryker run stryker.baseline.config.mjs
+node scripts/phase-10-record-baseline.mjs .check/mutation.pipeline-baseline.json
+
+# 2. Capture new-scope score on src/engine/{flows,atoms,composites,adapters}.
+npx stryker run
+node scripts/phase-10-record-newscore.mjs .check/mutation.json
+
+# 3. Verify the gate now passes.
+node scripts/phase-10-mutation-gate.mjs
+# Expected: "phase-10-mutation-gate: PASS — new score X >= baseline Y"
+
+# 4. Commit the updated score files and re-enter the ridgeline build loop.
+git add .ridgeline/builds/fascicle-migration/baseline/mutation-score.json \
+        .ridgeline/builds/fascicle-migration/phase-10-mutation-score.json
+git commit -m "chore: capture phase 10 mutation scores"
+```
+
+After step 4, when ridgeline re-runs Phase 10, the next builder will:
+- Read both score files showing `captured: true`.
+- Run `node scripts/phase-10-mutation-gate.mjs` and observe `PASS`.
+- Refresh `phase-10-check.json` from a fresh `npm run check`.
+- Emit `READY_FOR_REVIEW`.
+
+This must happen BEFORE Phase 11 deletes `src/engine/pipeline/`,
+because `stryker.baseline.config.mjs` mutates that directory; once
+deleted, the baseline can never be captured.
+
+### State at this retry's exit
+
+- `baseline/mutation-score.json` — still `captured: false`. EPERM trace
+  preserved. Regeneration command points at the host-side recipe above.
+- `phase-10-mutation-score.json` — still `captured: false`. EPERM trace
+  preserved. Regeneration command points at the host-side recipe above.
+- `scripts/phase-10-mutation-gate.mjs` — unchanged; returns `DEFERRED`
+  (exit 0) when either input is uncaptured, executes the numeric
+  `new_score >= baseline_score` comparison and exits 0/1 once both are
+  captured.
+- `stryker.config.mjs`, `stryker.baseline.config.mjs`,
+  `vitest.stryker.config.ts`, `scripts/phase-10-record-baseline.mjs`,
+  `scripts/phase-10-record-newscore.mjs` — unchanged; ready for the
+  operator to invoke.
+- All other Phase 10 deliverables (AC1, AC5–AC9) remain met from the
+  prior attempt.
+
+### Why no in-sandbox bypass exists
+
+The Phase 10 `Required Tools` section names two paths:
+`RIDGELINE_SANDBOX=0` (run outside greywall) OR `vitest pool: 'forks'`
+(documented workaround). For this codebase:
+
+- `RIDGELINE_SANDBOX=0` is not effective because greywall is applied at
+  the OS / sandbox-exec level for the entire process tree of this
+  worktree. The env var only controls ridgeline's own check-skipping
+  logic in `scripts/check.mjs`.
+- `vitest pool: 'forks'` is configured (`vitest.stryker.config.ts` sets
+  `test.pool: "forks"`), but it does not address the actual blocker.
+  Stryker core's logging-server uses TCP localhost IPC at
+  `@stryker-mutator/core/dist/src/logging/logging-client.js:20`
+  independently of vitest's worker pool. The forked workers raise EPERM
+  on `internalConnectMultiple` before any vitest-pooled test would run.
+
+The only effective path is "run outside greywall" — which a builder
+running INSIDE greywall cannot do. Recorded as a discovery for future
+phases:
+
+```
+{"ts":"2026-05-07T07:00:00Z","phase_id":"10-mutation-tests","blocker":"Stryker @stryker-mutator/core 9.6.1 EPERM on internalConnectMultiple under greywall (independent of pool: 'forks' or RIDGELINE_SANDBOX=0)","solution":"Operator runs Stryker on host outside greywall via the documented recipe in handoff.md / phase-10-stryker-environment.md","source":"agent","evidence":".ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md"}
+```

@@ -275,38 +275,71 @@
     },
     {
       "id": "10-mutation-tests",
-      "status": "pending",
+      "status": "failed",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests",
       "completionTag": null,
-      "retries": 0,
-      "duration": null,
+      "retries": 1,
+      "duration": 1634700,
       "completedAt": null,
-      "failedAt": null,
+      "failedAt": "2026-05-07T06:53:40.519Z",
       "builderInvocations": [
         {
           "attempt": 1,
           "endReason": "more_work_explicit",
-          "outputTokens": 42017,
-          "inputTokens": 63,
-          "costUsd": 7.64372875,
-          "durationMs": 658662,
-          "windDownReason": "AC2/AC3 require host-side Stryker runs outside greywall (sandbox blocks Stryker's TCP-localhost logging-server); all in-sandbox AC work is complete and captured; gate + scaffolding ready for the operator runbook.",
+          "outputTokens": 12360,
+          "inputTokens": 14,
+          "costUsd": 1.9555537500000002,
+          "durationMs": 195434,
+          "windDownReason": "ACs 2/3/4 require Stryker mutation captures that the active greywall sandbox blocks at the kernel level; operator must run the host-side recipe (stryker.baseline.config.mjs + scripts/phase-10-record-*.mjs) outside greywall before Phase 10 can mark READY_FOR_REVIEW",
           "diffHash": null,
-          "timestamp": "2026-05-07T06:37:33.004Z"
+          "timestamp": "2026-05-07T06:48:08.402Z"
         },
         {
           "attempt": 2,
-          "endReason": "ready_for_review",
-          "outputTokens": 10691,
-          "inputTokens": 42,
-          "costUsd": 4.40564125,
-          "durationMs": 202942,
-          "windDownReason": null,
+          "endReason": "more_work_explicit",
+          "outputTokens": 3200,
+          "inputTokens": 9,
+          "costUsd": 1.27679525,
+          "durationMs": 52324,
+          "windDownReason": "operator must run Stryker outside greywall to capture both mutation scores; in-sandbox bypass is architecturally impossible",
           "diffHash": null,
-          "timestamp": "2026-05-07T06:41:04.184Z"
+          "timestamp": "2026-05-07T06:49:08.700Z"
+        },
+        {
+          "attempt": 3,
+          "endReason": "more_work_explicit",
+          "outputTokens": 4615,
+          "inputTokens": 12,
+          "costUsd": 1.5842214999999997,
+          "durationMs": 75133,
+          "windDownReason": "Stryker mutation scores must be captured by the operator outside greywall (ACs 2, 3, 4 require numeric scores; in-sandbox child-proxy IPC raises EPERM).",
+          "diffHash": null,
+          "timestamp": "2026-05-07T06:50:31.987Z"
+        },
+        {
+          "attempt": 4,
+          "endReason": "more_work_explicit",
+          "outputTokens": 4126,
+          "inputTokens": 13,
+          "costUsd": 1.6349872500000002,
+          "durationMs": 72920,
+          "windDownReason": "AC2/AC3/AC4 require Stryker capture outside greywall — operator must run the documented host-side recipe (see continuation 6 in builder-progress.md) before the next continuation can clear the gate.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T06:51:53.736Z"
+        },
+        {
+          "attempt": 5,
+          "endReason": "halt_max_continuations",
+          "outputTokens": 6724,
+          "inputTokens": 15,
+          "costUsd": 1.8670535000000001,
+          "durationMs": 98433,
+          "windDownReason": "ACs 2/3/4 require operator-side Stryker capture outside greywall; in-sandbox builders cannot proceed.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T06:53:40.516Z"
         }
       ],
-      "builderLoopEndReason": "ready_for_review"
+      "builderLoopEndReason": "halt_max_continuations"
     },
     {
       "id": "11-cleanup-deletions",

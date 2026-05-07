@@ -443,7 +443,79 @@
       "cacheCreationInputTokens": 274939,
       "durationMs": 202942,
       "timestamp": "2026-05-07T06:41:04.184Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 3.7914584000000002,
+      "inputTokens": 20,
+      "outputTokens": 9254,
+      "cacheReadInputTokens": 3001538,
+      "cacheCreationInputTokens": 315820,
+      "durationMs": 220444,
+      "timestamp": "2026-05-07T06:44:44.746Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 1.9555537500000002,
+      "inputTokens": 14,
+      "outputTokens": 12360,
+      "cacheReadInputTokens": 1290997,
+      "cacheCreationInputTokens": 149893,
+      "durationMs": 195434,
+      "timestamp": "2026-05-07T06:48:08.403Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "builder",
+      "attempt": 2,
+      "costUsd": 1.27679525,
+      "inputTokens": 9,
+      "outputTokens": 3200,
+      "cacheReadInputTokens": 492029,
+      "cacheCreationInputTokens": 141047,
+      "durationMs": 52324,
+      "timestamp": "2026-05-07T06:49:08.700Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "builder",
+      "attempt": 3,
+      "costUsd": 1.5842214999999997,
+      "inputTokens": 12,
+      "outputTokens": 4615,
+      "cacheReadInputTokens": 967051,
+      "cacheCreationInputTokens": 146504,
+      "durationMs": 75133,
+      "timestamp": "2026-05-07T06:50:31.988Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "builder",
+      "attempt": 4,
+      "costUsd": 1.6349872500000002,
+      "inputTokens": 13,
+      "outputTokens": 4126,
+      "cacheReadInputTokens": 1128115,
+      "cacheCreationInputTokens": 143591,
+      "durationMs": 72920,
+      "timestamp": "2026-05-07T06:51:53.736Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "builder",
+      "attempt": 5,
+      "costUsd": 1.8670535000000001,
+      "inputTokens": 15,
+      "outputTokens": 6724,
+      "cacheReadInputTokens": 1453967,
+      "cacheCreationInputTokens": 144124,
+      "durationMs": 98433,
+      "timestamp": "2026-05-07T06:53:40.517Z"
     }
   ],
-  "totalCostUsd": 274.52784434999995
+  "totalCostUsd": 286.63791399999997
 }
