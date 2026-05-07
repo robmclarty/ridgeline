@@ -227,12 +227,12 @@
     },
     {
       "id": "08-leaf-flows",
-      "status": "reviewing",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/08-leaf-flows",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 3492387,
+      "completedAt": "2026-05-07T05:25:36.410Z",
       "failedAt": null,
       "builderInvocations": [
         {

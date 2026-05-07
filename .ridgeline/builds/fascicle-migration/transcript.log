@@ -2635,3 +2635,30 @@ All four originally-failed criteria are now resolved:
 `npm run check` exits 0 across all 8 sub-checks (1364 tests pass; 65 new snapshot tests added). `.ridgeline/builds/fascicle-migration/phase-8-check.json` captured.
 
 READY_FOR_REVIEW
+[ridgeline] [08-leaf-flows] Reviewing...
+I'll review this phase against the acceptance criteria. Let me start by inspecting the current state.
+
+[review:08-leaf-flows] Starting review
+
+Let me verify the key claims from the retry attempt.
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/help/ | wc -l && ls .ridgeline/builds/fascicle-migration/baseline/dts/ | wc -l && ls .ridgeline/builds/fascicle-migration/baseline/options/ | wc -l
+[Bash] ls src/__tests__/cli.help.snapshot.test.ts src/__tests__/cli.dts.snapshot.test.ts src/__tests__/cli.options.snapshot.test.ts 2>&1
+[Bash] ls src/engine/flows/ && echo "---" && ls .ridgeline/builds/fascicle-migration/phase-8-check.json .ridgeline/builds/fascicle-migration/phase-8-plugin-surface-audit.md 2>&1
+[Bash] ls src/main.ts src/cli.ts 2>&1 && echo "---" && grep -nE 'process\.on\(["\047]SIGINT' src/main.ts
+[Bash] grep -nE 'fascicle' src/commands/build.ts src/commands/auto.ts | head
+[Bash] grep -nE 'finally|engine\.dispose\(\)' src/commands/refine.ts src/commands/research.ts src/commands/spec.ts src/commands/plan.ts src/commands/retrospective.ts src/commands/retro-refine.ts | grep -E '…
+[Bash] cat rules/command-run-needs-dispose-finally.yml
+[Agent] Run verification on the Phase 8 retry work in /Users/robmclarty/Projects/ridgeline/code/ridgeline. Specifically:
+[Bash] npm run check; echo "EXIT:$?"
+[Read] .ridgeline/builds/fascicle-migration/phase-8-check.json
+[Bash] npx vitest run src/__tests__/cli.help.snapshot.test.ts src/__tests__/cli.dts.snapshot.test.ts src/__tests__/cli.options.snapshot.test.ts 2>&1; echo "EXIT:$?"
+[Bash] node dist/main.js --help 2>&1; echo "EXIT:$?"
+[Bash] node dist/main.js refine --help 2>&1; echo "EXIT:$?"
+[Bash] npx ast-grep scan --rule rules/command-run-needs-dispose-finally.yml src/commands/ 2>&1; echo "EXIT:$?"
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/help/
+[Bash] node dist/main.js --help 2>&1 | diff - .ridgeline/builds/fascicle-migration/baseline/help/ridge…
+[Bash] node dist/main.js refine --help 2>&1 | diff - .ridgeline/builds/fascicle-migration/baseline/hel…
+All four originally-failed criteria are now resolved, and the rest still pass. Verifier confirms `npm run check` exits 0 (all 8 sub-checks green), 65 new snapshot tests added (23 help + 23 dts + 19 options) all passing, and byte-equality holds for `--help`, `.d.ts`, and option sets.
+[ridgeline] [08-leaf-flows] PASSED (3492s)
+
+[ridgeline] ── Phase 11/14: 09-build-auto-sigint-dogfood ──
