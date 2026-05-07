@@ -203,7 +203,55 @@
       "cacheCreationInputTokens": 0,
       "durationMs": 54041,
       "timestamp": "2026-05-07T00:42:53.450Z"
+    },
+    {
+      "phase": "02-sandbox-policy",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 10.246442,
+      "inputTokens": 94,
+      "outputTokens": 70662,
+      "cacheReadInputTokens": 13049066,
+      "cacheCreationInputTokens": 309924,
+      "durationMs": 1120017,
+      "timestamp": "2026-05-07T02:12:58.688Z"
+    },
+    {
+      "phase": "02-sandbox-policy.builder-progress",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 12.987842999999998,
+      "inputTokens": 154,
+      "outputTokens": 59350,
+      "cacheReadInputTokens": 20314868,
+      "cacheCreationInputTokens": 212548,
+      "durationMs": 1273998,
+      "timestamp": "2026-05-07T02:15:32.765Z"
+    },
+    {
+      "phase": "02-sandbox-policy",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.7477176500000005,
+      "inputTokens": 19,
+      "outputTokens": 11606,
+      "cacheReadInputTokens": 1341439,
+      "cacheCreationInputTokens": 91266,
+      "durationMs": 267676,
+      "timestamp": "2026-05-07T02:17:26.481Z"
+    },
+    {
+      "phase": "02-sandbox-policy.builder-progress",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.41790935,
+      "inputTokens": 239,
+      "outputTokens": 12924,
+      "cacheReadInputTokens": 846651,
+      "cacheCreationInputTokens": 98263,
+      "durationMs": 218969,
+      "timestamp": "2026-05-07T02:19:11.838Z"
     }
   ],
-  "totalCostUsd": 87.78501169999998
+  "totalCostUsd": 114.18492369999998
 }

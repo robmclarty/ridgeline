@@ -26,3 +26,19 @@
 {"timestamp":"2026-05-07T00:42:53.452Z","level":"info","phase":"02-sandbox-policy","message":"Builder loop halted: halt_no_progress"}
 {"timestamp":"2026-05-07T00:42:55.935Z","level":"error","phase":null,"message":"Merge conflict for 03-adapters: "}
 {"timestamp":"2026-05-07T00:42:55.936Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/03-adapters"}
+{"timestamp":"2026-05-07T01:54:08.680Z","level":"info","phase":null,"message":"Reconciled state: added 2 new phase(s) (02-sandbox-policy.builder-progress, 03-adapters.builder-progress)"}
+{"timestamp":"2026-05-07T01:54:08.686Z","level":"info","phase":null,"message":"Resuming build 'fascicle-migration' from phase 4/14"}
+{"timestamp":"2026-05-07T01:54:09.394Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
+{"timestamp":"2026-05-07T01:54:09.396Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (14 phases)\n"}
+{"timestamp":"2026-05-07T01:54:09.465Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
+{"timestamp":"2026-05-07T01:54:09.467Z","level":"info","phase":null,"message":"\nWave: 2 parallel phases (02-sandbox-policy.builder-progress, 02-sandbox-policy)"}
+{"timestamp":"2026-05-07T01:54:09.744Z","level":"info","phase":"02-sandbox-policy.builder-progress","message":"Phase 2/14: 02-sandbox-policy.builder-progress"}
+{"timestamp":"2026-05-07T01:54:09.744Z","level":"info","phase":"02-sandbox-policy","message":"Phase 3/14: 02-sandbox-policy"}
+{"timestamp":"2026-05-07T01:54:09.907Z","level":"info","phase":"02-sandbox-policy.builder-progress","message":"Building..."}
+{"timestamp":"2026-05-07T01:54:09.943Z","level":"info","phase":"02-sandbox-policy","message":"Building..."}
+{"timestamp":"2026-05-07T02:12:58.801Z","level":"info","phase":"02-sandbox-policy","message":"Reviewing..."}
+{"timestamp":"2026-05-07T02:15:32.868Z","level":"info","phase":"02-sandbox-policy.builder-progress","message":"Reviewing..."}
+{"timestamp":"2026-05-07T02:17:26.558Z","level":"info","phase":"02-sandbox-policy","message":"PASSED (1397s)"}
+{"timestamp":"2026-05-07T02:19:11.897Z","level":"info","phase":"02-sandbox-policy.builder-progress","message":"PASSED (1502s)"}
+{"timestamp":"2026-05-07T02:19:14.514Z","level":"error","phase":null,"message":"Merge conflict for 02-sandbox-policy: .fallowrc.json, .ridgeline/builds/fascicle-migration/phase-2-check.json, src/engine/claude/__tests__/sandbox.greywall.test.ts, src/engine/claude/__tests__/sandbox.policy.test.ts, src/engine/claude/__tests__/sandbox.test.ts, src/engine/claude/sandbox.policy.ts, src/engine/claude/sandbox.ts"}
+{"timestamp":"2026-05-07T02:19:14.515Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/02-sandbox-policy"}

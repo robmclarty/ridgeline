@@ -36,39 +36,62 @@
       "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "02-sandbox-policy",
-      "status": "failed",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy",
-      "completionTag": null,
-      "retries": 1,
-      "duration": 5276498,
-      "completedAt": null,
-      "failedAt": "2026-05-07T00:42:53.452Z",
+      "id": "02-sandbox-policy.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/02-sandbox-policy.builder-progress",
+      "retries": 0,
+      "duration": 1502095,
+      "completedAt": "2026-05-07T02:19:11.896Z",
+      "failedAt": null,
       "builderInvocations": [
         {
           "attempt": 1,
-          "endReason": "more_work_implicit",
-          "outputTokens": 43063,
-          "inputTokens": 79,
-          "costUsd": 6.828768249999999,
-          "durationMs": 1975856,
-          "windDownReason": "no marker emitted",
-          "diffHash": "9b8f7bb2fc9265eef213612516755abbdfdac9b0d9dbe26d1b1747e8a5b1ce19",
-          "timestamp": "2026-05-07T00:41:50.364Z"
-        },
-        {
-          "attempt": 2,
-          "endReason": "halt_no_progress",
-          "outputTokens": 0,
-          "inputTokens": 0,
-          "costUsd": 0,
-          "durationMs": 54041,
-          "windDownReason": "no marker emitted",
-          "diffHash": "9b8f7bb2fc9265eef213612516755abbdfdac9b0d9dbe26d1b1747e8a5b1ce19",
-          "timestamp": "2026-05-07T00:42:53.449Z"
+          "endReason": "ready_for_review",
+          "outputTokens": 59350,
+          "inputTokens": 154,
+          "costUsd": 12.987842999999998,
+          "durationMs": 1273998,
+          "windDownReason": null,
+          "diffHash": "c1ecf87d5b8049f5dd6b1d05409a979a66bee5f3fa24d714a51f09e3983b24e4",
+          "timestamp": "2026-05-07T02:15:32.764Z"
         }
       ],
-      "builderLoopEndReason": "halt_no_progress"
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "02-sandbox-policy",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy",
+      "completionTag": "ridgeline/phase/fascicle-migration/02-sandbox-policy",
+      "retries": 0,
+      "duration": 1396656,
+      "completedAt": "2026-05-07T02:17:26.556Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 70662,
+          "inputTokens": 94,
+          "costUsd": 10.246442,
+          "durationMs": 1120017,
+          "windDownReason": null,
+          "diffHash": "11aa9a895bab95f11a25bae13eaa4c98a83e3b0324f494f32976961682a82940",
+          "timestamp": "2026-05-07T02:12:58.687Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "03-adapters.builder-progress",
+      "status": "pending",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-adapters.builder-progress",
+      "completionTag": null,
+      "retries": 0,
+      "duration": null,
+      "completedAt": null,
+      "failedAt": null
     },
     {
       "id": "03-adapters",
