@@ -3912,3 +3912,29 @@ I have enough to compose the verdict. Let me write it out.
 [ridgeline] Branch preserved: ridgeline/fascicle-migration/10-mutation-tests.builder-progress
 [ridgeline] ERROR: Merge conflict for 10-mutation-tests: docs/parallel-wave-fixes.md
 [ridgeline] Branch preserved: ridgeline/fascicle-migration/10-mutation-tests
+[ridgeline] Reconciled state: added 2 new phase(s) (08-leaf-flows.builder-progress.builder-progress, 10-mutation-tests.builder-progress.builder-progress)
+[ridgeline] Resuming build 'fascicle-migration' from phase 16/19
+[ridgeline] Sandbox: greywall (semi-locked)
+[ridgeline] Starting build: fascicle-migration (19 phases)
+[ridgeline] Phase dependencies detected — using wave-based scheduling
+[ridgeline] 
+Wave: 3 parallel phases (08-leaf-flows.builder-progress.builder-progress, 10-mutation-tests.builder-progress.builder-progress, 11-cleanup-deletions)
+
+[ridgeline] ── Phase 10/19: 08-leaf-flows.builder-progress.builder-progress ──
+
+[ridgeline] ── Phase 15/19: 10-mutation-tests.builder-progress.builder-progress ──
+
+[ridgeline] ── Phase 18/19: 11-cleanup-deletions ──
+[ridgeline] [08-leaf-flows.builder-progress.builder-progress] Building...
+[ridgeline] [10-mutation-tests.builder-progress.builder-progress] Building...
+[ridgeline] [11-cleanup-deletions] Building...
+[Bash] ls /Users/robmclarty/Projects/ridgeline/code/ridgeline/.ridgeline/builds/fascicle-migration/phases/ | head -30
+I'll start by orienting to the current state of the project, then plan and execute Phase 11.
+[Bash] ls src/engine/ 2>&1 | head -50
+[Bash] pwd && ls .ridgeline/builds/fascicle-migration/phases/ 2>&1 | head -30
+[Bash] ls src/engine/pipeline/ 2>&1
+I'll start by orienting on the current state — the prior continuation reported done with all ACs satisfied and check green. Let me verify the current state matches.
+[Bash] ls src/engine/claude/ 2>&1
+[Bash] pwd && git log --oneline -5 && git status
+[Read] .ridgeline/builds/fascicle-migration/phases/10-mutation…
+[Bash] ls src/engine/legacy/ 2>&1

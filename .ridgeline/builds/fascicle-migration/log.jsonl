@@ -116,3 +116,15 @@
 {"timestamp":"2026-05-07T18:53:07.118Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/10-mutation-tests.builder-progress"}
 {"timestamp":"2026-05-07T18:53:10.134Z","level":"error","phase":null,"message":"Merge conflict for 10-mutation-tests: docs/parallel-wave-fixes.md"}
 {"timestamp":"2026-05-07T18:53:10.134Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/10-mutation-tests"}
+{"timestamp":"2026-05-07T20:02:04.425Z","level":"info","phase":null,"message":"Reconciled state: added 2 new phase(s) (08-leaf-flows.builder-progress.builder-progress, 10-mutation-tests.builder-progress.builder-progress)"}
+{"timestamp":"2026-05-07T20:02:04.428Z","level":"info","phase":null,"message":"Resuming build 'fascicle-migration' from phase 16/19"}
+{"timestamp":"2026-05-07T20:02:05.000Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
+{"timestamp":"2026-05-07T20:02:05.002Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (19 phases)\n"}
+{"timestamp":"2026-05-07T20:02:05.062Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
+{"timestamp":"2026-05-07T20:02:05.064Z","level":"info","phase":null,"message":"\nWave: 3 parallel phases (08-leaf-flows.builder-progress.builder-progress, 10-mutation-tests.builder-progress.builder-progress, 11-cleanup-deletions)"}
+{"timestamp":"2026-05-07T20:02:05.653Z","level":"info","phase":"08-leaf-flows.builder-progress.builder-progress","message":"Phase 10/19: 08-leaf-flows.builder-progress.builder-progress"}
+{"timestamp":"2026-05-07T20:02:05.653Z","level":"info","phase":"10-mutation-tests.builder-progress.builder-progress","message":"Phase 15/19: 10-mutation-tests.builder-progress.builder-progress"}
+{"timestamp":"2026-05-07T20:02:05.653Z","level":"info","phase":"11-cleanup-deletions","message":"Phase 18/19: 11-cleanup-deletions"}
+{"timestamp":"2026-05-07T20:02:05.940Z","level":"info","phase":"08-leaf-flows.builder-progress.builder-progress","message":"Building..."}
+{"timestamp":"2026-05-07T20:02:05.980Z","level":"info","phase":"10-mutation-tests.builder-progress.builder-progress","message":"Building..."}
+{"timestamp":"2026-05-07T20:02:05.982Z","level":"info","phase":"11-cleanup-deletions","message":"Building..."}
