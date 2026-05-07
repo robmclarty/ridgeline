@@ -3094,3 +3094,33 @@ All retry work is complete. Summary of what was done:
 - Handoff retry entry appended; builder progress file written.
 
 READY_FOR_REVIEW
+[ridgeline] [09-build-auto-sigint-dogfood] Reviewing...
+[review:09-build-auto-sigint-dogfood] Starting review
+
+I'll verify each acceptance criterion against the actual codebase, prioritizing the two that previously failed (AC6, AC11) plus running the verifier in parallel.
+[Bash] grep -rE "from ['\"](\.\./)+engine/pipeline" src/commands/ ; echo "EXIT: $?"
+[Bash] grep -nE "process\.on\(['\"]SIGINT" src/main.ts src/cli.ts 2>/dev/null ; echo "EXIT: $?"
+[Bash] grep -rnE "process\.on\(['\"](exit|SIGTERM|SIGINT|SIGHUP|beforeExit)" src/engine/flows src/engine/atoms src/engine/composites src/engine/adapters src/commands/build.ts src/commands/auto.ts 2>/dev/nul…
+[Bash] grep -rnE "console\.|process\.stdout\.write|process\.stderr\.write" src/engine/flows src/engine/atoms src/engine/composites src/engine/adapters 2>/dev/null | grep -v __tests__ | grep -v __fixtures__ …
+[Bash] test -f .ridgeline/builds/fascicle-migration/phase-9-check.json && echo "PHASE9_CHECK_EXISTS"; test -f .ridgeline/builds/fascicle-migration/dogfood-evidence.md && echo "DOGFOOD_EXISTS"; ls -la src/en…
+[Agent] Run `npm run check` in the current working directory and report whether all 8 sub-checks (types, lint, struct, agents, dead, docs, spell, test) pass. Read .check/summary.json afterwards and report th…
+[Bash] npm run check 2>&1
+[Read] .check/summary.json
+[Bash] test -f .ridgeline/builds/fascicle-migration/phase-9-check.json && echo "EXISTS" || echo "MISSING"
+[Read] .ridgeline/builds/fascicle-migration/phase-9-check.json
+Mechanical checks all clean (grep exit 1/2 = no matches). Let me verify the substantive criteria.
+[Read] src/engine/flows/__tests__/build.flow.sigint.test.ts
+[Read] src/engine/flows/__tests__/__fixtures__/sigint-runner.mjs
+[Read] src/commands/build.ts
+[Read] src/commands/auto.ts
+Let me run the new SIGINT test and the build flow tests to verify behavior, and check the legacy bridge structure.
+[Bash] npx vitest run src/engine/flows/__tests__/build.flow.sigint.test.ts 2>&1 | tail -30
+[Bash] npx vitest run src/engine/flows/__tests__/build.flow.test.ts src/engine/flows/__tests__/auto.flow.test.ts src/engine/flows/__tests__/build.flow.resume.test.ts src/engine/__tests__/fascicle.signal.def…
+[Bash] ls src/engine/legacy/ 2>&1; echo "---"; cat src/engine/legacy/run-phase.ts; echo "---"; cat src/engine/legacy/plan.ts
+[Bash] grep -nE "from ['\"](\.\./)+pipeline" src/engine/legacy/*.ts 2>&1; echo "---"; ls src/engine/pipeline/ 2>&1 | head; echo "---"; ls src/engine/ 2>&1 | head -20
+All checks complete. Synthesizing the verdict.
+
+[review:09-build-auto-sigint-dogfood] AC1-13 verified. SIGINT test exercises real worktree+child+log paths and verifies all four sub-criteria non-vacuously via process.kill(pid,0). AC11 grep returns zero matches; legacy/ bridge satisfies the prior reviewer's "Required state" (re-export from a non-pipeline location).
+[ridgeline] [09-build-auto-sigint-dogfood] PASSED (3649s)
+
+[ridgeline] ── Phase 12/14: 10-mutation-tests ──

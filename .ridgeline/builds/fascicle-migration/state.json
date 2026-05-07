@@ -251,12 +251,12 @@
     },
     {
       "id": "09-build-auto-sigint-dogfood",
-      "status": "reviewing",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/09-build-auto-sigint-dogfood",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/09-build-auto-sigint-dogfood",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 3649358,
+      "completedAt": "2026-05-07T06:26:25.818Z",
       "failedAt": null,
       "builderInvocations": [
         {
