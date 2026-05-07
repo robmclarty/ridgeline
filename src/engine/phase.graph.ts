@@ -1,4 +1,4 @@
-import { PhaseInfo } from "../../types.js"
+import { PhaseInfo } from "../types.js"
 
 /**
  * DAG-based phase scheduling. Phases declare dependencies via YAML frontmatter;

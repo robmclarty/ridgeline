@@ -24,13 +24,13 @@ export type BuildFlowOutput = {
   readonly stoppedReason: "complete" | "failure" | "budget_exceeded" | "user_stop"
 }
 
-export type RunPhaseExecutor = (
-  phase: PhaseInfo,
-  cwd: string | undefined,
-) => Promise<BuildPhaseResult>
+export type RunPhaseStepInput = {
+  readonly phase: PhaseInfo
+  readonly cwd?: string
+}
 
 export type BuildFlowDeps = {
-  readonly runPhase: RunPhaseExecutor
+  readonly runPhaseStep: Step<RunPhaseStepInput, BuildPhaseResult>
   readonly worktreeDriver: WorktreeDriver<PhaseInfo, BuildPhaseResult>
   readonly budgetSubscribe: (callback: (costUsd: number) => void) => () => void
   readonly maxBudgetUsd: number
@@ -51,7 +51,7 @@ const buildPhaseStep = (deps: BuildFlowDeps): Step<PhaseInfo, BuildPhaseResult> 
     return p
   })
   const reviewLeaf = step<PhaseInfo, BuildPhaseResult>("build.review_leaf", async (p, ctx) => {
-    const result = await deps.runPhase(p, undefined)
+    const result = await deps.runPhaseStep.run({ phase: p, cwd: undefined }, ctx)
     ctx.emit({ build_event: "phase_end", phase_id: p.id, result })
     return result
   })

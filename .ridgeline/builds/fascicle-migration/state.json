@@ -251,7 +251,7 @@
     },
     {
       "id": "09-build-auto-sigint-dogfood",
-      "status": "pending",
+      "status": "reviewing",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/09-build-auto-sigint-dogfood",
       "completionTag": null,
       "retries": 0,
@@ -262,13 +262,13 @@
         {
           "attempt": 1,
           "endReason": "ready_for_review",
-          "outputTokens": 113742,
-          "inputTokens": 193,
-          "costUsd": 29.67238399999999,
-          "durationMs": 1858815,
+          "outputTokens": 78251,
+          "inputTokens": 139,
+          "costUsd": 18.35610675,
+          "durationMs": 1261398,
           "windDownReason": null,
           "diffHash": null,
-          "timestamp": "2026-05-07T05:56:43.552Z"
+          "timestamp": "2026-05-07T06:23:33.451Z"
         }
       ],
       "builderLoopEndReason": "ready_for_review"

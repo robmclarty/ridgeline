@@ -1,8 +1,13 @@
 import { describe, it, expect } from "vitest"
-import { run } from "fascicle"
+import { run, step } from "fascicle"
 import type { TrajectoryEvent, TrajectoryLogger } from "fascicle"
 import type { PhaseInfo } from "../../../types.js"
-import { buildFlow, type BuildFlowDeps, type BuildPhaseResult } from "../build.flow.js"
+import {
+  buildFlow,
+  type BuildFlowDeps,
+  type BuildPhaseResult,
+  type RunPhaseStepInput,
+} from "../build.flow.js"
 import type { WorktreeDriver, WorktreeItem } from "../../composites/index.js"
 
 const makePhase = (id: string, index: number): PhaseInfo => ({
@@ -36,6 +41,11 @@ const recordingTrajectory = (): { logger: TrajectoryLogger; events: TrajectoryEv
   }
 }
 
+const passingRunPhaseStep = step<RunPhaseStepInput, BuildPhaseResult>(
+  "test.run_phase",
+  async (): Promise<BuildPhaseResult> => "passed",
+)
+
 const cannedDeps = (overrides: Partial<BuildFlowDeps> = {}): BuildFlowDeps => {
   const driver: WorktreeDriver<PhaseInfo, BuildPhaseResult> = {
     create: () => undefined,
@@ -43,7 +53,7 @@ const cannedDeps = (overrides: Partial<BuildFlowDeps> = {}): BuildFlowDeps => {
     remove: () => undefined,
   }
   return {
-    runPhase: async () => "passed",
+    runPhaseStep: passingRunPhaseStep,
     worktreeDriver: driver,
     budgetSubscribe: () => () => undefined,
     maxBudgetUsd: Number.POSITIVE_INFINITY,
@@ -126,14 +136,17 @@ describe("buildFlow", () => {
     expect(out.failed).toBe(0)
   })
 
-  it("delegates to the injected runPhase executor", async () => {
+  it("delegates to the injected runPhaseStep", async () => {
     const seen: string[] = []
     const flow = buildFlow(
       cannedDeps({
-        runPhase: async (phase) => {
-          seen.push(phase.id)
-          return "passed"
-        },
+        runPhaseStep: step<RunPhaseStepInput, BuildPhaseResult>(
+          "test.run_phase_record",
+          async ({ phase }): Promise<BuildPhaseResult> => {
+            seen.push(phase.id)
+            return "passed"
+          },
+        ),
       }),
     )
     const out = await run(
@@ -152,7 +165,10 @@ describe("buildFlow", () => {
   it("counts failures and reports stoppedReason='failure'", async () => {
     const flow = buildFlow(
       cannedDeps({
-        runPhase: async () => "failed",
+        runPhaseStep: step<RunPhaseStepInput, BuildPhaseResult>(
+          "test.run_phase_fail",
+          async (): Promise<BuildPhaseResult> => "failed",
+        ),
       }),
     )
     const out = await run(
@@ -173,10 +189,13 @@ describe("buildFlow", () => {
     const flow = buildFlow(
       cannedDeps({
         shouldStop: () => calls > 0,
-        runPhase: async () => {
-          calls += 1
-          return "passed"
-        },
+        runPhaseStep: step<RunPhaseStepInput, BuildPhaseResult>(
+          "test.run_phase_count",
+          async (): Promise<BuildPhaseResult> => {
+            calls += 1
+            return "passed"
+          },
+        ),
       }),
     )
     const out = await run(

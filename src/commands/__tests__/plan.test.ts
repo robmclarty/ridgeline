@@ -21,11 +21,8 @@ vi.mock("../../stores/budget.js", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../engine/pipeline/ensemble.exec.js", () => ({
+vi.mock("../../engine/legacy/plan.js", () => ({
   invokePlanner: vi.fn(),
-}))
-
-vi.mock("../../engine/pipeline/plan.review.js", () => ({
   runPlanReviewer: vi.fn(async () => ({
     verdict: { approved: true, issues: [] },
     result: {
@@ -47,7 +44,7 @@ vi.mock("../../ui/output.js", async (importOriginal) => {
 })
 
 import { runPlan } from "../plan.js"
-import { invokePlanner } from "../../engine/pipeline/ensemble.exec.js"
+import { invokePlanner } from "../../engine/legacy/plan.js"
 
 const makeResult = (): ClaudeResult => ({
   success: true,

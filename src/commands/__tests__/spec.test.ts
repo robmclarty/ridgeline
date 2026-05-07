@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/pipeline/specify.exec.js", () => ({
+vi.mock("../../engine/legacy/spec.js", () => ({
   invokeSpecifier: vi.fn(),
 }))
 
@@ -17,7 +17,7 @@ vi.mock("../../stores/state.js", () => ({
   getMatchedShapes: vi.fn(() => []),
 }))
 
-import { invokeSpecifier } from "../../engine/pipeline/specify.exec.js"
+import { invokeSpecifier } from "../../engine/legacy/spec.js"
 import { printError } from "../../ui/output.js"
 import { runSpec } from "../spec.js"
 

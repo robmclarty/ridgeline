@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../phase.graph.js"
-import { PhaseInfo } from "../../../types.js"
+import { PhaseInfo } from "../../types.js"
 
 const makePhase = (id: string, index: number, dependsOn: string[] = []): PhaseInfo => ({
   id,

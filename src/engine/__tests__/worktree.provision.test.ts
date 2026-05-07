@@ -7,7 +7,7 @@ import {
   KNOWN_BINARY_FIXES,
   type BinaryFix,
 } from "../worktree.provision.js"
-import { readDiscoveries } from "../discoveries.js"
+import { readDiscoveries } from "../pipeline/discoveries.js"
 
 describe("worktree.provision", () => {
   let mainCwd: string

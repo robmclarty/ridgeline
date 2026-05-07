@@ -1,70 +1,137 @@
 import { describe, it, expect } from "vitest"
-import { spawn } from "node:child_process"
+import { spawn, execFileSync } from "node:child_process"
+import * as fs from "node:fs"
+import * as os from "node:os"
 import * as path from "node:path"
 import * as url from "node:url"
-import { execSync } from "node:child_process"
+import { initTestRepo } from "../../../../test/setup.js"
 
 const here = path.dirname(url.fileURLToPath(import.meta.url))
 const fixture = path.join(here, "__fixtures__", "sigint-runner.mjs")
 
-const waitFor = (
-  child: ReturnType<typeof spawn>,
-  predicate: (stdout: string) => boolean,
+const waitForLogLine = async (
+  logPath: string,
+  needle: string,
   timeoutMs: number,
-): Promise<string> =>
-  new Promise((resolve, reject) => {
-    let buffer = ""
-    const timer = setTimeout(() => reject(new Error(`timeout after ${timeoutMs}ms`)), timeoutMs)
-    child.stdout?.on("data", (chunk: Buffer) => {
-      buffer += chunk.toString()
-      if (predicate(buffer)) {
-        clearTimeout(timer)
-        resolve(buffer)
-      }
-    })
-    child.on("exit", () => {
-      clearTimeout(timer)
-      reject(new Error(`child exited before predicate matched: ${buffer}`))
-    })
-  })
+): Promise<void> => {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    if (fs.existsSync(logPath)) {
+      const content = fs.readFileSync(logPath, "utf-8")
+      if (content.includes(needle)) return
+    }
+    await new Promise((r) => setTimeout(r, 25))
+  }
+  throw new Error(`timeout waiting for "${needle}" in ${logPath}`)
+}
 
-const waitForExit = (child: ReturnType<typeof spawn>): Promise<{ code: number | null; signal: NodeJS.Signals | null }> =>
+const waitForExit = (
+  child: ReturnType<typeof spawn>,
+): Promise<{ code: number | null; signal: NodeJS.Signals | null }> =>
   new Promise((resolve) => {
     child.on("exit", (code, signal) => resolve({ code, signal }))
   })
 
-const orphanCount = (selfPid: number): number => {
+const isProcessAlive = (pid: number): boolean => {
   try {
-    const out = execSync("ps -o pid=,ppid= -A", { encoding: "utf-8" })
-    return out
-      .split("\n")
-      .map((line) => line.trim().split(/\s+/))
-      .filter((parts) => parts[1] === String(selfPid)).length
-  } catch {
-    return 0
+    process.kill(pid, 0)
+    return true
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false
+    // EPERM means process exists but we can't signal it. Treat as alive.
+    return true
   }
 }
 
-describe("SIGINT handover (Phase 9)", () => {
-  it("exits with code 130 when SIGINT is delivered to the runner using fascicle's default install_signal_handlers", async () => {
-    const child = spawn("node", [fixture], {
-      stdio: ["pipe", "pipe", "pipe"],
-      env: { ...process.env, NODE_NO_WARNINGS: "1" },
+const setupTempRepo = (): string => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ridgeline-sigint-test-"))
+  initTestRepo(dir)
+  fs.writeFileSync(path.join(dir, "README.md"), "test\n")
+  execFileSync("git", ["add", "."], { cwd: dir })
+  execFileSync("git", ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "initial"], {
+    cwd: dir,
+  })
+  return dir
+}
+
+const listWorktrees = (repoRoot: string): string[] => {
+  try {
+    const out = execFileSync("git", ["worktree", "list"], {
+      cwd: repoRoot,
+      encoding: "utf-8",
     })
-    await waitFor(child, (s) => s.includes("READY"), 5_000)
-    // Allow the run() call to install handlers + reach the awaiting state.
-    await new Promise((r) => setTimeout(r, 200))
-    const before = orphanCount(child.pid!)
-    expect(child.kill("SIGINT")).toBe(true)
-    const { code, signal } = await waitForExit(child)
-    // Either: the handler intercepts → process.exit(130); OR the OS delivers SIGINT and the
-    // process exits with signal=SIGINT (which Node would represent as 128+2=130). Accept both.
-    if (code !== null) {
-      expect(code).toBe(130)
-    } else {
-      expect(signal).toBe("SIGINT")
+    return out.split("\n").filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+describe("SIGINT regression (Phase 9)", () => {
+  it("on SIGINT mid-run: exits 130, removes the worktree, kills the spawned child, and runs cleanup exactly once", async () => {
+    const repoRoot = setupTempRepo()
+    const logPath = path.join(repoRoot, "sigint.log")
+    const childPidPath = path.join(repoRoot, "child.pid")
+
+    const fixtureChild = spawn(
+      process.execPath,
+      [fixture, repoRoot, logPath, childPidPath],
+      {
+        stdio: ["pipe", "pipe", "pipe"],
+        env: { ...process.env, NODE_NO_WARNINGS: "1" },
+      },
+    )
+
+    try {
+      // Wait until the fixture has created the worktree, spawned the child,
+      // registered cleanup, and is awaiting abort.
+      await waitForLogLine(logPath, "READY", 10_000)
+
+      // Verify worktree was actually created (filesystem proof).
+      const wtListBefore = listWorktrees(repoRoot)
+      expect(wtListBefore.some((line) => line.includes(".test-worktrees"))).toBe(true)
+
+      // Read the spawned child's PID and verify it's alive (non-vacuous proof).
+      const childPid = Number(fs.readFileSync(childPidPath, "utf-8").trim())
+      expect(Number.isInteger(childPid)).toBe(true)
+      expect(isProcessAlive(childPid)).toBe(true)
+
+      // Send SIGINT.
+      expect(fixtureChild.kill("SIGINT")).toBe(true)
+      const { code, signal } = await waitForExit(fixtureChild)
+
+      // (a) Exit code 130 — fascicle's install_signal_handlers default routes SIGINT
+      // through aborted_error and the fixture's catch maps that to process.exit(130).
+      // OS-level signal delivery can also surface as signal=SIGINT (Node represents
+      // both equivalently); accept either.
+      if (code !== null) {
+        expect(code).toBe(130)
+      } else {
+        expect(signal).toBe("SIGINT")
+      }
+
+      // Wait briefly for cleanup-async work to flush its log line.
+      await waitForLogLine(logPath, "cleanup_done", 5_000)
+      const log = fs.readFileSync(logPath, "utf-8")
+
+      // (d) cleanup ran exactly once — no double-teardown.
+      const cleanupStartMatches = log.match(/cleanup_start/g) ?? []
+      const cleanupDoneMatches = log.match(/cleanup_done/g) ?? []
+      expect(cleanupStartMatches.length).toBe(1)
+      expect(cleanupDoneMatches.length).toBe(1)
+
+      // (b) Worktree was removed by cleanup.
+      const wtListAfter = listWorktrees(repoRoot)
+      expect(wtListAfter.some((line) => line.includes(".test-worktrees"))).toBe(false)
+
+      // (c) Spawned child is gone — verified non-vacuously via process.kill(pid, 0).
+      // Give the OS a beat to reap the killed process.
+      await new Promise((r) => setTimeout(r, 200))
+      expect(isProcessAlive(childPid)).toBe(false)
+    } finally {
+      if (!fixtureChild.killed) {
+        try { fixtureChild.kill("SIGKILL") } catch { /* ignore */ }
+      }
+      fs.rmSync(repoRoot, { recursive: true, force: true })
     }
-    const after = orphanCount(child.pid!)
-    expect(after).toBeLessThanOrEqual(before)
-  }, 10_000)
+  }, 30_000)
 })

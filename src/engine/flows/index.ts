@@ -58,7 +58,7 @@ export type {
   BuildFlowOutput,
   BuildFlowDeps,
   BuildPhaseResult,
-  RunPhaseExecutor,
+  RunPhaseStepInput,
 } from "./build.flow.js"
 
 export { autoFlow } from "./auto.flow.js"

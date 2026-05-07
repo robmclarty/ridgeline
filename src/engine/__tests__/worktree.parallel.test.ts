@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest"
 import { execSync } from "node:child_process"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { initTestRepo } from "../../../../test/setup.js"
+import { initTestRepo } from "../../../test/setup.js"
 import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../worktree.parallel.js"
 
 const run = (cmd: string, cwd: string) =>

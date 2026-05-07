@@ -27,8 +27,9 @@ vi.mock("../../stores/phases.js", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
-vi.mock("../../engine/pipeline/phase.sequence.js", () => ({
+vi.mock("../../engine/legacy/run-phase.js", () => ({
   runPhase: vi.fn(),
+  makeRunPhaseStep: vi.fn(),
 }))
 
 vi.mock("../../stores/state.js", () => ({
@@ -77,7 +78,7 @@ vi.mock("../../engine/worktree.js", () => ({
 
 import { runBuild } from "../build.js"
 import { scanPhases } from "../../stores/phases.js"
-import { runPhase } from "../../engine/pipeline/phase.sequence.js"
+import { runPhase } from "../../engine/legacy/run-phase.js"
 import { loadState, resetRetries } from "../../stores/state.js"
 import { loadBudget } from "../../stores/budget.js"
 import { detectSandbox } from "../../engine/claude/sandbox.js"

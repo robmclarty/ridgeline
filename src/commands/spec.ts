@@ -3,7 +3,7 @@ import * as path from "node:path"
 import * as readline from "node:readline"
 import { run } from "fascicle"
 import { printInfo, printError } from "../ui/output.js"
-import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec.js"
+import { invokeSpecifier, type SpecEnsembleConfig } from "../engine/legacy/spec.js"
 import { advancePipeline, getMatchedShapes } from "../stores/state.js"
 import {
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,

@@ -383,7 +383,31 @@
       "cacheCreationInputTokens": 471038,
       "durationMs": 1858815,
       "timestamp": "2026-05-07T05:56:43.553Z"
+    },
+    {
+      "phase": "09-build-auto-sigint-dogfood",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.9051868499999998,
+      "inputTokens": 17,
+      "outputTokens": 20580,
+      "cacheReadInputTokens": 826265,
+      "cacheCreationInputTokens": 138703,
+      "durationMs": 340193,
+      "timestamp": "2026-05-07T06:02:23.860Z"
+    },
+    {
+      "phase": "09-build-auto-sigint-dogfood",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 18.35610675,
+      "inputTokens": 139,
+      "outputTokens": 78251,
+      "cacheReadInputTokens": 27750047,
+      "cacheCreationInputTokens": 394725,
+      "durationMs": 1261398,
+      "timestamp": "2026-05-07T06:23:33.452Z"
     }
   ],
-  "totalCostUsd": 240.64359065
+  "totalCostUsd": 260.90488425
 }

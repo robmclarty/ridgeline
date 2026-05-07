@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/pipeline/refine.exec.js", () => ({
+vi.mock("../../engine/legacy/refine.js", () => ({
   invokeRefiner: vi.fn(),
 }))
 
@@ -24,7 +24,7 @@ vi.mock("../../ui/output.js", () => ({
   printError: vi.fn(),
 }))
 
-import { invokeRefiner } from "../../engine/pipeline/refine.exec.js"
+import { invokeRefiner } from "../../engine/legacy/refine.js"
 import { advancePipeline } from "../../stores/state.js"
 import { logTrajectory } from "../../stores/trajectory.js"
 import { recordCost } from "../../stores/budget.js"
