@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
-import { detectSpritesheet, computeContentHash } from "../extract-metadata"
+import { detectSpritesheet, computeContentHash } from "../extract-metadata.js"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
 describe("detectSpritesheet", () => {
   it("detects horizontal spritesheet (128x32 = 4 frames)", () => {

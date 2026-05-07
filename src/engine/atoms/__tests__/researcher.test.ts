@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { researcherAtom, type ResearcherArgs } from "../researcher.atom"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { researcherAtom, type ResearcherArgs } from "../researcher.atom.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const args: ResearcherArgs = {
   specMd: "# Spec",

@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
-import { invokeClaude } from "../engine/claude/claude.exec"
-import type { SensorAdapter, SensorFinding, SensorInput } from "./index"
+import { invokeClaude } from "../engine/claude/claude.exec.js"
+import type { SensorAdapter, SensorFinding, SensorInput } from "./index.js"
 
 const PLAYWRIGHT_INSTALL_HINT =
   "npm install --save-dev playwright && npx playwright install chromium"

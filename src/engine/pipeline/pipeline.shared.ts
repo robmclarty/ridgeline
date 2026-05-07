@@ -1,11 +1,11 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig } from "../../types"
-import { buildAgentRegistry } from "../discovery/agent.registry"
-import { discoverPluginDirs, getCorePluginDir, PluginDir } from "../discovery/plugin.scan"
-import { printError } from "../../ui/output"
-import { PromptDocument } from "./prompt.document"
-import { buildStablePrompt } from "../claude/stable.prompt"
+import { RidgelineConfig } from "../../types.js"
+import { buildAgentRegistry } from "../discovery/agent.registry.js"
+import { discoverPluginDirs, getCorePluginDir, PluginDir } from "../discovery/plugin.scan.js"
+import { printError } from "../../ui/output.js"
+import { PromptDocument } from "./prompt.document.js"
+import { buildStablePrompt } from "../claude/stable.prompt.js"
 
 /**
  * Discover agents and plugins, including the core hooks plugin in unsafe mode.

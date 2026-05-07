@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execSync } from "node:child_process"
-import { makeTempDir, initTestRepo } from "../../../test/setup"
-import { ensureGitRepo } from "../worktree"
+import { makeTempDir, initTestRepo } from "../../../test/setup.js"
+import { ensureGitRepo } from "../worktree.js"
 
 const initGitRepo = (dir: string): void => {
   initTestRepo(dir)

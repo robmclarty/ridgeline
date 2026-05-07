@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { formatElapsed, pickVerb, startSpinner } from "../spinner"
+import { formatElapsed, pickVerb, startSpinner } from "../spinner.js"
 
 describe("spinner", () => {
   describe("formatElapsed", () => {

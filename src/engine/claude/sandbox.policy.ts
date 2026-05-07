@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process"
 import { writeFileSync } from "node:fs"
 import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
-import { SandboxBuildArgsOptions, SandboxProvider } from "./sandbox.types"
-import type { SandboxMode } from "../../stores/settings"
+import { SandboxBuildArgsOptions, SandboxProvider } from "./sandbox.types.js"
+import type { SandboxMode } from "../../stores/settings.js"
 
 const GREYPROXY_API = "http://localhost:43080"
 

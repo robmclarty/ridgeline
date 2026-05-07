@@ -4,9 +4,9 @@ import {
   appendDesignData,
   composeSystemPrompt,
   type StableInputs,
-} from "./_shape"
-import { createAtomPromptDocument } from "./_prompt.document"
-import { planArtifactSchema, type PlanArtifactSchema } from "../schemas"
+} from "./_shape.js"
+import { createAtomPromptDocument } from "./_prompt.document.js"
+import { planArtifactSchema, type PlanArtifactSchema } from "../schemas.js"
 
 const PLANNER_JSON_DIRECTIVE = [
   "",

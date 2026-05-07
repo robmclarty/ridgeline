@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { refinerAtom, type RefinerArgs } from "../refiner.atom"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { refinerAtom, type RefinerArgs } from "../refiner.atom.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const args: RefinerArgs = {
   specMd: "# Spec",

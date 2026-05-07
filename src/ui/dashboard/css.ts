@@ -1,5 +1,5 @@
-import { PALETTE, resolveAccents } from "./tokens"
-import { rgbaOf } from "./hex"
+import { PALETTE, resolveAccents } from "./tokens.js"
+import { rgbaOf } from "./hex.js"
 
 export const renderCss = (): string => {
   const accents = resolveAccents()

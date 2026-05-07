@@ -2,8 +2,8 @@ import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import type { CheckpointStore } from "fascicle"
-import { makeTempDir } from "../../../../test/setup"
-import { createRidgelineCheckpointStore } from "../ridgeline_checkpoint_store"
+import { makeTempDir } from "../../../../test/setup.js"
+import { createRidgelineCheckpointStore } from "../ridgeline_checkpoint_store.js"
 
 describe("ridgeline_checkpoint_store", () => {
   let dir: string
@@ -78,7 +78,7 @@ describe("ridgeline_checkpoint_store", () => {
   it("two-tier resume invariant: checkpoint write does not overlap with state.json", async () => {
     dir = makeTempDir()
     const store = createRidgelineCheckpointStore({ buildDir: dir })
-    const { saveState } = await import("../../../stores/state")
+    const { saveState } = await import("../../../stores/state.js")
 
     await store.set("phase-1", { resumed: true })
     saveState(dir, {

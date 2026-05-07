@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { normalizeQuestion, parseQAResponse, runQAIntake } from "../qa-workflow"
+import { normalizeQuestion, parseQAResponse, runQAIntake } from "../qa-workflow.js"
 import type * as readline from "node:readline"
 
-vi.mock("../../engine/claude/claude.exec", () => ({
+vi.mock("../../engine/claude/claude.exec.js", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../engine/claude/stream.display", () => ({
+vi.mock("../../engine/claude/stream.display.js", () => ({
   createDisplayCallbacks: vi.fn(() => ({
     onStdout: vi.fn(),
     flush: vi.fn(),
   })),
 }))
 
-import { invokeClaude } from "../../engine/claude/claude.exec"
+import { invokeClaude } from "../../engine/claude/claude.exec.js"
 
 describe("normalizeQuestion", () => {
   it("wraps a plain string into a QAQuestion", () => {

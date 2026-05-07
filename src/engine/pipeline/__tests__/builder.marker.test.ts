@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseBuilderMarker } from "../builder.marker"
+import { parseBuilderMarker } from "../builder.marker.js"
 
 describe("parseBuilderMarker", () => {
   it("recognizes a clean READY_FOR_REVIEW final line", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { createPromptDocument, PromptDocument } from "../prompt.document"
+import { createPromptDocument, PromptDocument } from "../prompt.document.js"
 
 describe("PromptDocument", () => {
   it("renders an instruction section as bare markdown", () => {

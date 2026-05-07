@@ -3,9 +3,9 @@ import { run } from "fascicle"
 import {
   specialistVerdictAtom,
   type SpecialistVerdictArgs,
-} from "../specialist.verdict.atom"
-import { specialistVerdictSchema } from "../../schemas"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+} from "../specialist.verdict.atom.js"
+import { specialistVerdictSchema } from "../../schemas.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const cannedVerdict = {
   stage: "spec" as const,

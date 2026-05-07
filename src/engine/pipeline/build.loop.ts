@@ -8,12 +8,12 @@ import type {
   ClaudeResult,
   BuilderInvocation,
   BuilderInvocationEndReason,
-} from "../../types"
-import { computeBuilderBudget } from "./builder.budget"
-import type { BuilderBudget } from "./builder.budget"
-import { parseBuilderMarker } from "./builder.marker"
-import { buildAgentRegistry } from "../discovery/agent.registry"
-import { assembleUserPrompt, invokeBuilder } from "./build.exec"
+} from "../../types.js"
+import { computeBuilderBudget } from "./builder.budget.js"
+import type { BuilderBudget } from "./builder.budget.js"
+import { parseBuilderMarker } from "./builder.marker.js"
+import { buildAgentRegistry } from "../discovery/agent.registry.js"
+import { assembleUserPrompt, invokeBuilder } from "./build.exec.js"
 
 export const DEFAULT_MAX_CONTINUATIONS = 5
 export const DEFAULT_PHASE_COST_CAP_MULTIPLIER = 5

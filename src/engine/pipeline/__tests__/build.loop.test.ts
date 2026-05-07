@@ -1,22 +1,22 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import { makeTempDir } from "../../../../test/setup"
-import { runBuilderLoop } from "../build.loop"
+import { makeTempDir } from "../../../../test/setup.js"
+import { runBuilderLoop } from "../build.loop.js"
 import type {
   BuilderInvoker,
   DiffHasher,
   BuilderLoopArgs,
-} from "../build.loop"
-import type { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../../types"
+} from "../build.loop.js"
+import type { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../../types.js"
 
-vi.mock("../../discovery/agent.registry", () => ({
+vi.mock("../../discovery/agent.registry.js", () => ({
   buildAgentRegistry: () => ({
     getCorePrompt: () => "stub builder system prompt",
   }),
 }))
 
-vi.mock("../build.exec", () => ({
+vi.mock("../build.exec.js", () => ({
   assembleUserPrompt: () => "stub user prompt",
 }))
 

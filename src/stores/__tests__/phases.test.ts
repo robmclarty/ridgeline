@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import { scanPhases, isPhaseFile, parsePhaseFilename, parsePhaseContent, parsePhaseFrontmatter, PHASE_FILENAME_PATTERN } from "../phases"
+import { makeTempDir } from "../../../test/setup.js"
+import { scanPhases, isPhaseFile, parsePhaseFilename, parsePhaseContent, parsePhaseFrontmatter, PHASE_FILENAME_PATTERN } from "../phases.js"
 
 describe("phases", () => {
   describe("PHASE_FILENAME_PATTERN", () => {

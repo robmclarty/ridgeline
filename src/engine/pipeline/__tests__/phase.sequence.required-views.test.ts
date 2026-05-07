@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { parseRequiredViews } from "../phase.sequence"
+import { parseRequiredViews } from "../phase.sequence.js"
 
 describe("parseRequiredViews", () => {
   it("returns an empty array when the section is absent", () => {

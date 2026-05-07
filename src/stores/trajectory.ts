@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { TrajectoryEntry } from "../types"
+import { TrajectoryEntry } from "../types.js"
 
 const trajectoryPath = (buildDir: string): string =>
   path.join(buildDir, "trajectory.jsonl")

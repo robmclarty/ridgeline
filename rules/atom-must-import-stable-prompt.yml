@@ -20,5 +20,7 @@ rule:
         stopBy: end
         any:
           - pattern: import $$$ from "../claude/stable.prompt"
+          - pattern: import $$$ from "../claude/stable.prompt.js"
           - pattern: import $$$ from "./_shape"
           - pattern: import $$$ from "./_shape.ts"
+          - pattern: import $$$ from "./_shape.js"

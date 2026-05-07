@@ -1,10 +1,10 @@
 import { compose, step, type Step } from "fascicle"
-import type { SensorName } from "../detect"
-import type { SensorAdapter, SensorFinding, SensorInput } from "../../sensors"
-import playwrightSensor from "../../sensors/playwright"
-import visionSensor from "../../sensors/vision"
-import a11ySensor from "../../sensors/a11y"
-import contrastSensor from "../../sensors/contrast"
+import type { SensorName } from "../detect/index.js"
+import type { SensorAdapter, SensorFinding, SensorInput } from "../../sensors/index.js"
+import playwrightSensor from "../../sensors/playwright.js"
+import visionSensor from "../../sensors/vision.js"
+import a11ySensor from "../../sensors/a11y.js"
+import contrastSensor from "../../sensors/contrast.js"
 
 const defaultRegistry: Record<SensorName, SensorAdapter> = {
   playwright: playwrightSensor,

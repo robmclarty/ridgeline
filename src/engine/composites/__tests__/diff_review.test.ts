@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run, step, aborted_error, type Step, type TrajectoryLogger } from "fascicle"
-import { diff_review } from "../diff_review"
-import { recordingTrajectory, sleep } from "./_helpers"
+import { diff_review } from "../diff_review.js"
+import { recordingTrajectory, sleep } from "./_helpers.js"
 
 type Build = { readonly text: string }
 type Review = { readonly summary: string }

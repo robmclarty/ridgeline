@@ -1,12 +1,12 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { makeTempDir } from "../../../../test/setup"
+import { makeTempDir } from "../../../../test/setup.js"
 import {
   DEFAULT_CONTEXT_WINDOWS,
   FALLBACK_CONTEXT_WINDOW,
   resolveContextWindow,
-} from "../context-window"
+} from "../context-window.js"
 
 describe("context-window", () => {
   let tmpDir: string

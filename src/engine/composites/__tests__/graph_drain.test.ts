@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run, step, aborted_error, type Step, type TrajectoryLogger } from "fascicle"
-import { graph_drain } from "../graph_drain"
-import { recordingTrajectory, sleep } from "./_helpers"
+import { graph_drain } from "../graph_drain.js"
+import { recordingTrajectory, sleep } from "./_helpers.js"
 
 describe("graph_drain composite", () => {
   it("emits a trajectory span named 'graph_drain'", async () => {

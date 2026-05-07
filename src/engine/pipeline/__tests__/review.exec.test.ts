@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { makeConfig, makePhase, makeClaudeResult, passVerdict } from "../../../../test/factories"
+import { makeConfig, makePhase, makeClaudeResult, passVerdict } from "../../../../test/factories.js"
 
-vi.mock("../../claude/claude.exec", () => ({
+vi.mock("../../claude/claude.exec.js", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../discovery/agent.registry", () => ({
+vi.mock("../../discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: vi.fn(() => "reviewer system prompt"),
     getSpecialists: vi.fn(() => []),
@@ -17,15 +17,15 @@ vi.mock("../../discovery/agent.registry", () => ({
   })),
 }))
 
-vi.mock("../../claude/stream.display", () => ({
+vi.mock("../../claude/stream.display.js", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
-vi.mock("../../../git", () => ({
+vi.mock("../../../git.js", () => ({
   getDiff: vi.fn(() => "diff --git a/file.ts"),
 }))
 
-vi.mock("../../../stores/feedback.verdict", () => ({
+vi.mock("../../../stores/feedback.verdict.js", () => ({
   parseVerdict: vi.fn(() => ({
     passed: true,
     summary: "All good",
@@ -35,19 +35,19 @@ vi.mock("../../../stores/feedback.verdict", () => ({
   })),
 }))
 
-vi.mock("../../discovery/plugin.scan", () => ({
+vi.mock("../../discovery/plugin.scan.js", () => ({
   cleanupPluginDirs: vi.fn(),
 }))
 
-vi.mock("../../../stores/state", () => ({
+vi.mock("../../../stores/state.js", () => ({
   getMatchedShapes: vi.fn(() => []),
 }))
 
-vi.mock("../../../shapes/detect", () => ({
+vi.mock("../../../shapes/detect.js", () => ({
   loadShapeDefinitions: vi.fn(() => []),
 }))
 
-vi.mock("../pipeline.shared", () => ({
+vi.mock("../pipeline.shared.js", () => ({
   prepareAgentsAndPlugins: vi.fn(() => ({ agents: undefined, pluginDirs: [] })),
   appendDesign: vi.fn(),
   commonInvokeOptions: vi.fn(() => ({
@@ -71,16 +71,16 @@ vi.mock("node:fs", async () => {
   }
 })
 
-import { invokeReviewer } from "../review.exec"
-import { invokeClaude } from "../../claude/claude.exec"
-import { buildAgentRegistry } from "../../discovery/agent.registry"
-import { createDisplayCallbacks } from "../../claude/stream.display"
-import { getDiff } from "../../../git"
-import { parseVerdict } from "../../../stores/feedback.verdict"
-import { cleanupPluginDirs } from "../../discovery/plugin.scan"
-import { appendDesign } from "../pipeline.shared"
-import { getMatchedShapes } from "../../../stores/state"
-import { loadShapeDefinitions } from "../../../shapes/detect"
+import { invokeReviewer } from "../review.exec.js"
+import { invokeClaude } from "../../claude/claude.exec.js"
+import { buildAgentRegistry } from "../../discovery/agent.registry.js"
+import { createDisplayCallbacks } from "../../claude/stream.display.js"
+import { getDiff } from "../../../git.js"
+import { parseVerdict } from "../../../stores/feedback.verdict.js"
+import { cleanupPluginDirs } from "../../discovery/plugin.scan.js"
+import { appendDesign } from "../pipeline.shared.js"
+import { getMatchedShapes } from "../../../stores/state.js"
+import { loadShapeDefinitions } from "../../../shapes/detect.js"
 
 beforeEach(() => vi.clearAllMocks())
 

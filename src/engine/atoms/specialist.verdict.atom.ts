@@ -2,9 +2,9 @@ import { compose, model_call, sequence, step, type Engine, type GenerateResult, 
 import {
   composeSystemPrompt,
   type StableInputs,
-} from "./_shape"
-import { createAtomPromptDocument } from "./_prompt.document"
-import { specialistVerdictSchema, type SpecialistVerdictSchema } from "../schemas"
+} from "./_shape.js"
+import { createAtomPromptDocument } from "./_prompt.document.js"
+import { specialistVerdictSchema, type SpecialistVerdictSchema } from "../schemas.js"
 
 export type SpecialistVerdictStage = "spec" | "plan" | "research"
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { hex as contrastHex } from "wcag-contrast"
-import { brightenForContrast, compositeAccentFill } from "../contrast"
-import { PALETTE } from "../dashboard/tokens"
+import { brightenForContrast, compositeAccentFill } from "../contrast.js"
+import { PALETTE } from "../dashboard/tokens.js"
 
 describe("brightenForContrast", () => {
   it("returns unchanged or near-unchanged cyan on 10%-cyan-over-bg", () => {

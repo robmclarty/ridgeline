@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { renderHtml } from "../html"
-import type { DashboardSnapshot } from "../snapshot"
+import { renderHtml } from "../html.js"
+import type { DashboardSnapshot } from "../snapshot.js"
 
 const snap: DashboardSnapshot = {
   buildName: "demo",

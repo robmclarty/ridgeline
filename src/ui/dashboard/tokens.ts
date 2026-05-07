@@ -1,4 +1,4 @@
-import { brightenForContrast, compositeAccentFill } from "../contrast"
+import { brightenForContrast, compositeAccentFill } from "../contrast.js"
 
 export const PALETTE = {
   bg: "#0B0F14",

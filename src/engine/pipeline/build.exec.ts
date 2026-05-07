@@ -1,14 +1,14 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types"
-import { invokeClaude } from "../claude/claude.exec"
-import { createDisplayCallbacks } from "../claude/stream.display"
-import { readHandoff } from "../../stores/handoff"
-import { cleanupPluginDirs } from "../discovery/plugin.scan"
-import { buildAgentRegistry } from "../discovery/agent.registry"
-import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
-import { createPromptDocument } from "./prompt.document"
-import { getDiscoveriesPath, readDiscoveries } from "./discoveries"
+import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../../types.js"
+import { invokeClaude } from "../claude/claude.exec.js"
+import { createDisplayCallbacks } from "../claude/stream.display.js"
+import { readHandoff } from "../../stores/handoff.js"
+import { cleanupPluginDirs } from "../discovery/plugin.scan.js"
+import { buildAgentRegistry } from "../discovery/agent.registry.js"
+import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared.js"
+import { createPromptDocument } from "./prompt.document.js"
+import { getDiscoveriesPath, readDiscoveries } from "./discoveries.js"
 
 /**
  * Resolve the file path the builder should append handoff notes to.

@@ -1,45 +1,45 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types"
+import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types.js"
 
-vi.mock("../../../stores/tags", () => ({
+vi.mock("../../../stores/tags.js", () => ({
   createCheckpoint: vi.fn(),
   createCompletionTag: vi.fn(() => "completion-tag"),
 }))
 
-vi.mock("../../../stores/budget", () => ({
+vi.mock("../../../stores/budget.js", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.05 })),
   getTotalCost: vi.fn(() => 0.05),
   getPhaseCostUsd: vi.fn(() => 0),
 }))
 
-vi.mock("../../../stores/handoff", () => ({ ensureHandoffExists: vi.fn() }))
-vi.mock("../../../stores/state", () => ({ updatePhaseStatus: vi.fn() }))
-vi.mock("../../../ui/output", () => ({
+vi.mock("../../../stores/handoff.js", () => ({ ensureHandoffExists: vi.fn() }))
+vi.mock("../../../stores/state.js", () => ({ updatePhaseStatus: vi.fn() }))
+vi.mock("../../../ui/output.js", () => ({
   printPhase: vi.fn(),
   printWarn: vi.fn(),
 }))
-vi.mock("../../../stores/trajectory", () => ({ logTrajectory: vi.fn() }))
-vi.mock("../build.loop", () => ({
+vi.mock("../../../stores/trajectory.js", () => ({ logTrajectory: vi.fn() }))
+vi.mock("../build.loop.js", () => ({
   runBuilderLoop: vi.fn(),
 }))
-vi.mock("../review.exec", () => ({ invokeReviewer: vi.fn() }))
-vi.mock("../../../stores/feedback.verdict", () => ({
+vi.mock("../review.exec.js", () => ({ invokeReviewer: vi.fn() }))
+vi.mock("../../../stores/feedback.verdict.js", () => ({
   formatIssue: vi.fn((i: { description: string }) => i.description),
 }))
-vi.mock("../../../stores/feedback.io", () => ({
+vi.mock("../../../stores/feedback.io.js", () => ({
   writeFeedback: vi.fn(),
   archiveFeedback: vi.fn(),
 }))
-vi.mock("../../../git", () => ({
+vi.mock("../../../git.js", () => ({
   isWorkingTreeDirty: vi.fn(() => false),
   commitAll: vi.fn(),
 }))
 
-vi.mock("../../detect", () => ({
+vi.mock("../../detect/index.js", () => ({
   detect: vi.fn(),
 }))
 
-vi.mock("../sensors.collect", () => ({
+vi.mock("../sensors.collect.js", () => ({
   collectSensorFindings: vi.fn(),
 }))
 
@@ -52,14 +52,14 @@ vi.mock("node:fs", async () => {
   }
 })
 
-import { runPhase } from "../phase.sequence"
-import { runBuilderLoop } from "../build.loop"
-import type { BuilderLoopOutcome } from "../build.loop"
-import type { BuilderInvocation } from "../../../types"
-import { invokeReviewer } from "../review.exec"
-import { detect } from "../../detect"
-import { collectSensorFindings } from "../sensors.collect"
-import { printWarn } from "../../../ui/output"
+import { runPhase } from "../phase.sequence.js"
+import { runBuilderLoop } from "../build.loop.js"
+import type { BuilderLoopOutcome } from "../build.loop.js"
+import type { BuilderInvocation } from "../../../types.js"
+import { invokeReviewer } from "../review.exec.js"
+import { detect } from "../../detect/index.js"
+import { collectSensorFindings } from "../sensors.collect.js"
+import { printWarn } from "../../../ui/output.js"
 
 const makeResult = (): ClaudeResult => ({
   success: true,

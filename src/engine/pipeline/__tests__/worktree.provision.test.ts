@@ -6,8 +6,8 @@ import {
   provisionPhaseWorktree,
   KNOWN_BINARY_FIXES,
   type BinaryFix,
-} from "../worktree.provision"
-import { readDiscoveries } from "../discoveries"
+} from "../worktree.provision.js"
+import { readDiscoveries } from "../discoveries.js"
 
 describe("worktree.provision", () => {
   let mainCwd: string

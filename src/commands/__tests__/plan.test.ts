@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import type { RidgelineConfig, ClaudeResult, PhaseInfo, EnsembleResult } from "../../types"
+import { makeTempDir } from "../../../test/setup.js"
+import type { RidgelineConfig, ClaudeResult, PhaseInfo, EnsembleResult } from "../../types.js"
 
-vi.mock("../../stores/trajectory", () => ({
+vi.mock("../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -17,15 +17,15 @@ vi.mock("../../stores/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../stores/budget", () => ({
+vi.mock("../../stores/budget.js", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../engine/pipeline/ensemble.exec", () => ({
+vi.mock("../../engine/pipeline/ensemble.exec.js", () => ({
   invokePlanner: vi.fn(),
 }))
 
-vi.mock("../../engine/pipeline/plan.review", () => ({
+vi.mock("../../engine/pipeline/plan.review.js", () => ({
   runPlanReviewer: vi.fn(async () => ({
     verdict: { approved: true, issues: [] },
     result: {
@@ -41,13 +41,13 @@ vi.mock("../../engine/pipeline/plan.review", () => ({
   reportPhaseSizeWarnings: vi.fn(() => []),
 }))
 
-vi.mock("../../ui/output", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../ui/output")>()
+vi.mock("../../ui/output.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../ui/output.js")>()
   return { ...actual, printInfo: vi.fn(), printWarn: vi.fn() }
 })
 
-import { runPlan } from "../plan"
-import { invokePlanner } from "../../engine/pipeline/ensemble.exec"
+import { runPlan } from "../plan.js"
+import { invokePlanner } from "../../engine/pipeline/ensemble.exec.js"
 
 const makeResult = (): ClaudeResult => ({
   success: true,

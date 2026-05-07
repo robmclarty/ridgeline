@@ -1,12 +1,12 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { EnsembleResult } from "../../types"
-import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
-import { invokeClaude } from "../claude/claude.exec"
-import { buildAgentRegistry } from "../discovery/agent.registry"
-import { createStderrHandler } from "./pipeline.shared"
-import { startSpinner } from "../../ui/spinner"
-import { createPromptDocument, PromptDocument } from "./prompt.document"
+import { EnsembleResult } from "../../types.js"
+import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec.js"
+import { invokeClaude } from "../claude/claude.exec.js"
+import { buildAgentRegistry } from "../discovery/agent.registry.js"
+import { createStderrHandler } from "./pipeline.shared.js"
+import { startSpinner } from "../../ui/spinner.js"
+import { createPromptDocument, PromptDocument } from "./prompt.document.js"
 
 // ---------------------------------------------------------------------------
 // Shared prompt helpers
@@ -176,7 +176,7 @@ export type ResearchConfig = {
   isQuick: boolean
   specialistCount: 1 | 2 | 3
   networkAllowlist: string[]
-  sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
+  sandboxProvider?: import("../../types.js").RidgelineConfig["sandboxProvider"]
   existingResearchMd: string | null
   changelogMd: string | null
   iterationNumber: number

@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo } from "../ui/output"
-import { startDashboard, DashboardServer } from "../ui/dashboard/server"
+import { printInfo } from "../ui/output.js"
+import { startDashboard, DashboardServer } from "../ui/dashboard/server.js"
 
 export interface UiOptions {
   port?: number

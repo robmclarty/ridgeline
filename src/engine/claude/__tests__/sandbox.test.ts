@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("../sandbox.policy", async () => {
-  const actual = await vi.importActual<typeof import("../sandbox.policy")>("../sandbox.policy")
+vi.mock("../sandbox.policy.js", async () => {
+  const actual = await vi.importActual<typeof import("../sandbox.policy.js")>("../sandbox.policy")
   return {
     ...actual,
     isAvailable: vi.fn(),
@@ -9,8 +9,8 @@ vi.mock("../sandbox.policy", async () => {
   }
 })
 
-import { detectSandbox } from "../sandbox"
-import { greywallProvider, isAvailable } from "../sandbox.policy"
+import { detectSandbox } from "../sandbox.js"
+import { greywallProvider, isAvailable } from "../sandbox.policy.js"
 
 describe("detectSandbox", () => {
   beforeEach(() => {

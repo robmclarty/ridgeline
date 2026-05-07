@@ -10,7 +10,7 @@ vi.mock("node:fs", async () => {
 import {
   buildSandboxPolicy,
   greywallProvider,
-} from "../claude/sandbox.policy"
+} from "../claude/sandbox.policy.js"
 
 const EMPTY_EXTRAS = { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run, step, aborted_error, type Step, type TrajectoryLogger } from "fascicle"
-import { cost_capped } from "../cost_capped"
-import { recordingTrajectory, sleep } from "./_helpers"
+import { cost_capped } from "../cost_capped.js"
+import { recordingTrajectory, sleep } from "./_helpers.js"
 
 type CostBus = {
   emit: (cost_usd: number) => void

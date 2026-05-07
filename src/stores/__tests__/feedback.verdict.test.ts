@@ -3,7 +3,7 @@ import {
   parseVerdict,
   formatIssue,
   generateFeedback,
-} from "../feedback.verdict"
+} from "../feedback.verdict.js"
 
 describe("feedback.verdict", () => {
   describe("parseVerdict", () => {

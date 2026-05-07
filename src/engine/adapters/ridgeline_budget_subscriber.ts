@@ -2,8 +2,8 @@
 // budget.json. Idempotent on duplicate event ids so a single logical cost is
 // never double-counted across redundant emit paths or replays.
 import type { TrajectoryEvent, TrajectoryLogger } from "fascicle"
-import type { BudgetEntry } from "../../types"
-import { appendBudgetEntry } from "../../stores/budget"
+import type { BudgetEntry } from "../../types.js"
+import { appendBudgetEntry } from "../../stores/budget.js"
 
 export const RIDGELINE_COST_KIND = "ridgeline_cost" as const
 

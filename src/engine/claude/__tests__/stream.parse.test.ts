@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { parseStreamLine, createStreamHandler } from "../stream.parse"
+import { parseStreamLine, createStreamHandler } from "../stream.parse.js"
 
 const sampleResult = {
   type: "result",

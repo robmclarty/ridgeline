@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import type { SensorAdapter, SensorFinding, SensorInput } from "../../../sensors"
-import type { SensorName } from "../../detect"
-import { sensorsCollectAtom, type SensorsCollectArgs } from "../sensors.collect.atom"
+import type { SensorAdapter, SensorFinding, SensorInput } from "../../../sensors/index.js"
+import type { SensorName } from "../../detect/index.js"
+import { sensorsCollectAtom, type SensorsCollectArgs } from "../sensors.collect.atom.js"
 
 const makeStubAdapter = (
   name: SensorName,

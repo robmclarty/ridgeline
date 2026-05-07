@@ -38,7 +38,7 @@ const makeRidgelineConfigShape = (buildPath: string) => {
   const buildName = path.basename(buildPath)
   const ridgelineDir = path.dirname(path.dirname(buildPath))
   return { buildDir, buildName, ridgelineDir } as unknown as Parameters<
-    typeof import("../discovery/plugin.scan").discoverPluginDirs
+    typeof import("../discovery/plugin.scan.js").discoverPluginDirs
   >[0]
 }
 
@@ -58,8 +58,8 @@ describe("makeRidgelineEngine lifecycle (discoverPluginDirs / cleanupPluginDirs)
     fs.writeFileSync(path.join(buildPath, "plugin", "marker.md"), "x", "utf-8")
 
     try {
-      const pluginScan = await import("../discovery/plugin.scan")
-      const { makeRidgelineEngine } = await import("../engine.factory")
+      const pluginScan = await import("../discovery/plugin.scan.js")
+      const { makeRidgelineEngine } = await import("../engine.factory.js")
 
       const discoverSpy = vi.spyOn(pluginScan, "discoverPluginDirs").mockImplementation((cfg) => {
         callOrder.push("discoverPluginDirs")

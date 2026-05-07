@@ -1,15 +1,15 @@
 import { spawn, ChildProcess } from "node:child_process"
-import { ClaudeResult } from "../../types"
-import { extractResult } from "./stream.result"
-import { SandboxProvider } from "./sandbox"
+import { ClaudeResult } from "../../types.js"
+import { extractResult } from "./stream.result.js"
+import { SandboxProvider } from "./sandbox.js"
 import {
   computeStableHash,
   detectExcludeDynamicFlag,
   writeStablePromptFile,
   shouldLogUnavailableOnce,
   type HelpRunner,
-} from "./stable.prompt"
-import { logTrajectory } from "../../stores/trajectory"
+} from "./stable.prompt.js"
+import { logTrajectory } from "../../stores/trajectory.js"
 
 /** Default: kill if no stdout arrives within 2 minutes of spawn. */
 const DEFAULT_STARTUP_TIMEOUT_MS = 2 * 60 * 1000
@@ -63,8 +63,8 @@ export type InvokeOptions = {
   onStdout?: (chunk: string) => void
   onStderr?: (chunk: string) => void
   sandboxProvider?: SandboxProvider | null
-  sandboxMode?: import("../../stores/settings").SandboxMode
-  sandboxExtras?: import("../../stores/settings").SandboxExtras
+  sandboxMode?: import("../../stores/settings.js").SandboxMode
+  sandboxExtras?: import("../../stores/settings.js").SandboxExtras
   networkAllowlist?: string[]
   additionalWritePaths?: string[]
   /**

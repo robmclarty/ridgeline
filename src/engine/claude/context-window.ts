@@ -1,4 +1,4 @@
-import { loadSettings } from "../../stores/settings"
+import { loadSettings } from "../../stores/settings.js"
 
 /**
  * Conservative per-model context-window defaults in tokens.

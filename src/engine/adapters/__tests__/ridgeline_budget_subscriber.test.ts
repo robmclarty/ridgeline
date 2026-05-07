@@ -1,15 +1,15 @@
 import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../../test/setup"
-import { BudgetEntry, BudgetState } from "../../../types"
+import { makeTempDir } from "../../../../test/setup.js"
+import { BudgetEntry, BudgetState } from "../../../types.js"
 import {
   buildCostEventId,
   createRidgelineBudgetSubscriber,
   emitCostEntry,
   isRidgelineCostEvent,
   RIDGELINE_COST_KIND,
-} from "../ridgeline_budget_subscriber"
+} from "../ridgeline_budget_subscriber.js"
 
 const baselineBudgetPath = path.join(
   process.cwd(),

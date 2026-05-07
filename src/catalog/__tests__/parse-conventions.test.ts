@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { parseConventions, inferDefaults, AUTO_DESCRIBE_CATEGORIES } from "../parse-conventions"
+import { parseConventions, inferDefaults, AUTO_DESCRIBE_CATEGORIES } from "../parse-conventions.js"
 
 describe("parseConventions", () => {
   it("parses category/subject/state from standard path", () => {

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { specialistAtom, type SpecialistArgs } from "../specialist.atom"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { specialistAtom, type SpecialistArgs } from "../specialist.atom.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const baseArgs: SpecialistArgs = {
   userPrompt: "## shape.md\n\n<!-- role: data -->\nThe shape\n",

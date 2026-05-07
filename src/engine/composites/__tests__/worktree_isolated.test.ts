@@ -4,8 +4,8 @@ import {
   worktree_isolated,
   type WorktreeDriver,
   type WorktreeItem,
-} from "../worktree_isolated"
-import { recordingTrajectory, sleep } from "./_helpers"
+} from "../worktree_isolated.js"
+import { recordingTrajectory, sleep } from "./_helpers.js"
 
 type Spec = { readonly name: string }
 

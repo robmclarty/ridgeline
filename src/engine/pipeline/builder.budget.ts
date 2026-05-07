@@ -1,6 +1,6 @@
-import { approximateTokenCount } from "../claude/stable.prompt"
-import { resolveContextWindow } from "../claude/context-window"
-import type { RidgelineConfig } from "../../types"
+import { approximateTokenCount } from "../claude/stable.prompt.js"
+import { resolveContextWindow } from "../claude/context-window.js"
+import type { RidgelineConfig } from "../../types.js"
 
 /** Reserved headroom inside the context window for output framing + buffer. */
 export const SAFETY_MARGIN_TOKENS = 5_000

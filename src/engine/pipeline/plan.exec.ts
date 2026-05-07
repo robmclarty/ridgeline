@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig } from "../../types"
-import { appendConstraintsAndTaste, appendDesign } from "./pipeline.shared"
-import { createPromptDocument, PromptDocument } from "./prompt.document"
+import { RidgelineConfig } from "../../types.js"
+import { appendConstraintsAndTaste, appendDesign } from "./pipeline.shared.js"
+import { createPromptDocument, PromptDocument } from "./prompt.document.js"
 
 /** Append the shared portion of the user prompt: spec, constraints, taste, design, target model. */
 export const appendBaseUserPrompt = (doc: PromptDocument, config: RidgelineConfig): void => {

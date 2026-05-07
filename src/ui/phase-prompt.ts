@@ -1,5 +1,5 @@
 import * as readline from "node:readline"
-import { bold, dimInfo, hint } from "./color"
+import { bold, dimInfo, hint } from "./color.js"
 
 export type PhaseApprovalDecision = "continue" | "stop"
 

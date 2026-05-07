@@ -10,7 +10,7 @@ import {
   stripAnsi,
   success,
   warning,
-} from "../color"
+} from "../color.js"
 
 const ESC = String.fromCharCode(27)
 const RESET = `${ESC}[0m`

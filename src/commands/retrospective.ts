@@ -1,12 +1,16 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo, printError, printWarn } from "../ui/output"
-import { invokeClaude } from "../engine/claude/claude.exec"
-import { createDisplayCallbacks } from "../engine/claude/stream.display"
-import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { loadBudget } from "../stores/budget"
-import { readTrajectory } from "../stores/trajectory"
-import { loadState } from "../stores/state"
+import { run } from "fascicle"
+import { printInfo, printError, printWarn } from "../ui/output.js"
+import { invokeClaude } from "../engine/claude/claude.exec.js"
+import { createDisplayCallbacks } from "../engine/claude/stream.display.js"
+import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
+import { loadBudget } from "../stores/budget.js"
+import { readTrajectory } from "../stores/trajectory.js"
+import { loadState } from "../stores/state.js"
+import { resolveSandboxMode } from "../stores/settings.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { retrospectiveFlow, type RetrospectiveFlowInput } from "../engine/flows/retrospective.flow.js"
 
 type RetrospectiveOpts = {
   model: string
@@ -74,42 +78,70 @@ export const runRetrospective = async (
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("retrospective.md")
   const userPrompt = assembleUserPrompt(buildDir, buildName)
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
 
   printInfo(`Running retrospective for build '${buildName}'...`)
 
+  const engine = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
+    timeoutMinutes: opts.timeout,
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: buildDir,
+  })
+
+  const flow = retrospectiveFlow({
+    executor: async (input: RetrospectiveFlowInput) => {
+      const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
+      try {
+        return await invokeClaude({
+          systemPrompt: input.systemPrompt,
+          userPrompt: input.userPrompt,
+          model: input.model,
+          allowedTools: ["Read", "Glob", "Grep", "Skill"],
+          cwd: process.cwd(),
+          timeoutMs: input.timeoutMs,
+          onStdout,
+        })
+      } finally {
+        flush()
+      }
+    },
+  })
+
+  let result
   try {
-    const result = await invokeClaude({
-      systemPrompt,
-      userPrompt,
-      model: opts.model,
-      allowedTools: ["Read", "Glob", "Grep", "Skill"],
-      cwd: process.cwd(),
-      timeoutMs: opts.timeout * 60 * 1000,
-      onStdout,
-    })
-
-    const body = result.result?.trim() ?? ""
-
-    if (!body) {
-      printWarn("Retrospective produced empty output; learnings.md not updated.")
-      return
+    try {
+      const out = await run(flow, {
+        systemPrompt,
+        userPrompt,
+        model: opts.model,
+        timeoutMs: opts.timeout * 60 * 1000,
+      }, { install_signal_handlers: false })
+      result = out.result
+    } finally {
+      await engine.dispose()
     }
-
-    if (!isWellFormedRetrospective(body)) {
-      printWarn(
-        "Retrospective output did not start with a '## Build:' heading; learnings.md not updated.",
-      )
-      return
-    }
-
-    const prefix = fs.existsSync(learningsPath) ? "\n\n" : "# Build Learnings\n\n"
-    fs.appendFileSync(learningsPath, prefix + body + "\n")
-
-    printInfo(`Retrospective complete. Learnings appended to ${path.relative(process.cwd(), learningsPath)}`)
   } catch (err) {
     printError(`Retrospective failed: ${err instanceof Error ? err.message : String(err)}`)
-  } finally {
-    flush()
+    return
   }
+
+  const body = result.result?.trim() ?? ""
+
+  if (!body) {
+    printWarn("Retrospective produced empty output; learnings.md not updated.")
+    return
+  }
+
+  if (!isWellFormedRetrospective(body)) {
+    printWarn(
+      "Retrospective output did not start with a '## Build:' heading; learnings.md not updated.",
+    )
+    return
+  }
+
+  const prefix = fs.existsSync(learningsPath) ? "\n\n" : "# Build Learnings\n\n"
+  fs.appendFileSync(learningsPath, prefix + body + "\n")
+
+  printInfo(`Retrospective complete. Learnings appended to ${path.relative(process.cwd(), learningsPath)}`)
 }

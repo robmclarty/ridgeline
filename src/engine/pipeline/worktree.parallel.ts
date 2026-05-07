@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process"
 import * as path from "node:path"
-import { printWarn } from "../../ui/output"
+import { printWarn } from "../../ui/output.js"
 
 const run = (cmd: string, cwd?: string): string =>
   execSync(cmd, { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim()

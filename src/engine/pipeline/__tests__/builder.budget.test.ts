@@ -1,14 +1,14 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { makeTempDir } from "../../../../test/setup"
+import { makeTempDir } from "../../../../test/setup.js"
 import {
   computeBuilderBudget,
   DEFAULT_HARD_LIMIT_FRACTION,
   DEFAULT_SOFT_LIMIT_FRACTION,
   SAFETY_MARGIN_TOKENS,
-} from "../builder.budget"
-import type { RidgelineConfig } from "../../../types"
+} from "../builder.budget.js"
+import type { RidgelineConfig } from "../../../types.js"
 
 const makeConfig = (overrides: Partial<RidgelineConfig>): RidgelineConfig =>
   ({

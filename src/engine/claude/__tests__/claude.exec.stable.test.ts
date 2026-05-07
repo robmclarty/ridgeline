@@ -18,8 +18,8 @@ vi.mock("node:child_process", () => {
 })
 
 import { spawn } from "node:child_process"
-import { assertSystemPromptFlagsExclusive, invokeClaude } from "../claude.exec"
-import { __resetStablePromptState } from "../stable.prompt"
+import { assertSystemPromptFlagsExclusive, invokeClaude } from "../claude.exec.js"
+import { __resetStablePromptState } from "../stable.prompt.js"
 
 const sampleResult = JSON.stringify({
   type: "result",

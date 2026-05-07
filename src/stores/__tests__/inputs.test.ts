@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import { resolveFile, parseCheckCommand } from "../inputs"
+import { makeTempDir } from "../../../test/setup.js"
+import { resolveFile, parseCheckCommand } from "../inputs.js"
 
 describe("inputs", () => {
   describe("resolveFile", () => {

@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import { loadBudget, saveBudget, recordCost, getTotalCost, getPhaseCostUsd } from "../budget"
-import type { ClaudeResult, BudgetState } from "../../types"
+import { makeTempDir } from "../../../test/setup.js"
+import { loadBudget, saveBudget, recordCost, getTotalCost, getPhaseCostUsd } from "../budget.js"
+import type { ClaudeResult, BudgetState } from "../../types.js"
 
 const makeClaudeResult = (cost: number, inputTokens = 100, outputTokens = 50): ClaudeResult => ({
   success: true,

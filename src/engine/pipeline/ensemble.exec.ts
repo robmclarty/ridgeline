@@ -1,18 +1,18 @@
 import * as fs from "node:fs"
-import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult, SpecialistStage, SpecialistVerdict } from "../../types"
-import { invokeClaude } from "../claude/claude.exec"
-import { createDisplayCallbacks } from "../claude/stream.display"
-import { scanPhases } from "../../stores/phases"
-import { printInfo, printError, printWarn } from "../../ui/output"
-import { startSpinner, formatElapsed } from "../../ui/spinner"
-import { appendTranscript } from "../../ui/transcript"
-import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry"
-import { appendBaseUserPrompt } from "./plan.exec"
-import { createStderrHandler, formatProposalHeading } from "./pipeline.shared"
-import { createPromptDocument } from "./prompt.document"
-import { logTrajectory } from "../../stores/trajectory"
-import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../../stores/settings"
-import { parseSpecialistVerdict, skeletonsAgree } from "./specialist.verdict"
+import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult, SpecialistStage, SpecialistVerdict } from "../../types.js"
+import { invokeClaude } from "../claude/claude.exec.js"
+import { createDisplayCallbacks } from "../claude/stream.display.js"
+import { scanPhases } from "../../stores/phases.js"
+import { printInfo, printError, printWarn } from "../../ui/output.js"
+import { startSpinner, formatElapsed } from "../../ui/spinner.js"
+import { appendTranscript } from "../../ui/transcript.js"
+import { buildAgentRegistry, SpecialistDef } from "../discovery/agent.registry.js"
+import { appendBaseUserPrompt } from "./plan.exec.js"
+import { createStderrHandler, formatProposalHeading } from "./pipeline.shared.js"
+import { createPromptDocument } from "./prompt.document.js"
+import { logTrajectory } from "../../stores/trajectory.js"
+import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../../stores/settings.js"
+import { parseSpecialistVerdict, skeletonsAgree } from "./specialist.verdict.js"
 
 // ---------------------------------------------------------------------------
 // Robust JSON extraction — handles markdown fences and surrounding text
@@ -119,7 +119,7 @@ type EnsembleConfig<TDraft> = {
   networkAllowlist?: string[]
 
   /** Sandbox provider for specialist invocations */
-  sandboxProvider?: import("../../types").RidgelineConfig["sandboxProvider"]
+  sandboxProvider?: import("../../types.js").RidgelineConfig["sandboxProvider"]
 
   /** Stall timeout override for the synthesizer invocation (ms). */
   stallTimeoutMs?: number

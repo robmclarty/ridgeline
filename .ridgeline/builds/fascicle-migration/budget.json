@@ -323,7 +323,19 @@
       "cacheCreationInputTokens": 101893,
       "durationMs": 179800,
       "timestamp": "2026-05-07T04:27:23.910Z"
+    },
+    {
+      "phase": "08-leaf-flows",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 37.73730475000002,
+      "inputTokens": 260,
+      "outputTokens": 125448,
+      "cacheReadInputTokens": 63225691,
+      "cacheCreationInputTokens": 441672,
+      "durationMs": 2127897,
+      "timestamp": "2026-05-07T05:03:00.230Z"
     }
   ],
-  "totalCostUsd": 158.58255624999998
+  "totalCostUsd": 196.319861
 }

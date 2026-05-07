@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { renderCss } from "../css"
+import { renderCss } from "../css.js"
 
 describe("prefers-reduced-motion", () => {
   const css = renderCss()

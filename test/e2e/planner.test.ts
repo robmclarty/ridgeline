@@ -1,9 +1,9 @@
 import { describe, it, expect, afterAll } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { isClaudeAvailable } from "./helpers"
-import { invokeClaude } from "../../src/engine/claude/claude.exec"
-import { extractResult } from "../../src/engine/claude/stream.result"
+import { isClaudeAvailable } from "./helpers.js"
+import { invokeClaude } from "../../src/engine/claude/claude.exec.js"
+import { extractResult } from "../../src/engine/claude/stream.result.js"
 import { spawn } from "node:child_process"
 
 /**

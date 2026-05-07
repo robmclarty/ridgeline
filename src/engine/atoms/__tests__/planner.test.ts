@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { plannerAtom, type PlannerArgs } from "../planner.atom"
-import { planArtifactSchema } from "../../schemas"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { plannerAtom, type PlannerArgs } from "../planner.atom.js"
+import { planArtifactSchema } from "../../schemas.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const cannedPlan = {
   perspective: "stub",

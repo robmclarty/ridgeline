@@ -4,7 +4,7 @@ import type {
   SpecialistSkeletonSpec,
   SpecialistSkeletonPlan,
   SpecialistSkeletonResearch,
-} from "../../types"
+} from "../../types.js"
 
 const FENCE_PATTERN = /```(?:json)?\s*\n?([\s\S]*?)```/g
 

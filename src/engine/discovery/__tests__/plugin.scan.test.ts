@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir, trackTempDir } from "../../../../test/setup"
-import { discoverPluginDirs, cleanupPluginDirs, getBundledPluginDir } from "../plugin.scan"
+import { makeTempDir, trackTempDir } from "../../../../test/setup.js"
+import { discoverPluginDirs, cleanupPluginDirs, getBundledPluginDir } from "../plugin.scan.js"
 
 const writePlugin = (baseDir: string, filename: string, content: string): void => {
   const pluginDir = path.join(baseDir, "plugin")

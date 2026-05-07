@@ -1,4 +1,4 @@
-import { ClaudeResult } from "../../types"
+import { ClaudeResult } from "../../types.js"
 
 export type StreamEvent =
   | { type: "text"; text: string }

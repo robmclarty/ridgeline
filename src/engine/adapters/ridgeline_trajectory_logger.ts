@@ -1,7 +1,7 @@
 // Translates fascicle TrajectoryEvent → ridgeline on-disk event shape (decision: translate, not verbatim — preserves fascicle-viewer and external .jsonl consumer back-compat).
 import type { TrajectoryEvent, TrajectoryLogger } from "fascicle"
-import type { TrajectoryEntry } from "../../types"
-import { appendTrajectoryEntry } from "../../stores/trajectory"
+import type { TrajectoryEntry } from "../../types.js"
+import { appendTrajectoryEntry } from "../../stores/trajectory.js"
 
 export const RIDGELINE_TRAJECTORY_KIND = "ridgeline_trajectory" as const
 

@@ -1,7 +1,7 @@
 import * as readline from "node:readline"
-import type { DetectionReport, SensorName } from "../engine/detect"
-import { bold, dimInfo, hint, warning } from "./color"
-import { minCacheableTokens } from "../engine/claude/stable.prompt"
+import type { DetectionReport, SensorName } from "../engine/detect/index.js"
+import { bold, dimInfo, hint, warning } from "./color.js"
+import { minCacheableTokens } from "../engine/claude/stable.prompt.js"
 
 export interface StablePromptInfo {
   tokens: number

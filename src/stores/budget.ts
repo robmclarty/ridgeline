@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { BudgetState, BudgetEntry, ClaudeResult } from "../types"
-import { atomicWriteSync } from "../utils/atomic-write"
-import { withFileLock } from "../utils/file-lock"
+import { BudgetState, BudgetEntry, ClaudeResult } from "../types.js"
+import { atomicWriteSync } from "../utils/atomic-write.js"
+import { withFileLock } from "../utils/file-lock.js"
 
 const budgetPath = (buildDir: string): string =>
   path.join(buildDir, "budget.json")

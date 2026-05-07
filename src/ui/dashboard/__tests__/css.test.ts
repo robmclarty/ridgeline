@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { renderCss } from "../css"
-import { PALETTE } from "../tokens"
+import { renderCss } from "../css.js"
+import { PALETTE } from "../tokens.js"
 
 describe("renderCss", () => {
   const css = renderCss()

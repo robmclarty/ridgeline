@@ -1,25 +1,25 @@
 import { describe, it, expect } from "vitest"
-import builderFixture from "./__fixtures__/byte-stability.builder.json"
-import reviewerFixture from "./__fixtures__/byte-stability.reviewer.json"
-import plannerFixture from "./__fixtures__/byte-stability.planner.json"
-import refinerFixture from "./__fixtures__/byte-stability.refiner.json"
-import researcherFixture from "./__fixtures__/byte-stability.researcher.json"
-import specialistFixture from "./__fixtures__/byte-stability.specialist.json"
-import specifierFixture from "./__fixtures__/byte-stability.specifier.json"
-import specialistVerdictFixture from "./__fixtures__/byte-stability.specialist.verdict.json"
-import planReviewFixture from "./__fixtures__/byte-stability.plan.review.json"
-import { shapeBuilderModelCallInput, type BuilderArgs } from "../builder.atom"
-import { shapeReviewerModelCallInput, type ReviewerArgs } from "../reviewer.atom"
-import { shapePlannerModelCallInput, type PlannerArgs } from "../planner.atom"
-import { shapeRefinerModelCallInput, type RefinerArgs } from "../refiner.atom"
-import { shapeResearcherModelCallInput, type ResearcherArgs } from "../researcher.atom"
-import { shapeSpecialistModelCallInput, type SpecialistArgs } from "../specialist.atom"
-import { shapeSpecifierModelCallInput, type SpecifierArgs } from "../specifier.atom"
+import builderFixture from "./__fixtures__/byte-stability.builder.json" with { type: "json" }
+import reviewerFixture from "./__fixtures__/byte-stability.reviewer.json" with { type: "json" }
+import plannerFixture from "./__fixtures__/byte-stability.planner.json" with { type: "json" }
+import refinerFixture from "./__fixtures__/byte-stability.refiner.json" with { type: "json" }
+import researcherFixture from "./__fixtures__/byte-stability.researcher.json" with { type: "json" }
+import specialistFixture from "./__fixtures__/byte-stability.specialist.json" with { type: "json" }
+import specifierFixture from "./__fixtures__/byte-stability.specifier.json" with { type: "json" }
+import specialistVerdictFixture from "./__fixtures__/byte-stability.specialist.verdict.json" with { type: "json" }
+import planReviewFixture from "./__fixtures__/byte-stability.plan.review.json" with { type: "json" }
+import { shapeBuilderModelCallInput, type BuilderArgs } from "../builder.atom.js"
+import { shapeReviewerModelCallInput, type ReviewerArgs } from "../reviewer.atom.js"
+import { shapePlannerModelCallInput, type PlannerArgs } from "../planner.atom.js"
+import { shapeRefinerModelCallInput, type RefinerArgs } from "../refiner.atom.js"
+import { shapeResearcherModelCallInput, type ResearcherArgs } from "../researcher.atom.js"
+import { shapeSpecialistModelCallInput, type SpecialistArgs } from "../specialist.atom.js"
+import { shapeSpecifierModelCallInput, type SpecifierArgs } from "../specifier.atom.js"
 import {
   shapeSpecialistVerdictModelCallInput,
   type SpecialistVerdictArgs,
-} from "../specialist.verdict.atom"
-import { shapePlanReviewModelCallInput, type PlanReviewArgs } from "../plan.review.atom"
+} from "../specialist.verdict.atom.js"
+import { shapePlanReviewModelCallInput, type PlanReviewArgs } from "../plan.review.atom.js"
 
 describe("atom byte-stability", () => {
   it("builder shape is byte-stable for frozen args", () => {

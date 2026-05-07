@@ -3,9 +3,9 @@ import {
   appendDesignData,
   composeSystemPrompt,
   type StableInputs,
-} from "./_shape"
-import { createAtomPromptDocument } from "./_prompt.document"
-import { reviewVerdictSchema, type ReviewVerdictSchema } from "../schemas"
+} from "./_shape.js"
+import { createAtomPromptDocument } from "./_prompt.document.js"
+import { reviewVerdictSchema, type ReviewVerdictSchema } from "../schemas.js"
 
 export type ReviewerSensorFinding = {
   readonly severity: string

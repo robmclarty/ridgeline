@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../../test/setup"
+import { makeTempDir } from "../../../../test/setup.js"
 
-vi.mock("../../claude/claude.exec", () => ({
+vi.mock("../../claude/claude.exec.js", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../../ui/spinner", () => ({
+vi.mock("../../../ui/spinner.js", () => ({
   startSpinner: vi.fn(() => ({
     stop: vi.fn(),
     printAbove: vi.fn(),
@@ -15,24 +15,24 @@ vi.mock("../../../ui/spinner", () => ({
   formatElapsed: vi.fn(() => "1s"),
 }))
 
-vi.mock("../../../ui/transcript", () => ({
+vi.mock("../../../ui/transcript.js", () => ({
   appendTranscript: vi.fn(),
 }))
 
-vi.mock("../../../ui/output", () => ({
+vi.mock("../../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
   printWarn: vi.fn(),
 }))
 
-vi.mock("../../claude/stream.display", () => ({
+vi.mock("../../claude/stream.display.js", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
-import { invokeClaude } from "../../claude/claude.exec"
-import { invokeEnsemble, selectSpecialists, appendSkipAuditNote } from "../ensemble.exec"
-import type { SpecialistDef } from "../../discovery/agent.registry"
-import { printWarn } from "../../../ui/output"
+import { invokeClaude } from "../../claude/claude.exec.js"
+import { invokeEnsemble, selectSpecialists, appendSkipAuditNote } from "../ensemble.exec.js"
+import type { SpecialistDef } from "../../discovery/agent.registry.js"
+import { printWarn } from "../../../ui/output.js"
 
 const mockClaude = vi.mocked(invokeClaude)
 

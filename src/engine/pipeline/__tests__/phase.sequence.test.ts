@@ -1,31 +1,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types"
+import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types.js"
 
 // Mock all external dependencies
-vi.mock("../../../stores/tags", () => ({
+vi.mock("../../../stores/tags.js", () => ({
   createCheckpoint: vi.fn(),
   createCompletionTag: vi.fn((buildName: string, phaseId: string) => `ridgeline/phase/${buildName}/${phaseId}`),
 }))
 
-vi.mock("../../../stores/budget", () => ({
+vi.mock("../../../stores/budget.js", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.10 })),
   getTotalCost: vi.fn(() => 0.10),
   getPhaseCostUsd: vi.fn(() => 0),
 }))
 
-vi.mock("../../../stores/handoff", () => ({
+vi.mock("../../../stores/handoff.js", () => ({
   ensureHandoffExists: vi.fn(),
 }))
 
-vi.mock("../../../stores/state", () => ({
+vi.mock("../../../stores/state.js", () => ({
   updatePhaseStatus: vi.fn(),
 }))
 
-vi.mock("../../../ui/output", () => ({
+vi.mock("../../../ui/output.js", () => ({
   printPhase: vi.fn(),
 }))
 
-vi.mock("../../../stores/trajectory", () => ({
+vi.mock("../../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -38,38 +38,38 @@ vi.mock("../../../stores/trajectory", () => ({
   })),
 }))
 
-vi.mock("../build.loop", () => ({
+vi.mock("../build.loop.js", () => ({
   runBuilderLoop: vi.fn(),
 }))
 
-vi.mock("../review.exec", () => ({
+vi.mock("../review.exec.js", () => ({
   invokeReviewer: vi.fn(),
 }))
 
-vi.mock("../../../stores/feedback.verdict", () => ({
+vi.mock("../../../stores/feedback.verdict.js", () => ({
   formatIssue: vi.fn((issue: { description: string; file?: string }) =>
     issue.file ? `${issue.file}: ${issue.description}` : issue.description
   ),
 }))
 
-vi.mock("../../../stores/feedback.io", () => ({
+vi.mock("../../../stores/feedback.io.js", () => ({
   writeFeedback: vi.fn(),
   archiveFeedback: vi.fn(),
 }))
 
-vi.mock("../../../git", () => ({
+vi.mock("../../../git.js", () => ({
   isWorkingTreeDirty: vi.fn(() => false),
   commitAll: vi.fn(),
 }))
 
-import { runPhase, backoffMs } from "../phase.sequence"
-import { runBuilderLoop } from "../build.loop"
-import type { BuilderLoopOutcome } from "../build.loop"
-import type { BuilderInvocation } from "../../../types"
-import { invokeReviewer } from "../review.exec"
-import { createCheckpoint, createCompletionTag } from "../../../stores/tags"
-import { recordCost } from "../../../stores/budget"
-import { updatePhaseStatus } from "../../../stores/state"
+import { runPhase, backoffMs } from "../phase.sequence.js"
+import { runBuilderLoop } from "../build.loop.js"
+import type { BuilderLoopOutcome } from "../build.loop.js"
+import type { BuilderInvocation } from "../../../types.js"
+import { invokeReviewer } from "../review.exec.js"
+import { createCheckpoint, createCompletionTag } from "../../../stores/tags.js"
+import { recordCost } from "../../../stores/budget.js"
+import { updatePhaseStatus } from "../../../stores/state.js"
 
 const makeResult = (cost = 0.05): ClaudeResult => ({
   success: true,

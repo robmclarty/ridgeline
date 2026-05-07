@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { specifierAtom, type SpecifierArgs } from "../specifier.atom"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { specifierAtom, type SpecifierArgs } from "../specifier.atom.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const args: SpecifierArgs = {
   shapeMd: "# Shape\n\nThe shape.\n",

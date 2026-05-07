@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { formatShapeMd } from "../shape"
+import { formatShapeMd } from "../shape.js"
 
 const baseShape = {
   projectName: "My App",

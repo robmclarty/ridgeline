@@ -2148,3 +2148,305 @@ Walking through each criterion:
 [ridgeline] [07-atoms-b] PASSED (1132s)
 
 [ridgeline] ── Phase 10/14: 08-leaf-flows ──
+[ridgeline] [08-leaf-flows] Building...
+[08-leaf-flows] Starting: migrate leaf command flows to fascicle
+[Bash] ls .ridgeline/builds/fascicle-migration/phases/08-leaf-flows.builder-progress.md 2>/dev/null && cat /Users/robmclarty/Projects/ridgeline/code/ridge…
+[Bash] ls src/commands/ src/engine/flows/ src/engi…
+[Bash] wc -l src/commands/*.ts
+[Read] src/commands/dry-run.ts
+[Read] src/commands/research.ts
+[Read] src/commands/refine.ts
+[Read] src/commands/plan.ts
+Let me identify which commands actually invoke pipeline executors:
+[Grep] from "\.\./engine/pipeline
+[ToolSearch]
+[Grep] invokeBuilder|invokePlanner|invokeReviewer|runPhase|invokeClaude|parseStreamLine|createStreamHandler|extractResult|createDisplayCallbacks|invokeResearcher|invokeSpecifier|invokeRefiner|runPlanReviewe…
+[Grep] invokeBuilder|invokePlanner|invokeReviewer|runPhase|invokeClaude|parseStreamLine|createStreamHandler|extractResult|createDisplayCallbacks|invokeResearcher|invokeSpecifier|invokeRefiner|runPlanReviewe…
+[Grep] from "\.\./engine/(pipeline|claude)/
+[Grep] invokeClaude|invokeBuilder|invokeReviewer|invokeSpecialist|runAgent
+[Bash] for f in directions design shape ingest dry-run rewind; do
+[Read] src/commands/qa-workflow.ts
+[Read] src/engine/atoms/specialist.atom.ts
+[Read] src/engine/atoms/builder.atom.ts
+[Read] src/engine/engine.factory.ts
+[TodoWrite]
+[Read] src/engine/atoms/refiner.atom.ts
+[Read] src/engine/pipeline/refine.exec.ts
+[Read] src/engine/atoms/_shape.ts
+[Read] src/engine/pipeline/research.exec.ts
+[Read] rules/no-pipeline-imports-in-engine-substrate.yml
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Bash] find node_modules/fascicle -name "*.d.ts" | head -5 && echo "---" && grep -A 30 "export.*run\|RunOptions" node_modules/fascicle/dist/index.d.ts | head -100
+[Read] src/engine/adapters/index.ts
+[Read] src/engine/adapters/ridgeline_trajectory_logger.ts
+[Read] src/engine/adapters/ridgeline_budget_subscriber.ts
+[Read] src/engine/claude/stable.prompt.ts
+[Read] src/engine/discovery/plugin.scan.ts
+[Read] src/engine/discovery/plugin.scan.ts
+[Read] src/types.ts
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/help/ | head; echo "---"; cat .ridgeline/builds/fascicle-migration/baseline/help/refine.txt 2>/dev/null | head -20
+[Bash] ls .ridgeline/builds/fascicle-migration/baseline/help/
+[Bash] ls src/__tests__/ src/commands/__tests__/ src/engine/__tests__ 2>/dev/null; echo "---"; ls -la vitest.e2e.config.ts 2>/dev/null
+[Read] src/commands/__tests__/refine.test.ts
+[Grep] qa-workflow
+[Grep] runQAWorkflow|qaWorkflow|runQA
+[Grep] qa-workflow|qaWorkflow
+[Bash] grep -n "qa\|qaIntake\|runOneShot" src/cli.ts | head; echo "---"; grep -rn "runQAIntake\|runOneShotCall\|runOutputTurn" src/cli.ts | head
+[Read] src/cli.ts
+[Read] .ridgeline/builds/fascicle-migration/baseline/help/qa-workflow.txt
+Let me look at the existing patterns in cli.ts and other commands quickly, then start implementing:
+[Bash] head -40 src/cli.ts; echo "---"; grep -n "runRefine\|runResearch\|runSpec\|runPlan\|runRetrospective\|runRetroRefine" src/cli.ts
+Now let me start implementing. I'll set up the foundation first - the trajectory and budget adapters, then build flows.
+[TodoWrite]
+[Read] src/engine/flows/index.ts
+[Read] .fallowrc.json
+Now let me start implementing. First, the refine flow as the simplest case:
+[Write] src/engine/flows/refine.flow.ts
+[Bash] grep -n "resolveConfig\|ridgelineDir" src/config.ts | head -20
+Now let me migrate the refine command:
+[Write] src/commands/refine.ts
+[Bash] npx tsc --noEmit 2>&1 | head -30
+[Bash] npx vitest run src/commands/__tests__/refine.test.ts 2>&1 | tail -30
+Refine works. Now research, spec, plan:
+[Write] src/engine/flows/research.flow.ts
+[Write] src/commands/research.ts
+[Bash] npx tsc --noEmit 2>&1 | head -20
+[Bash] grep -n "resolveSandboxMode" src/stores/settings.ts | head -5
+[Read] src/stores/settings.ts
+Good. Now let me migrate spec, plan, retrospective, retro-refine:
+[Read] src/commands/spec.ts
+[Write] src/engine/flows/spec.flow.ts
+[Edit] src/commands/spec.ts
+[Edit] src/commands/spec.ts
+[Bash] npx tsc --noEmit 2>&1 | head -20
+Now plan command:
+[Write] src/engine/flows/plan.flow.ts
+[Write] src/commands/plan.ts
+[Bash] npx tsc --noEmit 2>&1 | head -30
+Now retrospective and retro-refine:
+[Read] src/commands/retrospective.ts
+[Write] src/engine/flows/retrospective.flow.ts
+[Write] src/commands/retrospective.ts
+[Read] src/commands/retro-refine.ts
+[Write] src/engine/flows/retro-refine.flow.ts
+[Edit] src/commands/retro-refine.ts
+[Edit] src/commands/retro-refine.ts
+[Bash] npx tsc --noEmit 2>&1 | head -20
+[Bash] npx vitest run src/commands/__tests__/refine.test.ts src/commands/__tests__/research.test.ts src/commands/__tests__/spec.test.ts src/commands/__tests__/plan.test.ts src/commands/__tests__/retro-refin…
+[Read] src/commands/__tests__/research.test.ts
+[Edit] src/commands/__tests__/research.test.ts
+[Bash] grep -n "vi.mock.*settings" src/commands/__tests__/spec.test.ts src/commands/__tests__/plan.test.ts src/commands/__tests__/refine.test.ts
+[Bash] npx vitest run src/commands/__tests__/refine.test.ts src/commands/__tests__/research.test.ts src/commands/__tests__/spec.test.ts src/commands/__tests__/plan.test.ts src/commands/__tests__/retro-refin…
+All migrated command tests pass. Now let me create the remaining flow files for AC1, then the ast-grep rule:
+[Write] src/engine/flows/dryrun.flow.ts
+[TodoWrite]
+[Write] src/engine/flows/qa-workflow.flow.ts
+[Write] src/engine/flows/directions.flow.ts
+[Write] src/engine/flows/design.flow.ts
+[Write] src/engine/flows/shape.flow.ts
+[Write] src/engine/flows/ingest.flow.ts
+[Write] src/engine/flows/rewind.flow.ts
+Now the barrel and ast-grep rule:
+[Write] src/engine/flows/index.ts
+Now the ast-grep rule for AC3:
+[Bash] ls rules/ | head -30
+[Read] rules/atom-must-import-stable-prompt.yml
+[Write] rules/command-run-needs-dispose-finally.yml
+[Bash] npx ast-grep scan --rule rules/command-run-needs-dispose-finally.yml 2>&1 | tail -20
+[Write] rules/command-run-needs-dispose-finally.yml
+[Bash] npx ast-grep scan --rule rules/command-run-needs-dispose-finally.yml 2>&1 | tail -20
+[Bash] echo 'import { run } from "fascicle"; export const x = async () => { await run() }' > /tmp/violation_test.ts; npx ast-grep scan --rule rules/command-run-needs-dispose-finally.yml /tmp/violation_test.…
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+[Bash] cat > /tmp/test-rule.yml <<'EOF'
+[Bash] cat > /tmp/test-rule2.yml <<'EOF'
+The rule works correctly when scanning a specific file. The issue is the `files:` glob in `npx ast-grep scan` (without args). Let me check:
+[Bash] cat sgconfig.yml 2>&1 | head -20; echo "---"; ls sgconfig.yml ./*.yml 2>&1 | head
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+[Bash] cat package.json | head -50
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+[Bash] grep "files:" rules/*.yml; echo "---"; cat rules/no-pipeline-imports-in-engine-substrate.yml | head -20
+[Bash] ls -la rules/command-run-needs-dispose-finally.yml; npx ast-grep scan --rule rules/command-run-needs-dispose-finally.yml src/commands/ 2>&1 | tail -10
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+[Write] rules/command-run-needs-dispose-finally.yml
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+Rule fires correctly when explicitly scanned. Let me confirm it integrates with `npm run lint:struct`:
+[Bash] cat > src/commands/_violation_test.ts <<'EOF'
+Rule works. Now let me also confirm it doesn't fire on existing valid commands:
+[Bash] npm run lint:struct 2>&1 | tail -10
+Now let me update fallowrc.json for the new flow files and run the full test suite:
+[Edit] .fallowrc.json
+Now let me write a quick unit test for one flow to satisfy AC8 and verify the run+dispose+adapter wiring:
+[Bash] mkdir -p src/engine/flows/__tests__
+[Write] src/engine/flows/__tests__/refine.flow.test.ts
+[Write] src/engine/flows/__tests__/plan.flow.test.ts
+[TodoWrite]
+[Bash] npx vitest run src/engine/flows/ src/commands/__tests__/ 2>&1 | tail -25
+All tests pass. Let me run the full check now to make sure nothing else broke:
+[Bash] npm run typecheck 2>&1 | tail -20
+[Bash] npx vitest run 2>&1 | tail -15
+All 1299 unit tests pass. Now let me capture the plugin surface audit and run the full check:
+[Grep] invokeBuilder|invokePlanner|invokeReviewer|runPhase|invokeClaude|parseStreamLine|createStreamHandler|extractResult|createDisplayCallbacks
+[Read] src/engine/index.ts
+[Grep] from "\./engine\"|from \"ridgeline\"|from \"\.\./engine\"
+[Bash] ls plugin/ 2>&1 | head; echo "---"; find . -path ./node_modules -prune -o -name "*.ts" -print 2>&1 | xargs grep -l "ridgeline.*engine\|@ridgeline" 2>/dev/null | head -10
+[Bash] ls plugin/visual-tools/ | head
+[Write] .ridgeline/builds/fascicle-migration/phase-8-plugin-surface-audit.md
+Now let me run the full check:
+[Bash] npm run check 2>&1 | tail -50
+[Bash] cat .check/spell.txt 2>&1 | tail -30
+[Bash] ls .check/; echo "---"; cat .check/spell.json 2>&1 | head -50
+[Bash] cat .check/spell.stdout.txt | head -40
+[Bash] cat cspell.json 2>/dev/null | head -30; echo "---"; ls cspell* .cspell* 2>/dev/null
+[Grep] "rescan|rescans|dryrun|drumming|reapply
+[Read] cspell.json
+[Edit] cspell.json
+[Bash] npm run check 2>&1 | tail -20
+All checks pass. Let me capture the phase-8-check.json artifact and verify the build runs:
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-8-check.json
+[Bash] npm run build 2>&1 | tail -10; echo "---"; node dist/cli.js --help 2>&1 | head -5
+[Bash] node dist/cli.js --help 2>&1 | head -30
+[Bash] grep -n "fascicle" dist/cli.js | head -5; echo "---"; head -30 dist/cli.js
+[Bash] cat tsconfig.json | head -40
+[Bash] git log --oneline -10 -- tsconfig.json
+[Bash] git stash; npm run build 2>&1 | tail -3; node dist/cli.js --help 2>&1 | head -5; git stash pop
+[Bash] grep -E '"type"|"module"' package.json
+[Bash] cat node_modules/fascicle/package.json | head -30
+[Bash] cat > /tmp/test-cjs-import.cjs <<'EOF'
+[Bash] cat > /tmp/test-cjs.js <<'EOF'
+[Bash] cat > test-cjs.js <<'EOF'
+[Bash] grep -l "engine.factory\|engine/atoms\|engine/composites" dist/*.js dist/**/*.js 2>&1 | head -10
+[Bash] head -20 dist/engine/engine.factory.js
+[Bash] node dist/cli.js --help 2>&1 | head -3
+[Bash] npm run build 2>&1 | tail -3; node dist/cli.js --help 2>&1 | head -5
+[Grep] __dirname|__filename|require\(
+[Bash] npx tsc --version
+[Bash] grep -c "from \"\." src/cli.ts src/commands/*.ts | head
+[Bash] cat tsconfig.check.json
+[Bash] grep -rE "from \"\.\./" src/ --include="*.ts" -l 2>&1 | wc -l; echo "---"; grep -rE "from \"\./" src/ --include="*.ts" -l 2>&1 | wc -l
+I'll switch to an ESM migration since this is the right fix per constraints.md. Let me try the most surgical approach first - dynamic imports for the bottleneck:
+[Bash] grep -E '^(import|export).*from "(\.|\.\.)' src/cli.ts | head -3
+[Write] scripts/add-esm-extensions.mjs
+[Bash] cp package.json /tmp/package.json.bak; cp tsconfig.json /tmp/tsconfig.json.bak
+Let me check what the simplest path forward is - try just enabling ESM and see what tsc complains about:
+[Edit] package.json
+[Read] package.json
+[Bash] echo 'import * as fs from "node:fs"; export const x = 1' > /tmp/test.mts; cd /tmp && npx -p typescript@5.9.3 tsc --module commonjs test.mts 2>&1; ls -la /tmp/test.* 2>&1; rm -f /tmp/test.* /tmp/test.…
+[Bash] cat > /tmp/test-typeonly.ts <<'EOF'
+[Bash] mkdir -p /tmp/mts-test
+[Edit] package.json
+[Edit] tsconfig.json
+[Edit] tsconfig.json
+[Read] tsconfig.json
+[Edit] tsconfig.json
+Now run the extension-adding script:
+[Bash] node scripts/add-esm-extensions.mjs 2>&1 | tail -30
+Good, .js extensions are added. Let me run typecheck to see what breaks:
+[Bash] npm run typecheck 2>&1 | tail -50
+[Bash] npm run typecheck 2>&1 | head -30
+[Edit] scripts/add-esm-extensions.mjs
+[Edit] scripts/add-esm-extensions.mjs
+[Bash] node scripts/add-esm-extensions.mjs 2>&1 | wc -l
+[Bash] npm run typecheck 2>&1 | tail -30
+[Bash] npm run typecheck 2>&1 | head -100
+[Edit] scripts/add-esm-extensions.mjs
+[Bash] node scripts/add-esm-extensions.mjs 2>&1 | wc -l
+[Bash] npm run typecheck 2>&1 | tail -50
+[Read] src/engine/atoms/__tests__/byte-stability.test.ts
+[Edit] src/engine/atoms/__tests__/byte-stability.test.ts
+[Bash] npm run typecheck 2>&1 | tail -30
+Typecheck passes. Let me run all unit tests:
+[Bash] npx vitest run 2>&1 | tail -30
+All 1299 tests pass. Now build and runtime:
+[Bash] npm run build 2>&1 | tail -10
+[Bash] node dist/cli.js --help 2>&1 | head -20
+[Bash] head -3 dist/cli.js; echo "---"; ls -la dist/cli.js dist/cli.d.ts 2>&1
+[Bash] dist/cli.js --help 2>&1 | head -20
+[Bash] node -e "console.log('ok')" 2>&1; echo "---"; node dist/cli.js shape --help 2>&1 | head -10
+[Bash] grep -n "fascicle-viewer\|fascicle_viewer\|fascicleViewer" dist/cli.js | head
+[Bash] tail -50 dist/cli.js | head -30
+[Bash] grep -n "require\|import" dist/cli.js | head -30
+[Bash] grep -n "^const.*require\|= require\b" dist/cli.js | head -20
+[Bash] grep -n "require(\"\|runClean\|runCheck" src/cli.ts | head -10
+[Read] src/cli.ts
+[Edit] src/cli.ts
+[Read] src/cli.ts
+[Edit] src/cli.ts
+[Edit] src/cli.ts
+Now let me find other `require()` and `__dirname` usages:
+[Grep] ^.*require\(|__dirname|__filename
+[Read] src/config.ts
+[Edit] src/config.ts
+[Read] src/engine/discovery/agent.registry.ts
+[Edit] src/engine/discovery/agent.registry.ts
+[Read] src/engine/discovery/plugin.scan.ts
+[Edit] src/engine/discovery/plugin.scan.ts
+[Edit] src/engine/discovery/plugin.scan.ts
+[Read] src/shapes/detect.ts
+[Edit] src/shapes/detect.ts
+[Read] src/engine/claude/agent.prompt.ts
+[Edit] src/engine/claude/agent.prompt.ts
+[Read] src/git.ts
+[Read] src/git.ts
+[Edit] src/git.ts
+[Edit] src/git.ts
+Now sensors with require("playwright"):
+[Read] src/sensors/playwright.ts
+[Edit] src/sensors/playwright.ts
+[Edit] src/sensors/playwright.ts
+[Read] src/sensors/a11y.ts
+[Read] src/sensors/a11y.ts
+[Edit] src/sensors/a11y.ts
+[Edit] src/sensors/a11y.ts
+[Bash] grep -n "require.resolve" src/sensors/playwright.ts | head
+[Read] src/sensors/playwright.ts
+[Edit] src/sensors/playwright.ts
+[Edit] src/sensors/playwright.ts
+[Bash] npm run typecheck 2>&1 | tail -20
+[Bash] npm run build 2>&1 | tail -10; echo "---"; node dist/cli.js --help 2>&1 | head -30
+[Bash] which ridgeline; node --version; node dist/cli.js 2>&1 | head -30
+[Bash] grep -l "process\.argv\|main()\|run_viewer" node_modules/fascicle/dist/*.js | head -5
+[Bash] grep -n "process.argv\|main(" node_modules/fascicle/dist/index.js | head
+[Bash] mv src/cli.ts src/main.ts; ls src/main.ts src/cli.ts 2>&1 | head
+[Edit] package.json
+[Grep] cli\.ts|cli\.js|from "\.\./cli|from "\./cli
+[Bash] sed -i '' 's|"../cli.ts"|"../main.ts"|g' src/__tests__/cli.deep-ensemble-deprecation.test.ts src/__tests__/cli.specialist-timeout-wiring.test.ts src/__tests__/cli.preflight-wiring.test.ts
+[Bash] npm run build 2>&1 | tail -3; node dist/main.js --help 2>&1 | head -5
+Excellent! `node dist/main.js --help` now correctly shows ridgeline's help. Let me run the full test suite again to make sure nothing broke:
+[Bash] npx vitest run 2>&1 | tail -15
+[Bash] npm run check 2>&1 | tail -25
+[Bash] cat .check/struct.json | head -50
+[Bash] cat .check/struct.json | head -200 | tail -100 2>&1; echo "---"; npm run lint:struct 2>&1 | head -40
+[Bash] npx ast-grep scan 2>&1 | head -80
+[Edit] rules/atom-must-import-stable-prompt.yml
+[Bash] npx ast-grep scan 2>&1 | tail -30
+[Bash] npm run check 2>&1 | tail -20
+All checks green. Let me also test with a real subcommand:
+[Bash] node dist/main.js refine --help 2>&1 | head -10; echo "---"; node dist/main.js dry-run --help 2>&1 | head -5
+CLI works. Let me capture phase-8-check.json and write the handoff:
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-8-check.json
+[TodoWrite]
+[Bash] cat .check/summary.json | python3 -c "import json, sys; s=json.load(sys.stdin); print('ok:', s['ok']); [print(c['name'], c['ok']) for c in s['checks']]"
+Now let me write the handoff:
+[Bash] cat >> .ridgeline/builds/fascicle-migration/handoff.md <<'HANDOFF_EOF'
+[Bash] npm run check 2>&1 | tail -15
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-8-check.json
+[TodoWrite]
+All Phase 8 work complete. Summary of what was delivered:
+
+**Migrated commands** (6 LLM-using entry points): refine, research, spec, plan, retrospective, retro-refine — each now uses `makeRidgelineEngine` + `run(flow, ...)` + `engine.dispose()` in finally.
+
+**Flow files** (13 total under `src/engine/flows/`): one per command in the spec's enumerated list. Six are wired to entry points; seven are placeholders for non-pipeline-importing commands (dryrun, qa-workflow, directions, design, shape, ingest, rewind).
+
+**ESM conversion** (project-wide): tsconfig → NodeNext, `"type": "module"` in package.json, `.js` extensions added to ~270 files via `scripts/add-esm-extensions.mjs`, `__dirname` → `import.meta.url` in 5 files, `require()` → `createRequire` in sensors, `cli.ts` → `main.ts` rename to dodge fascicle 0.3.8's bin self-detection bug.
+
+**ast-grep rule**: `command-run-needs-dispose-finally.yml` (severity: error) — fails when a `commands/*.ts` file imports from fascicle without a sibling `dispose()` call.
+
+**Tests**: 1299 unit tests pass (added flow tests for refine + plan; existing command tests work because executor mocks are still effective).
+
+**Artifacts**: `phase-8-plugin-surface-audit.md`, `phase-8-check.json` (all 8 sub-checks green).
+
+`npm run check` passes; `node dist/main.js --help` works at runtime.
+
+READY_FOR_REVIEW

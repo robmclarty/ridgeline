@@ -233,7 +233,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 125448,
+          "inputTokens": 260,
+          "costUsd": 37.73730475000002,
+          "durationMs": 2127897,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T05:03:00.228Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "09-build-auto-sigint-dogfood",

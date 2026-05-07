@@ -1,30 +1,30 @@
 import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../../test/setup"
-import { BudgetEntry, BudgetState, ClaudeResult, TrajectoryEntry } from "../../../types"
+import { makeTempDir } from "../../../../test/setup.js"
+import { BudgetEntry, BudgetState, ClaudeResult, TrajectoryEntry } from "../../../types.js"
 import {
   appendBudgetEntry,
   loadBudget,
   makeBudgetEntry,
   recordCost,
-} from "../../../stores/budget"
+} from "../../../stores/budget.js"
 import {
   appendTrajectoryEntry,
   logTrajectory,
   makeTrajectoryEntry,
   readTrajectory,
-} from "../../../stores/trajectory"
+} from "../../../stores/trajectory.js"
 import {
   createRidgelineBudgetSubscriber,
   emitCostEntry,
   RIDGELINE_COST_KIND,
-} from "../ridgeline_budget_subscriber"
+} from "../ridgeline_budget_subscriber.js"
 import {
   createRidgelineTrajectoryLogger,
   emitTrajectoryEntry,
   RIDGELINE_TRAJECTORY_KIND,
-} from "../ridgeline_trajectory_logger"
+} from "../ridgeline_trajectory_logger.js"
 
 const fakeResult = (cost: number): ClaudeResult => ({
   success: true,
@@ -157,8 +157,8 @@ describe("store wrapping (cost/event flow goes through ctx.trajectory)", () => {
   describe("two-tier resume invariant", () => {
     it("adapter checkpoint write and stores/state.ts write produce two files at distinct paths", async () => {
       dir = makeTempDir()
-      const { saveState } = await import("../../../stores/state")
-      const { createRidgelineCheckpointStore } = await import("../ridgeline_checkpoint_store")
+      const { saveState } = await import("../../../stores/state.js")
+      const { createRidgelineCheckpointStore } = await import("../ridgeline_checkpoint_store.js")
 
       const checkpointStore = createRidgelineCheckpointStore({ buildDir: dir })
       await checkpointStore.set("01-phase", { ok: true })

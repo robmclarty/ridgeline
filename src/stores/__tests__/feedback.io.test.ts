@@ -1,14 +1,14 @@
 import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 import {
   feedbackPath,
   archiveFeedbackPath,
   writeFeedback,
   archiveFeedback,
   readFeedback,
-} from "../feedback.io"
+} from "../feedback.io.js"
 
 describe("feedback.io", () => {
   describe("feedbackPath", () => {

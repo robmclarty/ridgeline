@@ -2,38 +2,38 @@
 
 import * as path from "node:path"
 import { Command, Option } from "commander"
-import { loadVersion, resolveConfig } from "./config"
-import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings"
-import { RidgelineConfig } from "./types"
-import { disableLogger } from "./ui/logger"
-import { askBuildName } from "./ui/prompt"
-import { runShape, runShapeAuto } from "./commands/shape"
-import { runDesign, runDesignAuto } from "./commands/design"
-import { runDirections, runDirectionsAuto } from "./commands/directions"
-import { runSpec } from "./commands/spec"
-import { runIngest } from "./commands/ingest"
-import { runPlan } from "./commands/plan"
-import { runDryRun } from "./commands/dry-run"
-import { runBuild } from "./commands/build"
-import { runCreate } from "./commands/create"
-import { runAuto, StopAfter } from "./commands/auto"
-import { runRewind } from "./commands/rewind"
-import { runRetrospective } from "./commands/retrospective"
-import { runRetroRefine } from "./commands/retro-refine"
-import { runResearch } from "./commands/research"
-import { runRefine } from "./commands/refine"
-import { runCatalog } from "./commands/catalog"
-import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui"
-import { resolveInputBundle } from "./commands/input"
-import { resolveNameAndInput, parseAutoCount } from "./utils/cli-args"
-import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
-import { enforceFlavourRemoved } from "./utils/flavour-removed"
-import { detect } from "./engine/detect"
-import { runPreflight, type StablePromptInfo } from "./ui/preflight"
-import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "./ui/preflight.toolprobe"
-import { detectSandbox } from "./engine/claude/sandbox"
-import { resolveStablePrompt } from "./engine/pipeline/pipeline.shared"
-import { approximateTokenCount } from "./engine/claude/stable.prompt"
+import { loadVersion, resolveConfig } from "./config.js"
+import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings.js"
+import { RidgelineConfig } from "./types.js"
+import { disableLogger } from "./ui/logger.js"
+import { askBuildName } from "./ui/prompt.js"
+import { runShape, runShapeAuto } from "./commands/shape.js"
+import { runDesign, runDesignAuto } from "./commands/design.js"
+import { runDirections, runDirectionsAuto } from "./commands/directions.js"
+import { runSpec } from "./commands/spec.js"
+import { runIngest } from "./commands/ingest.js"
+import { runPlan } from "./commands/plan.js"
+import { runDryRun } from "./commands/dry-run.js"
+import { runBuild } from "./commands/build.js"
+import { runCreate } from "./commands/create.js"
+import { runAuto, StopAfter } from "./commands/auto.js"
+import { runRewind } from "./commands/rewind.js"
+import { runRetrospective } from "./commands/retrospective.js"
+import { runRetroRefine } from "./commands/retro-refine.js"
+import { runResearch } from "./commands/research.js"
+import { runRefine } from "./commands/refine.js"
+import { runCatalog } from "./commands/catalog.js"
+import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui.js"
+import { resolveInputBundle } from "./commands/input.js"
+import { resolveNameAndInput, parseAutoCount } from "./utils/cli-args.js"
+import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec.js"
+import { enforceFlavourRemoved } from "./utils/flavour-removed.js"
+import { detect } from "./engine/detect/index.js"
+import { runPreflight, type StablePromptInfo } from "./ui/preflight.js"
+import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "./ui/preflight.toolprobe.js"
+import { detectSandbox } from "./engine/claude/sandbox.js"
+import { resolveStablePrompt } from "./engine/pipeline/pipeline.shared.js"
+import { approximateTokenCount } from "./engine/claude/stable.prompt.js"
 
 enforceFlavourRemoved(process.argv.slice(2))
 
@@ -583,9 +583,9 @@ addAutoOption(addPreflightOptions(program
 program
   .command("clean")
   .description("Clean up build artifacts")
-  .action(() => {
+  .action(async () => {
     try {
-      const { runClean } = require("./commands/clean")
+      const { runClean } = await import("./commands/clean.js")
       runClean(process.cwd())
     } catch (err) {
       handleCommandError(err)
@@ -617,9 +617,9 @@ program
 program
   .command("check")
   .description("Check project prerequisites and tooling")
-  .action(() => {
+  .action(async () => {
     try {
-      const { runCheck } = require("./commands/check")
+      const { runCheck } = await import("./commands/check.js")
       runCheck()
     } catch (err) {
       handleCommandError(err)

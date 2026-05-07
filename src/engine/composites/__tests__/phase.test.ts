@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { run, step, aborted_error, type Step } from "fascicle"
-import { phase, type PhaseRoundResult } from "../phase"
-import { recordingTrajectory, sleep } from "./_helpers"
+import { phase, type PhaseRoundResult } from "../phase.js"
+import { recordingTrajectory, sleep } from "./_helpers.js"
 
 type BuildOut = { readonly text: string }
 type Verdict = { readonly summary: string }

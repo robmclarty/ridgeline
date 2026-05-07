@@ -1,32 +1,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/claude/claude.exec", () => ({
+vi.mock("../../engine/claude/claude.exec.js", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../engine/claude/stream.display", () => ({
+vi.mock("../../engine/claude/stream.display.js", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
-vi.mock("../../engine/discovery/agent.registry", () => ({
+vi.mock("../../engine/discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: () => "(stub retro-refiner system prompt)",
   })),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
   printWarn: vi.fn(),
 }))
 
-import { invokeClaude } from "../../engine/claude/claude.exec"
-import { printError, printWarn, printInfo } from "../../ui/output"
-import { runRetroRefine } from "../retro-refine"
-import { recordInputSource } from "../../stores/state"
+import { invokeClaude } from "../../engine/claude/claude.exec.js"
+import { printError, printWarn, printInfo } from "../../ui/output.js"
+import { runRetroRefine } from "../retro-refine.js"
+import { recordInputSource } from "../../stores/state.js"
 
 const opts = { model: "opus", timeout: 10 }
 const REFINED_HEADING = "# Refined input (from retrospective)"

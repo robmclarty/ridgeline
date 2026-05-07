@@ -1,25 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/pipeline/specify.exec", () => ({
+vi.mock("../../engine/pipeline/specify.exec.js", () => ({
   invokeSpecifier: vi.fn(),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
 }))
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   advancePipeline: vi.fn(),
   getMatchedShapes: vi.fn(() => []),
 }))
 
-import { invokeSpecifier } from "../../engine/pipeline/specify.exec"
-import { printError } from "../../ui/output"
-import { runSpec } from "../spec"
+import { invokeSpecifier } from "../../engine/pipeline/specify.exec.js"
+import { printError } from "../../ui/output.js"
+import { runSpec } from "../spec.js"
 
 const defaultOpts = { model: "opus", timeout: 10 }
 

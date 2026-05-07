@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { AssetCatalog } from "./types"
+import { AssetCatalog } from "./types.js"
 import type { PackerExporterType } from "free-tex-packer-core"
-import { hint, warning } from "../ui/color"
+import { hint, warning } from "../ui/color.js"
 
 /**
  * Pack sprites into texture atlases grouped by category.

@@ -27,7 +27,7 @@ const mockEngine = (): Engine => {
 }
 
 const importFactory = async () => {
-  const mod = await import("../engine.factory")
+  const mod = await import("../engine.factory.js")
   return mod.makeRidgelineEngine
 }
 
@@ -145,7 +145,7 @@ describe("makeRidgelineEngine", () => {
   })
 
   it("named export is `makeRidgelineEngine` (camelCase)", async () => {
-    const mod = await import("../engine.factory")
+    const mod = await import("../engine.factory.js")
     expect(typeof mod.makeRidgelineEngine).toBe("function")
     expect("make_ridgeline_engine" in mod).toBe(false)
     expect("createRidgelineEngine" in mod).toBe(false)

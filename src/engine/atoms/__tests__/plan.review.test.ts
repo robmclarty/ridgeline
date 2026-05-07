@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { planReviewAtom, type PlanReviewArgs } from "../plan.review.atom"
-import { planReviewSchema } from "../../schemas"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { planReviewAtom, type PlanReviewArgs } from "../plan.review.atom.js"
+import { planReviewSchema } from "../../schemas.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const cannedVerdict = { approved: true, issues: [] }
 

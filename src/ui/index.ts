@@ -1,3 +1,3 @@
-export { pickVerb, formatElapsed, startSpinner } from './spinner'
-export { printInfo, printError, printPhase } from './output'
-export { askBuildName } from './prompt'
+export { pickVerb, formatElapsed, startSpinner } from './spinner.js'
+export { printInfo, printError, printPhase } from './output.js'
+export { askBuildName } from './prompt.js'

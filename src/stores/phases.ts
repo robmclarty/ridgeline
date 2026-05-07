@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { PhaseInfo } from "../types"
+import { PhaseInfo } from "../types.js"
 
 export const PHASE_FILENAME_PATTERN = /^\d{2}[a-z]?-.*\.md$/
 

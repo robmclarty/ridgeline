@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createEventBuffer } from "../events"
+import { createEventBuffer } from "../events.js"
 
 describe("EventBuffer", () => {
   it("assigns monotonic ids across event types", () => {

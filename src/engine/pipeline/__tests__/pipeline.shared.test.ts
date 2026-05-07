@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { makeConfig } from "../../../../test/factories"
+import { makeConfig } from "../../../../test/factories.js"
 
-vi.mock("../../discovery/agent.registry", () => ({
+vi.mock("../../discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: vi.fn(() => ""),
     getSpecialists: vi.fn(() => []),
@@ -13,12 +13,12 @@ vi.mock("../../discovery/agent.registry", () => ({
   })),
 }))
 
-vi.mock("../../discovery/plugin.scan", () => ({
+vi.mock("../../discovery/plugin.scan.js", () => ({
   discoverPluginDirs: vi.fn(() => []),
   getCorePluginDir: vi.fn(() => "/core/plugins"),
 }))
 
-vi.mock("../../../ui/output", () => ({
+vi.mock("../../../ui/output.js", () => ({
   printError: vi.fn(),
 }))
 
@@ -27,11 +27,11 @@ vi.mock("node:fs", async () => {
   return { ...actual, readFileSync: vi.fn(() => "file content"), existsSync: vi.fn(() => false) }
 })
 
-import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "../pipeline.shared"
-import { createPromptDocument } from "../prompt.document"
-import { buildAgentRegistry } from "../../discovery/agent.registry"
-import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan"
-import { printError } from "../../../ui/output"
+import { prepareAgentsAndPlugins, createStderrHandler, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "../pipeline.shared.js"
+import { createPromptDocument } from "../prompt.document.js"
+import { buildAgentRegistry } from "../../discovery/agent.registry.js"
+import { discoverPluginDirs, getCorePluginDir } from "../../discovery/plugin.scan.js"
+import { printError } from "../../../ui/output.js"
 import * as fs from "node:fs"
 
 beforeEach(() => vi.clearAllMocks())

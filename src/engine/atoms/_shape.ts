@@ -1,5 +1,5 @@
-import { buildStablePrompt, type StablePromptParts } from "../claude/stable.prompt"
-import type { AtomPromptDocument } from "./_prompt.document"
+import { buildStablePrompt, type StablePromptParts } from "../claude/stable.prompt.js"
+import type { AtomPromptDocument } from "./_prompt.document.js"
 
 const ASSET_USAGE_INSTRUCTIONS = `Key rules for using assets:
 - Load packed atlases from ./assets/packed/ using their JSON manifests

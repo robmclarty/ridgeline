@@ -5,8 +5,8 @@ import {
   appendDesignData,
   composeSystemPrompt,
   type StableInputs,
-} from "./_shape"
-import { createAtomPromptDocument } from "./_prompt.document"
+} from "./_shape.js"
+import { createAtomPromptDocument } from "./_prompt.document.js"
 
 export type BuilderExtras = {
   readonly continuationPreamble?: string | null

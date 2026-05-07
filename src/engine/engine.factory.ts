@@ -6,7 +6,7 @@ import {
   DEFAULT_NETWORK_ALLOWLIST_STRICT,
   type SandboxFlag,
   type SandboxProviderConfig,
-} from "./claude/sandbox.policy"
+} from "./claude/sandbox.policy.js"
 
 const STARTUP_TIMEOUT_MS = 120_000
 const DEFAULT_STALL_TIMEOUT_MS = 300_000

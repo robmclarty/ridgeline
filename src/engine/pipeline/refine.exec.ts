@@ -1,12 +1,12 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { ClaudeResult } from "../../types"
-import { invokeClaude } from "../claude/claude.exec"
-import { createDisplayCallbacks } from "../claude/stream.display"
-import { buildAgentRegistry } from "../discovery/agent.registry"
-import { createStderrHandler } from "./pipeline.shared"
-import { SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
-import { createPromptDocument } from "./prompt.document"
+import { ClaudeResult } from "../../types.js"
+import { invokeClaude } from "../claude/claude.exec.js"
+import { createDisplayCallbacks } from "../claude/stream.display.js"
+import { buildAgentRegistry } from "../discovery/agent.registry.js"
+import { createStderrHandler } from "./pipeline.shared.js"
+import { SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec.js"
+import { createPromptDocument } from "./prompt.document.js"
 
 // ---------------------------------------------------------------------------
 // Refine executor

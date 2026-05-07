@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { makeConfig, makePhase, makeClaudeResult } from "../../../../test/factories"
+import { makeConfig, makePhase, makeClaudeResult } from "../../../../test/factories.js"
 
-vi.mock("../../claude/claude.exec", () => ({
+vi.mock("../../claude/claude.exec.js", () => ({
   invokeClaude: vi.fn(),
 }))
 
-vi.mock("../../discovery/agent.registry", () => ({
+vi.mock("../../discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: vi.fn(() => "builder system prompt"),
     getSpecialists: vi.fn(() => []),
@@ -17,19 +17,19 @@ vi.mock("../../discovery/agent.registry", () => ({
   })),
 }))
 
-vi.mock("../../claude/stream.display", () => ({
+vi.mock("../../claude/stream.display.js", () => ({
   createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
 }))
 
-vi.mock("../../../stores/handoff", () => ({
+vi.mock("../../../stores/handoff.js", () => ({
   readHandoff: vi.fn(() => null),
 }))
 
-vi.mock("../../discovery/plugin.scan", () => ({
+vi.mock("../../discovery/plugin.scan.js", () => ({
   cleanupPluginDirs: vi.fn(),
 }))
 
-vi.mock("../pipeline.shared", () => ({
+vi.mock("../pipeline.shared.js", () => ({
   prepareAgentsAndPlugins: vi.fn(() => ({ agents: undefined, pluginDirs: [] })),
   appendConstraintsAndTaste: vi.fn(),
   appendDesign: vi.fn(),
@@ -56,12 +56,12 @@ vi.mock("node:fs", async () => {
   }
 })
 
-import { invokeBuilder } from "../build.exec"
-import { invokeClaude } from "../../claude/claude.exec"
-import { buildAgentRegistry } from "../../discovery/agent.registry"
-import { createDisplayCallbacks } from "../../claude/stream.display"
-import { readHandoff } from "../../../stores/handoff"
-import { cleanupPluginDirs } from "../../discovery/plugin.scan"
+import { invokeBuilder } from "../build.exec.js"
+import { invokeClaude } from "../../claude/claude.exec.js"
+import { buildAgentRegistry } from "../../discovery/agent.registry.js"
+import { createDisplayCallbacks } from "../../claude/stream.display.js"
+import { readHandoff } from "../../../stores/handoff.js"
+import { cleanupPluginDirs } from "../../discovery/plugin.scan.js"
 import * as fs from "node:fs"
 
 beforeEach(() => vi.clearAllMocks())

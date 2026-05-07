@@ -1,7 +1,7 @@
 import * as readline from "node:readline"
-import { invokeClaude } from "../engine/claude/claude.exec"
-import { createDisplayCallbacks } from "../engine/claude/stream.display"
-import { hint } from "../ui/color"
+import { invokeClaude } from "../engine/claude/claude.exec.js"
+import { createDisplayCallbacks } from "../engine/claude/stream.display.js"
+import { hint } from "../ui/color.js"
 
 const MAX_CLARIFICATION_ROUNDS = 4
 

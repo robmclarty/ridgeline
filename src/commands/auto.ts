@@ -1,19 +1,19 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo, printError, printWarn } from "../ui/output"
+import { printInfo, printError, printWarn } from "../ui/output.js"
 import {
   getNextPipelineStage,
   getPipelineStatus,
   getMatchedShapes,
-} from "../stores/state"
-import { PipelineStage } from "../types"
-import { resolveBuildDir } from "../config"
-import { resolveSpecialistTimeoutSeconds } from "../stores/settings"
-import { runCreate, CreateOptions, persistInputSourceIfPath } from "./create"
-import { runDirectionsAuto } from "./directions"
-import { runResearch } from "./research"
-import { runRetrospective } from "./retrospective"
-import { runRetroRefine } from "./retro-refine"
+} from "../stores/state.js"
+import { PipelineStage } from "../types.js"
+import { resolveBuildDir } from "../config.js"
+import { resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
+import { runCreate, CreateOptions, persistInputSourceIfPath } from "./create.js"
+import { runDirectionsAuto } from "./directions.js"
+import { runResearch } from "./research.js"
+import { runRetrospective } from "./retrospective.js"
+import { runRetroRefine } from "./retro-refine.js"
 
 export type StopAfter = "shape" | "design" | "spec" | "plan" | "build"
 

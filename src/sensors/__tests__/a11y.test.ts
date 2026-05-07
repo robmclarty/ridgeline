@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import a11ySensor, { runA11ySensor } from "../a11y"
+import a11ySensor, { runA11ySensor } from "../a11y.js"
 
 const fakePage = (violations: unknown[], probes: { navigated?: string[]; scriptsInjected?: string[] } = {}) => ({
   goto: async (url: string) => {
@@ -59,7 +59,7 @@ describe("a11y sensor", () => {
         loadPlaywright: () =>
           ({
             chromium: { launch: async () => browser },
-          }) as unknown as ReturnType<typeof import("../a11y").runA11ySensor> as never,
+          }) as unknown as ReturnType<typeof import("../a11y.js").runA11ySensor> as never,
       },
     )
     expect(probes.navigated).toEqual(["http://127.0.0.1:5173"])
@@ -83,7 +83,7 @@ describe("a11y sensor", () => {
         loadPlaywright: () =>
           ({
             chromium: { launch: async () => fakeBrowser(fakePage(violations)) },
-          }) as unknown as ReturnType<typeof import("../a11y").runA11ySensor> as never,
+          }) as unknown as ReturnType<typeof import("../a11y.js").runA11ySensor> as never,
       },
     )
     expect(findings).toHaveLength(3)
@@ -112,7 +112,7 @@ describe("a11y sensor", () => {
           loadPlaywright: () =>
             ({
               chromium: { launch: async () => fakeBrowser(fakePage([], probes)) },
-            }) as unknown as ReturnType<typeof import("../a11y").runA11ySensor> as never,
+            }) as unknown as ReturnType<typeof import("../a11y.js").runA11ySensor> as never,
         },
       )
       expect(fetchCalled).toBe(0)
@@ -140,7 +140,7 @@ describe("a11y sensor", () => {
                 throw new Error("Target page, context or browser has been closed")
               },
             },
-          }) as unknown as ReturnType<typeof import("../a11y").runA11ySensor> as never,
+          }) as unknown as ReturnType<typeof import("../a11y.js").runA11ySensor> as never,
       },
     )
     expect(findings).toHaveLength(1)
@@ -161,7 +161,7 @@ describe("a11y sensor", () => {
                 throw new Error("Executable doesn't exist at /path; run: npx playwright install chromium")
               },
             },
-          }) as unknown as ReturnType<typeof import("../a11y").runA11ySensor> as never,
+          }) as unknown as ReturnType<typeof import("../a11y.js").runA11ySensor> as never,
       },
     )
     expect(findings[0].summary).toContain("npm install --save-dev playwright && npx playwright install chromium")

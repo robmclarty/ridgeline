@@ -1,18 +1,18 @@
 import * as path from "node:path"
-import { printInfo } from "../ui/output"
+import { printInfo } from "../ui/output.js"
 import {
   getPipelineStatus,
   getNextPipelineStage,
   recordInputSource,
-} from "../stores/state"
-import { PipelineStage } from "../types"
-import { runShape, runShapeAuto, ShapeOptions } from "./shape"
-import { runSpec, SpecOptions } from "./spec"
-import { resolveBuildDir, resolveConfig } from "../config"
-import { resolveSpecialistTimeoutSeconds } from "../stores/settings"
-import { runPlan } from "./plan"
-import { runBuild } from "./build"
-import { resolveInputBundle } from "./input"
+} from "../stores/state.js"
+import { PipelineStage } from "../types.js"
+import { runShape, runShapeAuto, ShapeOptions } from "./shape.js"
+import { runSpec, SpecOptions } from "./spec.js"
+import { resolveBuildDir, resolveConfig } from "../config.js"
+import { resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
+import { runPlan } from "./plan.js"
+import { runBuild } from "./build.js"
+import { resolveInputBundle } from "./input.js"
 
 export type CreateOptions = {
   model: string

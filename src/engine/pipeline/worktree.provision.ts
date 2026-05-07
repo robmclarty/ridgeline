@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { appendDiscovery } from "./discoveries"
+import { appendDiscovery } from "./discoveries.js"
 
 /**
  * Post-worktree-creation environment provisioning.

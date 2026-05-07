@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { reviewerAtom, type ReviewerArgs } from "../reviewer.atom"
-import { reviewVerdictSchema } from "../../schemas"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { reviewerAtom, type ReviewerArgs } from "../reviewer.atom.js"
+import { reviewVerdictSchema } from "../../schemas.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const cannedVerdict = {
   passed: true,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { run } from "fascicle"
-import { builderAtom, type BuilderArgs } from "../builder.atom"
-import { cannedGenerateResult, stubEngine } from "./_stub.engine"
+import { builderAtom, type BuilderArgs } from "../builder.atom.js"
+import { cannedGenerateResult, stubEngine } from "./_stub.engine.js"
 
 const minimalArgs: BuilderArgs = {
   constraintsMd: "# Constraints",

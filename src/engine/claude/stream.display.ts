@@ -1,7 +1,7 @@
-import { createStreamHandler } from "./stream.parse"
-import { startSpinner } from "../../ui/spinner"
-import { appendTranscript } from "../../ui/transcript"
-import { hint } from "../../ui/color"
+import { createStreamHandler } from "./stream.parse.js"
+import { startSpinner } from "../../ui/spinner.js"
+import { appendTranscript } from "../../ui/transcript.js"
+import { hint } from "../../ui/color.js"
 
 interface DisplayCallbackOptions {
   /** Suppress fenced JSON blocks (```json ... ```) from display output. */

@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import sharp from "sharp"
-import { makeTempDir } from "../../../test/setup"
-import { buildCatalog } from "../build-catalog"
+import { makeTempDir } from "../../../test/setup.js"
+import { buildCatalog } from "../build-catalog.js"
 
 const defaultOpts = { isForce: false, isClassify: false, model: "", timeout: 5 } as const
 

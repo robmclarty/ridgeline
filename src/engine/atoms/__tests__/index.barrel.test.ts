@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import * as atoms from "../index"
-import { stubEngine } from "./_stub.engine"
+import * as atoms from "../index.js"
+import { stubEngine } from "./_stub.engine.js"
 
 const ATOM_FACTORIES = [
   "builderAtom",

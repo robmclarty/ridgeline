@@ -7,7 +7,7 @@ import {
   buildSandboxPolicy,
   DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED,
   DEFAULT_NETWORK_ALLOWLIST_STRICT,
-} from "../sandbox.policy"
+} from "../sandbox.policy.js"
 
 const REPO_ROOT = path.resolve(__dirname, "../../../..")
 const BASELINE_DIR = path.join(

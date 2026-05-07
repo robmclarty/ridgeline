@@ -1,35 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/pipeline/refine.exec", () => ({
+vi.mock("../../engine/pipeline/refine.exec.js", () => ({
   invokeRefiner: vi.fn(),
 }))
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   advancePipeline: vi.fn(),
 }))
 
-vi.mock("../../stores/trajectory", () => ({
+vi.mock("../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
 }))
 
-vi.mock("../../stores/budget", () => ({
+vi.mock("../../stores/budget.js", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
 }))
 
-import { invokeRefiner } from "../../engine/pipeline/refine.exec"
-import { advancePipeline } from "../../stores/state"
-import { logTrajectory } from "../../stores/trajectory"
-import { recordCost } from "../../stores/budget"
-import { printError } from "../../ui/output"
-import { runRefine } from "../refine"
+import { invokeRefiner } from "../../engine/pipeline/refine.exec.js"
+import { advancePipeline } from "../../stores/state.js"
+import { logTrajectory } from "../../stores/trajectory.js"
+import { recordCost } from "../../stores/budget.js"
+import { printError } from "../../ui/output.js"
+import { runRefine } from "../refine.js"
 
 const makeRefinerResult = () => ({
   success: true,

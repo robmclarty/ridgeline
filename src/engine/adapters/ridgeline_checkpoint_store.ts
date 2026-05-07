@@ -4,7 +4,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import type { CheckpointStore } from "fascicle"
-import { atomicWriteSync } from "../../utils/atomic-write"
+import { atomicWriteSync } from "../../utils/atomic-write.js"
 
 export type RidgelineCheckpointStoreOptions = {
   readonly buildDir: string

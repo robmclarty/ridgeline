@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { createDisplayCallbacks } from "../stream.display"
+import { createDisplayCallbacks } from "../stream.display.js"
 
 describe("stream.display", () => {
   describe("createDisplayCallbacks", () => {

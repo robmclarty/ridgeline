@@ -1,10 +1,10 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { SpecifierDraft, EnsembleResult } from "../../types"
-import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec"
-import { buildAgentRegistry } from "../discovery/agent.registry"
-import { formatProposalHeading } from "./pipeline.shared"
-import { createPromptDocument } from "./prompt.document"
+import { SpecifierDraft, EnsembleResult } from "../../types.js"
+import { invokeEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.exec.js"
+import { buildAgentRegistry } from "../discovery/agent.registry.js"
+import { formatProposalHeading } from "./pipeline.shared.js"
+import { createPromptDocument } from "./prompt.document.js"
 
 // ---------------------------------------------------------------------------
 // JSON schema for structured spec specialist output

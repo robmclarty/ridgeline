@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { extractJSON } from "../ensemble.exec"
+import { extractJSON } from "../ensemble.exec.js"
 
 describe("extractJSON", () => {
   it("parses raw JSON object", () => {

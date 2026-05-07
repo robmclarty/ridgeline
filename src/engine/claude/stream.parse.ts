@@ -1,4 +1,4 @@
-import { parseClaudeResult, type StreamEvent } from "./stream.types"
+import { parseClaudeResult, type StreamEvent } from "./stream.types.js"
 
 /**
  * Parse a single NDJSON line from `claude --output-format stream-json`.

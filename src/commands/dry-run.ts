@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
-import { RidgelineConfig } from "../types"
-import { printInfo } from "../ui/output"
-import { parsePhaseContent } from "../stores/phases"
-import { ensurePhases } from "./build"
+import { RidgelineConfig } from "../types.js"
+import { printInfo } from "../ui/output.js"
+import { parsePhaseContent } from "../stores/phases.js"
+import { ensurePhases } from "./build.js"
 
 export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
   const phases = await ensurePhases(config)

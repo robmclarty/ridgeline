@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../../test/setup"
-import { makeConfig } from "../../../../test/factories"
+import { makeTempDir } from "../../../../test/setup.js"
+import { makeConfig } from "../../../../test/factories.js"
 
-vi.mock("../../../ui/output", () => ({
+vi.mock("../../../ui/output.js", () => ({
   printError: vi.fn(),
 }))
 
-import { assembleBaseUserPrompt } from "../plan.exec"
+import { assembleBaseUserPrompt } from "../plan.exec.js"
 
 describe("assembleBaseUserPrompt", () => {
   let tmpDir: string

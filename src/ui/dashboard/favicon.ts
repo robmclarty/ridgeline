@@ -1,4 +1,4 @@
-import { PALETTE } from "./tokens"
+import { PALETTE } from "./tokens.js"
 
 export type FaviconStatus = "running" | "done" | "failed" | "idle"
 

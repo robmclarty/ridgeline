@@ -4,11 +4,12 @@
   "description": "Build harness for long-horizon software execution",
   "license": "Apache-2.0",
   "bin": {
-    "ridgeline": "dist/cli.js"
+    "ridgeline": "dist/main.js"
   },
   "engines": {
     "node": ">=24.0.0"
   },
+  "type": "module",
   "scripts": {
     "build": "tsc && rm -rf dist/agents && cp -r src/agents dist/agents && rm -rf dist/plugin && cp -r plugin dist/plugin && cp src/shapes/*.json dist/shapes/",
     "dev": "tsc --watch",

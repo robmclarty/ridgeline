@@ -50,7 +50,20 @@
     { "file": "src/engine/atoms/sensors.collect.atom.ts", "exports": ["SensorsCollectArgs", "SensorsCollectAtomDeps", "sensorsCollectAtom"] },
     { "file": "src/engine/atoms/plan.review.atom.ts", "exports": ["PlanReviewArgs", "PlanReviewAtomDeps", "planReviewAtom", "shapePlanReviewModelCallInput"] },
     { "file": "src/engine/atoms/specialist.verdict.atom.ts", "exports": ["SpecialistVerdictArgs", "SpecialistVerdictAtomDeps", "SpecialistVerdictStage", "specialistVerdictAtom", "shapeSpecialistVerdictModelCallInput"] },
-    { "file": "src/engine/schemas.ts", "exports": ["reviewVerdictSchema", "planArtifactSchema", "planReviewSchema", "specialistVerdictSchema", "ReviewVerdictSchema", "PlanArtifactSchema", "PlanReviewSchema", "SpecialistVerdictSchema"] }
+    { "file": "src/engine/schemas.ts", "exports": ["reviewVerdictSchema", "planArtifactSchema", "planReviewSchema", "specialistVerdictSchema", "ReviewVerdictSchema", "PlanArtifactSchema", "PlanReviewSchema", "SpecialistVerdictSchema"] },
+    { "file": "src/engine/flows/refine.flow.ts", "exports": ["RefineFlowInput", "RefineFlowOutput", "RefineExecutor", "RefineFlowDeps"] },
+    { "file": "src/engine/flows/research.flow.ts", "exports": ["ResearchFlowInput", "ResearchFlowOutput", "ResearchExecutor", "ResearchFlowDeps"] },
+    { "file": "src/engine/flows/spec.flow.ts", "exports": ["SpecFlowInput", "SpecFlowOutput", "SpecExecutor", "SpecFlowDeps"] },
+    { "file": "src/engine/flows/plan.flow.ts", "exports": ["PlanFlowInput", "PlanFlowOutput", "PlanFlowExecutors", "PlanFlowDeps"] },
+    { "file": "src/engine/flows/retrospective.flow.ts", "exports": ["RetrospectiveFlowInput", "RetrospectiveFlowOutput", "RetrospectiveExecutor", "RetrospectiveFlowDeps"] },
+    { "file": "src/engine/flows/retro-refine.flow.ts", "exports": ["RetroRefineFlowInput", "RetroRefineFlowOutput", "RetroRefineExecutor", "RetroRefineFlowDeps"] },
+    { "file": "src/engine/flows/dryrun.flow.ts", "exports": ["DryRunFlowInput", "DryRunFlowOutput", "dryRunFlow"] },
+    { "file": "src/engine/flows/qa-workflow.flow.ts", "exports": ["QAWorkflowFlowInput", "QAWorkflowFlowOutput", "QAWorkflowExecutor", "QAWorkflowFlowDeps", "qaWorkflowFlow"] },
+    { "file": "src/engine/flows/directions.flow.ts", "exports": ["DirectionsFlowInput", "DirectionsFlowOutput", "directionsFlow"] },
+    { "file": "src/engine/flows/design.flow.ts", "exports": ["DesignFlowInput", "DesignFlowOutput", "designFlow"] },
+    { "file": "src/engine/flows/shape.flow.ts", "exports": ["ShapeFlowInput", "ShapeFlowOutput", "shapeFlow"] },
+    { "file": "src/engine/flows/ingest.flow.ts", "exports": ["IngestFlowInput", "IngestFlowOutput", "ingestFlow"] },
+    { "file": "src/engine/flows/rewind.flow.ts", "exports": ["RewindFlowInput", "RewindFlowOutput", "rewindFlow"] }
   ],
   "duplicates": {
     "ignore": [

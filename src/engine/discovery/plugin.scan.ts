@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig } from "../../types"
+import { RidgelineConfig } from "../../types.js"
 
 const PLUGIN_JSON_MARKER = "ridgeline-auto-generated"
 
@@ -65,6 +65,7 @@ export const discoverPluginDirs = (config: RidgelineConfig): PluginDir[] => {
 }
 
 export const getBundledPluginDir = (): string | null => {
+  const __dirname = path.dirname(new URL(import.meta.url).pathname)
   const candidates = [
     path.join(__dirname, "..", "..", "plugin"),           // dist/plugin
     path.join(__dirname, "..", "..", "..", "plugin"),      // src layout
@@ -80,6 +81,7 @@ export const getBundledPluginDir = (): string | null => {
 }
 
 export const getCorePluginDir = (): string | null => {
+  const __dirname = path.dirname(new URL(import.meta.url).pathname)
   const candidates = [
     path.join(__dirname, "..", "..", "agents", "core"),  // dist
     path.join(__dirname, "..", "..", "..", "agents", "core"),  // src

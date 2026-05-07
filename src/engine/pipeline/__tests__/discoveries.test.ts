@@ -7,7 +7,7 @@ import {
   readDiscoveries,
   getDiscoveriesPath,
   type DiscoveryEntry,
-} from "../discoveries"
+} from "../discoveries.js"
 
 describe("discoveries", () => {
   let buildDir: string

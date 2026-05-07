@@ -1,14 +1,14 @@
 import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../../test/setup"
-import { TrajectoryEntry } from "../../../types"
+import { makeTempDir } from "../../../../test/setup.js"
+import { TrajectoryEntry } from "../../../types.js"
 import {
   createRidgelineTrajectoryLogger,
   emitTrajectoryEntry,
   isRidgelineTrajectoryEvent,
   RIDGELINE_TRAJECTORY_KIND,
-} from "../ridgeline_trajectory_logger"
+} from "../ridgeline_trajectory_logger.js"
 
 const baselinePath = path.join(
   process.cwd(),
@@ -100,7 +100,7 @@ describe("ridgeline_trajectory_logger", () => {
       fs.mkdirSync(legacyDir, { recursive: true })
 
       const legacyLogger = createRidgelineTrajectoryLogger({ buildDir: adapterDir })
-      const { logTrajectory } = await import("../../../stores/trajectory")
+      const { logTrajectory } = await import("../../../stores/trajectory.js")
 
       // Same logical inputs to both paths. Timestamps will differ slightly so
       // we compare structure (parsed equality minus timestamp).

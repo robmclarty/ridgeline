@@ -3,10 +3,10 @@ import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("../sensors.collect", () => ({
+vi.mock("../sensors.collect.js", () => ({
   collectSensorFindings: vi.fn(async () => []),
 }))
-vi.mock("../../detect", () => ({
+vi.mock("../../detect/index.js", () => ({
   detect: vi.fn(async () => ({
     projectType: "node",
     isVisualSurface: false,
@@ -18,27 +18,27 @@ vi.mock("../../detect", () => ({
     suggestedEnsembleSize: 2,
   })),
 }))
-vi.mock("../../../stores/tags", () => ({
+vi.mock("../../../stores/tags.js", () => ({
   createCheckpoint: vi.fn(),
   createCompletionTag: vi.fn(() => "ridgeline/phase/b/p"),
 }))
-vi.mock("../../../stores/budget", () => ({
+vi.mock("../../../stores/budget.js", () => ({
   recordCost: vi.fn(() => ({ entries: [], totalCostUsd: 0.1 })),
   getTotalCost: vi.fn(() => 0.1),
   getPhaseCostUsd: vi.fn(() => 0),
 }))
-vi.mock("../../../stores/handoff", () => ({
+vi.mock("../../../stores/handoff.js", () => ({
   ensureHandoffExists: vi.fn(),
   ensurePhaseHandoffExists: vi.fn(),
 }))
-vi.mock("../../../stores/state", () => ({
+vi.mock("../../../stores/state.js", () => ({
   updatePhaseStatus: vi.fn(),
 }))
-vi.mock("../../../ui/output", () => ({
+vi.mock("../../../ui/output.js", () => ({
   printPhase: vi.fn(),
   printWarn: vi.fn(),
 }))
-vi.mock("../build.exec", () => ({
+vi.mock("../build.exec.js", () => ({
   assembleUserPrompt: vi.fn(() => "stub user prompt"),
   invokeBuilder: vi.fn(async () => ({
     success: true,
@@ -54,7 +54,7 @@ vi.mock("../build.exec", () => ({
     sessionId: "sess",
   })),
 }))
-vi.mock("../review.exec", () => ({
+vi.mock("../review.exec.js", () => ({
   invokeReviewer: vi.fn(async () => ({
     result: {
       success: true,
@@ -72,16 +72,16 @@ vi.mock("../review.exec", () => ({
     verdict: { passed: true, summary: "ok", criteriaResults: [], issues: [], suggestions: [], sensorFindings: [] },
   })),
 }))
-vi.mock("../../../stores/feedback.verdict", () => ({ formatIssue: vi.fn() }))
-vi.mock("../../../stores/feedback.io", () => ({ writeFeedback: vi.fn(), archiveFeedback: vi.fn() }))
-vi.mock("../../../git", () => ({
+vi.mock("../../../stores/feedback.verdict.js", () => ({ formatIssue: vi.fn() }))
+vi.mock("../../../stores/feedback.io.js", () => ({ writeFeedback: vi.fn(), archiveFeedback: vi.fn() }))
+vi.mock("../../../git.js", () => ({
   isWorkingTreeDirty: vi.fn(() => false),
   commitAll: vi.fn(),
 }))
 
-import { runPhase } from "../phase.sequence"
-import { readTrajectory } from "../../../stores/trajectory"
-import type { PhaseInfo, BuildState, RidgelineConfig } from "../../../types"
+import { runPhase } from "../phase.sequence.js"
+import { readTrajectory } from "../../../stores/trajectory.js"
+import type { PhaseInfo, BuildState, RidgelineConfig } from "../../../types.js"
 
 const makeState = (): BuildState => ({
   buildName: "b",

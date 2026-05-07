@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { parseSpecialistVerdict, skeletonsAgree } from "../specialist.verdict"
-import type { SpecialistVerdict } from "../../../types"
+import { parseSpecialistVerdict, skeletonsAgree } from "../specialist.verdict.js"
+import type { SpecialistVerdict } from "../../../types.js"
 
 describe("parseSpecialistVerdict", () => {
   describe("spec stage", () => {

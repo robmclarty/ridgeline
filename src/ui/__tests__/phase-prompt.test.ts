@@ -1,7 +1,7 @@
 import { PassThrough, Writable } from "node:stream"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { runPhaseApproval } from "../phase-prompt"
-import { stripAnsi } from "../color"
+import { runPhaseApproval } from "../phase-prompt.js"
+import { stripAnsi } from "../color.js"
 
 const captureWritable = (): { stream: Writable; chunks: string[] } => {
   const chunks: string[] = []

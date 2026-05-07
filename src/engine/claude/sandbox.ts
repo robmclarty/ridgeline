@@ -1,7 +1,7 @@
-import { greywallProvider, isAvailable } from "./sandbox.policy"
-import type { SandboxProvider } from "./sandbox.types"
-import type { SandboxMode } from "../../stores/settings"
-export type { SandboxProvider } from "./sandbox.types"
+import { greywallProvider, isAvailable } from "./sandbox.policy.js"
+import type { SandboxProvider } from "./sandbox.types.js"
+import type { SandboxMode } from "../../stores/settings.js"
+export type { SandboxProvider } from "./sandbox.types.js"
 
 type SandboxDetectionResult = {
   provider: SandboxProvider | null

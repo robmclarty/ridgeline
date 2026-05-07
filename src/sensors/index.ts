@@ -1,4 +1,4 @@
-import type { SensorName } from "../engine/detect"
+import type { SensorName } from "../engine/detect/index.js"
 
 export interface SensorFinding {
   kind: "screenshot" | "a11y" | "contrast" | "vision"

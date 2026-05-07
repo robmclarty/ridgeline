@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execFileSync } from "node:child_process"
-import { MediaType } from "./types"
-import { warning } from "../ui/color"
+import { MediaType } from "./types.js"
+import { warning } from "../ui/color.js"
 
 type ClassificationResult = {
   category: string

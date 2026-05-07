@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { AssetCatalog, AssetEntry, CatalogOptions, MediaType, VisualIdentity } from "./types"
-import { parseConventions, inferDefaults, AUTO_DESCRIBE_CATEGORIES } from "./parse-conventions"
+import { AssetCatalog, AssetEntry, CatalogOptions, MediaType, VisualIdentity } from "./types.js"
+import { parseConventions, inferDefaults, AUTO_DESCRIBE_CATEGORIES } from "./parse-conventions.js"
 import {
   extractImageMetadata,
   extractPalette,
@@ -9,9 +9,9 @@ import {
   detectTileable,
   computeContentHash,
   extractBasicMetadata,
-} from "./extract-metadata"
-import { classifyByHeuristics, classifyWithAI } from "./classify"
-import { hint } from "../ui/color"
+} from "./extract-metadata.js"
+import { classifyByHeuristics, classifyWithAI } from "./classify.js"
+import { hint } from "../ui/color.js"
 
 /** Map file extensions to media types. */
 const MEDIA_EXTENSIONS: Record<string, MediaType> = {

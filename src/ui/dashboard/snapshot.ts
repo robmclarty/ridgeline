@@ -1,4 +1,4 @@
-import type { BuildState, BudgetState, PhaseState, TrajectoryEntry } from "../../types"
+import type { BuildState, BudgetState, PhaseState, TrajectoryEntry } from "../../types.js"
 
 export type DashboardStatus = "pending" | "running" | "done" | "failed" | "idle"
 

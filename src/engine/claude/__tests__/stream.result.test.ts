@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { extractResult } from "../stream.result"
+import { extractResult } from "../stream.result.js"
 
 const sampleResult = {
   type: "result",
