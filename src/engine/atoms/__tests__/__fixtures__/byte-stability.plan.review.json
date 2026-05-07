@@ -1,0 +1,15 @@
+{
+  "args": {
+    "specMd": "# Spec\n\nThe spec body.\n",
+    "constraintsMd": "# Constraints\n\n- TypeScript strict.\n",
+    "tasteMd": "# Taste\n\n- Boolean prefixes is/has/should.\n",
+    "extraContext": null,
+    "projectDesignMd": null,
+    "featureDesignMd": "# Feature Design\n\nNo visual surface.\n",
+    "model": "opus",
+    "phaseTokenLimit": 50000,
+    "phaseBudgetLimit": 12,
+    "phasesMd": "### 01-foo.md\n\n# Phase 1\n\n## Goal\n\nDo it.\n"
+  },
+  "modelCallInput": "## spec.md\n\n<!-- role: data -->\n# Spec\n\nThe spec body.\n\n\n## constraints.md\n\n<!-- role: data -->\n# Constraints\n\n- TypeScript strict.\n\n\n## taste.md\n\n<!-- role: data -->\n# Taste\n\n- Boolean prefixes is/has/should.\n\n\n## Feature Design\n\n<!-- role: data -->\n# Feature Design\n\nNo visual surface.\n\n\n## Target Model\n\nThe builder will use the `opus` model.\n\n## Phase Budget\n\nStay below ~50,000 output tokens (~$12 USD) per phase — treat it as a hard maximum, not a target. Aim for 50–70% of the ceiling. If a phase would approach or exceed it, split. Splitting is cheap; a too-large phase risks timeout and truncation.\n\n## Synthesized Plan (phase files)\n\n<!-- role: data -->\n### 01-foo.md\n\n# Phase 1\n\n## Goal\n\nDo it.\n\n\n## Output Format\n\nRespond with ONLY a JSON object matching the schema in your system prompt. No prose, no markdown fences, no commentary."
+}

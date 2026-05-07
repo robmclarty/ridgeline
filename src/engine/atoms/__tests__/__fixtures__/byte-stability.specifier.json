@@ -1,0 +1,19 @@
+{
+  "args": {
+    "shapeMd": "# Shape\n\nThe shape body.\n",
+    "userInput": "## User Spec\n\nUser-authored draft.\n",
+    "drafts": [
+      {
+        "perspective": "feature",
+        "proposalMarkdown": "Feature-focused proposal markdown."
+      },
+      {
+        "perspective": "constraints",
+        "proposalMarkdown": "Constraints-focused proposal markdown."
+      }
+    ],
+    "buildDir": "/tmp/build",
+    "inferGapFlagging": true
+  },
+  "modelCallInput": "## shape.md\n\n<!-- role: data -->\n# Shape\n\nThe shape body.\n\n\n## User-Provided Spec Draft\n\n<!-- role: data -->\n## User Spec\n\nUser-authored draft.\n\n\n## Authority of User Input\n\nThe user has provided an existing spec draft (above) as authoritative source material. Treat it as higher priority than the specialist proposals: preserve the user's detail, features, acceptance criteria, constraints, and taste preferences wherever they do not contradict shape.md. Use the specialist proposals to sharpen, enrich, and fill gaps — do not replace the user's draft with a rewrite. If specialists and the user draft disagree on a non-conflicting detail, favor the user draft.\n\n## Specialist Proposals\n\n<!-- role: data -->\n### Feature Specialist Proposal\n\nFeature-focused proposal markdown.\n\n---\n\n### Constraints Specialist Proposal\n\nConstraints-focused proposal markdown.\n\n---\n\n\n## Output Directory\n\nWrite spec.md, constraints.md, and optionally taste.md to: /tmp/build/\nUse the Write tool to create each file.\n\n## Gap Flagging\n\nWhen writing each output file, append a final section titled `## Inferred / Gaps`. Under that heading list every load-bearing fact in the file you inferred without the user's input or shape.md directly stating it. Use one bullet per item: `- <fact> — inferred because: <one-line reason>`. If every load-bearing fact is source-backed, write `(none)`. The user will edit this section to confirm or override your guesses before plan runs."
+}

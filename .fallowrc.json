@@ -45,7 +45,12 @@
     { "file": "src/engine/atoms/refiner.atom.ts", "exports": ["RefinerArgs", "RefinerAtomDeps", "refinerAtom", "shapeRefinerModelCallInput"] },
     { "file": "src/engine/atoms/researcher.atom.ts", "exports": ["ResearcherArgs", "ResearcherAtomDeps", "ResearcherSpecialistDraft", "researcherAtom", "shapeResearcherModelCallInput"] },
     { "file": "src/engine/atoms/_prompt.document.ts", "exports": ["AtomPromptDocument"] },
-    { "file": "src/engine/schemas.ts", "exports": ["reviewVerdictSchema", "planArtifactSchema", "ReviewVerdictSchema", "PlanArtifactSchema"] }
+    { "file": "src/engine/atoms/specialist.atom.ts", "exports": ["SpecialistArgs", "SpecialistExtraSection", "SpecialistAtomDeps", "specialistAtom", "shapeSpecialistModelCallInput"] },
+    { "file": "src/engine/atoms/specifier.atom.ts", "exports": ["SpecifierArgs", "SpecifierProposalDraft", "SpecifierAtomDeps", "specifierAtom", "shapeSpecifierModelCallInput"] },
+    { "file": "src/engine/atoms/sensors.collect.atom.ts", "exports": ["SensorsCollectArgs", "SensorsCollectAtomDeps", "sensorsCollectAtom"] },
+    { "file": "src/engine/atoms/plan.review.atom.ts", "exports": ["PlanReviewArgs", "PlanReviewAtomDeps", "planReviewAtom", "shapePlanReviewModelCallInput"] },
+    { "file": "src/engine/atoms/specialist.verdict.atom.ts", "exports": ["SpecialistVerdictArgs", "SpecialistVerdictAtomDeps", "SpecialistVerdictStage", "specialistVerdictAtom", "shapeSpecialistVerdictModelCallInput"] },
+    { "file": "src/engine/schemas.ts", "exports": ["reviewVerdictSchema", "planArtifactSchema", "planReviewSchema", "specialistVerdictSchema", "ReviewVerdictSchema", "PlanArtifactSchema", "PlanReviewSchema", "SpecialistVerdictSchema"] }
   ],
   "duplicates": {
     "ignore": [
@@ -63,6 +68,12 @@
       "src/engine/atoms/builder.atom.ts",
       "src/engine/atoms/reviewer.atom.ts",
       "src/engine/atoms/researcher.atom.ts",
+      "src/engine/atoms/refiner.atom.ts",
+      "src/engine/atoms/planner.atom.ts",
+      "src/engine/atoms/specialist.atom.ts",
+      "src/engine/atoms/specifier.atom.ts",
+      "src/engine/atoms/plan.review.atom.ts",
+      "src/engine/atoms/specialist.verdict.atom.ts",
       "src/sensors/playwright.ts",
       "src/sensors/a11y.ts",
       "src/sensors/vision.ts",

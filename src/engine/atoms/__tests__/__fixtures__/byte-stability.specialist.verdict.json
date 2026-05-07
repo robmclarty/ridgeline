@@ -1,0 +1,7 @@
+{
+  "args": {
+    "stage": "plan",
+    "raw": "{\"perspective\":\"sequential\",\"phases\":[{\"slug\":\"foo\"}]}"
+  },
+  "modelCallInput": "## Stage\n\n<!-- role: data -->\nplan\n\n## Specialist Raw Output\n\n<!-- role: data -->\n{\"perspective\":\"sequential\",\"phases\":[{\"slug\":\"foo\"}]}\n\n## Verdict Extraction\n\nExtract the structured agreement-detection skeleton for the `plan` stage.\nThe skeleton must include:\n- `phaseList`: array of `{ id, slug }` entries in sequential order; id is `NN-<slug>`.\n- `depGraph`: array of `[from, to]` id pairs describing cross-phase dependencies.\n\n## Output Format\n\nRespond with ONLY a JSON object matching the schema. The `stage` field MUST equal the stage above. No prose, no markdown fences, no commentary."
+}

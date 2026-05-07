@@ -209,7 +209,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 60708,
+          "inputTokens": 115,
+          "costUsd": 12.8689695,
+          "durationMs": 943976,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T04:24:23.966Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "08-leaf-flows",

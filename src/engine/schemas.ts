@@ -32,7 +32,7 @@ const phaseProposalSchema = z.object({
   dependsOn: z.array(z.string()).optional(),
 })
 
-const skeletonSchema = z.object({
+const planSkeletonShape = z.object({
   phaseList: z.array(z.object({
     id: z.string(),
     slug: z.string(),
@@ -45,7 +45,43 @@ export const planArtifactSchema = z.object({
   summary: z.string(),
   phases: z.array(phaseProposalSchema),
   tradeoffs: z.string(),
-  _skeleton: skeletonSchema,
+  _skeleton: planSkeletonShape,
 })
 
 export type PlanArtifactSchema = z.infer<typeof planArtifactSchema>
+
+export const planReviewSchema = z.object({
+  approved: z.boolean(),
+  issues: z.array(z.string()),
+})
+
+export type PlanReviewSchema = z.infer<typeof planReviewSchema>
+
+const specSkeletonSchema = z.object({
+  stage: z.literal("spec"),
+  skeleton: z.object({
+    sectionOutline: z.array(z.string()),
+    riskList: z.array(z.string()),
+  }),
+})
+
+const planSkeletonSchema = z.object({
+  stage: z.literal("plan"),
+  skeleton: planSkeletonShape,
+})
+
+const researchSkeletonSchema = z.object({
+  stage: z.literal("research"),
+  skeleton: z.object({
+    findings: z.array(z.string()),
+    openQuestions: z.array(z.string()),
+  }),
+})
+
+export const specialistVerdictSchema = z.discriminatedUnion("stage", [
+  specSkeletonSchema,
+  planSkeletonSchema,
+  researchSkeletonSchema,
+])
+
+export type SpecialistVerdictSchema = z.infer<typeof specialistVerdictSchema>

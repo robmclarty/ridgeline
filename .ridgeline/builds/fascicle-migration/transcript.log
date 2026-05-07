@@ -1951,3 +1951,149 @@ Visual review skipped — diff touches no visual code (no `.tsx`/`.svg`/`.css`/t
 [ridgeline] [06-atoms-a] PASSED (1614s)
 
 [ridgeline] ── Phase 9/14: 07-atoms-b ──
+[ridgeline] [07-atoms-b] Building...
+[Bash] ls src/engine/atoms/ src/engine/pipeline/ 2>&1 | head -100
+[Bash] ls src/engine/atoms/__tests__/ src/engine/atoms/__tests__/__fixtures__/ 2>&1
+[Read] src/engine/atoms/index.ts
+[Read] src/engine/atoms/builder.atom.ts
+[Read] src/engine/atoms/reviewer.atom.ts
+[Read] src/engine/atoms/planner.atom.ts
+[Read] src/engine/atoms/_shape.ts
+[Read] src/engine/atoms/_prompt.document.ts
+[Read] src/engine/schemas.ts
+[Read] src/engine/pipeline/specialist.verdict.ts
+[ToolSearch]
+[TodoWrite]
+[Read] src/engine/pipeline/specify.exec.ts
+[Read] src/engine/pipeline/sensors.collect.ts
+[Read] src/engine/pipeline/plan.review.ts
+[Read] src/engine/pipeline/plan.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+Now let me look at researcher and refiner atoms to understand the pattern, and the existing atom tests for reference.
+[Read] src/engine/atoms/researcher.atom.ts
+[Read] src/engine/atoms/refiner.atom.ts
+[Read] src/engine/atoms/__tests__/_stub.engine.ts
+[Read] src/engine/atoms/__tests__/builder.test.ts
+[Read] src/engine/atoms/__tests__/reviewer.test.ts
+[Read] src/engine/atoms/__tests__/byte-stability.test.ts
+[Read] src/engine/atoms/__tests__/__fixtures__/byte-stability.builder.json
+Now let me look at types and check the SpecialistVerdict types to write a proper Zod schema for it.
+[Bash] grep -n "SpecialistVerdict\|SpecialistSkeletonSpec\|SpecialistSkeletonPlan\|SpecialistSkeletonResearch\|SpecialistStage" src/types.ts | head -50
+[Read] src/types.ts
+Now let me look at sensors and the matching plan.review pattern more carefully to understand what "atom" structure makes sense here.
+[Read] src/sensors
+[Bash] ls src/sensors/
+[Read] src/sensors/index.ts
+[TodoWrite]
+Let me understand the existing schemas pattern further then implement.
+[Read] src/engine/atoms/__tests__/__fixtures__/byte-stability.refiner.json
+Now let me check how `stable.prompt.ts` is set up so I understand promptShaper.
+[Read] src/engine/claude/stable.prompt.ts
+[Read] .fallowrc.json
+Now I'll add the schemas and start creating atoms.
+[Edit] src/engine/schemas.ts
+[TodoWrite]
+Now create specialist.atom.ts (generic narrative specialist invocation):
+[Write] src/engine/atoms/specialist.atom.ts
+Now the specifier atom (synthesizer for spec stage). Looking at pre-migration `assembleSynthesizerUserPrompt`:
+[Write] src/engine/atoms/specifier.atom.ts
+[TodoWrite]
+[Bash] grep -n "SensorName" src/engine/detect/index.ts | head -5
+[Write] src/engine/atoms/sensors.collect.atom.ts
+Now plan.review.atom.ts:
+[Write] src/engine/atoms/plan.review.atom.ts
+Now specialist.verdict.atom.ts:
+[Write] src/engine/atoms/specialist.verdict.atom.ts
+[TodoWrite]
+[Write] src/engine/atoms/index.ts
+[Edit] .fallowrc.json
+Now let me also add the new atom files to the duplicates ignore (since they share the same skeleton with builder/reviewer/etc):
+[Edit] .fallowrc.json
+Now create unit tests. Let me start with the simpler tests for non-schema atoms:
+[Write] src/engine/atoms/__tests__/specialist.test.ts
+[Write] src/engine/atoms/__tests__/specifier.test.ts
+Now sensors.collect tests — this is non-model_call:
+[Write] src/engine/atoms/__tests__/sensors.collect.test.ts
+[Write] src/engine/atoms/__tests__/plan.review.test.ts
+[Write] src/engine/atoms/__tests__/specialist.verdict.test.ts
+Now add a barrel-import test (AC9) and add byte-stability fixtures. Let me first run a quick TypeScript check to ensure things compile:
+[Bash] npx tsc --noEmit 2>&1 | head -80
+Type check is clean. Now byte-stability fixtures. I need to generate them programmatically. Let me create the fixtures and a script-style approach. First the easy ones — specifier and specialist.verdict — by creating fixture JSON files that need their `modelCallInput` regenerated. Let me write a small helper script approach:
+[Bash] node --experimental-strip-types -e '
+[Bash] ls node_modules/.bin/ | grep -E "tsx|tsm|ts-node" | head
+[Bash] ls node_modules/.bin/ | grep -E "^ts" | head
+[Write] src/engine/atoms/__tests__/_gen_fixtures.ts
+[Bash] mv src/engine/atoms/__tests__/_gen_fixtures.ts src/engine/atoms/__tests__/_gen_fixtures.test.ts
+[Bash] GEN_BYTE_STABILITY_FIXTURES=1 npx vitest run src/engine/atoms/__tests__/_gen_fixtures.test.ts 2>&1 | tail -30
+[Bash] ls src/engine/atoms/__tests__/__fixtures__/
+Now delete the generator file and update byte-stability.test.ts:
+[Bash] rm src/engine/atoms/__tests__/_gen_fixtures.test.ts
+[Read] src/engine/atoms/__tests__/__fixtures__/byte-stability.specialist.json
+[Edit] src/engine/atoms/__tests__/byte-stability.test.ts
+[Edit] src/engine/atoms/__tests__/byte-stability.test.ts
+Now add the barrel-import test (AC9):
+[Write] src/engine/atoms/__tests__/index.barrel.test.ts
+Now run the new tests:
+[Bash] npx vitest run src/engine/atoms/__tests__/ 2>&1 | tail -50
+[TodoWrite]
+Now let me audit the call sites of the Tier 2 candidates. Let me look at the atoms and existing code to count repetitions:
+[Grep] composeSystemPrompt|buildStablePrompt
+[Grep] handoff|appendHandoff|handoffMd
+[Write] .ridgeline/builds/fascicle-migration/phase-7-tier2-audit.md
+Now re-verify capability matrix. Let me look at the existing matrix and check fascicle 0.3.8 source.
+[Read] .ridgeline/builds/fascicle-migration/baseline/capability-matrix.md
+[Bash] grep -E '"fascicle"|"zod"' package.json
+[Bash] grep -A2 '"version"' node_modules/fascicle/package.json | head -5
+[Bash] grep -E "(skip_probe|startup_timeout_ms|stall_timeout_ms|auth_mode|install_signal_handlers)" node_modules/fascicle/dist/index.js | head -30
+[Bash] grep -E "skip_probe" node_modules/fascicle/dist/index.js | head -10
+[Bash] grep -E "skip_probe" node_modules/fascicle/dist/index.d.ts | head -5
+[Edit] .ridgeline/builds/fascicle-migration/baseline/capability-matrix.md
+[Edit] .ridgeline/builds/fascicle-migration/baseline/capability-matrix.md
+[TodoWrite]
+[Bash] ls node_modules/agnix/bin/ 2>&1
+[Bash] file node_modules/agnix/bin/agnix-binary 2>&1
+Good, agnix binary is present. Let me run `npm run check` now:
+[Bash] npm run check 2>&1 | tail -80
+[Bash] cat .check/dead.txt 2>&1 | tail -50
+[Bash] ls .check/ 2>&1
+[Bash] cat .check/dead.stdout.txt | head -60
+[Bash] grep -rn "from.*sensors\.collect" src 2>&1 | head -20
+[Read] src/engine/schemas.ts
+[Edit] src/engine/schemas.ts
+Now fix the sensors.collect duplicate exports issue. I'll keep the registry/helper internal to the atom file and only re-export the factory + types from the index:
+[Edit] src/engine/atoms/sensors.collect.atom.ts
+[Edit] src/engine/atoms/index.ts
+[Edit] .fallowrc.json
+Now also check if the test imports the `collectSensorFindings` helper that I removed:
+[Read] src/engine/atoms/__tests__/sensors.collect.test.ts
+Good, the test only uses `sensorsCollectAtom`. Now also fix the index.barrel test which imported `collectSensorFindings` and `SENSOR_REGISTRY`:
+[Bash] grep -n "collectSensorFindings\|SENSOR_REGISTRY" src/engine/atoms/__tests__/index.barrel.test.ts
+Good, no references. Run check again:
+[Bash] npm run check 2>&1 | tail -30
+All checks green. Now capture phase-7-check.json:
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-7-check.json && cat /Users/ro…
+[TodoWrite]
+Now let me verify the build still works end-to-end (AC12) and that grep checks pass for the no-pipeline / no-claude.exec rules:
+[Bash] npm run build 2>&1 | tail -10 && node dist/cli.js --help 2>&1 | head -5
+[Grep] from "\.\./pipeline|from "\.\./claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)
+Good. Let me also verify the atom-must-import-stable-prompt rule passes for new atoms:
+[Bash] npx ast-grep scan --filter '.*atom-must-import-stable-prompt.*' 2>&1 | head -20
+[Bash] npx ast-grep scan 2>&1 | tail -10
+Now write the handoff entry:
+[Bash] wc -l .ridgeline/builds/fascicle-migration/handoff.md
+[Bash] cat >> .ridgeline/builds/fascicle-migration/handoff.md <<'EOF'
+[TodoWrite]
+Let me do a final verification that all changes look right and run a check one more time as the final sanity gate:
+[Bash] npm run check 2>&1 | tail -25
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-7-check.json
+All phase-7 acceptance criteria are met. Final summary:
+
+- **5 new atoms** implemented (`specialist`, `specifier`, `sensors.collect`, `plan.review`, `specialist.verdict`) following the `compose(name, sequence([shaper, model_call(...)]))` pattern.
+- **Two new schemas** (`planReviewSchema`, `specialistVerdictSchema`) added to `src/engine/schemas.ts` with referential-equality unit tests on both schema-bearing atoms.
+- **`src/engine/atoms/index.ts`** populated as the canonical barrel re-exporting all ten atoms.
+- **10 new unit tests** + **4 new byte-stability fixtures** covering the new atoms.
+- **`phase-7-tier2-audit.md`** lands with all five candidates counted; default outcome (no Tier 2 promotion) holds.
+- **`capability-matrix.md`** re-verified against fascicle 0.3.8; no drift detected.
+- **`phase-7-check.json`** captured: top-level `ok: true`, all eight sub-checks `ok: true`, 1206 unit tests pass.
+
+READY_FOR_REVIEW

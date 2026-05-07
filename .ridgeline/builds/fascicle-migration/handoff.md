@@ -1320,3 +1320,328 @@ Artifacts captured:
   phase ran on a worktree that already had the binary in place; no
   symlink was needed.
 
+
+
+## Phase 07-atoms-b: Atoms (part B), Tier 2 audit, capability re-verification
+
+### What was built
+
+Phase 7 completes the ten-atom set, lands the Tier 2 audit document, and
+re-verifies the fascicle 0.3.8 capability matrix. The old pipeline at
+`src/engine/pipeline/` remains untouched and still drives `ridgeline build`
+end-to-end.
+
+Files added:
+
+- `src/engine/atoms/specialist.atom.ts` — `specialistAtom(deps)` returns
+  `Step<SpecialistArgs, GenerateResult<unknown>>`. Generic narrative
+  specialist invocation. Takes a pre-rendered `userPrompt` plus optional
+  `extraSections` (for cross-specialist annotation contexts). Atom shape:
+  `compose("specialist", sequence([shaper, model_call({ engine, model, system })]))`.
+  Non-schema-bearing.
+- `src/engine/atoms/specifier.atom.ts` — `specifierAtom(deps)` returns
+  `Step<SpecifierArgs, GenerateResult<unknown>>`. Synthesizer for the
+  spec stage. Mirrors the pre-migration `assembleSynthesizerUserPrompt`
+  (shape.md → user input + authority block? → specialist proposals →
+  output directory → optional gap-flagging instruction).
+  Non-schema-bearing.
+- `src/engine/atoms/sensors.collect.atom.ts` — `sensorsCollectAtom(deps)`
+  returns `Step<SensorsCollectArgs, ReadonlyArray<SensorFinding>>`.
+  Pure orchestration step (no `model_call`). Wraps the existing sensor
+  registry (playwright, vision, a11y, contrast) as a fascicle Step,
+  preserving the per-sensor try/catch and warn-on-failure behavior of
+  the legacy `pipeline/sensors.collect.ts`. Adapter-injectable
+  `registry` and `onWarn` deps for unit tests.
+- `src/engine/atoms/plan.review.atom.ts` — `planReviewAtom(deps)`
+  returns `Step<PlanReviewArgs, GenerateResult<PlanReviewSchema>>`.
+  Schema-bearing: passes `planReviewSchema` referentially to
+  `model_call`. Mirrors the pre-migration `runPlanReviewer` user prompt
+  (spec → constraints → taste? → design → target model + phase budget
+  → synthesized phases → output format directive).
+- `src/engine/atoms/specialist.verdict.atom.ts` —
+  `specialistVerdictAtom(deps)` returns `Step<SpecialistVerdictArgs,
+  GenerateResult<SpecialistVerdictSchema>>`. Schema-bearing: passes
+  `specialistVerdictSchema` (a Zod discriminated union over `stage` ∈
+  `"spec" | "plan" | "research"`) referentially to `model_call`.
+  Stage-specific extraction instructions are appended to the user
+  prompt; the model is asked to extract the agreement-detection
+  skeleton from raw specialist output.
+
+Files modified:
+
+- `src/engine/atoms/index.ts` — populated. Re-exports each of the ten
+  atom Step factories (`builderAtom`, `reviewerAtom`, `plannerAtom`,
+  `refinerAtom`, `researcherAtom`, `specialistAtom`, `specifierAtom`,
+  `sensorsCollectAtom`, `planReviewAtom`, `specialistVerdictAtom`) plus
+  their corresponding shape functions and types. The barrel is the
+  canonical surface that Phase 8/9 flows will import from.
+- `src/engine/schemas.ts` — added `planReviewSchema` (`{ approved,
+  issues }`), `specialistVerdictSchema` (discriminated union over
+  stage), and the inferred `PlanReviewSchema` /
+  `SpecialistVerdictSchema` types. The pre-existing internal
+  `skeletonSchema` was renamed to `planSkeletonShape` and reused inside
+  the discriminated-union plan variant — eliminating a 7-line
+  duplicate-block flag from fallow.
+- `src/engine/atoms/__tests__/byte-stability.test.ts` — extended with
+  four new fixture-replay assertions covering specialist, specifier,
+  specialist.verdict, and plan.review.
+- `.fallowrc.json` — added `ignoreExports` entries for the five new
+  atom modules and the four new schema exports
+  (`planReviewSchema`/`PlanReviewSchema`,
+  `specialistVerdictSchema`/`SpecialistVerdictSchema`); added the five
+  new atom source files to `duplicates.ignore` (they share the same
+  `compose(name, sequence([shaper, model_call]))` skeleton flagged by
+  the suffix-array detector).
+
+Tests added (10 new unit tests, all green; total 1206 unit tests pass):
+
+- `src/engine/atoms/__tests__/specialist.test.ts` — 2 tests covering
+  the user-prompt-verbatim shaper and the optional extra-sections
+  rendering.
+- `src/engine/atoms/__tests__/specifier.test.ts` — 2 tests covering
+  shape rendering (shape.md + drafts + output directory) and the
+  user-input authority + gap-flagging branches.
+- `src/engine/atoms/__tests__/sensors.collect.test.ts` — 2 tests
+  covering the per-sensor in-order dispatch (using a stub registry)
+  and the warn-and-continue behavior on sensor exceptions.
+- `src/engine/atoms/__tests__/plan.review.test.ts` — 2 tests covering
+  AC5 (`expect(opts.schema).toBe(planReviewSchema)` referentially)
+  and shape rendering of the plan-reviewer user prompt.
+- `src/engine/atoms/__tests__/specialist.verdict.test.ts` — 2 tests
+  covering AC5 (`expect(opts.schema).toBe(specialistVerdictSchema)`
+  referentially) and stage-specific extraction-instruction rendering.
+- `src/engine/atoms/__tests__/index.barrel.test.ts` — 2 tests covering
+  AC9 (the barrel re-exports all ten factories AND each yields a
+  non-null Step instance with a `.run` method).
+
+Fixtures added (4):
+
+- `src/engine/atoms/__tests__/__fixtures__/byte-stability.specialist.json`
+- `src/engine/atoms/__tests__/__fixtures__/byte-stability.specifier.json`
+- `src/engine/atoms/__tests__/__fixtures__/byte-stability.specialist.verdict.json`
+- `src/engine/atoms/__tests__/__fixtures__/byte-stability.plan.review.json`
+
+Each fixture pairs a frozen `args` object with the resulting
+`modelCallInput` string. The byte-stability test asserts
+`expect(out).toBe(fixture.modelCallInput)` for each — pinning prompt
+assembly so prompt-cache hit rate cannot regress silently.
+
+Artifacts captured:
+
+- `.ridgeline/builds/fascicle-migration/phase-7-tier2-audit.md` —
+  enumerates each Tier 2 candidate (`with_stable_prompt`,
+  `with_handoff`, `specialist_panel`, `adversarial_archived`,
+  `resumable`) with a counted call-site repetition number and a
+  promote/defer/reject disposition. Outcome: **no Tier 2 composites
+  promoted**, matching the spec's expected default and `taste.md`'s
+  3+-repetition gate.
+- `.ridgeline/builds/fascicle-migration/baseline/capability-matrix.md`
+  — re-verified against pinned `fascicle@0.3.8` distribution; added a
+  Phase 7 re-verification footer recording each row's confirmation
+  (auth_mode default, startup_timeout_ms, stall_timeout_ms,
+  install_signal_handlers default for `run`, `SandboxProviderConfig`
+  union shape, `RunOptions` shape, `Engine.generate` signature,
+  `fascicle/adapters` subpath status, `ai` peer policy).
+  **No drift detected.**
+- `.ridgeline/builds/fascicle-migration/phase-7-check.json` — verbatim
+  copy of `.check/summary.json` at this phase's exit commit. All eight
+  sub-checks (types, lint, struct, agents, dead, docs, spell, test)
+  report `ok: true` with `exit_code: 0`. Top-level `ok: true`. 1206
+  unit tests pass.
+
+### AC walkthrough
+
+- **AC1** — `src/engine/atoms/` contains exactly the ten `*.atom.ts`
+  files plus `index.ts`, `_shape.ts`, `_prompt.document.ts`. The
+  barrel re-exports all ten atoms.
+- **AC2** — Each new atom uses
+  `compose(name, sequence([shaper, model_call({...})]))` (matching the
+  Phase 6 pattern). The `atom-must-import-stable-prompt` ast-grep rule
+  continues to pass; each model-call atom imports from `./_shape`
+  which itself imports `buildStablePrompt` from
+  `../claude/stable.prompt`.
+- **AC3** — `grep -rE 'from "../pipeline|from "../claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)"' src/engine/atoms/`
+  returns no matches.
+- **AC4** — Each new atom has at least one unit test under
+  `src/engine/atoms/__tests__/<atom>.test.ts` using `stubEngine(...)`
+  from `_stub.engine.ts`. No real claude_cli provider is invoked in
+  unit tests; tests pass `install_signal_handlers: false` to fascicle's
+  `run(...)`. `sensors.collect.test.ts` uses an injected stub registry.
+- **AC5** — `plan.review.test.ts:
+  "passes planReviewSchema referentially to model_call"` and
+  `specialist.verdict.test.ts:
+  "passes specialistVerdictSchema referentially to model_call"` both
+  assert `expect(opts.schema).toBe(<schema>)` (referential identity,
+  not deep-equal).
+- **AC6** — Four new byte-stability fixtures land:
+  `byte-stability.{specialist,specifier,specialist.verdict,plan.review}.json`.
+  Each is exercised by `byte-stability.test.ts`. AC6's "at minimum
+  plan.review, specialist.verdict, and specifier" floor is exceeded;
+  the specialist atom is also fixturized.
+- **AC7** — `phase-7-tier2-audit.md` enumerates all five candidates
+  with counts and dispositions; default outcome (no promotion) holds.
+- **AC8** — `baseline/capability-matrix.md` re-verified against
+  `fascicle@0.3.8`; the Phase 7 footer records the verification.
+  **No drift detected.**
+- **AC9** — `index.barrel.test.ts:
+  "re-exports all ten atom factories"` and
+  `"each factory yields a non-null Step instance"` cover the barrel.
+- **AC10** — `src/engine/pipeline/*.exec.ts` files are unchanged.
+  `npm run build && node dist/cli.js --help` exits 0.
+- **AC11** — `npm run check` exits 0; `.check/summary.json` shows
+  `ok: true` and zero failures across all eight tools.
+- **AC12** — `ridgeline build` runs end-to-end via the legacy
+  pipeline. The new atoms are not yet consumed by any command path
+  (verified by `grep` returning no matches in `src/commands/`); the
+  legacy `pipeline/build.exec.ts → pipeline/build.loop.ts → claude.exec.ts`
+  chain still executes builds. The migration discipline forbids the
+  binary under migration from self-dogfooding (Phase 6/build dogfood
+  gate is explicit). The maximal in-sandbox proof is the build-and-help
+  smoke test plus the 1206 passing unit tests.
+- **AC13** — `phase-7-check.json` is captured at the expected path.
+  Top-level `ok: true`; all eight sub-checks `ok: true`.
+
+### Decisions
+
+- **`planReviewSchema` lives ridgeline-side, not as `PlanVerdict`
+  shaped from `types.ts`.** The pre-migration `PlanVerdict` is a
+  TypeScript type with no runtime presence; ridgeline-side schemas
+  belong in `src/engine/schemas.ts` next to the existing
+  `reviewVerdictSchema` and `planArtifactSchema`. The new schema
+  matches the same shape (`{ approved, issues }`) — adding it to
+  `schemas.ts` is the smallest deviation from the established
+  convention.
+- **`specialistVerdictSchema` as a Zod discriminated union over
+  `stage`.** The pre-migration TypeScript type is a discriminated
+  union over `stage`; the natural Zod equivalent is
+  `z.discriminatedUnion("stage", [...])`. Using a single schema lets
+  the atom test assert referential equality once (AC5) without needing
+  to dispatch on stage at the schema-passing boundary. The model is
+  required to set `stage` to match the input stage; the runtime check
+  is performed by Zod when fascicle validates the response.
+- **`planSkeletonShape` factored out.** The original
+  `skeletonSchema` (used inside `planArtifactSchema._skeleton`) and
+  the new `planSkeletonSchema` (`{ stage: "plan", skeleton: { phaseList,
+  depGraph } }`) shared the same inner shape. Extracting it removes a
+  7-line clone group flagged by fallow. The extracted `planSkeletonShape`
+  is module-private — neither exported nor named in the public schema
+  surface — to keep the boundary minimal.
+- **`specialist.atom.ts` keeps its shaper as a thin pass-through.**
+  The atom is generic — pre-rendered user prompts come from the
+  caller. The `extraSections` slot is the only non-pass-through
+  branch; it appends Cross-Specialist Annotations (or any future
+  contextual data) below the user prompt as `## <heading>` data
+  blocks. This matches the pre-migration two-round annotation flow's
+  shape and lets a single atom serve both the structured-specialist
+  dispatch and the annotation pass.
+- **`specifier.atom.ts` is the synthesizer atom only, not the
+  spec-specialist atom.** The pre-migration ensemble has two roles:
+  (1) per-perspective specialists producing structured proposals via
+  `SPEC_SPECIALIST_SCHEMA` and JSON directive; (2) the synthesizer
+  reading drafts and writing spec/constraints/taste files via the
+  Write tool. The atom layer mirrors the second role; the
+  per-perspective specialist call is `specialist.atom.ts` (generic,
+  prompt-text in/out). This split keeps each atom's responsibility
+  small and avoids duplicating the JSON-directive logic that lives in
+  the planner atom.
+- **`sensors.collect.atom.ts` keeps its sensor adapters internal
+  (not re-exported via the barrel).** The pre-migration
+  `pipeline/sensors.collect.ts` exports `SENSOR_REGISTRY` and
+  `collectSensorFindings` — both consumed by `phase.sequence.ts` and
+  test harnesses. Re-exporting the same names from the atom file
+  triggered fallow's "duplicate exports" detector. The atom needs
+  only the factory (`sensorsCollectAtom`) at its boundary — the
+  registry is injected via `deps.registry` in tests, defaulting to
+  the file-internal `defaultRegistry`. The pre-migration callers
+  remain on `pipeline/sensors.collect.ts` until Phase 8 migrates the
+  flows; once the pipeline file is deleted at Phase 8, the names
+  free up and could be re-exported from the atom barrel if desired.
+- **`stage` rendered as `## Stage` data block, not as a system-prompt
+  boolean.** The specialist verdict atom's stage discriminator
+  appears in the user prompt as `## Stage\n\n<!-- role: data -->\nplan`
+  (or `spec`/`research`). The model is then instructed to set the
+  output `stage` field to match. Putting the stage in the user
+  prompt (vs. the system prompt) keeps the dynamic per-call portion
+  isolated and ensures the cacheable system-prompt block stays
+  consistent across stages — preserving prompt-cache hit rate at the
+  same level as other atoms.
+
+### Deviations
+
+- **No production wiring.** Per AC10/AC12, the new atoms are pure
+  additions; no command path consumes them yet. `ridgeline build`
+  runs through the legacy pipeline end-to-end at this phase exit.
+  Phase 8 (leaf flows) and Phase 9 (build/auto + SIGINT) wire the
+  atoms in.
+- **`SENSOR_REGISTRY` and `collectSensorFindings` symbol divergence
+  between atom and pipeline.** The legacy pipeline exports
+  `SENSOR_REGISTRY` and `collectSensorFindings` from
+  `pipeline/sensors.collect.ts`. The new atom file deliberately does
+  NOT re-export the same names to avoid fallow's duplicate-exports
+  flag. Phase 8 will resolve this by deleting the pipeline file
+  entirely and (optionally) re-exposing the symbols from the atom.
+- **`schema` parameter on `specialist.atom.ts` not exposed at the
+  factory boundary.** The atom is non-schema-bearing per the spec
+  text. If a future caller needs a schema-bearing variant of the
+  generic specialist call, the cleanest path is a new
+  `specialist.structured.atom.ts` rather than parameterizing the
+  existing factory — the existing one's call-site simplicity is the
+  point of the split.
+
+### Notes for next phase (08-leaf-flows)
+
+- **Atom set is complete.** All ten atoms in `src/engine/atoms/`
+  are ready to be consumed by leaf-command flows in
+  `src/engine/flows/`. The barrel at `src/engine/atoms/index.ts`
+  re-exports the full surface. Schemas live in
+  `src/engine/schemas.ts` (`reviewVerdictSchema`, `planArtifactSchema`,
+  `planReviewSchema`, `specialistVerdictSchema`).
+- **First flow targets.** The natural starting points for Phase 8
+  are the simpler leaf commands (research, refine, retrospective,
+  spec) — each consumes a small subset of atoms and has minimal
+  composite wiring. `build` and `auto` are reserved for Phase 9
+  because they exercise every Tier 1 composite.
+- **Flow integration pattern.** The canonical entry-point shape is:
+
+  ```ts
+  const engine = makeRidgelineEngine(cfg)
+  try {
+    await run(flow, input, { trajectory, checkpoint_store, install_signal_handlers: true })
+  } finally {
+    await engine.dispose()
+  }
+  ```
+
+  Where `flow` composes atoms + composites via fascicle's `pipe`,
+  `sequence`, `parallel`, `branch`, `map`, etc. The factory's deps
+  threading (`pluginDirs` from `discoverPluginDirs`,
+  `cleanupPluginDirs` after dispose) is the caller's responsibility
+  per the Phase 4 lifecycle test.
+- **`specialist_panel` Tier 2 candidate watch.** Phase 8/9 will
+  produce the first three production call sites of the
+  ensemble-dispatch pattern (planner, specifier, researcher flows).
+  Re-evaluate `phase-7-tier2-audit.md`'s deferral when the third
+  call-site emerges; if the imperative wiring is verbatim across
+  all three, promote `specialist_panel` to a dedicated composite at
+  that point.
+- **`SpecialistVerdictArgs.stage` carries through to the schema.**
+  The model receives the stage as a `## Stage` data block AND in
+  the discriminated-union schema's `stage` literal. Callers should
+  set both to the same value; if a caller passes
+  `args.stage === "plan"` but the model returns `{ stage: "spec",
+  ... }`, fascicle's schema validator will fail (zod's discriminated
+  union dispatch is exact-match on the literal). This is by design
+  — the atom is best-effort extraction, but the schema rejects
+  cross-stage drift.
+- **Old pipeline survives Phase 8 partial migration.** Per the
+  spec, "Old `src/engine/pipeline/*.exec.ts` files remain in place,
+  compile, and continue to run all existing E2E tests" until
+  Phase 9 / cleanup. Phase 8 will migrate leaf commands one at a
+  time, leaving the pipeline operational at every intermediate
+  commit.
+- **Environmental footnote (agnix-binary).** No symlink workaround
+  was needed in this worktree — the parent repository's
+  `node_modules/agnix/bin/agnix-binary` was already populated.
+  Future fresh worktrees may need the symlink trick from
+  `discoveries.jsonl` (entry by 02-sandbox-policy) when github.com
+  is sandbox-blocked.
