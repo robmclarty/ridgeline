@@ -1,5 +1,35 @@
 # Changelog
 
+## v0.12.1 — 2026-05-06
+
+### Added
+
+- **Pre-wave environment provisioning hook.** Phase worktrees created
+  for parallel waves are now post-processed by a fixer registry that
+  mirrors known package binaries from the main worktree's
+  `node_modules/` into the new worktree if missing. First entry: agnix's
+  platform binary, whose postinstall download is blocked by the
+  semi-locked sandbox. Eliminates the per-phase rediscovery pattern
+  where every parallel builder independently burned time working
+  around the same blocker. Extensible — new fixers register as
+  `{ pkg, binPath, why }` triples.
+- **Cross-phase discoveries log.** Parallel builders now share an
+  append-only `discoveries.jsonl` in the main worktree (absolute path
+  injected into the builder prompt). Builders consult it before
+  working around environmental blockers and append their own entries
+  when they find a fix. Advisory only — entries are hints, not
+  directives. Gitignored so concurrent writes never become a
+  merge-conflict source.
+
+### Fixed
+
+- **`--require-phase-approval` honours the flag in non-TTY
+  environments.** Previously the prompt silently auto-continued under
+  any pipe/redirect (CI, agent harnesses, editor integrations),
+  defeating the purpose of asking for approval. The flag now pauses
+  the build with a clear notice telling the user to resume from a TTY
+  or omit the flag for unattended runs.
+
 ## v0.12.0 — 2026-05-06
 
 ### Added
