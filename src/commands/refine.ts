@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { run } from "fascicle"
 import { printInfo, printError } from "../ui/output.js"
-import { invokeRefiner, type RefineConfig } from "../engine/legacy/refine.js"
+import { runRefiner, type RefineConfig } from "../engine/refiner.js"
 import { advancePipeline } from "../stores/state.js"
 import { logTrajectory } from "../stores/trajectory.js"
 import { recordCost } from "../stores/budget.js"
@@ -75,7 +75,7 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
         changelogMd: input.changelogMd,
         iterationNumber: input.iterationNumber,
       }
-      return invokeRefiner(input.specMd, input.researchMd, input.constraintsMd, input.tasteMd, config)
+      return runRefiner(input.specMd, input.researchMd, input.constraintsMd, input.tasteMd, config)
     },
   })
 

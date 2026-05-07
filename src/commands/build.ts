@@ -6,19 +6,19 @@ import { initLogger } from "../ui/logger.js"
 import { initTranscript } from "../ui/transcript.js"
 import { detectSandbox } from "../engine/claude/sandbox.js"
 import { scanPhases } from "../stores/phases.js"
-import { runPhase } from "../engine/legacy/run-phase.js"
+import { executeBuildPhase } from "../engine/build-phase.js"
 import { loadState, saveState, initState, resetRetries, reconcilePhases, markBuildRunning, advancePipeline } from "../stores/state.js"
-import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/phase.graph.js"
+import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/phase-graph.js"
 import { loadBudget } from "../stores/budget.js"
 import { cleanupBuildTags } from "../stores/tags.js"
-import { killAllClaudeSync } from "../engine/claude/claude.exec.js"
-import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../engine/worktree.parallel.js"
+import { killAllClaudeSync } from "../engine/claude-process.js"
+import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../engine/worktree-parallel.js"
 import { provisionPhaseWorktree } from "../engine/worktree.provision.js"
 import { consolidateHandoffs } from "../stores/handoff.js"
 import { runPlan } from "./plan.js"
 import { runRetrospective } from "./retrospective.js"
 import { ensureGitRepo } from "../engine/worktree.js"
-import { runPhaseApproval } from "../ui/phase-prompt.js"
+import { requestPhaseApproval } from "../ui/phase-prompt.js"
 import { installGracefulStopListener } from "../ui/graceful-stop.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
 import { buildFlow, type BuildFlowInput, type BuildPhaseResult, type RunPhaseStepInput } from "../engine/flows/build.flow.js"
@@ -313,7 +313,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
         const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
         printPhaseHeader(phaseIndex, phases.length, phase.id)
       }
-      const result = await runPhase(phase, config, state, targetCwd)
+      const result = await executeBuildPhase(phase, config, state, targetCwd)
       if (result === "passed") completedIds.add(phase.id)
       return result
     },
@@ -390,7 +390,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   if (config.requirePhaseApproval && stoppedReason !== "complete") {
     return
   }
-  void runPhaseApproval
+  void requestPhaseApproval
 
   const isFullyDone = state.phases.every((p) => p.status === "complete")
 

@@ -17,6 +17,8 @@
     "dist/**",
     "examples/**",
     ".worktrees/**",
-    ".ridgeline/**"
+    ".ridgeline/**",
+    ".stryker-tmp/**",
+    ".stryker-tmp-baseline/**"
   ]
 }

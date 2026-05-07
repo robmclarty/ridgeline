@@ -133,3 +133,4 @@
 {"timestamp":"2026-05-07T20:07:09.308Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (17 phases)\n"}
 {"timestamp":"2026-05-07T20:07:09.347Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
 {"timestamp":"2026-05-07T20:07:09.351Z","level":"info","phase":"11-cleanup-deletions","message":"Phase 16/17: 11-cleanup-deletions"}
+{"timestamp":"2026-05-07T20:07:09.502Z","level":"info","phase":"11-cleanup-deletions","message":"Building..."}

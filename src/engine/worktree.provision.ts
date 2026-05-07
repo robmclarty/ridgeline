@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { appendDiscovery } from "./pipeline/discoveries.js"
+import { appendDiscovery } from "./discoveries.js"
 
 /**
  * Post-worktree-creation environment provisioning.

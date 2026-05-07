@@ -2,8 +2,8 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { run } from "fascicle"
 import { printInfo, printError, printWarn } from "../ui/output.js"
-import { invokeClaude } from "../engine/claude/claude.exec.js"
-import { createDisplayCallbacks } from "../engine/claude/stream.display.js"
+import { runClaudeOneShot } from "../engine/claude.runner.js"
+import { createStreamDisplay } from "../ui/claude-stream-display.js"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
 import { getInputSource } from "../stores/state.js"
 import { resolveSandboxMode } from "../stores/settings.js"
@@ -139,16 +139,15 @@ export const runRetroRefine = async (
 
   const flow = retroRefineFlow({
     executor: async (input: RetroRefineFlowInput) => {
-      const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
+      const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
       try {
-        return await invokeClaude({
-          systemPrompt: input.systemPrompt,
-          userPrompt: input.userPrompt,
+        return await runClaudeOneShot({
+          engine,
           model: input.model,
+          system: input.systemPrompt,
+          prompt: input.userPrompt,
           allowedTools: ["Read", "Glob", "Grep"],
-          cwd: process.cwd(),
-          timeoutMs: input.timeoutMs,
-          onStdout,
+          onChunk,
         })
       } finally {
         flush()

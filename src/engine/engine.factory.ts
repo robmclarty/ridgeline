@@ -1,5 +1,5 @@
 // `--timeout <minutes>` maps onto two distinct fascicle timeouts: stall (per-call), startup (constant 120s).
-import { create_engine, type Engine } from "fascicle"
+import { create_engine, type AliasTable, type Engine } from "fascicle"
 import {
   buildSandboxPolicy,
   DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED,
@@ -10,6 +10,16 @@ import {
 
 const STARTUP_TIMEOUT_MS = 120_000
 const DEFAULT_STALL_TIMEOUT_MS = 300_000
+
+// Ridgeline routes opus/sonnet/haiku to claude_cli (subscription/OAuth path), overriding fascicle defaults that target the anthropic API provider.
+const RIDGELINE_ALIASES: AliasTable = Object.freeze({
+  opus: { provider: "claude_cli", model_id: "claude-opus-4-7" },
+  sonnet: { provider: "claude_cli", model_id: "claude-sonnet-4-6" },
+  haiku: { provider: "claude_cli", model_id: "claude-haiku-4-5" },
+  "claude-opus": { provider: "claude_cli", model_id: "claude-opus-4-7" },
+  "claude-sonnet": { provider: "claude_cli", model_id: "claude-sonnet-4-6" },
+  "claude-haiku": { provider: "claude_cli", model_id: "claude-haiku-4-5" },
+})
 
 export type RidgelineEngineConfig = {
   readonly sandboxFlag: SandboxFlag
@@ -45,6 +55,7 @@ export const makeRidgelineEngine = (cfg: RidgelineEngineConfig): Engine => {
     cfg.timeoutMinutes !== undefined ? cfg.timeoutMinutes * 60_000 : DEFAULT_STALL_TIMEOUT_MS
 
   return create_engine({
+    aliases: RIDGELINE_ALIASES,
     providers: {
       claude_cli: {
         auth_mode: "auto",

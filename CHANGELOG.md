@@ -10,6 +10,38 @@
   fascicle migration so the runtime ABI stays aligned across the substrate
   swap.
 
+### Breaking — for plugin authors
+
+- **Internal pipeline directory removed.** `src/engine/pipeline/` and
+  `src/engine/claude/{claude.exec,stream.parse,stream.result,stream.display,stream.types}.ts`
+  no longer exist. The following exports from `src/engine/index.ts` are
+  removed: `invokeBuilder`, `invokePlanner`, `invokeReviewer`, `runPhase`,
+  `invokeClaude`, `parseStreamLine`, `createStreamHandler`, `extractResult`,
+  `createDisplayCallbacks`. Plugin authors that imported any of these
+  symbols must migrate to the new substrate exports: `makeRidgelineEngine`,
+  `runClaudeOneShot`, the atom/composite/adapter/flow barrels, and the
+  fascicle `Engine.generate` API. The legacy spawn-and-stream behaviour
+  has been internalised under `src/engine/claude-process.ts` (the
+  `runClaudeProcess` function) for in-tree use only. The fascicle
+  `claude_cli` provider is now the canonical Claude subprocess driver
+  for new code paths.
+- **Internal symbol renames.** `invokeBuilder → runBuilder`,
+  `invokeReviewer → runReviewer`, `invokePlanner → runEnsemblePlanner`,
+  `invokeRefiner → runRefiner`, `invokeResearcher → runResearchEnsemble`,
+  `invokeSpecifier → runSpecifyEnsemble`, `invokeEnsemble → runEnsemble`,
+  `runPhase → executeBuildPhase`, `FATAL_PATTERNS → FATAL_ERROR_PATTERNS`,
+  `classifyError → classifyBuildError`, `createDisplayCallbacks →
+  createLegacyStdoutDisplay` (in `src/ui/claude-stream-display.ts`).
+- **File renames** to comply with the new substrate's basename rules:
+  `phase.graph.ts → phase-graph.ts`, `worktree.parallel.ts →
+  worktree-parallel.ts`. Bridge directory `src/engine/legacy/` deleted —
+  consumers should import from the new module locations directly.
+- **`FATAL_PATTERNS` and `classifyError` removed in favour of typed-error
+  retry policy.** Use `shouldRetry(err)` from
+  `src/engine/retry.policy.ts` for retry-vs-abort classification against
+  fascicle's typed error classes (`rate_limit_error`, `provider_error`,
+  `aborted_error`, `schema_validation_error`, etc.).
+
 ### Added
 
 - **Builder continuation loop.** A single phase no longer fails when the

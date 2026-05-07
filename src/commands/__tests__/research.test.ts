@@ -3,8 +3,8 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/legacy/research.js", () => ({
-  invokeResearcher: vi.fn(),
+vi.mock("../../engine/researcher.js", () => ({
+  runResearchEnsemble: vi.fn(),
 }))
 
 vi.mock("../../stores/state.js", () => ({
@@ -35,7 +35,7 @@ vi.mock("../refine.js", () => ({
   runRefine: vi.fn(),
 }))
 
-import { invokeResearcher } from "../../engine/legacy/research.js"
+import { runResearchEnsemble } from "../../engine/researcher.js"
 import { advancePipeline } from "../../stores/state.js"
 import { logTrajectory } from "../../stores/trajectory.js"
 import { recordCost } from "../../stores/budget.js"
@@ -81,7 +81,7 @@ describe("commands/research", () => {
     buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
     fs.mkdirSync(buildDir, { recursive: true })
 
-    vi.mocked(invokeResearcher).mockResolvedValue(makeEnsembleResult())
+    vi.mocked(runResearchEnsemble).mockResolvedValue(makeEnsembleResult())
   })
 
   afterEach(() => {
@@ -113,14 +113,14 @@ describe("commands/research", () => {
     expect(printError).toHaveBeenCalledWith(expect.stringContaining("constraints.md not found"))
   })
 
-  it("calls invokeResearcher with correct config", async () => {
+  it("calls runResearchEnsemble with correct config", async () => {
     fs.writeFileSync(path.join(buildDir, "spec.md"), "spec content")
     fs.writeFileSync(path.join(buildDir, "constraints.md"), "constraints")
 
     await runResearch(buildName, defaultOpts)
 
-    expect(invokeResearcher).toHaveBeenCalledTimes(1)
-    const [specMd, constraintsMd] = vi.mocked(invokeResearcher).mock.calls[0]
+    expect(runResearchEnsemble).toHaveBeenCalledTimes(1)
+    const [specMd, constraintsMd] = vi.mocked(runResearchEnsemble).mock.calls[0]
     expect(specMd).toBe("spec content")
     expect(constraintsMd).toBe("constraints")
   })

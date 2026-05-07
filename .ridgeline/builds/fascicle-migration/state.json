@@ -377,7 +377,43 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "more_work_explicit",
+          "outputTokens": 39701,
+          "inputTokens": 67,
+          "costUsd": 9.18966125,
+          "durationMs": 699850,
+          "windDownReason": "deletion sequence (pipeline/, claude streams, legacy bridges) and consumer migration (~5 invokeClaude callers, 3 createDisplayCallbacks callers) plus runPhase/ensemble atom-stack rewrite remain.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T20:18:58.248Z"
+        },
+        {
+          "attempt": 2,
+          "endReason": "more_work_explicit",
+          "outputTokens": 69555,
+          "inputTokens": 144,
+          "costUsd": 27.6690455,
+          "durationMs": 1146372,
+          "windDownReason": "heavyweight rewrites (runPhase composite, ensemble composite, leaf-flow command migrations) and the deletion sequence remain; budget exhausted by the bridge utilities and 4 consumer migrations.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T20:38:12.911Z"
+        },
+        {
+          "attempt": 3,
+          "endReason": "ready_for_review",
+          "outputTokens": 92652,
+          "inputTokens": 162,
+          "costUsd": 28.438528500000007,
+          "durationMs": 1511927,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T21:03:33.116Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "12-docs-invariants-golden",

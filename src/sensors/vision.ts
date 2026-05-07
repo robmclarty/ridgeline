@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
-import { invokeClaude } from "../engine/claude/claude.exec.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { runClaudeOneShot } from "../engine/claude.runner.js"
 import type { SensorAdapter, SensorFinding, SensorInput } from "./index.js"
 
 const PLAYWRIGHT_INSTALL_HINT =
@@ -30,15 +31,25 @@ type InvokeVision = (args: {
 }) => Promise<{ result: string }>
 
 const defaultInvokeVision: InvokeVision = async (args) => {
-  const result = await invokeClaude({
-    systemPrompt: args.systemPrompt,
-    userPrompt: args.userPrompt,
-    model: args.model,
-    allowedTools: ["Read"],
-    cwd: args.cwd,
-    timeoutMs: VISION_TIMEOUT_MS,
+  const engine = makeRidgelineEngine({
+    sandboxFlag: "off",
+    timeoutMinutes: Math.ceil(VISION_TIMEOUT_MS / 60_000),
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: args.cwd,
   })
-  return { result: result.result }
+  try {
+    const result = await runClaudeOneShot({
+      engine,
+      model: args.model,
+      system: args.systemPrompt,
+      prompt: args.userPrompt,
+      allowedTools: ["Read"],
+    })
+    return { result: result.result }
+  } finally {
+    await engine.dispose()
+  }
 }
 
 const unresolvableFinding = (): SensorFinding => ({

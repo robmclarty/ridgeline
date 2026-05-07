@@ -2,18 +2,32 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { normalizeQuestion, parseQAResponse, runQAIntake } from "../qa-workflow.js"
 import type * as readline from "node:readline"
 
-vi.mock("../../engine/claude/claude.exec.js", () => ({
-  invokeClaude: vi.fn(),
+vi.mock("../../engine/claude.runner.js", () => ({
+  runClaudeOneShot: vi.fn(),
 }))
 
-vi.mock("../../engine/claude/stream.display.js", () => ({
-  createDisplayCallbacks: vi.fn(() => ({
-    onStdout: vi.fn(),
+vi.mock("../../ui/claude-stream-display.js", () => ({
+  createStreamDisplay: vi.fn(() => ({
+    onChunk: vi.fn(),
     flush: vi.fn(),
   })),
 }))
 
-import { invokeClaude } from "../../engine/claude/claude.exec.js"
+vi.mock("../../engine/engine.factory.js", () => ({
+  makeRidgelineEngine: vi.fn(() => ({
+    generate: vi.fn(),
+    register_alias: vi.fn(),
+    unregister_alias: vi.fn(),
+    resolve_alias: vi.fn(),
+    list_aliases: vi.fn(),
+    register_price: vi.fn(),
+    resolve_price: vi.fn(),
+    list_prices: vi.fn(),
+    dispose: vi.fn(async () => {}),
+  })),
+}))
+
+import { runClaudeOneShot } from "../../engine/claude.runner.js"
 
 describe("normalizeQuestion", () => {
   it("wraps a plain string into a QAQuestion", () => {
@@ -81,7 +95,7 @@ describe("runQAIntake", () => {
   })
 
   it("returns immediately when initial response is ready", async () => {
-    vi.mocked(invokeClaude).mockResolvedValueOnce(
+    vi.mocked(runClaudeOneShot).mockResolvedValueOnce(
       makeClaudeResult({ ready: true, summary: "All clear" }),
     )
 
@@ -91,11 +105,11 @@ describe("runQAIntake", () => {
 
     expect(result.qa.ready).toBe(true)
     expect(result.qa.summary).toBe("All clear")
-    expect(invokeClaude).toHaveBeenCalledTimes(1)
+    expect(runClaudeOneShot).toHaveBeenCalledTimes(1)
   })
 
   it("exits loop when questions array is empty", async () => {
-    vi.mocked(invokeClaude).mockResolvedValueOnce(
+    vi.mocked(runClaudeOneShot).mockResolvedValueOnce(
       makeClaudeResult({ ready: false, questions: [], summary: "Thinking..." }),
     )
 
@@ -104,11 +118,11 @@ describe("runQAIntake", () => {
     )
 
     expect(result.qa.ready).toBe(false)
-    expect(invokeClaude).toHaveBeenCalledTimes(1) // no clarification call
+    expect(runClaudeOneShot).toHaveBeenCalledTimes(1)
   })
 
   it("runs a single clarification round", async () => {
-    vi.mocked(invokeClaude)
+    vi.mocked(runClaudeOneShot)
       .mockResolvedValueOnce(
         makeClaudeResult({
           ready: false,
@@ -129,16 +143,15 @@ describe("runQAIntake", () => {
 
     expect(result.qa.ready).toBe(true)
     expect(result.sessionId).toBe("sess-2")
-    expect(invokeClaude).toHaveBeenCalledTimes(2)
+    expect(runClaudeOneShot).toHaveBeenCalledTimes(2)
 
-    // Verify answers are passed in the second call
-    const secondCall = vi.mocked(invokeClaude).mock.calls[1][0]
-    expect(secondCall.userPrompt).toContain("Q: What color?")
-    expect(secondCall.userPrompt).toContain("A: Blue")
+    const secondCall = vi.mocked(runClaudeOneShot).mock.calls[1][0]
+    expect(secondCall.prompt).toContain("Q: What color?")
+    expect(secondCall.prompt).toContain("A: Blue")
   })
 
   it("uses suggestedAnswer when user provides empty input", async () => {
-    vi.mocked(invokeClaude)
+    vi.mocked(runClaudeOneShot)
       .mockResolvedValueOnce(
         makeClaudeResult({
           ready: false,
@@ -149,30 +162,29 @@ describe("runQAIntake", () => {
         makeClaudeResult({ ready: true, summary: "Done" }),
       )
 
-    answerQueue = [""] // empty — should fall back to suggested
+    answerQueue = [""]
 
     const result = await runQAIntake(
       mockRl, "system", "user", { model: "test" }, 30000, "Analyzing...",
     )
 
     expect(result.qa.ready).toBe(true)
-    const secondCall = vi.mocked(invokeClaude).mock.calls[1][0]
-    expect(secondCall.userPrompt).toContain("A: React")
+    const secondCall = vi.mocked(runClaudeOneShot).mock.calls[1][0]
+    expect(secondCall.prompt).toContain("A: React")
   })
 
   it("stops after MAX_CLARIFICATION_ROUNDS", async () => {
-    // Return "not ready" with questions every round
     const notReady = makeClaudeResult({
       ready: false,
       questions: ["More info?"],
       summary: "Still thinking",
     })
-    vi.mocked(invokeClaude)
-      .mockResolvedValueOnce(notReady) // initial intake
-      .mockResolvedValueOnce(notReady) // round 0 clarification
-      .mockResolvedValueOnce(notReady) // round 1
-      .mockResolvedValueOnce(notReady) // round 2
-      .mockResolvedValueOnce(notReady) // round 3
+    vi.mocked(runClaudeOneShot)
+      .mockResolvedValueOnce(notReady)
+      .mockResolvedValueOnce(notReady)
+      .mockResolvedValueOnce(notReady)
+      .mockResolvedValueOnce(notReady)
+      .mockResolvedValueOnce(notReady)
 
     answerQueue = ["a", "b", "c", "d"]
 
@@ -180,13 +192,12 @@ describe("runQAIntake", () => {
       mockRl, "system", "user", { model: "test" }, 30000, "Analyzing...",
     )
 
-    // 1 initial + 4 clarification rounds = 5 calls
-    expect(invokeClaude).toHaveBeenCalledTimes(5)
+    expect(runClaudeOneShot).toHaveBeenCalledTimes(5)
     expect(result.qa.ready).toBe(false)
   })
 
   it("propagates sessionId across rounds", async () => {
-    vi.mocked(invokeClaude)
+    vi.mocked(runClaudeOneShot)
       .mockResolvedValueOnce({
         ...makeClaudeResult({ ready: false, questions: ["Q1?"] }),
         sessionId: "sess-a",
@@ -206,8 +217,7 @@ describe("runQAIntake", () => {
       mockRl, "system", "user", { model: "test" }, 30000, "Analyzing...",
     )
 
-    // Second clarification call should use sessionId from first clarification
-    const secondClarification = vi.mocked(invokeClaude).mock.calls[2][0]
+    const secondClarification = vi.mocked(runClaudeOneShot).mock.calls[2][0]
     expect(secondClarification.sessionId).toBe("sess-b")
     expect(result.sessionId).toBe("sess-c")
   })

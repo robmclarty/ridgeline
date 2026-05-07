@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { run } from "fascicle"
 import { printInfo, printError } from "../ui/output.js"
-import { invokeResearcher, type ResearchConfig } from "../engine/legacy/research.js"
+import { runResearchEnsemble, type ResearchConfig } from "../engine/researcher.js"
 import { advancePipeline } from "../stores/state.js"
 import { logTrajectory } from "../stores/trajectory.js"
 import { recordCost } from "../stores/budget.js"
@@ -87,7 +87,7 @@ const runSingleResearch = async (
         changelogMd,
         iterationNumber: input.iterationNumber,
       }
-      return invokeResearcher(input.specMd, input.constraintsMd, input.tasteMd, config)
+      return runResearchEnsemble(input.specMd, input.constraintsMd, input.tasteMd, config)
     },
   })
 

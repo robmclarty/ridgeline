@@ -1,7 +1,32 @@
 import * as readline from "node:readline"
-import { invokeClaude } from "../engine/claude/claude.exec.js"
-import { createDisplayCallbacks } from "../engine/claude/stream.display.js"
+import type { Engine } from "fascicle"
+import { runClaudeOneShot } from "../engine/claude.runner.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { resolveSandboxMode } from "../stores/settings.js"
+import { createStreamDisplay } from "../ui/claude-stream-display.js"
 import { hint } from "../ui/color.js"
+import * as path from "node:path"
+
+const ensureEngine = async <T>(
+  engine: Engine | undefined,
+  timeoutMs: number,
+  fn: (engine: Engine) => Promise<T>,
+): Promise<T> => {
+  if (engine) return fn(engine)
+  const ridgelineDir = path.join(process.cwd(), ".ridgeline")
+  const inline = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
+    timeoutMinutes: Math.max(1, Math.ceil(timeoutMs / 60_000)),
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: process.cwd(),
+  })
+  try {
+    return await fn(inline)
+  } finally {
+    await inline.dispose()
+  }
+}
 
 const MAX_CLARIFICATION_ROUNDS = 4
 
@@ -56,6 +81,7 @@ export const askQuestion = (rl: readline.Interface, prompt: string): Promise<str
 }
 
 type QAOpts = {
+  engine?: Engine
   model: string
   questionLabel?: string
 }
@@ -73,26 +99,31 @@ export const runQAIntake = async (
   statusMessage: string,
 ): Promise<{ sessionId: string; qa: QAResponse }> => {
   process.stderr.write(`\n${hint(statusMessage, { stream: "stderr" })}\n`)
-  const display = createDisplayCallbacks({ projectRoot: process.cwd() })
-  const intakeResult = await invokeClaude({
-    systemPrompt,
-    userPrompt,
-    model: opts.model,
-    allowedTools: ["Read", "Glob", "Grep"],
-    cwd: process.cwd(),
-    timeoutMs,
-    jsonSchema: QA_JSON_SCHEMA,
-    onStdout: display.onStdout,
-  })
-  display.flush()
-
-  return runClarificationLoop(rl, systemPrompt, opts, timeoutMs, {
-    sessionId: intakeResult.sessionId,
-    qa: parseQAResponse(intakeResult.result),
+  return ensureEngine(opts.engine, timeoutMs, async (engine) => {
+    const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
+    let intakeResult
+    try {
+      intakeResult = await runClaudeOneShot({
+        engine,
+        model: opts.model,
+        system: systemPrompt,
+        prompt: userPrompt,
+        allowedTools: ["Read", "Glob", "Grep"],
+        outputJsonSchema: QA_JSON_SCHEMA,
+        onChunk,
+      })
+    } finally {
+      flush()
+    }
+    return runClarificationLoop(rl, systemPrompt, { ...opts, engine }, timeoutMs, {
+      sessionId: intakeResult.sessionId,
+      qa: parseQAResponse(intakeResult.result),
+    })
   })
 }
 
 type OneShotOpts = {
+  engine?: Engine
   systemPrompt: string
   userPrompt: string
   model: string
@@ -112,20 +143,25 @@ export const runOneShotCall = async (
   opts: OneShotOpts,
 ): Promise<{ result: string; sessionId: string }> => {
   process.stderr.write(`\n${hint(opts.statusMessage, { stream: "stderr" })}\n`)
-  const display = createDisplayCallbacks({ projectRoot: process.cwd() })
-  const result = await invokeClaude({
-    systemPrompt: opts.systemPrompt,
-    userPrompt: opts.userPrompt,
-    model: opts.model,
-    allowedTools: opts.allowedTools,
-    cwd: process.cwd(),
-    timeoutMs: opts.timeoutMs,
-    jsonSchema: opts.jsonSchema,
-    onStdout: display.onStdout,
-    buildDir: opts.buildDir,
+  return ensureEngine(opts.engine, opts.timeoutMs, async (engine) => {
+    const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
+    let result
+    try {
+      result = await runClaudeOneShot({
+        engine,
+        model: opts.model,
+        system: opts.systemPrompt,
+        prompt: opts.userPrompt,
+        allowedTools: opts.allowedTools,
+        outputJsonSchema: opts.jsonSchema,
+        buildDir: opts.buildDir,
+        onChunk,
+      })
+    } finally {
+      flush()
+    }
+    return { result: result.result, sessionId: result.sessionId }
   })
-  display.flush()
-  return { result: result.result, sessionId: result.sessionId }
 }
 
 /**
@@ -139,28 +175,34 @@ export const runOutputTurn = async (
   sessionId: string,
   statusMessage: string,
   jsonSchema?: string,
+  engine?: Engine,
 ): Promise<{ result: string; sessionId: string }> => {
   process.stderr.write(`\n${hint(statusMessage, { stream: "stderr" })}\n`)
-  const display = createDisplayCallbacks({ projectRoot: process.cwd() })
-  const result = await invokeClaude({
-    systemPrompt,
-    userPrompt,
-    model,
-    cwd: process.cwd(),
-    timeoutMs,
-    sessionId,
-    jsonSchema,
-    onStdout: display.onStdout,
+  return ensureEngine(engine, timeoutMs, async (resolved) => {
+    const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
+    let result
+    try {
+      result = await runClaudeOneShot({
+        engine: resolved,
+        model,
+        system: systemPrompt,
+        prompt: userPrompt,
+        sessionId,
+        outputJsonSchema: jsonSchema,
+        onChunk,
+      })
+    } finally {
+      flush()
+    }
+    return { result: result.result, sessionId: result.sessionId }
   })
-  display.flush()
-  return { result: result.result, sessionId: result.sessionId }
 }
 
 const runClarificationLoop = async (
   rl: readline.Interface,
   systemPrompt: string,
-  opts: QAOpts,
-  timeoutMs: number,
+  opts: QAOpts & { engine: Engine },
+  _timeoutMs: number,
   initialResult: { sessionId: string; qa: QAResponse }
 ): Promise<{ sessionId: string; qa: QAResponse }> => {
   let { sessionId, qa } = initialResult
@@ -196,19 +238,22 @@ const runClarificationLoop = async (
       .map((q, i) => `Q: ${q.question}\nA: ${answers[i]}`)
       .join("\n\n")
 
-    const display = createDisplayCallbacks({ projectRoot: process.cwd() })
-    const result = await invokeClaude({
-      systemPrompt,
-      userPrompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
-      model: opts.model,
-      allowedTools: ["Read", "Glob", "Grep"],
-      cwd: process.cwd(),
-      timeoutMs,
-      sessionId,
-      jsonSchema: QA_JSON_SCHEMA,
-      onStdout: display.onStdout,
-    })
-    display.flush()
+    const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
+    let result
+    try {
+      result = await runClaudeOneShot({
+        engine: opts.engine,
+        model: opts.model,
+        system: systemPrompt,
+        prompt: `User answers to follow-up questions:\n\n${answersPrompt}`,
+        allowedTools: ["Read", "Glob", "Grep"],
+        sessionId,
+        outputJsonSchema: QA_JSON_SCHEMA,
+        onChunk,
+      })
+    } finally {
+      flush()
+    }
 
     sessionId = result.sessionId
     qa = parseQAResponse(result.result)

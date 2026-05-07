@@ -3,8 +3,8 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/legacy/spec.js", () => ({
-  invokeSpecifier: vi.fn(),
+vi.mock("../../engine/specifier.js", () => ({
+  runSpecifyEnsemble: vi.fn(),
 }))
 
 vi.mock("../../ui/output.js", () => ({
@@ -17,7 +17,7 @@ vi.mock("../../stores/state.js", () => ({
   getMatchedShapes: vi.fn(() => []),
 }))
 
-import { invokeSpecifier } from "../../engine/legacy/spec.js"
+import { runSpecifyEnsemble } from "../../engine/specifier.js"
 import { printError } from "../../ui/output.js"
 import { runSpec } from "../spec.js"
 
@@ -61,7 +61,7 @@ describe("commands/spec", () => {
     await runSpec("my-build", defaultOpts)
 
     expect(printError).toHaveBeenCalledWith(expect.stringContaining("shape.md not found"))
-    expect(invokeSpecifier).not.toHaveBeenCalled()
+    expect(runSpecifyEnsemble).not.toHaveBeenCalled()
   })
 
   it("reads shape.md and invokes ensemble", async () => {
@@ -69,7 +69,7 @@ describe("commands/spec", () => {
     fs.mkdirSync(buildDir, { recursive: true })
     fs.writeFileSync(path.join(buildDir, "shape.md"), "# My Shape\n\n## Intent\nBuild a CLI")
 
-    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+    vi.mocked(runSpecifyEnsemble).mockImplementation(async () => {
       // Simulate specifier writing files
       fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
       fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
@@ -78,19 +78,19 @@ describe("commands/spec", () => {
 
     await runSpec("my-build", defaultOpts)
 
-    expect(invokeSpecifier).toHaveBeenCalledTimes(1)
-    const [shapeMd, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    expect(runSpecifyEnsemble).toHaveBeenCalledTimes(1)
+    const [shapeMd, config] = vi.mocked(runSpecifyEnsemble).mock.calls[0]
     expect(shapeMd).toContain("Build a CLI")
     expect(config.model).toBe("opus")
     expect(fs.realpathSync(config.buildDir)).toBe(fs.realpathSync(buildDir))
   })
 
-  it("propagates errors from invokeSpecifier", async () => {
+  it("propagates errors from runSpecifyEnsemble", async () => {
     const buildDir = path.join(tmpDir, ".ridgeline", "builds", "my-build")
     fs.mkdirSync(buildDir, { recursive: true })
     fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
 
-    vi.mocked(invokeSpecifier).mockRejectedValue(
+    vi.mocked(runSpecifyEnsemble).mockRejectedValue(
       new Error("Synthesizer did not create required files: spec.md"),
     )
 
@@ -105,7 +105,7 @@ describe("commands/spec", () => {
     const inputFile = path.join(tmpDir, "idea.md")
     fs.writeFileSync(inputFile, "# My hand-authored spec\n\nDetailed feature A.")
 
-    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+    vi.mocked(runSpecifyEnsemble).mockImplementation(async () => {
       fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
       fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
       return makeEnsembleResult()
@@ -113,8 +113,8 @@ describe("commands/spec", () => {
 
     await runSpec("my-build", { ...defaultOpts, input: inputFile })
 
-    expect(invokeSpecifier).toHaveBeenCalledTimes(1)
-    const [, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    expect(runSpecifyEnsemble).toHaveBeenCalledTimes(1)
+    const [, config] = vi.mocked(runSpecifyEnsemble).mock.calls[0]
     expect(config.userInput).toContain("hand-authored spec")
     expect(config.userInput).toContain("Detailed feature A")
   })
@@ -124,7 +124,7 @@ describe("commands/spec", () => {
     fs.mkdirSync(buildDir, { recursive: true })
     fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
 
-    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+    vi.mocked(runSpecifyEnsemble).mockImplementation(async () => {
       fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
       fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
       return makeEnsembleResult()
@@ -132,7 +132,7 @@ describe("commands/spec", () => {
 
     await runSpec("my-build", { ...defaultOpts, input: "must use postgres 16" })
 
-    const [, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    const [, config] = vi.mocked(runSpecifyEnsemble).mock.calls[0]
     expect(config.userInput).toBe("must use postgres 16")
   })
 
@@ -141,7 +141,7 @@ describe("commands/spec", () => {
     fs.mkdirSync(buildDir, { recursive: true })
     fs.writeFileSync(path.join(buildDir, "shape.md"), "# Shape")
 
-    vi.mocked(invokeSpecifier).mockImplementation(async () => {
+    vi.mocked(runSpecifyEnsemble).mockImplementation(async () => {
       fs.writeFileSync(path.join(buildDir, "spec.md"), "# Spec")
       fs.writeFileSync(path.join(buildDir, "constraints.md"), "# Constraints")
       return makeEnsembleResult()
@@ -149,7 +149,7 @@ describe("commands/spec", () => {
 
     await runSpec("my-build", defaultOpts)
 
-    const [, config] = vi.mocked(invokeSpecifier).mock.calls[0]
+    const [, config] = vi.mocked(runSpecifyEnsemble).mock.calls[0]
     expect(config.userInput).toBeNull()
   })
 
@@ -162,7 +162,7 @@ describe("commands/spec", () => {
 
     await runSpec("my-build", defaultOpts)
 
-    expect(invokeSpecifier).not.toHaveBeenCalled()
+    expect(runSpecifyEnsemble).not.toHaveBeenCalled()
     // Original content untouched
     expect(fs.readFileSync(path.join(buildDir, "spec.md"), "utf-8"))
       .toBe("# Existing detailed spec")

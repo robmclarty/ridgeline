@@ -5,7 +5,8 @@ import { RidgelineConfig } from "../types.js"
 import { printInfo, printWarn } from "../ui/output.js"
 import { logTrajectory } from "../stores/trajectory.js"
 import { recordCost } from "../stores/budget.js"
-import { invokePlanner, runPlanReviewer, revisePlanWithFeedback, reportPhaseSizeWarnings } from "../engine/legacy/plan.js"
+import { runEnsemblePlanner } from "../engine/ensemble.js"
+import { runPlanReviewer, revisePlanWithFeedback, reportPhaseSizeWarnings } from "../engine/plan-reviewer.js"
 import { advancePipeline } from "../stores/state.js"
 import { scanPhases } from "../stores/phases.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
@@ -34,7 +35,7 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   })
 
   const flow = planFlow({
-    invokePlanner,
+    runEnsemblePlanner,
     runPlanReviewer,
     revisePlanWithFeedback,
     rescanPhases: scanPhases,

@@ -6,7 +6,7 @@ const UI_MODULES = ["spinner", "logger", "output", "prompt", "summary", "transcr
 
 const FEATURE_MODULES: string[] = [
   "../../commands/qa-workflow.ts",
-  "../../engine/claude/stream.display.ts",
+  "../../ui/claude-stream-display.ts",
   "../../catalog/build-catalog.ts",
   "../../catalog/classify.ts",
   "../../catalog/pack-sprites.ts",

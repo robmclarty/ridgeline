@@ -3,7 +3,7 @@ import * as path from "node:path"
 import * as readline from "node:readline"
 import { run } from "fascicle"
 import { printInfo, printError } from "../ui/output.js"
-import { invokeSpecifier, type SpecEnsembleConfig } from "../engine/legacy/spec.js"
+import { runSpecifyEnsemble, type SpecEnsembleConfig } from "../engine/specifier.js"
 import { advancePipeline, getMatchedShapes } from "../stores/state.js"
 import {
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
@@ -127,7 +127,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
         userInput,
         inferGapFlagging: opts.inferGapFlagging,
       }
-      return invokeSpecifier(input.shapeMd, config)
+      return runSpecifyEnsemble(input.shapeMd, config)
     },
   })
 

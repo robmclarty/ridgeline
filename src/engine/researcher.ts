@@ -1,0 +1,287 @@
+import * as fs from "node:fs"
+import * as path from "node:path"
+import { EnsembleResult } from "../types.js"
+import { runEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.js"
+import { runClaudeProcess } from "./claude-process.js"
+import { buildAgentRegistry } from "./discovery/agent.registry.js"
+import { createStderrHandler } from "./legacy-shared.js"
+import { startSpinner } from "../ui/spinner.js"
+import { createPromptDocument, PromptDocument } from "./prompt-document.js"
+
+// ---------------------------------------------------------------------------
+// Shared prompt helpers
+// ---------------------------------------------------------------------------
+
+/** Append the common spec + constraints + taste sections to a prompt document. */
+const appendInputSections = (doc: PromptDocument, specMd: string, constraintsMd: string, tasteMd: string | null): void => {
+  doc.data("spec.md", specMd)
+  doc.data("constraints.md", constraintsMd)
+  if (tasteMd) {
+    doc.data("taste.md", tasteMd)
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Research agenda
+// ---------------------------------------------------------------------------
+
+const AGENDA_SYSTEM_PROMPT = `You are a research agenda planner. Given a specification and a domain gap checklist, identify what the spec is missing or vague about, and produce a focused research agenda.
+
+Your output is a markdown research agenda that will be given to research specialists to focus their web searches. Be specific — name the gaps, suggest search terms, and prioritize by impact.
+
+If prior research findings are provided, note which areas are already well-covered and should not be re-researched unless contradictory information is found. Focus the agenda on unexplored territory.
+
+Keep your response concise — under 500 words. No preamble.`
+
+const buildAgendaUserPrompt = (
+  specMd: string,
+  gapsMd: string | null,
+  existingResearchMd: string | null,
+  changelogMd: string | null,
+): string => {
+  const doc = createPromptDocument()
+
+  doc.data("spec.md", specMd)
+
+  if (gapsMd) {
+    doc.data("Domain Gap Checklist", gapsMd)
+  }
+
+  if (existingResearchMd) {
+    doc.data("Prior Research (already conducted)", existingResearchMd)
+  }
+
+  if (changelogMd) {
+    doc.data("Spec Changelog (recommendations already incorporated)", changelogMd)
+  }
+
+  doc.instruction("Task", "Produce a focused research agenda identifying gaps and specific questions for specialists to investigate.")
+
+  return doc.render()
+}
+
+const buildResearchAgenda = async (
+  specMd: string,
+  gapsMd: string | null,
+  existingResearchMd: string | null,
+  changelogMd: string | null,
+  model: string,
+  timeoutMinutes: number,
+): Promise<string> => {
+  const result = await runClaudeProcess({
+    systemPrompt: AGENDA_SYSTEM_PROMPT,
+    userPrompt: buildAgendaUserPrompt(specMd, gapsMd, existingResearchMd, changelogMd),
+    model: "sonnet",
+    allowedTools: [],
+    cwd: process.cwd(),
+    timeoutMs: Math.min(timeoutMinutes * 60 * 1000, 3 * 60 * 1000), // cap at 3 min
+    onStderr: createStderrHandler("agenda"),
+  })
+
+  return (result.result as string) ?? ""
+}
+
+// ---------------------------------------------------------------------------
+// Prompt construction
+// ---------------------------------------------------------------------------
+
+/** Build a research specialist system prompt from shared context + overlay. */
+const buildResearchSpecialistPrompt = (context: string, overlay: string): string => {
+  return `${context}\n\n${overlay}`
+}
+
+/** Assemble the user prompt for a research specialist. */
+const assembleSpecialistUserPrompt = (
+  specMd: string,
+  constraintsMd: string,
+  tasteMd: string | null,
+  agenda: string | null,
+): string => {
+  const doc = createPromptDocument()
+  appendInputSections(doc, specMd, constraintsMd, tasteMd)
+
+  if (agenda) {
+    doc.data(
+      "Research Agenda",
+      "The following gaps and questions were identified. Focus your research on these areas:\n\n" + agenda,
+    )
+  }
+
+  doc.instruction(
+    "Task",
+    [
+      "Research this spec thoroughly using your web tools. Produce a markdown research report as your response.",
+      "",
+      "At the very end of your report, append a fenced JSON block (```json ... ```) with this shape:",
+      "",
+      "```json",
+      "{ \"findings\": [\"short label for each finding\"], \"openQuestions\": [\"short label for each open question\"] }",
+      "```",
+      "",
+      "This block is used for ensemble agreement detection; keep the labels faithful to the main report.",
+    ].join("\n"),
+  )
+  return doc.render()
+}
+
+/** Assemble the user prompt for the research synthesizer. */
+const assembleSynthesizerUserPrompt = (
+  specMd: string,
+  buildDir: string,
+  drafts: { perspective: string; draft: string }[],
+  existingResearchMd: string | null,
+  changelogMd: string | null,
+  iterationNumber: number,
+): string => {
+  const doc = createPromptDocument()
+
+  doc.data("spec.md", specMd)
+
+  const reportLines: string[] = []
+  for (const { perspective, draft } of drafts) {
+    reportLines.push(`### ${perspective.charAt(0).toUpperCase() + perspective.slice(1)} Specialist Report\n`)
+    reportLines.push(draft)
+    reportLines.push("\n---\n")
+  }
+  doc.data("Specialist Research Reports", reportLines.join("\n"))
+
+  if (existingResearchMd) {
+    doc.data("Existing research.md (to be updated, not replaced)", existingResearchMd)
+  }
+
+  if (changelogMd) {
+    doc.data("spec.changelog.md (recommendations already acted on)", changelogMd)
+  }
+
+  doc.data("Current Iteration", `Iteration: ${iterationNumber}`)
+
+  doc.instruction(
+    "Output",
+    `Write the ${existingResearchMd ? "updated" : "new"} research report to: ${buildDir}/research.md\nUse the Write tool to create the file.`,
+  )
+
+  return doc.render()
+}
+
+// ---------------------------------------------------------------------------
+// Research ensemble
+// ---------------------------------------------------------------------------
+
+export type ResearchConfig = {
+  model: string
+  timeoutMinutes: number
+  specialistTimeoutSeconds: number
+  maxBudgetUsd: number | null
+  buildDir: string
+  isQuick: boolean
+  specialistCount: 1 | 2 | 3
+  networkAllowlist: string[]
+  sandboxProvider?: import("../types.js").RidgelineConfig["sandboxProvider"]
+  existingResearchMd: string | null
+  changelogMd: string | null
+  iterationNumber: number
+}
+
+export const runResearchEnsemble = async (
+  specMd: string,
+  constraintsMd: string,
+  tasteMd: string | null,
+  config: ResearchConfig,
+): Promise<EnsembleResult> => {
+  const registry = buildAgentRegistry()
+  const context = registry.getContext("researchers") ?? ""
+  const gapsMd = registry.getGaps("researchers")
+  const allSpecialists = registry.getSpecialists("researchers")
+
+  // Quick mode: pick one specialist at random. Otherwise the configured count (default 3).
+  const specialists = config.isQuick && allSpecialists.length > 0
+    ? [allSpecialists[Math.floor(Math.random() * allSpecialists.length)]]
+    : selectSpecialists(allSpecialists, { specialistCount: config.specialistCount })
+
+  // Build a research agenda before dispatching specialists
+  const agendaSpinner = startSpinner("Building agenda")
+  const agenda = await buildResearchAgenda(
+    specMd,
+    gapsMd,
+    config.existingResearchMd,
+    config.changelogMd,
+    config.model,
+    config.timeoutMinutes,
+  )
+  agendaSpinner.stop()
+
+  return runEnsemble<string>({
+    label: "Researching",
+    specialists,
+    isStructured: false,
+
+    buildSpecialistPrompt: (overlay) => buildResearchSpecialistPrompt(context, overlay),
+    specialistUserPrompt: assembleSpecialistUserPrompt(specMd, constraintsMd, tasteMd, agenda || null),
+    specialistSchema: "",
+    specialistTools: ["WebFetch", "WebSearch", "Bash", "Skill"],
+
+    synthesizerPrompt: registry.getCorePrompt("researcher.md"),
+    buildSynthesizerUserPrompt: (drafts) =>
+      assembleSynthesizerUserPrompt(
+        specMd,
+        config.buildDir,
+        drafts,
+        config.existingResearchMd,
+        config.changelogMd,
+        config.iterationNumber,
+      ),
+    synthesizerTools: ["Write", "Skill"],
+
+    model: config.model,
+    timeoutMinutes: config.timeoutMinutes,
+    specialistTimeoutSeconds: config.specialistTimeoutSeconds,
+    maxBudgetUsd: config.maxBudgetUsd,
+    networkAllowlist: config.networkAllowlist,
+    sandboxProvider: config.sandboxProvider,
+    stallTimeoutMs: SYNTHESIZER_STALL_TIMEOUT_MS,
+
+    isTwoRound: config.specialistCount === 3,
+    buildAnnotationPrompt: (ownPerspective, otherDrafts) => {
+      const sections = [
+        `You are the ${ownPerspective} research specialist. You have already submitted your report.`,
+        "Below are the other specialists' reports. Provide brief annotations:",
+        "- **Concerns:** Issues or weak citations in their findings",
+        "- **Agreements:** Where their findings corroborate yours",
+        "- **Gaps:** What none of the reports adequately cover",
+        "",
+        "Do NOT rewrite your report. Provide only annotations.",
+        "",
+      ]
+      for (const { perspective, draft } of otherDrafts) {
+        sections.push(`## ${perspective} Specialist Report\n`)
+        sections.push(draft)
+        sections.push("\n---\n")
+      }
+      return sections.join("\n")
+    },
+
+    stage: "research",
+    buildDir: config.buildDir,
+    onAgreementSkip: (successful) => {
+      const [first] = successful
+      const researchPath = path.join(config.buildDir, "research.md")
+      fs.mkdirSync(config.buildDir, { recursive: true })
+      fs.writeFileSync(researchPath, first.draft)
+      appendSkipAuditNote(researchPath, successful.length, "research")
+      return {
+        success: true,
+        result: first.draft,
+        durationMs: 0,
+        costUsd: 0,
+        usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+        sessionId: `synthesis-skipped-${first.perspective}`,
+      }
+    },
+
+    verify: () => {
+      if (!fs.existsSync(path.join(config.buildDir, "research.md"))) {
+        throw new Error("Synthesizer did not create research.md")
+      }
+    },
+  })
+}

@@ -611,7 +611,43 @@
       "cacheCreationInputTokens": 89420,
       "durationMs": 430061,
       "timestamp": "2026-05-07T18:53:01.201Z"
+    },
+    {
+      "phase": "11-cleanup-deletions",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 9.18966125,
+      "inputTokens": 67,
+      "outputTokens": 39701,
+      "cacheReadInputTokens": 11512974,
+      "cacheCreationInputTokens": 379125,
+      "durationMs": 699850,
+      "timestamp": "2026-05-07T20:18:58.249Z"
+    },
+    {
+      "phase": "11-cleanup-deletions",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 27.6690455,
+      "inputTokens": 144,
+      "outputTokens": 69555,
+      "cacheReadInputTokens": 31692608,
+      "cacheCreationInputTokens": 1601110,
+      "durationMs": 1146372,
+      "timestamp": "2026-05-07T20:38:12.911Z"
+    },
+    {
+      "phase": "11-cleanup-deletions",
+      "role": "builder",
+      "attempt": 2,
+      "costUsd": 28.438528500000007,
+      "inputTokens": 162,
+      "outputTokens": 92652,
+      "cacheReadInputTokens": 45141883,
+      "cacheCreationInputTokens": 554920,
+      "durationMs": 1511927,
+      "timestamp": "2026-05-07T21:03:33.117Z"
     }
   ],
-  "totalCostUsd": 318.25545209999996
+  "totalCostUsd": 383.5526873499999
 }

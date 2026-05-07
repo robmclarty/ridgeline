@@ -41,7 +41,7 @@ describe("planFlow", () => {
   it("dispatches planner then reviewer when reviewer approves", async () => {
     const onApproved = vi.fn()
     const flow = planFlow({
-      invokePlanner: async () => ({ phases: [phase], ensemble: cannedEnsemble() }),
+      runEnsemblePlanner: async () => ({ phases: [phase], ensemble: cannedEnsemble() }),
       runPlanReviewer: async () => ({
         verdict: { approved: true, issues: [] },
         result: cannedClaudeResult(),
@@ -68,7 +68,7 @@ describe("planFlow", () => {
     const revisedPhases = [phase, { ...phase, id: "02-y" }]
 
     const flow = planFlow({
-      invokePlanner: async () => ({ phases: [phase], ensemble: cannedEnsemble() }),
+      runEnsemblePlanner: async () => ({ phases: [phase], ensemble: cannedEnsemble() }),
       runPlanReviewer: async () => ({ verdict, result: cannedClaudeResult() }),
       revisePlanWithFeedback: async () => cannedClaudeResult(),
       rescanPhases: () => revisedPhases,
@@ -88,7 +88,7 @@ describe("planFlow", () => {
   it("calls onReviewerError when reviewer throws and continues with original phases", async () => {
     const onError = vi.fn()
     const flow = planFlow({
-      invokePlanner: async () => ({ phases: [phase], ensemble: cannedEnsemble() }),
+      runEnsemblePlanner: async () => ({ phases: [phase], ensemble: cannedEnsemble() }),
       runPlanReviewer: async () => {
         throw new Error("review-failed")
       },

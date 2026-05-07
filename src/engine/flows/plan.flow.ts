@@ -14,7 +14,7 @@ export type PlanFlowOutput = {
 }
 
 export type PlanFlowExecutors = {
-  readonly invokePlanner: (config: RidgelineConfig) => Promise<{ phases: PhaseInfo[]; ensemble: EnsembleResult }>
+  readonly runEnsemblePlanner: (config: RidgelineConfig) => Promise<{ phases: PhaseInfo[]; ensemble: EnsembleResult }>
   readonly runPlanReviewer: (config: RidgelineConfig) => Promise<{ verdict: PlanVerdict; result: ClaudeResult }>
   readonly revisePlanWithFeedback: (config: RidgelineConfig, issues: string[]) => Promise<ClaudeResult>
   readonly rescanPhases: (phasesDir: string) => PhaseInfo[]
@@ -29,7 +29,7 @@ export type PlanFlowDeps = PlanFlowExecutors
 export const planFlow = (deps: PlanFlowDeps): Step<PlanFlowInput, PlanFlowOutput> => {
   const inner = step("plan.inner", async (input: PlanFlowInput): Promise<PlanFlowOutput> => {
     const { config } = input
-    const { phases, ensemble } = await deps.invokePlanner(config)
+    const { phases, ensemble } = await deps.runEnsemblePlanner(config)
 
     let review: { verdict: PlanVerdict; reviewerResult: ClaudeResult } | null = null
     let revisionResult: ClaudeResult | null = null

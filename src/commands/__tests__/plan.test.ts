@@ -21,8 +21,11 @@ vi.mock("../../stores/budget.js", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../engine/legacy/plan.js", () => ({
-  invokePlanner: vi.fn(),
+vi.mock("../../engine/ensemble.js", () => ({
+  runEnsemblePlanner: vi.fn(),
+}))
+
+vi.mock("../../engine/plan-reviewer.js", () => ({
   runPlanReviewer: vi.fn(async () => ({
     verdict: { approved: true, issues: [] },
     result: {
@@ -44,7 +47,7 @@ vi.mock("../../ui/output.js", async (importOriginal) => {
 })
 
 import { runPlan } from "../plan.js"
-import { invokePlanner } from "../../engine/legacy/plan.js"
+import { runEnsemblePlanner } from "../../engine/ensemble.js"
 
 const makeResult = (): ClaudeResult => ({
   success: true,
@@ -130,13 +133,13 @@ describe("commands/plan", () => {
       totalDurationMs: 15000,
     }
 
-    vi.mocked(invokePlanner).mockResolvedValue({
+    vi.mocked(runEnsemblePlanner).mockResolvedValue({
       result: synthResult,
       phases,
       ensemble,
     })
 
     await runPlan(config)
-    expect(invokePlanner).toHaveBeenCalledWith(config)
+    expect(runEnsemblePlanner).toHaveBeenCalledWith(config)
   })
 })
