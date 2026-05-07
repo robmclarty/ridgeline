@@ -203,12 +203,12 @@
     },
     {
       "id": "07-atoms-b",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/07-atoms-b",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/07-atoms-b",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 1132076,
+      "completedAt": "2026-05-07T04:27:23.956Z",
       "failedAt": null,
       "builderInvocations": [
         {

@@ -2097,3 +2097,54 @@ All phase-7 acceptance criteria are met. Final summary:
 - **`phase-7-check.json`** captured: top-level `ok: true`, all eight sub-checks `ok: true`, 1206 unit tests pass.
 
 READY_FOR_REVIEW
+[ridgeline] [07-atoms-b] Reviewing...
+[review:07-atoms-b] Starting review
+
+I'll verify the phase against all 13 acceptance criteria. Let me start by inspecting the repo state and running checks.
+[Bash] ls src/engine/atoms/ && echo "---" && ls src/engine/atoms/__tests__/ && echo "---" && ls src/engine/atoms/__tests__/__fixtures__/
+[Bash] cat .ridgeline/builds/fascicle-migration/phase-7-check.json
+Let me run the verifier to confirm checks pass on the current state, and examine remaining files in parallel.
+[Agent] Verify the current state of the ridgeline repo at /Users/robmclarty/Projects/ridgeline/code/ridgeline. This is reviewer verification for the fascicle migration Phase 7 (07-atoms-b).
+[Read] src/engine/atoms/specialist.atom.ts
+[Read] src/engine/atoms/specifier.atom.ts
+[Bash] npm run check 2>&1
+[Read] src/engine/atoms/sensors.collect.atom.ts
+[Bash] npm run build 2>&1
+[Read] src/engine/atoms/plan.review.atom.ts
+[Read] src/engine/atoms/specialist.verdict.atom.ts
+[Read] src/engine/atoms/index.ts
+[Read] src/engine/schemas.ts
+[Bash] node dist/cli.js --help 2>&1; echo "EXIT:$?"
+[Bash] grep -rE 'from "\.\./pipeline|from "\.\./claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)' src/engine/atoms/; echo …
+[Bash] npx vitest run src/engine/atoms/__tests__/ 2>&1
+[Read] .check/summary.json
+[Bash] grep -n "expect(opts.schema).toBe" src/engine/atoms/__tests__/plan.review.test.ts src/engine/atoms/__tests__/specialist.verdict.test.ts
+[Bash] ls .ridgeline/builds/fascicle-migration/phase-7-tier2-audit.md && wc -l .ridgeline/builds/fascicle-migration/phase-7-tier2-audit.md && wc -l .ridgeline/builds/fascicle-migration/baseline/capability-m…
+[Bash] grep -rE 'from "\.\./pipeline|from "\.\./claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)' src/engine/atoms/ || echo "no matches"
+[Bash] cat .check/struct.json 2>/dev/null | head -30 ; echo "---" ; npx ast-grep scan --rule .ast-grep/atom-must-import-stable-prompt.yml 2>&1 | tail -10 || echo "rule file path differs"
+[Bash] find . -name "atom-must-import-stable-prompt*" -not -path "*/node_modules/*" 2>/dev/null | head -5
+[Bash] ls .ast-grep/ 2>/dev/null || ls .astgrep/ 2>/dev/null || ls rules/ 2>/dev/null || find . -name "*.yml" -path "*ast*" -not -path "*/node_modules/*" 2>/dev/null | head -10
+[Read] rules/atom-must-import-stable-prompt.yml
+[Bash] npx ast-grep scan -c sgconfig.yml 2>&1 | tail -10 ; echo "---" ; cat .check/struct.json 2>/dev/null
+[Read] .ridgeline/builds/fascicle-migration/phase-7-tier2-audit.md
+[Read] src/engine/atoms/__tests__/sensors.collect.test.ts
+I have enough evidence to produce the verdict. The verifier confirmed `npm run check` is green (all 8 sub-checks ok), the build succeeds, `--help` exits 0, no forbidden imports in atoms, and 29 tests pass in 12 test files.
+
+Walking through each criterion:
+
+- **AC1** ✅ — `src/engine/atoms/` has all 10 `*.atom.ts` files + `index.ts` + helpers (`_shape.ts`, `_prompt.document.ts`).
+- **AC2** ✅ (with one observation) — Each of the four new model-bearing atoms uses `compose(name, sequence([shaper, model_call({...})]))` and imports from `./_shape`, which transitively imports `stable.prompt`. The struct check passes (`[]` violations). `sensors.collect.atom.ts` has no `model_call` (pure orchestration); the ast-grep rule only fires on `model_call(` so it's not violated. The spec's literal AC2 wording requires `pipe(promptShaper, model_call(...))` for "each of the five new atoms" but sensors.collect inherently has no model call — the builder documented this deviation explicitly. The intent of preserving prompt-cache routing is met for all model-bearing atoms.
+- **AC3** ✅ — `grep -rE 'from "../pipeline|from "../claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)' src/engine/atoms/` returns zero matches.
+- **AC4** ✅ — Each new atom has unit tests under `__tests__/`. 29 tests pass; no real `claude_cli` invocations.
+- **AC5** ✅ — `plan.review.test.ts:26` and `specialist.verdict.test.ts:31` use `expect(opts.schema).toBe(...)` (referential, not deep-equal).
+- **AC6** ✅ — Four new byte-stability fixtures (`specialist`, `specifier`, `specialist.verdict`, `plan.review`) extend `byte-stability.test.ts`; floor of "plan.review, specialist.verdict, specifier" is met and exceeded.
+- **AC7** ✅ — `phase-7-tier2-audit.md` exists with all 5 candidates (counts + dispositions); default outcome (no promotion) holds.
+- **AC8** ✅ — `capability-matrix.md` re-verified against pinned `fascicle@0.3.8` with a Phase 7 footer recording per-row confirmation; no drift detected.
+- **AC9** ✅ — `index.ts` re-exports all 10 atom factories; `index.barrel.test.ts` asserts non-null Step instances with `.run` methods.
+- **AC10** ✅ — Diff does not touch `src/engine/pipeline/*.exec.ts`.
+- **AC11** ✅ — `npm run check` re-run by verifier; all 8 sub-checks ok, exit 0.
+- **AC12** ✅ — `npm run build` + `node dist/cli.js --help` succeed; pipeline files unchanged, so legacy build path remains operational.
+- **AC13** ✅ — `phase-7-check.json` exists at the expected path, top-level `ok: true`, all 8 sub-checks `ok: true`.
+[ridgeline] [07-atoms-b] PASSED (1132s)
+
+[ridgeline] ── Phase 10/14: 08-leaf-flows ──
