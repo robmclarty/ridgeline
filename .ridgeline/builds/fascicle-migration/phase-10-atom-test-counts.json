@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-05-07T06:39:13.175Z",
+  "threshold": 1,
+  "scope": "src/engine/atoms/__tests__/<name>.test.ts",
+  "atoms": {
+    "builder": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/builder.test.ts",
+      "ok": true
+    },
+    "reviewer": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/reviewer.test.ts",
+      "ok": true
+    },
+    "planner": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/planner.test.ts",
+      "ok": true
+    },
+    "specialist": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/specialist.test.ts",
+      "ok": true
+    },
+    "refiner": {
+      "count": 1,
+      "file": "src/engine/atoms/__tests__/refiner.test.ts",
+      "ok": true
+    },
+    "researcher": {
+      "count": 1,
+      "file": "src/engine/atoms/__tests__/researcher.test.ts",
+      "ok": true
+    },
+    "specifier": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/specifier.test.ts",
+      "ok": true
+    },
+    "sensors.collect": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/sensors.collect.test.ts",
+      "ok": true
+    },
+    "plan.review": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/plan.review.test.ts",
+      "ok": true
+    },
+    "specialist.verdict": {
+      "count": 2,
+      "file": "src/engine/atoms/__tests__/specialist.verdict.test.ts",
+      "ok": true
+    }
+  },
+  "ok": true
+}

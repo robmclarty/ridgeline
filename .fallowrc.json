@@ -5,6 +5,8 @@
     "test/fixtures/**",
     "src/**/__tests__/**/__fixtures__/**",
     "stryker.config.mjs",
+    "stryker.baseline.config.mjs",
+    "vitest.stryker.config.ts",
     "src/engine/flows/index.ts",
     "src/engine/atoms/index.ts",
     "src/engine/composites/index.ts",

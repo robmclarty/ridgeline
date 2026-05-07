@@ -281,7 +281,32 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "more_work_explicit",
+          "outputTokens": 42017,
+          "inputTokens": 63,
+          "costUsd": 7.64372875,
+          "durationMs": 658662,
+          "windDownReason": "AC2/AC3 require host-side Stryker runs outside greywall (sandbox blocks Stryker's TCP-localhost logging-server); all in-sandbox AC work is complete and captured; gate + scaffolding ready for the operator runbook.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T06:37:33.004Z"
+        },
+        {
+          "attempt": 2,
+          "endReason": "ready_for_review",
+          "outputTokens": 10691,
+          "inputTokens": 42,
+          "costUsd": 4.40564125,
+          "durationMs": 202942,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T06:41:04.184Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "11-cleanup-deletions",

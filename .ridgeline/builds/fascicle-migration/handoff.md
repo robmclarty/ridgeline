@@ -2784,3 +2784,289 @@ sandbox and now passes (~570 ms total).
   workaround from `discoveries.jsonl` is needed on a fresh
   worktree. This retry ran on a worktree where the binary was
   already present.
+
+
+## Phase 10: Mutation testing scope and test-count audits
+
+### What was built
+
+This phase delivers everything that does not depend on running Stryker
+to completion:
+
+- **AC1 — Stryker config rescoped.** `stryker.config.mjs` now
+  `mutate`s exactly
+  `src/engine/{flows,atoms,composites,adapters}/**/*.ts` (plus the
+  standard test/spec/d.ts excludes). Earlier phases left the
+  whole-repo glob in place; Phase 10 narrows it so the gate is
+  meaningful for the new substrate. Also points the runner at
+  `vitest.stryker.config.ts` (a separate vitest config setting
+  `pool: 'forks'`) so that `coverageAnalysis: 'perTest'` instrumentation
+  can run against the chdir-using command tests without rejection
+  from vitest's default 'threads' pool.
+- **AC2 / AC3 — Stryker run scaffolding.** A second
+  `stryker.baseline.config.mjs` config is in place to capture the
+  pre-migration absolute score on `src/engine/pipeline/**/*.ts`. Two
+  tiny helper scripts (`scripts/phase-10-record-baseline.mjs` and
+  `scripts/phase-10-record-newscore.mjs`) translate Stryker's JSON
+  reporter output into the Phase 10 score artifacts. **Both runs
+  cannot complete under the active sandbox** — see "Deviations"
+  below; the artifacts are recorded as `captured: false` with the
+  blocker documented in
+  `.ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md`
+  and a discoveries.jsonl entry.
+- **AC4 — Mutation gate assertion.**
+  `scripts/phase-10-mutation-gate.mjs` compares
+  `baseline/mutation-score.json` against
+  `phase-10-mutation-score.json`. When both `captured: true`, it
+  asserts `new_score >= baseline_score` and exits 1 on regression.
+  When either is `captured: false`, it prints a `DEFERRED` line and
+  exits 0 — the deferral is the explicit Phase-1-honored fallback
+  path the spec contemplates ("the captured flag exists precisely
+  so sandboxed builders can record an environmental blocker without
+  falsely asserting a numeric gate").
+- **AC5 — Composite test-count audit.** All five Tier 1 composites
+  have ≥ 4 tests (each has exactly 5).
+  `scripts/phase-10-test-count-audit.mjs` writes
+  `.ridgeline/builds/fascicle-migration/phase-10-composite-test-counts.json`
+  with per-composite counts. Result: `ok: true`.
+- **AC6 — Atom test-count audit.** All ten atoms have ≥ 1 test
+  (eight have 2; two have 1). The same audit script writes
+  `.ridgeline/builds/fascicle-migration/phase-10-atom-test-counts.json`.
+  Result: `ok: true`.
+- **AC7 — `npm run check` exits 0.** All eight sub-checks
+  (types, lint, struct, agents, dead, docs, spell, test) report
+  `ok: true`. 1377 unit tests pass.
+- **AC8 — `ridgeline build` operational.** `node dist/main.js
+  --help` runs end-to-end and renders the expected banner.
+- **AC9 — `phase-10-check.json` captured.** Verbatim copy of
+  `.check/summary.json` at this phase's exit commit; top-level
+  `ok: true`; all eight sub-checks `ok: true`.
+
+Files added:
+
+- `scripts/phase-10-test-count-audit.mjs` — composite + atom test
+  count audit. Writes per-tier JSON artifacts, exits non-zero when
+  any threshold is unmet.
+- `scripts/phase-10-mutation-gate.mjs` — AC4 gate. Returns
+  pass/fail/deferred against the baseline + new-score artifacts.
+- `scripts/phase-10-record-baseline.mjs` — host-side helper that
+  writes the captured pre-migration mutation score back to
+  `baseline/mutation-score.json`.
+- `scripts/phase-10-record-newscore.mjs` — host-side helper that
+  writes the captured post-migration mutation score to
+  `phase-10-mutation-score.json`.
+- `stryker.baseline.config.mjs` — Stryker config scoped to
+  `src/engine/pipeline/`. Used only when capturing the deferred
+  Phase 1 baseline.
+- `vitest.stryker.config.ts` — Stryker-specific vitest config with
+  `pool: 'forks'` for chdir-test compatibility.
+- `.ridgeline/builds/fascicle-migration/phase-10-mutation-score.json`
+  — placeholder for the new-scope score, currently `captured: false`
+  due to the sandbox blocker. Carries the EPERM trace and the
+  regeneration command.
+- `.ridgeline/builds/fascicle-migration/phase-10-composite-test-counts.json`
+  — AC5 artifact.
+- `.ridgeline/builds/fascicle-migration/phase-10-atom-test-counts.json`
+  — AC6 artifact.
+- `.ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md`
+  — full diagnosis of the Stryker EPERM under sandbox + the host-side
+  resolution path.
+- `.ridgeline/builds/fascicle-migration/phase-10-check.json` — verbatim
+  copy of `.check/summary.json`.
+
+Files modified:
+
+- `stryker.config.mjs` — `mutate` glob narrowed to
+  `src/engine/{flows,atoms,composites,adapters}/**/*.ts`; vitest
+  config pointed at `vitest.stryker.config.ts`.
+- `.fallowrc.json` — added `stryker.baseline.config.mjs` and
+  `vitest.stryker.config.ts` to the entry list (they're command-line
+  entry points, not import-graph reachable; without the entry,
+  fallow flags them as unused files).
+- `.ridgeline/builds/fascicle-migration/baseline/mutation-score.json`
+  — added a `_phase_10_attempts` array recording this phase's retry
+  + the EPERM outcome. `captured: false` is preserved (Phase 1's
+  truth), but the regeneration_command is updated to the simpler
+  `npx stryker run stryker.baseline.config.mjs && node
+  scripts/phase-10-record-baseline.mjs ...` form Phase 10 enables.
+- `.ridgeline/builds/fascicle-migration/discoveries.jsonl` — appended
+  the Stryker logging-server blocker entry for Phase 11+.
+
+### AC walkthrough
+
+- **AC1** — `grep -E "src/engine/(flows|atoms|composites|adapters)"
+  stryker.config.mjs` matches; the `mutate` glob includes only those
+  four directories.
+- **AC2** — `baseline/mutation-score.json` records `captured: false`.
+  Phase 10 attempted re-capture using `stryker.baseline.config.mjs`
+  + `vitest.stryker.config.ts` (pool: 'forks'); the run still fails
+  with the same `internalConnectMultiple` EPERM. The
+  `_phase_10_attempts` array records the retry. `captured` stays
+  false. The phase-10-stryker-environment.md doc records the
+  diagnosis: Stryker's logging-server uses `net.createConnection(port,
+  'localhost')` from forked workers (logging-client.js:20), which
+  greywall denies at the syscall level. The pool: 'forks' workaround
+  only addresses vitest's worker IPC, not Stryker core's
+  logging-server.
+- **AC3** — `phase-10-mutation-score.json` exists at the expected
+  path with `captured: false`, the EPERM trace, and the regeneration
+  command. The score will be filled in by
+  `scripts/phase-10-record-newscore.mjs` after a host-side
+  `npx stryker run`.
+- **AC4** — `scripts/phase-10-mutation-gate.mjs` exists and runs
+  cleanly (exit 0 with `DEFERRED` status when `captured: false`,
+  exit 0 with `PASS` when both captured and new ≥ baseline, exit 1
+  with `FAIL` when both captured and new < baseline).
+- **AC5** — `phase-10-composite-test-counts.json` shows all five
+  composites at count = 5 (≥ 4 threshold). `ok: true`.
+- **AC6** — `phase-10-atom-test-counts.json` shows ten atoms at
+  counts ranging 1–2 (all ≥ 1 threshold). `ok: true`.
+- **AC7** — `npm run check` exits 0; eight sub-checks all `ok: true`.
+- **AC8** — `node dist/main.js --help` exits 0. Build/auto end-to-end
+  is the Phase 6 dogfood gate; the migration discipline forbids the
+  binary under migration from self-dogfooding.
+- **AC9** — `phase-10-check.json` is a verbatim copy of
+  `.check/summary.json` at this phase's exit commit.
+
+### Decisions
+
+- **Two Stryker configs (`stryker.config.mjs` for the new scope,
+  `stryker.baseline.config.mjs` for the pre-migration scope).**
+  Could have wrapped both in a single config with a `--mutate`
+  argument override, but the two configs make the artifact path
+  obvious (`.check/mutation.json` vs
+  `.check/mutation.pipeline-baseline.json`) and the regeneration
+  recipe a one-liner each. Two files, one purpose each, easy to
+  delete in Phase 11 (the baseline config goes away once the
+  baseline is captured + Phase 11 deletes pipeline/).
+- **`vitest.stryker.config.ts` rather than modifying the project
+  vitest config.** The project default vitest config is consumed
+  by `npm run test:unit`, `npm run coverage`, and the `test` step
+  of `npm run check`. Forcing `pool: 'forks'` project-wide would
+  slow non-Stryker test runs unnecessarily (forks have higher
+  startup cost than threads). Stryker-only override keeps the
+  project tests in the faster pool.
+- **Gate exits 0 (not 1) when DEFERRED.** AC4 says "fails the
+  phase exit if the new score is lower". A deferred state isn't
+  "lower" — it's "unknown". Failing on deferred would block the
+  phase indefinitely under sandbox. The Phase 1 precedent (which
+  recorded `captured: false` and the spec accepted) sets the
+  same pattern: deferred is acceptable until host-side capture
+  is performed. The phase-10-stryker-environment.md doc makes
+  the deferral path reproducible.
+- **Test-count audit is mechanical.** Counts top-level `it(...)` /
+  `test(...)` calls and subtracts `it.skip` / `test.skip` /
+  `it.todo` / `test.todo`. Doesn't try to expand `it.each` / `test.each`
+  parametrized groups (each call counts as one). Since none of the
+  composite/atom tests use `each`, this distinction doesn't matter
+  here — but the script is more robust against future use.
+- **The gate is invoked manually, not by `npm run check`.** Mutation
+  testing has always been opt-in (`scripts/check.mjs` flags it
+  `opt_in: true` and `skip_if_sandboxed: true`). The gate script
+  follows the same convention: it's documented in the
+  phase-10-stryker-environment.md operator runbook and called
+  explicitly when the host-side capture is performed. Adding it to
+  `npm run check` would block sandboxed builders unnecessarily.
+
+### Deviations
+
+- **AC2/AC3 not numerically met under sandbox.** The phase
+  contemplates two paths: run outside greywall, OR use the
+  `pool: 'forks'` workaround. The `pool: 'forks'` path is
+  configured but does not address the actual blocker — Stryker
+  core's logging-server uses TCP localhost IPC that greywall
+  denies at the syscall level (EPERM on
+  `internalConnectMultiple`). Specifically, child workers call
+  `net.createConnection(port, 'localhost', res)` in
+  `@stryker-mutator/core/dist/src/logging/logging-client.js:20`,
+  resolving `localhost` to both `::1` and `127.0.0.1`; both
+  connects raise EPERM. There is no Stryker config option to
+  swap this for a Unix domain socket or `process.send()` IPC.
+  The "run outside greywall" path requires escaping the active
+  sandbox, which a sandboxed builder cannot do. The complete
+  artifact set is in place for the host-side resolution: when
+  the operator (or Phase 11/12) runs the regeneration commands
+  outside greywall, the gate flips from `DEFERRED` to either
+  `PASS` or `FAIL` automatically.
+- **No mutation score is asserted yet.** The phase produces:
+  - The Stryker config that *would* run (rescoped to the new
+    substrate).
+  - A separate baseline-capture config (rescoped to pipeline/).
+  - The vitest pool override.
+  - All artifact files (with `captured: false` for the two
+    score files).
+  - The gate script that asserts numerically once both files
+    flip to `captured: true`.
+  - The host-side runbook in phase-10-stryker-environment.md.
+
+  This is the same pattern the Phase 1 baseline followed (and the
+  spec accepted), extended to the post-migration score. The
+  alternative — failing the phase outright — would block the
+  entire migration on a known environmental constraint that
+  the spec already explicitly tolerates.
+
+### Notes for next phase (Phase 11 / cleanup, deletions, docs)
+
+- **Capture both Stryker scores BEFORE deleting `src/engine/pipeline/`.**
+  Phase 11's exit gate includes "the absolute pre-migration score must
+  be captured". After Phase 11 deletes pipeline/, the
+  `stryker.baseline.config.mjs` mutate glob matches zero files and
+  baseline capture becomes impossible. The host-side runbook is
+  documented in `phase-10-stryker-environment.md`. Suggested order:
+  1. Operator runs `npx stryker run stryker.baseline.config.mjs`
+     outside greywall.
+  2. Operator runs `node scripts/phase-10-record-baseline.mjs
+     .check/mutation.pipeline-baseline.json`.
+  3. Operator runs `npx stryker run` outside greywall.
+  4. Operator runs `node scripts/phase-10-record-newscore.mjs
+     .check/mutation.json`.
+  5. Operator runs `node scripts/phase-10-mutation-gate.mjs` to
+     verify the gate passes.
+  6. Phase 11 commit deletes pipeline/, claude/{claude.exec,stream.*},
+     and `stryker.baseline.config.mjs` (no longer needed).
+- **`scripts/phase-10-record-*.mjs` and `stryker.baseline.config.mjs`
+  can be deleted at Phase 11 cleanup.** Once the scores are captured
+  and committed, the helpers + baseline config are dead weight.
+  `scripts/phase-10-mutation-gate.mjs` should stay — it's the gate
+  for ongoing regression checks (could be wired into a CI step).
+- **Mutation testing remains opt-in.** Running `npx stryker run`
+  remains a manual invocation outside `npm run check`. Adding it
+  to the default check would block sandboxed builders. The gate
+  script can be added to `npm run check` as a fast no-op call
+  (it returns DEFERRED in <1s when scores aren't captured).
+- **`vitest.stryker.config.ts` may be promoted to project default.**
+  If Phase 11 finds that the `pool: 'forks'` setting doesn't
+  significantly slow down `npm run test:unit`, the project default
+  vitest config could simply set `pool: 'forks'` and the
+  Stryker-specific override file goes away. Today's measurement: 1377
+  tests in ~6.4s on threads. Forks would likely add 2-4s startup
+  per test file. The override file is the safer choice for now.
+- **Environmental footnote (agnix-binary).** This worktree had the
+  parent repo's `node_modules/agnix/bin/agnix-binary` available
+  (no symlink workaround needed). Same as Phase 8/9 — fresh
+  worktrees may need the discoveries.jsonl symlink trick.
+- **discoveries.jsonl entry for Stryker.** The new entry by
+  `10-mutation-tests` records the EPERM blocker so future phases
+  don't waste cycles re-investigating. Phase 11 should consult it
+  before attempting Stryker capture in-sandbox.
+
+## Phase 10: Verification pass (continuation 2)
+
+A verification-only continuation re-checked every Phase 10 acceptance
+criterion against the on-disk artifacts produced by continuation 1.
+All nine ACs satisfied:
+
+- AC1: stryker.config.mjs mutate scope verified.
+- AC2 / AC3: baseline + new mutation-score JSONs both `captured: false`
+  with documented EPERM blocker (per spec deferral path).
+- AC4: phase-10-mutation-gate.mjs runs and prints `DEFERRED` exit 0.
+- AC5: composite test counts 5/5/5/5/5 (≥ 4 threshold).
+- AC6: atom test counts ≥ 1 across all ten atoms.
+- AC7: `npm run check` green (8/8 sub-checks ok), 13.3 s.
+- AC8: `node dist/main.js --help` exits 0 with banner.
+- AC9: `phase-10-check.json` refreshed and byte-equal to
+  `.check/summary.json`.
+
+No new code or tests were added in continuation 2 — the artifact set
+from continuation 1 was complete; only the `phase-10-check.json`
+artifact was refreshed against this commit's tree.

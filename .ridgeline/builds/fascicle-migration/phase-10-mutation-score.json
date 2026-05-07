@@ -1,0 +1,26 @@
+{
+  "_note": "Phase 10 attempted to capture the mutation score on src/engine/{flows,atoms,composites,adapters}/**/*.ts. The active sandbox (greywall) blocks Stryker's logging-server TCP-IPC: child workers connect via net.createConnection(port, 'localhost') and greywall denies the syscall with EPERM on internalConnectMultiple (both ::1 and 127.0.0.1). The documented `vitest pool: 'forks'` workaround does not address this: it covers vitest worker IPC, not Stryker core's logging-server. RIDGELINE_SANDBOX=0 / GREYWALL_SANDBOX=0 do not disable greywall (kernel-level enforcement). To capture this score, run `npx stryker run` on the host outside greywall, then run `node scripts/phase-10-record-newscore.mjs .check/mutation.json`. See .ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md for the full diagnosis.",
+  "scope": "src/engine/{flows,atoms,composites,adapters}/**/*.ts",
+  "captured": false,
+  "captured_at": null,
+  "environment": "blocked by greywall sandbox",
+  "score": null,
+  "killed": null,
+  "survived": null,
+  "timeout": null,
+  "no_coverage": null,
+  "compile_errors": null,
+  "runtime_errors": null,
+  "ignored": null,
+  "stryker_runtime_error": {
+    "kind": "AggregateError EPERM",
+    "stage": "ChildProcessProxy — logging-server connect from forked worker",
+    "node_version": "v24.15.0",
+    "stryker_core_version": "9.6.1",
+    "stryker_vitest_runner_version": "9.6.1",
+    "fatal_log_excerpt": "Unexpected error occurred while running Stryker StrykerError: AggregateError: EPERM (undefined) AggregateError [EPERM] at internalConnectMultiple (node:net:1193:18); root: connect EPERM ::1:<port> and 127.0.0.1:<port> (Local 0.0.0.0:0)"
+  },
+  "regeneration_command": "npx stryker run && node scripts/phase-10-record-newscore.mjs .check/mutation.json",
+  "_phase_10_environment_doc": ".ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md",
+  "_phase_11_dependency": "AC4 of Phase 10 cannot assert numerically until both this file and baseline/mutation-score.json have captured: true. The gate at scripts/phase-10-mutation-gate.mjs returns deferred (exit 0) until then; once captured, it asserts new_score >= baseline_score and fails with exit 1 on regression."
+}
