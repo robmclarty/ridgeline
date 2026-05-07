@@ -137,7 +137,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 44118,
+          "inputTokens": 100,
+          "costUsd": 9.244394250000003,
+          "durationMs": 754229,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T03:38:06.623Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "05-composites",

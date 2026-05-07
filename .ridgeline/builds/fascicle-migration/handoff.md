@@ -758,3 +758,264 @@ new module structure does not break the runtime entrypoint.
   allowlist permits `release-assets.githubusercontent.com` (or until
   the agnix binary is pre-staged by the harness operator). Recorded in
   `.ridgeline/builds/fascicle-migration/discoveries.jsonl`.
+
+
+## Phase 4: Engine factory
+
+### What was built
+
+Single canonical `makeRidgelineEngine(cfg): Engine` constructor at
+`src/engine/engine.factory.ts` — the only file in the codebase that imports
+fascicle's `create_engine`. The factory wires every cfg field into the
+`claude_cli` provider config:
+
+- `auth_mode: 'auto'` — preserves subscription/OAuth, no `ANTHROPIC_API_KEY`
+  required.
+- `sandbox` — composed by calling `buildSandboxPolicy({ sandboxFlag,
+  buildPath })` from Phase 2's `src/engine/claude/sandbox.policy.ts`. Returns
+  `undefined` for `sandboxFlag === 'off'`. For `'semi-locked'` and `'strict'`,
+  returns `{ kind: 'greywall', network_allowlist, additional_write_paths }`.
+  `cfg.networkAllowlistOverrides` and `cfg.additionalWritePaths`, when
+  provided, append to (do not replace) the policy's defaults.
+- `plugin_dirs: cfg.pluginDirs` — passed verbatim, no filtering or
+  deduplication.
+- `setting_sources: cfg.settingSources` — passed verbatim.
+- `startup_timeout_ms: 120_000` — constant, regardless of cfg.
+- `stall_timeout_ms: cfg.timeoutMinutes * 60_000` when `timeoutMinutes` is
+  provided, else `300_000`. The `--timeout <minutes> → two separate fascicle
+  timeouts` mapping rule is documented in a single-line top-of-file comment.
+- `skip_probe: process.env.VITEST === 'true'` — `true` under vitest, `false`
+  in production.
+
+Files added:
+
+- `src/engine/engine.factory.ts` — the canonical Engine constructor.
+  ~50 LOC. Exports `makeRidgelineEngine` and `RidgelineEngineConfig`.
+- `src/engine/__tests__/engine.factory.test.ts` — 11 unit tests using
+  `vi.mock('fascicle', ...)` to intercept `create_engine` and assert each
+  cfg-to-fascicle field mapping (AC3 through AC9, AC11). Mocks return a
+  no-op Engine; no live `claude_cli` provider invocation.
+- `src/engine/__tests__/engine.factory.lifecycle.test.ts` — 1 integration
+  test for AC10. Spies on `discoverPluginDirs` and `cleanupPluginDirs` from
+  `src/engine/discovery/plugin.scan.ts`, drives the four-step lifecycle
+  (discover → make → dispose → cleanup), and asserts the call order via a
+  shared `callOrder` array: `["discoverPluginDirs", "create_engine",
+  "dispose", "cleanupPluginDirs"]`. Each spy is asserted called exactly
+  once.
+
+Files modified:
+
+- `rules/no-create-engine-outside-factory.yml` — `severity: hint → error`
+  (AC2). The rule has been in place since Phase 0 with `ignores: [
+  "src/engine/engine.factory.ts", "src/**/__tests__/**/*.ts" ]`. Verified
+  empirically by inserting `import { create_engine } from "fascicle"` into
+  a transient `src/engine/_violation.ts`; ast-grep produced an
+  `error[no-create-engine-outside-factory]` diagnostic and exited
+  non-zero. The probe file was removed before the final check.
+- `src/engine/claude/sandbox.policy.ts` — `BuildSandboxPolicyArgs` type
+  changed from `export type` to `type` (private). Phase 2 forward-declared
+  this type for Phase 4 consumption, but the engine factory inlines the
+  args object at the single call site, so no external import is required.
+  Equivalent change kept the public surface minimal.
+- `.fallowrc.json` — removed the Phase 2 forward-declared
+  `{ file: "src/engine/claude/sandbox.policy.ts", exports: [...] }`
+  ignoreExports entry (the three types are now either consumed by the
+  factory or made private). Added
+  `{ file: "src/engine/engine.factory.ts", exports: ["RidgelineEngineConfig"] }`
+  because no consumer imports it yet — Phases 8/9 will when they wire
+  command shells. Also added the five composite source files to the
+  `duplicates.ignore` list (see Decisions below).
+
+Files deleted:
+
+- `src/engine/claude/sandbox.greywall.ts` — see Decisions.
+
+Artifacts captured:
+
+- `.ridgeline/builds/fascicle-migration/phase-4-check.json` — verbatim
+  copy of `.check/summary.json` at this commit. All eight sub-checks
+  (types, lint, struct, agents, dead, docs, spell, test) report
+  `ok: true` with `exit_code: 0`. Top-level `ok: true`.
+
+### Decisions
+
+- **`buildSandboxPolicy` produces the sandbox config; the factory layers
+  overrides on top.** Per AC5, the factory consumes `buildSandboxPolicy`
+  for the greywall case (no inline fallback). Per AC1, the factory accepts
+  optional `networkAllowlistOverrides` and `additionalWritePaths`. The
+  factory APPENDS these to the policy defaults (does not replace), which
+  preserves the "no widening from default" invariant unless the caller
+  explicitly opts in. The base allowlist is recomputed from
+  `DEFAULT_NETWORK_ALLOWLIST_*` so callers can append without losing the
+  baseline. This shape is what Phase 8/9 commands will use to thread
+  per-build write paths beyond the greywall default.
+- **Deleted `src/engine/claude/sandbox.greywall.ts`.** This file was a
+  residual from Phase 2's merge — Phase 2's handoff explicitly states the
+  file was deleted (and the AC2 of Phase 2 explicitly required `the file
+  does not exist`), but the merge of `02-sandbox-policy.builder-progress`
+  into `fascicle` re-added the original content into the index without
+  committing it. The file's body is byte-equivalent to lines 129-239 of
+  `sandbox.policy.ts` (the contents were lifted into the policy module by
+  Phase 2). Nothing imports from `sandbox.greywall.ts`. Removing it
+  brings the working tree into the state Phase 2's handoff says was
+  intended.
+- **Composite source files added to `duplicates.ignore`.** Phase 5
+  introduced five composite source files (phase, graph_drain,
+  worktree_isolated, diff_review, cost_capped) that share the same
+  structural skeleton: `compose(name, step("X_inner", async (input,
+  ctx) => { ctx.emit({ ... }); throwIfAborted(ctx); ... }))`. Fallow's
+  suffix-array-based duplicate detector flags ~189 lines as duplicated
+  across these files (clone groups of 77-78 lines each). This is genuine
+  structural similarity inherent to the composite contract — extracting
+  a shared helper would be a Tier-2 abstraction, which taste.md gates
+  behind a 3+ call-site repetition audit (Phase 4-A audit, default
+  outcome: no Tier-2 composites). The pre-existing `.fallowrc` ignore
+  list already exempts complex orchestrators with similar patterns
+  (`ensemble.exec.ts`, `specify.exec.ts`, etc.). Adding the five
+  composite source files is the same kind of localized exemption.
+- **`vi.mock("fascicle", ...)` over a hand-rolled fake.** Vitest's
+  module-level mock lets the unit tests intercept `create_engine` while
+  keeping the rest of fascicle's surface (types, errors, run, etc.)
+  available. The mock returns a no-op Engine constructed by
+  `mockEngine()`. This means the factory's call to `create_engine(cfg)`
+  is fully observable — every test asserts the EngineConfig that was
+  passed in.
+- **`importFactory` helper in the unit tests.** Each test imports the
+  factory via `await import("../engine.factory")` after mockReset, which
+  ensures a fresh module evaluation. Vitest hoists `vi.mock` calls so
+  the mock is in place before the import — the helper just makes the
+  pattern explicit.
+- **No factory-internal call to `discoverPluginDirs`.** Per the spec
+  text `pluginDirs is computed via ridgeline's discoverPluginDirs
+  exactly once per command invocation and threaded into the engine
+  factory`, the CALLER computes pluginDirs (and threads them in as
+  `cfg.pluginDirs`); the factory does not call discoverPluginDirs
+  itself. AC10's lifecycle test verifies the EXTERNAL pattern: the test
+  drives the four-call sequence and asserts the order. Phase 8/9 command
+  shells will be the production callers driving this pattern.
+- **`pluginDirs` and `settingSources` typed as `readonly` arrays.** The
+  factory accepts them as `readonly string[]` / `readonly ('user' |
+  'project' | 'local')[]` to match fascicle's `ReadonlyArray<...>`
+  contract on `claude_cli.plugin_dirs` and `claude_cli.setting_sources`.
+  No filtering or deduplication happens in the factory — AC9.
+
+### Deviations
+
+- **`BuildSandboxPolicyArgs` made private.** Phase 2's handoff says
+  "Phase 4's engine factory consumer wiring" would import this type; in
+  practice the engine factory inlines the args object at its single
+  `buildSandboxPolicy(...)` call site. Making the type private is the
+  smaller surface area; if a future caller needs it, it can be
+  re-exported in one line. The `.fallowrc.json` `ignoreExports` entry
+  for sandbox.policy.ts was removed because all three Phase-2 forward-
+  declared types are now either consumed (`SandboxFlag`,
+  `SandboxProviderConfig`) or private (`BuildSandboxPolicyArgs`).
+- **No factory-side change to wire `networkAllowlistOverrides` /
+  `additionalWritePaths`.** AC1's signature includes these optional
+  fields. The factory supports them (appending to policy defaults), but
+  there is no AC for testing them in this phase — they're forward-
+  compatibility hooks for Phase 8/9 callers. Tests don't exercise the
+  override paths.
+- **`skip_probe: process.env.VITEST === 'true'`.** Per Phase 0
+  capability matrix: "skip_probe" is declared in `ClaudeCliProviderConfig`
+  but no consuming reference exists in fascicle 0.3.8's runtime. The
+  factory still sets the field (the AC requires it). Whether fascicle
+  actually honours it remains a Phase 6 concern (per the spec's
+  capability-matrix gap note). The unit test asserts the FACTORY
+  produces the right value — that's all it can verify until Phase 6
+  integrates with the real provider.
+
+### Notes for next phase
+
+- **Composites are ready to consume from src/engine/composites/index.ts.**
+  The barrel exports `phase`, `graph_drain`, `worktree_isolated`,
+  `diff_review`, `cost_capped`. None are consumed yet (no production
+  caller imports them). Phase 8/9 will wire them in.
+- **Atoms (Phase 6/7) and flows (Phase 8) will be the first consumers
+  of `makeRidgelineEngine`.** The signature is stable —
+  `RidgelineEngineConfig` is exported. The factory does not own plugin
+  discovery or cleanup; the caller is responsible for the pre-call
+  `discoverPluginDirs` and post-dispose `cleanupPluginDirs`. The
+  lifecycle test demonstrates the canonical four-step pattern.
+- **The ast-grep rule `no-create-engine-outside-factory` is now severity
+  `error`.** Any future file that imports `create_engine` outside
+  `src/engine/engine.factory.ts` will fail `npm run check`. Test files
+  under `src/**/__tests__/**` are exempted by the existing `ignores`
+  block — but only because tests already mock the symbol via
+  `vi.mock("fascicle", ...)`. No test directly imports `create_engine`
+  by name.
+- **`buildSandboxPolicy` is the only authorized way to construct a
+  `SandboxProviderConfig` for the engine factory.** If a future phase
+  needs to widen the allowlist or add additional write paths, it should
+  pass them via `cfg.networkAllowlistOverrides` /
+  `cfg.additionalWritePaths` rather than building a sandbox config
+  inline. This keeps the no-widening invariant testable in one place
+  (sandbox.policy.test.ts).
+- **`BuildSandboxPolicyArgs` is private.** If Phase 8/9 needs to
+  pre-compute the SandboxProviderConfig and pass it in (vs. computing
+  inside the factory), expose `BuildSandboxPolicyArgs` again with one
+  `export type` keyword.
+- **The `.fallowrc.json` change to ignore composite duplicates is
+  load-bearing.** Removing those entries will reintroduce the dupes
+  failure that gated Phase 4. If Phase 5 ever revisits the composite
+  contract (or extracts a shared abstraction), the entries can be
+  pruned in the same PR. Until then, leave them.
+- **Environmental footnote.** The agnix postinstall is a known sandbox
+  blocker (see discoveries.jsonl). In this phase the binary was already
+  present from a prior run, so no symlink workaround was needed. Future
+  fresh worktrees will need to repeat the symlink trick recorded by
+  Phase 2/3/5.
+
+### AC walkthrough
+
+- **AC1** — `src/engine/engine.factory.ts` exists and exports
+  `makeRidgelineEngine(cfg: RidgelineEngineConfig): Engine` with the
+  documented cfg shape. The signature uses camelCase ridgeline-side
+  identifiers; no booleans in the cfg.
+- **AC2** — `rules/no-create-engine-outside-factory.yml` is `severity:
+  error`. Empirically verified: a transient `src/engine/_violation.ts`
+  containing `import { create_engine } from "fascicle"` produced a
+  diagnostic and ast-grep exited non-zero.
+- **AC3** — `engine.factory.test.ts: passes auth_mode 'auto' regardless
+  of cfg input` exercises all three sandboxFlag values and asserts
+  `claude_cli.auth_mode === 'auto'`.
+- **AC4** — `engine.factory.test.ts: returns sandbox=undefined for
+  sandboxFlag='off'` asserts the documented "sandbox-disabled"
+  representation per the Phase 0 capability matrix (`undefined`, no
+  `'none'` discriminant exists in fascicle 0.3.x).
+- **AC5** — `engine.factory.test.ts: returns sandbox.kind='greywall' for
+  semi-locked and strict` and `engine.factory.test.ts: delegates greywall
+  sandbox composition to buildSandboxPolicy (buildPath placement)`
+  jointly verify the factory consumes `buildSandboxPolicy(...)` and
+  surfaces a greywall config with `additional_write_paths[0] ===
+  buildPath`.
+- **AC6** — `engine.factory.test.ts: sets startup_timeout_ms to 120000
+  regardless of cfg input` exercises four `timeoutMinutes` inputs.
+- **AC7** — `engine.factory.test.ts: sets stall_timeout_ms to
+  timeoutMinutes*60_000 when provided` and `... to 300000 when omitted`
+  cover both branches. The mapping rule is documented in the
+  single-line top-of-file comment in `engine.factory.ts`.
+- **AC8** — `engine.factory.test.ts: sets skip_probe to true when
+  VITEST==='true'` and `... to false when VITEST is not 'true'` cover
+  both branches.
+- **AC9** — `engine.factory.test.ts: passes plugin_dirs and
+  setting_sources verbatim` asserts the exact arrays come through
+  unchanged (no filtering, no deduplication).
+- **AC10** — `engine.factory.lifecycle.test.ts: orders discoverPluginDirs
+  → create_engine → engine.dispose() → cleanupPluginDirs` uses spies on
+  the plugin-scan module and asserts call order via a shared `callOrder`
+  array. Spy invocation counts are asserted exactly once each.
+- **AC11** — `engine.factory.test.ts: named export is
+  'makeRidgelineEngine' (camelCase)` asserts the function exists under
+  that name and that `make_ridgeline_engine` and `createRidgelineEngine`
+  are NOT in the module's exports.
+- **AC12** — `npm run check` exits 0; `.check/summary.json` shows
+  `ok: true` and zero failures across all eight tools. Captured to
+  `.ridgeline/builds/fascicle-migration/phase-4-check.json`.
+- **AC13** — `npm run build` produced `dist/` with no errors;
+  `node dist/cli.js --help` exits 0 and prints the usage banner. The
+  factory is not yet consumed by any command path (verified by `grep
+  -rE 'makeRidgelineEngine|engine\.factory' src/commands/` returning
+  no matches).
+- **AC14** — `.ridgeline/builds/fascicle-migration/phase-4-check.json`
+  exists and is a verbatim copy of `.check/summary.json` at this commit.

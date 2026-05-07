@@ -1,12 +1,10 @@
 id: no-create-engine-outside-factory
-# Activates at Phase 6 (engine.factory.ts).
 # Rationale: fascicle's `create_engine` may be imported only by the single
 # canonical engine factory at src/engine/engine.factory.ts. Every other
 # module receives an Engine instance via parameter or via the factory
-# function — never by constructing one directly. Severity is `hint` until
-# Phase 6 adds engine.factory.ts; Phase 6 lifts this to `error`.
+# function — never by constructing one directly.
 message: Only src/engine/engine.factory.ts may import `create_engine` from fascicle. Use `makeRidgelineEngine(cfg)` everywhere else.
-severity: hint
+severity: error
 language: typescript
 files:
   - "src/**/*.ts"

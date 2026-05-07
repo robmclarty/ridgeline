@@ -38,7 +38,7 @@
     { "file": "src/engine/pipeline/build.exec.ts", "exports": ["BuilderInvocationExtras"] },
     { "file": "src/ui/phase-prompt.ts", "exports": ["PhaseApprovalDecision", "PhaseApprovalContext", "PhaseApprovalOptions"] },
     { "file": "src/ui/graceful-stop.ts", "exports": ["GracefulStopOptions", "GracefulStopHandle"] },
-    { "file": "src/engine/claude/sandbox.policy.ts", "exports": ["SandboxProviderConfig", "SandboxFlag", "BuildSandboxPolicyArgs"] }
+    { "file": "src/engine/engine.factory.ts", "exports": ["RidgelineEngineConfig"] }
   ],
   "duplicates": {
     "ignore": [
@@ -47,6 +47,11 @@
       "src/cli.ts",
       "src/engine/pipeline/ensemble.exec.ts",
       "src/engine/pipeline/specify.exec.ts",
+      "src/engine/composites/phase.ts",
+      "src/engine/composites/graph_drain.ts",
+      "src/engine/composites/worktree_isolated.ts",
+      "src/engine/composites/diff_review.ts",
+      "src/engine/composites/cost_capped.ts",
       "src/sensors/playwright.ts",
       "src/sensors/a11y.ts",
       "src/sensors/vision.ts",

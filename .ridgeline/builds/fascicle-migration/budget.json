@@ -251,7 +251,19 @@
       "cacheCreationInputTokens": 98263,
       "durationMs": 218969,
       "timestamp": "2026-05-07T02:19:11.838Z"
+    },
+    {
+      "phase": "04-engine-factory",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 9.244394250000003,
+      "inputTokens": 100,
+      "outputTokens": 44118,
+      "cacheReadInputTokens": 12662444,
+      "cacheCreationInputTokens": 285789,
+      "durationMs": 754229,
+      "timestamp": "2026-05-07T03:38:06.624Z"
     }
   ],
-  "totalCostUsd": 114.18492369999998
+  "totalCostUsd": 123.42931794999998
 }

@@ -113,7 +113,7 @@ export type SandboxProviderConfig =
 
 export type SandboxFlag = "off" | "semi-locked" | "strict"
 
-export type BuildSandboxPolicyArgs = {
+type BuildSandboxPolicyArgs = {
   sandboxFlag: SandboxFlag
   buildPath: string
 }
