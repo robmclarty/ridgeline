@@ -1525,3 +1525,9 @@ The `.fallowrc.json` adds three forward-declared types (`SandboxProviderConfig`,
 [ridgeline] [02-sandbox-policy.builder-progress] PASSED (1502s)
 [ridgeline] ERROR: Merge conflict for 02-sandbox-policy: .fallowrc.json, .ridgeline/builds/fascicle-migration/phase-2-check.json, src/engine/claude/__tests__/sandbox.greywall.test.ts, src/engine/claude/__tests__/sandbox.policy.test.ts, src/engine/claude/__tests__/sandbox.test.ts, src/engine/claude/sandbox.policy.ts, src/engine/claude/sandbox.ts
 [ridgeline] Branch preserved: ridgeline/fascicle-migration/02-sandbox-policy
+[ridgeline] Resuming build 'fascicle-migration' from phase 7/14
+[ridgeline] Sandbox: greywall (semi-locked)
+[ridgeline] Starting build: fascicle-migration (14 phases)
+[ridgeline] Phase dependencies detected — using wave-based scheduling
+
+[ridgeline] ── Phase 6/14: 04-engine-factory ──

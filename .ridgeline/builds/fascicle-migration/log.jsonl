@@ -42,3 +42,8 @@
 {"timestamp":"2026-05-07T02:19:11.897Z","level":"info","phase":"02-sandbox-policy.builder-progress","message":"PASSED (1502s)"}
 {"timestamp":"2026-05-07T02:19:14.514Z","level":"error","phase":null,"message":"Merge conflict for 02-sandbox-policy: .fallowrc.json, .ridgeline/builds/fascicle-migration/phase-2-check.json, src/engine/claude/__tests__/sandbox.greywall.test.ts, src/engine/claude/__tests__/sandbox.policy.test.ts, src/engine/claude/__tests__/sandbox.test.ts, src/engine/claude/sandbox.policy.ts, src/engine/claude/sandbox.ts"}
 {"timestamp":"2026-05-07T02:19:14.515Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/02-sandbox-policy"}
+{"timestamp":"2026-05-07T03:25:21.753Z","level":"info","phase":null,"message":"Resuming build 'fascicle-migration' from phase 7/14"}
+{"timestamp":"2026-05-07T03:25:23.458Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
+{"timestamp":"2026-05-07T03:25:23.460Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (14 phases)\n"}
+{"timestamp":"2026-05-07T03:25:23.514Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
+{"timestamp":"2026-05-07T03:25:23.516Z","level":"info","phase":"04-engine-factory","message":"Phase 6/14: 04-engine-factory"}
