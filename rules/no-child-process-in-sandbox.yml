@@ -1,0 +1,21 @@
+id: no-child-process-in-sandbox
+# Sandbox spawn-wrapping moved into fascicle's claude_cli provider in Phase 2.
+# sandbox.ts and sandbox.types.ts are now detection helpers and config types;
+# any import of `node:child_process` or `child_process` (or a `spawn` call) in
+# either file is a regression toward the legacy spawn-wrapper architecture.
+# sandbox.policy.ts retains child_process for the legacy greywallProvider — it
+# is intentionally excluded from this rule.
+message: No `child_process` or `spawn` imports in src/engine/claude/sandbox.ts or sandbox.types.ts. Spawn-wrapping lives in sandbox.policy.ts (legacy) and fascicle's claude_cli provider (post-migration).
+severity: error
+language: typescript
+files:
+  - "src/engine/claude/sandbox.ts"
+  - "src/engine/claude/sandbox.types.ts"
+rule:
+  any:
+    - pattern: import $$$ from "node:child_process"
+    - pattern: import $$$ from "child_process"
+    - pattern: import("node:child_process")
+    - pattern: import("child_process")
+    - pattern: require("node:child_process")
+    - pattern: require("child_process")

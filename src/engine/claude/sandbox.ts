@@ -1,17 +1,7 @@
-import { execFileSync } from "node:child_process"
-import { greywallProvider } from "./sandbox.greywall"
+import { greywallProvider, isAvailable } from "./sandbox.policy"
 import type { SandboxProvider } from "./sandbox.types"
 import type { SandboxMode } from "../../stores/settings"
 export type { SandboxProvider } from "./sandbox.types"
-
-const isAvailable = (cmd: string): boolean => {
-  try {
-    execFileSync("which", [cmd], { stdio: ["pipe", "pipe", "pipe"] })
-    return true
-  } catch {
-    return false
-  }
-}
 
 type SandboxDetectionResult = {
   provider: SandboxProvider | null

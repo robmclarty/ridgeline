@@ -37,7 +37,8 @@
     { "file": "src/engine/pipeline/build.loop.ts", "exports": ["BuilderLoopOutcome", "BuilderLoopOptions", "BuilderInvocationContext", "BuilderInvoker", "DiffHasher", "BuilderLoopArgs", "DEFAULT_MAX_CONTINUATIONS", "DEFAULT_PHASE_COST_CAP_MULTIPLIER", "PROGRESS_TRIM_THRESHOLD_TOKENS", "defaultDiffHasher", "defaultInvoker", "InvocationCompleteHook"] },
     { "file": "src/engine/pipeline/build.exec.ts", "exports": ["BuilderInvocationExtras"] },
     { "file": "src/ui/phase-prompt.ts", "exports": ["PhaseApprovalDecision", "PhaseApprovalContext", "PhaseApprovalOptions"] },
-    { "file": "src/ui/graceful-stop.ts", "exports": ["GracefulStopOptions", "GracefulStopHandle"] }
+    { "file": "src/ui/graceful-stop.ts", "exports": ["GracefulStopOptions", "GracefulStopHandle"] },
+    { "file": "src/engine/claude/sandbox.policy.ts", "exports": ["SandboxProviderConfig", "SandboxFlag", "BuildSandboxPolicyArgs"] }
   ],
   "duplicates": {
     "ignore": [

@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("node:child_process", () => ({
-  execFileSync: vi.fn(),
-}))
+vi.mock("../sandbox.policy", async () => {
+  const actual = await vi.importActual<typeof import("../sandbox.policy")>("../sandbox.policy")
+  return {
+    ...actual,
+    isAvailable: vi.fn(),
+    greywallProvider: { name: "greywall", command: "greywall", buildArgs: vi.fn(() => []), checkReady: vi.fn(() => null) },
+  }
+})
 
-vi.mock("../sandbox.greywall", () => ({
-  greywallProvider: { name: "greywall", command: "greywall", buildArgs: vi.fn(() => []), checkReady: vi.fn(() => null) },
-}))
-
-import { execFileSync } from "node:child_process"
 import { detectSandbox } from "../sandbox"
-import { greywallProvider } from "../sandbox.greywall"
+import { greywallProvider, isAvailable } from "../sandbox.policy"
 
 describe("detectSandbox", () => {
   beforeEach(() => {
@@ -18,7 +18,8 @@ describe("detectSandbox", () => {
   })
 
   it("returns greywall provider when greywall is available and ready", () => {
-    vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
+    vi.mocked(isAvailable).mockReturnValue(true)
+    vi.mocked(greywallProvider.checkReady!).mockReturnValue(null)
 
     const { provider, warning } = detectSandbox()
     expect(provider).not.toBeNull()
@@ -27,7 +28,7 @@ describe("detectSandbox", () => {
   })
 
   it("returns null provider with warning when greyproxy is not running", () => {
-    vi.mocked(execFileSync).mockReturnValue("/usr/local/bin/greywall")
+    vi.mocked(isAvailable).mockReturnValue(true)
     vi.mocked(greywallProvider.checkReady!).mockReturnValue("greyproxy is not running. Start it with: greywall setup")
 
     const { provider, warning } = detectSandbox()
@@ -37,9 +38,7 @@ describe("detectSandbox", () => {
   })
 
   it("returns null when greywall is absent", () => {
-    vi.mocked(execFileSync).mockImplementation(() => {
-      throw new Error("not found")
-    })
+    vi.mocked(isAvailable).mockReturnValue(false)
 
     const { provider } = detectSandbox()
     expect(provider).toBeNull()
@@ -50,6 +49,6 @@ describe("detectSandbox", () => {
     expect(provider).toBeNull()
     expect(warning).toBeNull()
     // No tool probes should run when sandbox is explicitly off
-    expect(execFileSync).not.toHaveBeenCalled()
+    expect(isAvailable).not.toHaveBeenCalled()
   })
 })

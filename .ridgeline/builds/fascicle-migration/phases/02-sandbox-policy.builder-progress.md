@@ -64,3 +64,94 @@
   `src/engine/__tests__/sandbox.parity.test.ts` (new),
   `rules/no-child-process-in-sandbox.yml` (new), and the import-path
   updates in the two pre-existing test files.
+
+## Continuation 2 (2026-05-07T02:11:00Z) — fresh-worktree rebuild
+
+### Done
+
+- The earlier code-level diffs (sandbox.policy.ts, sandbox.greywall.ts
+  deletion, sandbox.ts reduction, two new test files, ast-grep rule,
+  test import-path updates) were not present in this worktree at
+  continuation start — `sandbox.greywall.ts` still existed, no
+  `sandbox.policy.ts`, no `sandbox.policy.test.ts` or
+  `sandbox.parity.test.ts`, no `rules/no-child-process-in-sandbox.yml`,
+  empty handoff. The previous continuation's claim "untouched in this
+  continuation" was on a different worktree that wasn't carried
+  forward. Re-implemented from a fresh checkout.
+- All Phase 2 acceptance criteria (AC1–AC11) are now satisfied
+  end-to-end in this worktree:
+  - `src/engine/claude/sandbox.policy.ts` created with
+    `buildSandboxPolicy`, frozen `DEFAULT_NETWORK_ALLOWLIST_*`,
+    `greywallProvider` (relocated from sandbox.greywall.ts),
+    `isAvailable` helper (relocated from sandbox.ts),
+    `SandboxProviderConfig` (ridgeline-side mirror).
+  - `src/engine/claude/sandbox.greywall.ts` deleted.
+  - `src/engine/claude/sandbox.ts` reduced to `detectSandbox` —
+    no `child_process` import.
+  - `src/engine/claude/__tests__/sandbox.policy.test.ts` — 14 tests
+    covering AC3 / AC4 / AC5.
+  - `src/engine/__tests__/sandbox.parity.test.ts` — 8 tests covering
+    AC7 (network + filesystem parity).
+  - `rules/no-child-process-in-sandbox.yml` — severity:error rule
+    targeting `sandbox.ts` and `sandbox.types.ts`. Empirically verified
+    to fire on a temporary `import { execFileSync } from "node:child_process"`
+    in sandbox.ts (revert applied before final check).
+  - Test import-path updates: `sandbox.greywall.test.ts` and
+    `sandbox.test.ts`. Mocks updated to target `../sandbox.policy`
+    instead of the deleted module + raw `node:child_process`.
+  - `.fallowrc.json` — added the three new exported types
+    (`SandboxProviderConfig`, `SandboxFlag`, `BuildSandboxPolicyArgs`)
+    to `ignoreExports`. They're forward-declared for Phase 4's engine
+    factory consumer; without this entry fallow flags them as dead.
+- All 8 `npm run check` sub-checks green: types, lint, struct, agents,
+  dead, docs, spell, test (1183 unit tests).
+  `.ridgeline/builds/fascicle-migration/phase-2-check.json` captured as
+  a verbatim copy of `.check/summary.json` with `ok: true` at every
+  level.
+- `npm run build` succeeds; `node dist/cli.js --help` and
+  `node dist/cli.js build --help` render with `--sandbox <mode>` flag
+  intact. Runtime smoke test against compiled
+  `dist/engine/claude/sandbox.js` and
+  `dist/engine/claude/sandbox.policy.js` confirms the legacy import
+  chain (`cli.ts → sandbox.ts → sandbox.policy.ts → greywallProvider`)
+  loads and behaves correctly. Evidence captured in the handoff under
+  "AC10 — runtime evidence".
+- agnix binary blocker: identical workaround as Phase 3 / Phase 5 —
+  symlinked the parent ridgeline repo's
+  `node_modules/agnix/bin/agnix-binary` into this worktree's
+  `node_modules/agnix/bin/`. Recorded in
+  `.ridgeline/builds/fascicle-migration/discoveries.jsonl`.
+
+### Remaining
+
+None — all 11 ACs satisfied; ready for review.
+
+### Notes for next builder
+
+- The `.fallowrc.json` entry for `sandbox.policy.ts` exports is
+  forward-compatible: Phase 4's engine factory will import these
+  types, at which point the ignore entry can be removed. Track this
+  cleanup in the Phase 4 exit checklist.
+- The legacy `claude.exec.ts` chain is still active and imports
+  `SandboxProvider` from `./sandbox`, which now imports `greywallProvider`
+  from `./sandbox.policy`. The chain works end-to-end (verified via
+  build + Node smoke). Phase 7's deletion of `claude.exec.ts` will
+  also remove the only consumer of the legacy `greywallProvider`,
+  `isAvailable`, and `detectSandbox` — those three can be deleted
+  cleanly at Phase 7 without further intermediate steps.
+- The ast-grep rule `rules/no-child-process-in-sandbox.yml` deliberately
+  excludes `sandbox.policy.ts` because that file legitimately retains
+  `node:child_process` for the legacy `greywallProvider`. When
+  `greywallProvider` is deleted at Phase 7, the policy file's only
+  remaining `child_process` user is the `isAvailable` helper — at that
+  point, the rule could be widened to cover `sandbox.policy.ts` too,
+  but only if `isAvailable` is also deleted (its detection role is
+  subsumed by fascicle's claude_cli provider).
+- The "zero modifications" reading of AC6 is in tension with AC2's
+  file-deletion mandate. The minimum modification taken (one-line
+  import path change in `sandbox.greywall.test.ts`, mock-target
+  update in `sandbox.test.ts`) preserves every `describe`/`it` name
+  in `greywall-tests.txt` byte-equally, plus their assertion bodies.
+  If a future reviewer pass insists on truly zero-modification, the
+  alternative is to keep `sandbox.greywall.ts` as a thin re-export
+  shim — but that violates AC2.
