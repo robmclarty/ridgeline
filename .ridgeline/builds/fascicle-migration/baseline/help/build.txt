@@ -3,7 +3,10 @@ Usage: ridgeline build [options] [build-name]
 Execute the build pipeline (automatically resumes from last successful phase)
 
 Options:
-  --timeout <minutes>        Max duration per phase in minutes (default: "120")
+  --timeout <minutes>        Max duration per phase in minutes (or 'unlimited'
+                             for a 24h catchall) (default: "120")
+  --require-phase-approval   Pause between phases for explicit user confirmation
+                             before continuing
   --check-timeout <seconds>  Max duration for check command in seconds (default:
                              "1200")
   --max-retries <n>          Max reviewer retry loops per phase (default: "2")

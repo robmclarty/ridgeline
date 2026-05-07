@@ -1,2 +1,2 @@
-import { RidgelineConfig } from "../types";
+import { RidgelineConfig } from "../types.js";
 export declare const runPlan: (config: RidgelineConfig) => Promise<void>;

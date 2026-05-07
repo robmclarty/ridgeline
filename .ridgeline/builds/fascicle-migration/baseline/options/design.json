@@ -1,0 +1,44 @@
+[
+  {
+    "flags": "--auto",
+    "description": "Non-interactive mode: skip Q&A; use Auto variants where applicable",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--model <name>",
+    "description": "Model for designer agent (defaults to settings.json model, or 'opus')",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--specialists <n>",
+    "description": "Number of ensemble specialists (1, 2, or 3). Default: 3",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--thorough",
+    "description": "Alias for --specialists 3 (the default)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--timeout <minutes>",
+    "description": "Max duration per turn in minutes",
+    "defaultValue": "10",
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "-y, --yes",
+    "description": "Skip the preflight confirmation prompt",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  }
+]

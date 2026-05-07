@@ -16,11 +16,11 @@ subscriber) is wired into `run`'s `opts`. The composites from Phase 5 and
 the atoms from Phases 6 and 7 are composed into the flows.
 
 External signatures of every commands/*.ts exported function (the function
-consumed by `src/cli.ts`) are byte-equal to the Phase 1 baseline `.d.ts`
+consumed by `src/main.ts`) are byte-equal to the Phase 1 baseline `.d.ts`
 output. The CLI flag set is unchanged; `--help` output is byte-equal to the
 baseline; existing E2E tests for each migrated command pass unchanged.
 
-The manual `process.on('SIGINT', ...)` handler in `src/cli.ts` is NOT
+The manual `process.on('SIGINT', ...)` handler in `src/main.ts` is NOT
 removed in this phase — `build` and `auto` still run on the old pipeline
 until Phase 9, and the manual handler covers them. SIGINT migration
 happens in Phase 9.
@@ -89,7 +89,7 @@ phase's PR/commit body so test coverage is not silently reduced.
    plugin consumers reachable from the project — including any
    first-party plugins under `src/plugins/`, declared plugin directories,
    and plugin-host integrations.
-10. `src/cli.ts` STILL contains its manual `process.on('SIGINT', ...)`
+10. `src/main.ts` STILL contains its manual `process.on('SIGINT', ...)`
     handler at this phase's exit (Phase 9 removes it).
 11. `build` and `auto` commands are NOT migrated in this phase — they
     remain on the old pipeline until Phase 9.
@@ -107,8 +107,8 @@ From `spec.md`, "Phase 5 — Leaf command flows":
 > and `auto`) to construct a fascicle flow and call
 > `run(flow, input, opts)` inside a try/finally that disposes the Engine.
 > External command signatures (the function exported from each
-> commands/<name>.ts and consumed by src/cli.ts) and the CLI flag set are
-> unchanged. The src/cli.ts manual `process.on('SIGINT', ...)` is NOT yet
+> commands/<name>.ts and consumed by src/main.ts) and the CLI flag set are
+> unchanged. The src/main.ts manual `process.on('SIGINT', ...)` is NOT yet
 > removed in this phase — it covers any commands still on the old surface.
 
 From `constraints.md`, "API Style":

@@ -1,0 +1,156 @@
+[
+  {
+    "flags": "--auto",
+    "description": "Non-interactive mode: skip Q&A; use Auto variants where applicable",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--check <command>",
+    "description": "Baseline check command (overrides constraints.md)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--check-timeout <seconds>",
+    "description": "Max duration for check command in seconds",
+    "defaultValue": "1200",
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--constraints <path>",
+    "description": "Path to constraints.md",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--context <text>",
+    "description": "Extra context appended to builder and planner prompts",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--directions [n]",
+    "description": "Generate N parallel directions between shape and design (default 3)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--inspiration <src>",
+    "description": "Source for the directions picker: file path, directory, or inline text",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--max-budget-usd <n>",
+    "description": "Halt if cumulative cost exceeds this amount",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--max-retries <n>",
+    "description": "Max reviewer retry loops per phase",
+    "defaultValue": "2",
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--model <name>",
+    "description": "Model for all stages (defaults to settings.json model, or 'opus')",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--no-refine",
+    "description": "Skip retro-refine at the end of an --auto run",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--require-phase-approval",
+    "description": "Pause between phases for explicit user confirmation before continuing",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--research [n]",
+    "description": "Run N research+refine iterations between spec and plan (default 1)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--sandbox <mode>",
+    "description": "Sandbox mode: off | semi-locked (default) | strict",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--specialists <n>",
+    "description": "Number of ensemble specialists (1, 2, or 3). Default: 3",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--stop-after <stage>",
+    "description": "Halt the auto run after this stage (shape|design|spec|plan|build)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--taste <path>",
+    "description": "Path to taste.md",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--thorough",
+    "description": "Alias for --specialists 3 (the default)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--timeout <minutes>",
+    "description": "Max duration per turn in minutes",
+    "defaultValue": "10",
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--unsafe",
+    "description": "Alias for --sandbox=off (deprecated)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "-V, --version",
+    "description": "output the version number",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "-y, --yes",
+    "description": "Skip the preflight confirmation prompt",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  }
+]

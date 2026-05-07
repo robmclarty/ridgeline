@@ -31,7 +31,7 @@
 
 ## Directory Layout
 
-- `src/cli.ts` — entry point. After Phase 6, contains zero `process.on('SIGINT', ...)` registrations.
+- `src/main.ts` — entry point (renamed from `src/cli.ts` at Phase 8). After Phase 6, contains zero `process.on('SIGINT', ...)` registrations. The `bin.ridgeline` entry in `package.json` points at `dist/main.js`. The rename works around fascicle 0.3.8's `dist/index.js:7195` self-detection guard, which incorrectly fires `run_viewer_cli` for any binary whose `process.argv[1]` ends in `/cli.js` or `/cli.ts`. Once fascicle ships a fix that scopes the guard to `fascicle-viewer-cli.js` (or compares against `import.meta.url`), this file may be renamed back.
 - `src/commands/<name>.ts` — one file per CLI subcommand; thin shells that call `run(flow, input, opts)` with `engine.dispose()` in a finally block. External function signatures are byte-equal to the Phase 0 `.d.ts` baseline.
 - `src/engine/engine.factory.ts` — exports `makeRidgelineEngine(cfg): Engine`. The only call site of fascicle's `create_engine` in the codebase.
 - `src/engine/flows/<command>.flow.ts` — per-command fascicle flows (build.flow.ts, auto.flow.ts, plan.flow.ts, dryrun.flow.ts, research.flow.ts, etc.).

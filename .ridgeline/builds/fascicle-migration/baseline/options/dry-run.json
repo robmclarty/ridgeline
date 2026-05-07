@@ -1,0 +1,37 @@
+[
+  {
+    "flags": "--constraints <path>",
+    "description": "Path to constraints.md",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--deep-ensemble",
+    "description": "deprecated: use --thorough",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": true
+  },
+  {
+    "flags": "--model <name>",
+    "description": "Model for planner (defaults to settings.json model, or 'opus')",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--taste <path>",
+    "description": "Path to taste.md",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--timeout <minutes>",
+    "description": "Max duration for planning (or 'unlimited' for a 24h catchall)",
+    "defaultValue": "120",
+    "mandatory": false,
+    "hidden": false
+  }
+]

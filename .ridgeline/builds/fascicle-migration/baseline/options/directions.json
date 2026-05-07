@@ -1,0 +1,58 @@
+[
+  {
+    "flags": "--auto",
+    "description": "Non-interactive mode: skip Q&A; use Auto variants where applicable",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--count <n>",
+    "description": "Number of directions to generate. Overrides settings.directions.count",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--inspiration <src>",
+    "description": "Inspiration source for the auto picker: file path, directory, or inline text",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--model <name>",
+    "description": "Model for direction-advisor agent (defaults to settings.json model, or 'opus')",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--skip",
+    "description": "Explicit no-op (skip direction generation)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--thorough",
+    "description": "Alias for --count 3",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--timeout <minutes>",
+    "description": "Max duration in minutes",
+    "defaultValue": "15",
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "-y, --yes",
+    "description": "Skip the preflight confirmation prompt",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  }
+]

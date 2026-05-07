@@ -35,49 +35,53 @@ import { detectSandbox } from "./engine/claude/sandbox.js"
 import { resolveStablePrompt } from "./engine/pipeline/pipeline.shared.js"
 import { approximateTokenCount } from "./engine/claude/stable.prompt.js"
 
-enforceFlavourRemoved(process.argv.slice(2))
-
-// Deprecation pre-check: --deep-ensemble is renamed to --thorough.
-// --thorough is now an alias for --specialists 3 (the default).
-// Emit on every run (not once per session) so the user always sees it.
-{
-  const rawArgs = process.argv.slice(2)
-  const hasDeep = rawArgs.includes("--deep-ensemble")
-  if (hasDeep) {
-    console.error("[deprecated] --deep-ensemble is now --specialists 3 (default); continuing")
-  }
-  const hasUnsafe = rawArgs.includes("--unsafe")
-  if (hasUnsafe) {
-    console.error("[deprecated] --unsafe is now --sandbox=off; continuing")
-  }
+const isMainModule = (): boolean => {
+  const argv1 = process.argv[1]
+  if (!argv1) return false
+  return argv1.endsWith("/main.js") || argv1.endsWith("/main.ts")
 }
 
-// Kill all Claude subprocesses on Ctrl+C before exiting
-process.on("SIGINT", () => {
-  killAllClaude()
-  setTimeout(() => process.exit(130), 2500)
-})
+if (isMainModule()) {
+  enforceFlavourRemoved(process.argv.slice(2))
 
-// Kill Claude subprocesses on unhandled errors before crashing
-process.on("uncaughtException", (err) => {
-  killAllClaudeSync()
-  console.error("Fatal error:", err.message)
-  process.exit(1)
-})
+  // Deprecation pre-check: --deep-ensemble is renamed to --thorough.
+  // --thorough is now an alias for --specialists 3 (the default).
+  // Emit on every run (not once per session) so the user always sees it.
+  const rawArgs = process.argv.slice(2)
+  if (rawArgs.includes("--deep-ensemble")) {
+    console.error("[deprecated] --deep-ensemble is now --specialists 3 (default); continuing")
+  }
+  if (rawArgs.includes("--unsafe")) {
+    console.error("[deprecated] --unsafe is now --sandbox=off; continuing")
+  }
 
-process.on("unhandledRejection", (reason) => {
-  killAllClaudeSync()
-  console.error(
-    "Unhandled rejection:",
-    reason instanceof Error ? reason.message : String(reason),
-  )
-  process.exit(1)
-})
+  // Kill all Claude subprocesses on Ctrl+C before exiting
+  process.on("SIGINT", () => {
+    killAllClaude()
+    setTimeout(() => process.exit(130), 2500)
+  })
 
-// Belt-and-suspenders: clean up any remaining subprocesses on exit
-process.on("exit", () => {
-  killAllClaudeSync()
-})
+  // Kill Claude subprocesses on unhandled errors before crashing
+  process.on("uncaughtException", (err) => {
+    killAllClaudeSync()
+    console.error("Fatal error:", err.message)
+    process.exit(1)
+  })
+
+  process.on("unhandledRejection", (reason) => {
+    killAllClaudeSync()
+    console.error(
+      "Unhandled rejection:",
+      reason instanceof Error ? reason.message : String(reason),
+    )
+    process.exit(1)
+  })
+
+  // Belt-and-suspenders: clean up any remaining subprocesses on exit
+  process.on("exit", () => {
+    killAllClaudeSync()
+  })
+}
 
 type Opts = Record<string, string | boolean | undefined>
 
@@ -626,4 +630,8 @@ program
     }
   })
 
-program.parse()
+export { program }
+
+if (isMainModule()) {
+  program.parse()
+}

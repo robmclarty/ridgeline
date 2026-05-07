@@ -1,0 +1,58 @@
+[
+  {
+    "flags": "--auto [iterations]",
+    "description": "Auto-loop: research + refine for N iterations (default 2)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--max-budget-usd <n>",
+    "description": "Halt if cumulative research cost exceeds this amount",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--model <name>",
+    "description": "Model for research agents (defaults to settings.json model, or 'opus')",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--quick",
+    "description": "Run a single random specialist instead of the full ensemble",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--specialists <n>",
+    "description": "Number of ensemble specialists (1, 2, or 3). Default: 3",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--thorough",
+    "description": "Alias for --specialists 3 (the default)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--timeout <minutes>",
+    "description": "Max duration per agent in minutes",
+    "defaultValue": "15",
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "-y, --yes",
+    "description": "Skip the preflight confirmation prompt",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  }
+]

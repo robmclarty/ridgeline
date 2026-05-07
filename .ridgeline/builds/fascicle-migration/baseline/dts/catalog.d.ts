@@ -1,4 +1,4 @@
-import { CatalogOptions } from "../catalog/types";
+import { CatalogOptions } from "../catalog/types.js";
 /** Count items by a string field and format as an indented list. */
 export declare const countByField: (items: {
     [k: string]: unknown;

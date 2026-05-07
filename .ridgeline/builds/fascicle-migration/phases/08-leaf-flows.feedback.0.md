@@ -1,0 +1,47 @@
+# Reviewer Feedback: Phase 08-leaf-flows
+
+## Failed Criteria
+
+### Criterion 4
+**Status:** FAIL
+**Evidence:** 8 of 22 baseline help snapshots have drifted. Examples: ridgeline.txt and auto.txt are missing the new `--require-phase-approval` flag in baseline; build.txt and plan.txt have new `unlimited` text in --timeout description. Verified by diffing every command's --help output against baseline. The drift came from pre-Phase-8 commits (ace80dc, 03a8ecb) but the AC demands byte-equality at this phase's exit.
+**Required state:** Either: (a) the baseline help/*.txt files are regenerated to capture intentional post-Phase-0 feature additions and the spec/constraints text is updated to acknowledge the rebaseline; OR (b) the upstream feature commits that added --require-phase-approval and 'unlimited' text are reverted; OR (c) the migration plan explicitly amends AC4 to permit this drift. The end state must produce zero-drift between current --help output and the live baseline.
+
+### Criterion 5
+**Status:** FAIL
+**Evidence:** Builder explicitly deferred this AC: handoff says '.d.ts byte equality... not asserted as an automated test in this phase. The dist/.d.ts files are present... by inspection.' The AC requires `tsc --emitDeclarationOnly` snapshot test against baseline/dts/. No such test exists in src/__tests__/.
+**Required state:** An automated test exists that compiles src/commands/*.ts via tsc --emitDeclarationOnly and asserts the resulting .d.ts output is byte-equal to baseline/dts/. Test fails npm run check if any external command signature drifts.
+
+### Criterion 6
+**Status:** FAIL
+**Evidence:** Builder did not add a commander option-set snapshot test. AC requires 'A snapshot test of commander's parsed option set per command matches the Phase 1 baseline.' No such test exists; given the AC4 drift in --help text, the underlying option set has also drifted (--require-phase-approval added) so this AC would fail empirically too.
+**Required state:** An automated test enumerates commander's parsed option set per command and asserts it matches the Phase 0 baseline. Test fails npm run check on any drift, OR the baseline is rebased and the rebaseline is documented.
+
+### Criterion 10
+**Status:** FAIL
+**Evidence:** AC literally references 'src/cli.ts'. That file no longer exists — renamed to src/main.ts to work around a fascicle 0.3.8 bin self-detection bug at fascicle/dist/index.js:7195 (`if (process.argv[1].endsWith('/cli.js')) run_viewer_cli(...)`). The SIGINT handler IS still present (main.ts:56-59 and main.ts:610), so the spirit is preserved, but the letter of AC10 and the directory layout in constraints.md ('src/cli.ts — entry point') are broken.
+**Required state:** Either: (a) restore src/cli.ts as the entry-point filename and resolve the fascicle bin self-detection conflict differently (e.g., via a thin wrapper that masks process.argv before importing fascicle, or by patching/upstreaming a fascicle fix); OR (b) update constraints.md, spec.md, AC10, and any other text that references src/cli.ts to consistently reference src/main.ts and document the rename rationale; AND ensure the new naming is reflected in shape.md and design.md if they reference cli.ts.
+
+## Issues
+
+- 8 of 22 --help snapshots drift from .ridgeline/builds/fascicle-migration/baseline/help/. Specifically: ridgeline.txt, auto.txt, build.txt, plan.txt (and four others) differ. The drift is primarily caused by pre-Phase-8 feature commits (ace80dc 'feat(cli): add --require-phase-approval', 03a8ecb 'feat(settings): unlimited limits') that added new flags/text. AC4 requires byte-equality at this phase's exit regardless of cause. (.ridgeline/builds/fascicle-migration/baseline/help/)
+  - **Required:** Either: (a) the baseline help/*.txt files are regenerated to capture intentional post-Phase-0 feature additions and the spec/constraints text is updated to acknowledge the rebaseline; OR (b) the upstream feature commits that added --require-phase-approval and 'unlimited' text are reverted; OR (c) the migration plan explicitly amends AC4 to permit this drift. The end state must produce zero-drift between current --help output and the live baseline.
+- AC5 requires an automated snapshot test that re-runs `tsc --emitDeclarationOnly` over src/commands/*.ts and asserts byte-equality against .ridgeline/builds/fascicle-migration/baseline/dts/. Builder explicitly deferred this and relied on by-inspection verification. No such test exists in the test tree. (src/__tests__/)
+  - **Required:** An automated test exists that compiles src/commands/*.ts via tsc --emitDeclarationOnly and asserts the resulting .d.ts output is byte-equal to baseline/dts/. Test fails npm run check if any external command signature drifts.
+- AC6 requires 'A snapshot test of commander's parsed option set per command matches the Phase 1 baseline.' No such test exists. The implicit AC4 drift (new --require-phase-approval flag added pre-Phase-8) means the option set has also drifted. (src/__tests__/)
+  - **Required:** An automated test enumerates commander's parsed option set per command and asserts it matches the Phase 0 baseline. Test fails npm run check on any drift, OR the baseline is rebased and the rebaseline is documented.
+- src/cli.ts no longer exists. The file was renamed to src/main.ts to work around a fascicle 0.3.8 bin self-detection bug (fascicle/dist/index.js:7195 fires run_viewer_cli for any binary named cli.js). The SIGINT handler still exists in main.ts, so the spirit of AC10 is preserved, but the file name referenced in the AC and in constraints.md (Directory Layout: 'src/cli.ts — entry point') no longer matches the repository state. This is a fallback for an upstream tool failure documented in the builder's deviations and 'Notes for next phase' sections. (src/main.ts)
+  - **Required:** Either: (a) restore src/cli.ts as the entry-point filename and resolve the fascicle bin self-detection conflict differently (e.g., via a thin wrapper that masks process.argv before importing fascicle, or by patching/upstreaming a fascicle fix); OR (b) update constraints.md, spec.md, AC10, and any other text that references src/cli.ts to consistently reference src/main.ts and document the rename rationale; AND ensure the new naming is reflected in shape.md and design.md if they reference cli.ts.
+
+## What Passed
+
+- Criterion 1: 13 flow files exist under src/engine/flows/ matching the spec's enumerated list (refine, research, spec, plan, retrospective, retro-refine, dryrun, qa-workflow, directions, design, shape, ingest, rewind). Verified by `ls src/engine/flows/`. Each exports a fascicle Step factory or composed flow.
+- Criterion 2: All six migrated entry points (refine.ts, research.ts, spec.ts, plan.ts, retrospective.ts, retro-refine.ts) construct a RidgelineEngine via makeRidgelineEngine and call `await engine.dispose()` inside a finally block. Verified by grep showing 14 finally/dispose pairs across the six files (refine.ts:98-99, research.ts:109-110, spec.ts:138-139, plan.ts:62-63, retrospective.ts:121-122, retro-refine.ts:169-170).
+- Criterion 3: rules/command-run-needs-dispose-finally.yml exists at severity: error, scoped to src/commands/*.ts, pattern requires `import { ... } from "fascicle"` to be paired with a sibling `dispose()` call. npm run lint:struct passes (struct sub-check ok).
+- Criterion 7: All 1299 unit tests pass (verifier confirmed). Only one test file modified: src/commands/__tests__/research.test.ts added resolveSandboxMode to its vi.mock target — a unit-test mock adjustment forced by the migrated command now calling that function. vitest.e2e.config.ts E2E tests were not modified.
+- Criterion 8: phase-8-plugin-surface-audit.md contains a 'Migration discipline at Phase 8' section with old → new test mapping table covering refine/research/spec/plan/retro-refine. Two new flow tests added (refine.flow.test.ts, plan.flow.test.ts). Coverage for research/spec/retrospective/retro-refine flow layer deferred to Phase 11 per the audit doc.
+- Criterion 9: phase-8-plugin-surface-audit.md exists and enumerates every consumer of the deletion-target symbols (invokeBuilder/invokePlanner/invokeReviewer/runPhase/invokeClaude/parseStreamLine/createStreamHandler/extractResult/createDisplayCallbacks) with per-call-site disposition. Bundled plugin/visual-tools/ confirmed to not consume these symbols. Three in-tree consumers (sensors/vision.ts, catalog/classify.ts, ui/phase-prompt.ts) flagged for Phase 11 thin StreamChunk reader replacement.
+- Criterion 11: src/commands/build.ts and src/commands/auto.ts are unchanged at the entry-point level. grep -E 'fascicle' against both files returns no matches. They remain on the old pipeline.
+- Criterion 12: Verifier confirmed: npm run check exits 0 with all 8 sub-checks (types, lint, struct, agents, dead, docs, spell, test) ok: true. 1299 unit tests pass. Total run ~14.6s.
+- Criterion 13: node dist/main.js --help and node dist/main.js refine --help both exit 0 with sensible help text (verified by verifier). Migrated commands compile and the binary boots. Dogfooding `ridgeline build` against this build's directory was deliberately skipped per migration discipline (binary under migration must not self-dogfood).
+- Criterion 14: phase-8-check.json exists and shows ok: true with all 8 sub-checks ok: true. Structurally identical to .check/summary.json modulo per-run duration_ms (which differs because npm run check was re-executed after the commit was captured).

@@ -335,7 +335,31 @@
       "cacheCreationInputTokens": 441672,
       "durationMs": 2127897,
       "timestamp": "2026-05-07T05:03:00.230Z"
+    },
+    {
+      "phase": "08-leaf-flows",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.7993300499999998,
+      "inputTokens": 7,
+      "outputTokens": 15239,
+      "cacheReadInputTokens": 1646440,
+      "cacheCreationInputTokens": 14070,
+      "durationMs": 422305,
+      "timestamp": "2026-05-07T05:10:02.919Z"
+    },
+    {
+      "phase": "08-leaf-flows",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 10.608984000000001,
+      "inputTokens": 104,
+      "outputTokens": 41648,
+      "cacheReadInputTokens": 15424736,
+      "cacheCreationInputTokens": 288976,
+      "durationMs": 753748,
+      "timestamp": "2026-05-07T05:22:44.763Z"
     }
   ],
-  "totalCostUsd": 196.319861
+  "totalCostUsd": 208.72817505
 }

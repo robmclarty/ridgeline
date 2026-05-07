@@ -94,7 +94,12 @@ Acceptance criteria:
 
 ### Phase 5 — Leaf command flows
 
-Migrate every leaf command (every src/commands/<name>.ts except `build` and `auto`) to construct a fascicle flow and call `run(flow, input, opts)` inside a try/finally that disposes the Engine. External command signatures (the function exported from each commands/<name>.ts and consumed by src/cli.ts) and the CLI flag set are unchanged. The src/cli.ts manual `process.on('SIGINT', ...)` is NOT yet removed in this phase — it covers any commands still on the old surface.
+Migrate every leaf command (every src/commands/<name>.ts except `build` and `auto`) to construct a fascicle flow and call `run(flow, input, opts)` inside a try/finally that disposes the Engine. External command signatures (the function exported from each commands/<name>.ts and consumed by src/main.ts) and the CLI flag set are unchanged. The src/main.ts manual `process.on('SIGINT', ...)` is NOT yet removed in this phase — it covers any commands still on the old surface.
+
+Phase 5 also acknowledges two intentional rebaselines that landed during the migration timeline:
+- The `baseline/help/` snapshots are regenerated from current `--help` output. Pre-Phase-5 feature commits (e.g. `--require-phase-approval`, `unlimited` budget descriptions) added new help text. These are intentional product changes; AC4's byte-equality is asserted against the rebaselined snapshots, not the original Phase 0 captures.
+- The `baseline/dts/` snapshots are regenerated to include the `.js` extensions that NodeNext-mode TypeScript emits on relative imports (a forced consequence of the project-wide ESM conversion). Exported function names and signatures are unchanged; only the import specifiers carry the `.js` suffix.
+- The CLI entry point is renamed from `src/cli.ts` to `src/main.ts` to work around fascicle 0.3.8's bin self-detection guard at `dist/index.js:7195`. The bin name on PATH (`ridgeline`) and the user-facing CLI behavior are unchanged.
 
 Acceptance criteria:
 - Each migrated command's entry point uses `makeRidgelineEngine(cfg)` wrapped in `try { await run(flow, input, opts) } finally { await engine.dispose() }`.
@@ -109,12 +114,12 @@ Acceptance criteria:
 
 ### Phase 6 — Build flow, auto flow, and SIGINT handover
 
-Migrate `build` and `auto` — the highest-complexity orchestrations — to fascicle flows that exercise every Tier 1 composite (phase, graph_drain, worktree_isolated, diff_review, cost_capped). Once every command runs through `run(flow, ...)`, remove the manual `process.on('SIGINT', ...)` handler in src/cli.ts and rely on fascicle's runner default `install_signal_handlers: true`. Migrate teardown to `ctx.on_cleanup(...)` registrations inside steps.
+Migrate `build` and `auto` — the highest-complexity orchestrations — to fascicle flows that exercise every Tier 1 composite (phase, graph_drain, worktree_isolated, diff_review, cost_capped). Once every command runs through `run(flow, ...)`, remove the manual `process.on('SIGINT', ...)` handler in src/main.ts and rely on fascicle's runner default `install_signal_handlers: true`. Migrate teardown to `ctx.on_cleanup(...)` registrations inside steps.
 
 Acceptance criteria:
 - src/commands/build.ts and src/commands/auto.ts are thin shells over fascicle flows defined in src/engine/flows/build.flow.ts and src/engine/flows/auto.flow.ts.
 - src/engine/flows/ contains at minimum: `build.flow.ts`, `auto.flow.ts`, `plan.flow.ts`, `dryrun.flow.ts`, `research.flow.ts`, plus per-command flow files for every other migrated command.
-- src/cli.ts contains zero matches for `process.on('SIGINT'` or `process.on("SIGINT"` (verified by grep).
+- src/main.ts contains zero matches for `process.on('SIGINT'` or `process.on("SIGINT"` (verified by grep).
 - Every commands/*.ts call to `run(...)` either passes `install_signal_handlers: true` explicitly OR omits the key and relies on fascicle's default — and a unit test asserts fascicle's default for that key is `true` at the pinned fascicle version.
 - An E2E test starts a `ridgeline build`, sends SIGINT after a configurable delay, and asserts: (a) process exit code === 130; (b) any created git worktrees have been removed; (c) no orphan claude subprocesses remain (verified by `ps` grep); (d) no "double cleanup" errors are logged.
 - An E2E test resumes a `ridgeline build` after SIGINT via the existing state.json + tag-based outer resume path; resume continues to span processes (the CheckpointStore is per-step intra-run only and does not interfere).
@@ -233,7 +238,7 @@ Acceptance criteria:
 - Migrating every command in src/commands/ that invokes a pipeline executor to construct a fascicle flow and call `run(flow, input, opts)` with engine.dispose() in finally; external command signatures unchanged; CLI flag set unchanged.
 - Replacing FATAL_PATTERNS / classifyError with instanceof checks against fascicle's typed error classes; preserving existing exponential-backoff-with-jitter retry defaults.
 - Wrapping stores/budget.ts and stores/trajectory.ts so cost/event flow goes through `ctx.trajectory`; underlying file writers unchanged.
-- Removing the manual `process.on('SIGINT', ...)` handler in src/cli.ts; relying on fascicle's `install_signal_handlers` default; migrating teardown to `ctx.on_cleanup` registrations; preserving exit code 130.
+- Removing the manual `process.on('SIGINT', ...)` handler in src/main.ts; relying on fascicle's `install_signal_handlers` default; migrating teardown to `ctx.on_cleanup` registrations; preserving exit code 130.
 - Deleting old public surface in src/engine/index.ts at Phase 7 and updating affected plugin call sites in the same PR; providing a thin StreamChunk reader replacement only if a load-bearing plugin consumer requires it.
 - Carrying forward all existing tests; rewriting tests targeting deleted internals at the same abstraction level; recording old → new test mapping in PR descriptions.
 - Adding unit tests for each Tier 1 composite (≥ 4 each) and each atom (≥ 1 each).

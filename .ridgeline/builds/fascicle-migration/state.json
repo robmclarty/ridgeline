@@ -227,7 +227,7 @@
     },
     {
       "id": "08-leaf-flows",
-      "status": "pending",
+      "status": "reviewing",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows",
       "completionTag": null,
       "retries": 0,
@@ -238,13 +238,13 @@
         {
           "attempt": 1,
           "endReason": "ready_for_review",
-          "outputTokens": 125448,
-          "inputTokens": 260,
-          "costUsd": 37.73730475000002,
-          "durationMs": 2127897,
+          "outputTokens": 41648,
+          "inputTokens": 104,
+          "costUsd": 10.608984000000001,
+          "durationMs": 753748,
           "windDownReason": null,
           "diffHash": null,
-          "timestamp": "2026-05-07T05:03:00.228Z"
+          "timestamp": "2026-05-07T05:22:44.763Z"
         }
       ],
       "builderLoopEndReason": "ready_for_review"

@@ -1,4 +1,4 @@
-import { CreateOptions } from "./create";
+import { CreateOptions } from "./create.js";
 export type StopAfter = "shape" | "design" | "spec" | "plan" | "build";
 type AutoOptions = CreateOptions & {
     stopAfter?: StopAfter;

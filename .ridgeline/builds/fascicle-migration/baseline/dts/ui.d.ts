@@ -1,4 +1,4 @@
-import { DashboardServer } from "../ui/dashboard/server";
+import { DashboardServer } from "../ui/dashboard/server.js";
 export interface UiOptions {
     port?: number;
 }
