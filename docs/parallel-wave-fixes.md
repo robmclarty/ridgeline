@@ -26,6 +26,7 @@ only lever is editing each phase's `depends_on` frontmatter, which is brittle
 and per-build.
 
 **How to apply:**
+
 - Add the flag(s) to the command in `src/commands/build.ts` (next to
   `--require-phase-approval`).
 - Plumb a `maxParallel` value into `executeWaveLoop` and clamp the result of
@@ -47,6 +48,7 @@ its original both touched `sandbox.policy.ts`, `sandbox.ts`, three test files,
 this — the DAG only encodes declared `depends_on`, not file footprint.
 
 **How to apply (sketch):**
+
 - After the builder runs, the diffs are visible in the worktree. The current
   flow merges them sequentially in index order (`build.ts:248`). The merge
   step already knows about conflicts.
@@ -62,8 +64,7 @@ this — the DAG only encodes declared `depends_on`, not file footprint.
 not produce an unrecoverable `Branch preserved` halt — either the scheduler
 serializes them, or the merge phase replays the loser onto the new HEAD.
 
-### 3. Don't create `.builder-progress` twins for phases whose source has been
-   landed out-of-band
+### 3. Don't create `.builder-progress` twins for already-landed phases
 
 **Why:** during the resume run, ridgeline created `03-adapters.builder-progress`
 even though the phase-3 source had been committed manually to main while the
@@ -71,6 +72,7 @@ build was offline (commits `a61bbb4` + `c16e6be`). Re-running it would have
 produced a second merge conflict for no benefit.
 
 **How to apply:**
+
 - Reconcile logic should compare the original phase's checkpoint/completion
   tag commit against `main` HEAD. If the tag is reachable from main (i.e.,
   the work is already merged), mark the phase complete instead of creating a
