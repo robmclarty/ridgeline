@@ -17,7 +17,7 @@ export type TrajectoryOpts = {
   cacheCreationInputTokens?: number
 }
 
-export const makeTrajectoryEntry = (
+const makeEntry = (
   type: TrajectoryEntry["type"],
   phaseId: string | null,
   summary: string,
@@ -38,13 +38,6 @@ export const makeTrajectoryEntry = (
   ...(typeof opts?.cacheCreationInputTokens === "number" ? { cacheCreationInputTokens: opts.cacheCreationInputTokens } : {}),
 })
 
-// Low-level append: writes one pre-formed entry as a single JSON line.
-// Reused by the ridgeline_trajectory_logger adapter so the on-disk format stays
-// owned by this module while the call site can reach disk via ctx.trajectory.
-export const appendTrajectoryEntry = (buildDir: string, entry: TrajectoryEntry): void => {
-  fs.appendFileSync(trajectoryPath(buildDir), JSON.stringify(entry) + "\n")
-}
-
 export const logTrajectory = (
   buildDir: string,
   type: TrajectoryEntry["type"],
@@ -52,7 +45,7 @@ export const logTrajectory = (
   summary: string,
   opts?: TrajectoryOpts,
 ): void => {
-  appendTrajectoryEntry(buildDir, makeTrajectoryEntry(type, phaseId, summary, opts))
+  fs.appendFileSync(trajectoryPath(buildDir), JSON.stringify(makeEntry(type, phaseId, summary, opts)) + "\n")
 }
 
 // Read all trajectory entries from the JSONL file
