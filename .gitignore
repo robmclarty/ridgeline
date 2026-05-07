@@ -7,3 +7,4 @@ node_modules/
 coverage/
 .worktrees/
 .ridgeline/worktrees/
+.ridgeline/builds/*/discoveries.jsonl

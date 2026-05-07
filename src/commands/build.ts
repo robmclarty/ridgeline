@@ -12,6 +12,7 @@ import { loadBudget } from "../stores/budget"
 import { cleanupBuildTags } from "../stores/tags"
 import { killAllClaudeSync } from "../engine/claude/claude.exec"
 import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../engine/pipeline/worktree.parallel"
+import { provisionPhaseWorktree } from "../engine/pipeline/worktree.provision"
 import { consolidateHandoffs } from "../stores/handoff"
 import { runPlan } from "./plan"
 import { runRetrospective } from "./retrospective"
@@ -193,6 +194,13 @@ const runParallelWave = async (
     try {
       const wtPath = createPhaseWorktree(config.buildName, phase.id, mainCwd)
       worktreePaths.set(phase.id, wtPath)
+      const results = provisionPhaseWorktree(wtPath, mainCwd, {
+        phaseId: phase.id,
+        buildDir: config.buildDir,
+      })
+      for (const r of results) {
+        if (r.applied) printInfo(`  [${phase.id}] env fix: ${r.fix} — ${r.detail}`)
+      }
     } catch (err) {
       printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : String(err)}`)
       worktreesFailed = true
@@ -376,6 +384,10 @@ const executeWaveLoop = async (
         totalPhases: phases.length,
         completedPhaseId: lastCompletedPhase.id,
         nextPhaseId: stillReady[0].id,
+        // The flag was set explicitly. If we can't actually prompt, pause
+        // rather than silently continuing — silent auto-continue defeats
+        // the purpose of asking to require approval.
+        nonTTYDecision: "stop",
       })
       if (decision === "stop") {
         printInfo(

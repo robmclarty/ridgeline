@@ -8,6 +8,7 @@ import { cleanupPluginDirs } from "../discovery/plugin.scan"
 import { buildAgentRegistry } from "../discovery/agent.registry"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./pipeline.shared"
 import { createPromptDocument } from "./prompt.document"
+import { getDiscoveriesPath, readDiscoveries } from "./discoveries"
 
 /**
  * Resolve the file path the builder should append handoff notes to.
@@ -61,6 +62,12 @@ export const assembleUserPrompt = (
   // per-phase fragment so parallel phases don't collide at merge time.
   doc.instruction("Handoff File", `Append your handoff notes to: ${resolveHandoffTarget(config, phase, cwd)}`)
 
+  // Cross-phase discoveries log. Lives at an absolute path in the main
+  // worktree so parallel siblings see each other's environmental fixes
+  // in real time. Always include the section so the builder knows the
+  // path, even when the file is empty.
+  appendDiscoveriesSection(doc, config, phase)
+
   if (feedbackPath && fs.existsSync(feedbackPath)) {
     doc.data(
       "Reviewer Feedback (RETRY)",
@@ -71,6 +78,35 @@ export const assembleUserPrompt = (
   }
 
   return doc.render()
+}
+
+const appendDiscoveriesSection = (
+  doc: ReturnType<typeof createPromptDocument>,
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+): void => {
+  const discoveriesPath = getDiscoveriesPath(config.buildDir)
+  const existing = readDiscoveries(config.buildDir)
+  const recap = existing.length > 0
+    ? `Existing entries (${existing.length}):\n\n` +
+      existing.map((e) => `- [${e.source}/${e.phase_id}] ${e.solution} — ${e.blocker}`).join("\n")
+    : "Log is currently empty."
+
+  doc.instruction(
+    "Cross-Phase Discoveries",
+    [
+      `Path: ${discoveriesPath}`,
+      "",
+      "This is a shared, append-only JSONL log used by parallel phases to share environmental fixes (missing binaries, sandbox-blocked downloads, permission workarounds). Entries are advisory — verify before applying.",
+      "",
+      "Behaviour:",
+      `- BEFORE working around an environmental blocker (a tool/binary missing, a network call refused, a permission denied), read this file. A sibling phase may have already solved the same problem; if so, verify the fix applies in your worktree before reapplying.`,
+      `- AFTER you find a working remediation for an environmental blocker, append a one-line JSON entry: \`{"ts":"<ISO>","phase_id":"${phase.id}","blocker":"<one line>","solution":"<one line>","source":"agent"}\`. Use \`>> ${discoveriesPath}\` so the append is atomic. Optional \`evidence\` field can point at a check summary or file.`,
+      `- Do NOT log code-level decisions, deliverable choices, or notes for the next builder — those go in handoff.md / the builder progress file. Only environmental gotchas belong here.`,
+      "",
+      recap,
+    ].join("\n"),
+  )
 }
 
 /**
