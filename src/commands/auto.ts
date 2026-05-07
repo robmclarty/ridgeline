@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import { run } from "fascicle"
 import { printInfo, printError, printWarn } from "../ui/output.js"
 import {
   getNextPipelineStage,
@@ -8,12 +9,14 @@ import {
 } from "../stores/state.js"
 import { PipelineStage } from "../types.js"
 import { resolveBuildDir } from "../config.js"
-import { resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
+import { resolveSandboxMode, resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
 import { runCreate, CreateOptions, persistInputSourceIfPath } from "./create.js"
 import { runDirectionsAuto } from "./directions.js"
 import { runResearch } from "./research.js"
 import { runRetrospective } from "./retrospective.js"
 import { runRetroRefine } from "./retro-refine.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { autoFlow, type AutoStage, type AutoStageOutcome } from "../engine/flows/auto.flow.js"
 
 export type StopAfter = "shape" | "design" | "spec" | "plan" | "build"
 
@@ -62,7 +65,6 @@ const isShapeVisual = (buildDir: string): boolean => {
   return matched.some((name) => VISUAL_SHAPES.has(name))
 }
 
-/** Run the directions-auto stage, return true if it ran. Errors are surfaced. */
 const runDirectionsInsertion = async (
   buildName: string, buildDir: string, opts: AutoOptions, next: PipelineStage,
 ): Promise<boolean> => {
@@ -137,14 +139,73 @@ const runTailHooks = async (
 
 const runStageWithErrorHandling = async (
   stageLabel: string,
-  fn: () => Promise<void>,
-): Promise<boolean> => {
+  fn: () => Promise<AutoStageOutcome>,
+): Promise<AutoStageOutcome> => {
   try {
-    await fn()
-    return true
+    return await fn()
   } catch (err) {
     printError(`${stageLabel} stage failed: ${err instanceof Error ? err.message : String(err)}`)
-    return false
+    return "halted"
+  }
+}
+
+const buildAutoStages = (
+  buildName: string,
+  buildDir: string,
+  opts: AutoOptions,
+  stopAfter: StopAfter,
+): (() => AsyncIterable<AutoStage>) => async function* () {
+  const stopRank = stageRank(stopAfter)
+  let directionsDone = false
+  let researchDone = false
+  const MAX_ITERATIONS = 16
+
+  for (let i = 0; i < MAX_ITERATIONS; i++) {
+    const next = getNextPipelineStage(buildDir)
+    if (!next) return
+    if (stageRank(next) > stopRank) {
+      printInfo(`Reached stop-after boundary (${stopAfter}); halting.`)
+      return
+    }
+
+    if (!directionsDone) {
+      yield {
+        name: "directions",
+        run: () => runStageWithErrorHandling("directions", async () => {
+          const ran = await runDirectionsInsertion(buildName, buildDir, opts, next)
+          if (ran) {
+            directionsDone = true
+            return "ran"
+          }
+          return "skipped"
+        }),
+      }
+      if (directionsDone) continue
+    }
+
+    if (!researchDone) {
+      yield {
+        name: "research",
+        run: () => runStageWithErrorHandling("research", async () => {
+          const ran = await runResearchInsertion(buildName, opts, next)
+          if (ran) {
+            researchDone = true
+            return "ran"
+          }
+          return "skipped"
+        }),
+      }
+      if (researchDone) continue
+    }
+
+    printStageBanner(`${next} (auto)`)
+    yield {
+      name: next,
+      run: () => runStageWithErrorHandling(next, async () => {
+        await runCreate(buildName, { ...opts, isAuto: true, isQuiet: true })
+        return "ran"
+      }),
+    }
   }
 }
 
@@ -161,7 +222,6 @@ export const runAuto = async (buildName: string, opts: AutoOptions): Promise<voi
   persistInputSourceIfPath(buildDir, buildName, opts.input)
 
   const stopAfter = opts.stopAfter ?? "build"
-  const stopRank = stageRank(stopAfter)
 
   printInfo(`Build: ${buildName}`)
   printInfo(`Auto mode — stop-after: ${stopAfter}`)
@@ -169,44 +229,24 @@ export const runAuto = async (buildName: string, opts: AutoOptions): Promise<voi
   if (opts.research) printInfo(`Research: ${opts.research} iteration(s)`)
   if (opts.inspiration) printInfo(`Inspiration: ${opts.inspiration}`)
 
-  let directionsDone = false
-  let researchDone = false
+  const ridgelineDir = path.join(process.cwd(), ".ridgeline")
+  const engine = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
+    timeoutMinutes: parseInt(opts.timeout, 10),
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: buildDir,
+  })
 
-  // Hard cap to prevent any infinite loop bug from runaway costs.
-  const MAX_ITERATIONS = 16
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const next = getNextPipelineStage(buildDir)
-    if (!next) break
-    if (stageRank(next) > stopRank) {
-      printInfo(`Reached stop-after boundary (${stopAfter}); halting.`)
-      return
-    }
+  const flow = autoFlow({
+    stages: buildAutoStages(buildName, buildDir, opts, stopAfter),
+  })
 
-    if (!directionsDone) {
-      const ok = await runStageWithErrorHandling("directions", () =>
-        runDirectionsInsertion(buildName, buildDir, opts, next).then((ran) => {
-          if (ran) directionsDone = true
-        }),
-      )
-      if (!ok) return
-      if (directionsDone) continue
-    }
-
-    if (!researchDone) {
-      const ok = await runStageWithErrorHandling("research", () =>
-        runResearchInsertion(buildName, opts, next).then((ran) => {
-          if (ran) researchDone = true
-        }),
-      )
-      if (!ok) return
-      if (researchDone) continue
-    }
-
-    printStageBanner(`${next} (auto)`)
-    const ok = await runStageWithErrorHandling(next, () =>
-      runCreate(buildName, { ...opts, isAuto: true, isQuiet: true }),
-    )
-    if (!ok) return
+  try {
+    const out = await run(flow, { buildName, buildDir })
+    if (out.halted) return
+  } finally {
+    await engine.dispose()
   }
 
   if (getPipelineStatus(buildDir).build !== "complete") {

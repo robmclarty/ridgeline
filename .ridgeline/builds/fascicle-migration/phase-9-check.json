@@ -1,0 +1,71 @@
+{
+  "timestamp": "2026-05-07T05:56:11.880Z",
+  "ok": true,
+  "total_duration_ms": 12903,
+  "checks": [
+    {
+      "name": "types",
+      "description": "TypeScript type checking",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 2001,
+      "output_file": null
+    },
+    {
+      "name": "lint",
+      "description": "Oxlint with tsgolint type-aware rules",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 534,
+      "output_file": "lint.json"
+    },
+    {
+      "name": "struct",
+      "description": "Structural rules (ast-grep)",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 272,
+      "output_file": "struct.json"
+    },
+    {
+      "name": "agents",
+      "description": "Agent/skill metadata (agnix)",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 253,
+      "output_file": null
+    },
+    {
+      "name": "dead",
+      "description": "Fallow: dead code, cycles, duplication, complexity",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 716,
+      "output_file": null
+    },
+    {
+      "name": "docs",
+      "description": "Markdown linting",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 823,
+      "output_file": null
+    },
+    {
+      "name": "spell",
+      "description": "Spell check (cspell)",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 1899,
+      "output_file": null
+    },
+    {
+      "name": "test",
+      "description": "Vitest unit tests",
+      "ok": true,
+      "exit_code": 0,
+      "duration_ms": 6405,
+      "output_file": null
+    }
+  ]
+}

@@ -257,7 +257,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 113742,
+          "inputTokens": 193,
+          "costUsd": 29.67238399999999,
+          "durationMs": 1858815,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T05:56:43.552Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "10-mutation-tests",

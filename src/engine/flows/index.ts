@@ -51,3 +51,21 @@ export type { IngestFlowInput, IngestFlowOutput } from "./ingest.flow.js"
 
 export { rewindFlow } from "./rewind.flow.js"
 export type { RewindFlowInput, RewindFlowOutput } from "./rewind.flow.js"
+
+export { buildFlow } from "./build.flow.js"
+export type {
+  BuildFlowInput,
+  BuildFlowOutput,
+  BuildFlowDeps,
+  BuildPhaseResult,
+  RunPhaseExecutor,
+} from "./build.flow.js"
+
+export { autoFlow } from "./auto.flow.js"
+export type {
+  AutoFlowInput,
+  AutoFlowOutput,
+  AutoFlowDeps,
+  AutoStage,
+  AutoStageOutcome,
+} from "./auto.flow.js"

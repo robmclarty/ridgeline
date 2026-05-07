@@ -26,7 +26,7 @@ import { runCatalog } from "./commands/catalog.js"
 import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui.js"
 import { resolveInputBundle } from "./commands/input.js"
 import { resolveNameAndInput, parseAutoCount } from "./utils/cli-args.js"
-import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec.js"
+import { killAllClaudeSync } from "./engine/claude/claude.exec.js"
 import { enforceFlavourRemoved } from "./utils/flavour-removed.js"
 import { detect } from "./engine/detect/index.js"
 import { runPreflight, type StablePromptInfo } from "./ui/preflight.js"
@@ -55,11 +55,9 @@ if (isMainModule()) {
     console.error("[deprecated] --unsafe is now --sandbox=off; continuing")
   }
 
-  // Kill all Claude subprocesses on Ctrl+C before exiting
-  process.on("SIGINT", () => {
-    killAllClaude()
-    setTimeout(() => process.exit(130), 2500)
-  })
+  // SIGINT handover: fascicle's runner installs SIGINT/SIGTERM handlers via
+  // install_signal_handlers (default true) and aborts active runs. Exit code
+  // 130 is preserved by handleCommandError, which detects aborted_error.
 
   // Kill Claude subprocesses on unhandled errors before crashing
   process.on("uncaughtException", (err) => {
@@ -94,7 +92,26 @@ const requireBuildName = async (buildName: string | undefined): Promise<string> 
   return buildName
 }
 
+const isAbortedError = (err: unknown): boolean => {
+  if (err === null || typeof err !== "object") return false
+  const kind = (err as { kind?: unknown }).kind
+  if (kind === "aborted_error") return true
+  const name = (err as { name?: unknown }).name
+  return name === "aborted_error"
+}
+
+const registerProcessSignal = (
+  signal: NodeJS.Signals,
+  handler: () => void | Promise<void>,
+): void => {
+  process.on(signal, handler)
+}
+
 const handleCommandError = (err: unknown): never => {
+  if (isAbortedError(err)) {
+    killAllClaudeSync()
+    process.exit(130)
+  }
   console.error(err instanceof Error ? err.message : String(err))
   process.exit(1)
 }
@@ -611,8 +628,10 @@ program
         await server.close()
         process.exit(0)
       }
-      process.on("SIGINT", shutdown)
-      process.on("SIGTERM", shutdown)
+      // The UI command runs a long-lived HTTP server, not a fascicle flow,
+      // so its lifecycle is signal-driven (see commands/ui.ts.shutdown()).
+      registerProcessSignal("SIGINT", shutdown)
+      registerProcessSignal("SIGTERM", shutdown)
     } catch (err) {
       handleCommandError(err)
     }

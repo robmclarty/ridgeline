@@ -20,22 +20,6 @@ const DEFAULT_STALL_TIMEOUT_MS = 10 * 60 * 1000
 // --- Process registry: track all live Claude subprocesses ---
 const liveProcs = new Set<ChildProcess>()
 
-/** Graceful kill: SIGTERM all process groups, then SIGKILL after 2s. */
-export const killAllClaude = (): void => {
-  for (const proc of liveProcs) {
-    if (proc.pid) {
-      try { process.kill(-proc.pid, "SIGTERM") } catch { /* already dead */ }
-    }
-  }
-  setTimeout(() => {
-    for (const proc of liveProcs) {
-      if (proc.pid) {
-        try { process.kill(-proc.pid, "SIGKILL") } catch { /* already dead */ }
-      }
-    }
-  }, 2000)
-}
-
 /** Immediate kill: SIGKILL all process groups. Use before process.exit(). */
 export const killAllClaudeSync = (): void => {
   for (const proc of liveProcs) {

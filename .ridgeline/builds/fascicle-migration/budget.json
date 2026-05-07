@@ -371,7 +371,19 @@
       "cacheCreationInputTokens": 269628,
       "durationMs": 171426,
       "timestamp": "2026-05-07T05:25:36.343Z"
+    },
+    {
+      "phase": "09-build-auto-sigint-dogfood",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 29.67238399999999,
+      "inputTokens": 193,
+      "outputTokens": 113742,
+      "cacheReadInputTokens": 47670955,
+      "cacheCreationInputTokens": 471038,
+      "durationMs": 1858815,
+      "timestamp": "2026-05-07T05:56:43.553Z"
     }
   ],
-  "totalCostUsd": 210.97120665
+  "totalCostUsd": 240.64359065
 }

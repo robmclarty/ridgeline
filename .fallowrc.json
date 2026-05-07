@@ -3,6 +3,7 @@
     "examples/**",
     "scripts/**",
     "test/fixtures/**",
+    "src/**/__tests__/**/__fixtures__/**",
     "stryker.config.mjs",
     "src/engine/flows/index.ts",
     "src/engine/atoms/index.ts",
@@ -63,13 +64,16 @@
     { "file": "src/engine/flows/design.flow.ts", "exports": ["DesignFlowInput", "DesignFlowOutput", "designFlow"] },
     { "file": "src/engine/flows/shape.flow.ts", "exports": ["ShapeFlowInput", "ShapeFlowOutput", "shapeFlow"] },
     { "file": "src/engine/flows/ingest.flow.ts", "exports": ["IngestFlowInput", "IngestFlowOutput", "ingestFlow"] },
-    { "file": "src/engine/flows/rewind.flow.ts", "exports": ["RewindFlowInput", "RewindFlowOutput", "rewindFlow"] }
+    { "file": "src/engine/flows/rewind.flow.ts", "exports": ["RewindFlowInput", "RewindFlowOutput", "rewindFlow"] },
+    { "file": "src/engine/flows/build.flow.ts", "exports": ["BuildFlowInput", "BuildFlowOutput", "BuildFlowDeps", "BuildPhaseResult", "RunPhaseExecutor"] },
+    { "file": "src/engine/flows/auto.flow.ts", "exports": ["AutoFlowInput", "AutoFlowOutput", "AutoFlowDeps", "AutoStage", "AutoStageOutcome"] }
   ],
   "duplicates": {
     "ignore": [
       "**/__tests__/**",
       "scripts/**",
       "src/cli.ts",
+      "src/main.ts",
       "src/engine/pipeline/ensemble.exec.ts",
       "src/engine/pipeline/specify.exec.ts",
       "src/engine/composites/phase.ts",

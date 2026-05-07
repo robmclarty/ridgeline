@@ -34,6 +34,7 @@ vi.mock("../../config.js", () => ({
 
 vi.mock("../../stores/settings.js", () => ({
   resolveSpecialistTimeoutSeconds: vi.fn(() => 600),
+  resolveSandboxMode: vi.fn(() => "off"),
 }))
 
 vi.mock("../../ui/output.js", () => ({
