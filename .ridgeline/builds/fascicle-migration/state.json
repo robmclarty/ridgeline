@@ -226,6 +226,30 @@
       "builderLoopEndReason": "ready_for_review"
     },
     {
+      "id": "08-leaf-flows.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/08-leaf-flows.builder-progress",
+      "retries": 0,
+      "duration": 757955,
+      "completedAt": "2026-05-07T18:49:32.862Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 19346,
+          "inputTokens": 69,
+          "costUsd": 7.080336499999999,
+          "durationMs": 409196,
+          "windDownReason": null,
+          "diffHash": "ea2a32e69652d59789272e638e13339e052e267a4bd276e530ad3bdb304d616d",
+          "timestamp": "2026-05-07T18:43:53.926Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
       "id": "08-leaf-flows",
       "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows",
@@ -245,6 +269,30 @@
           "windDownReason": null,
           "diffHash": null,
           "timestamp": "2026-05-07T05:22:44.763Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "09-build-auto-sigint-dogfood.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/09-build-auto-sigint-dogfood.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/09-build-auto-sigint-dogfood.builder-progress",
+      "retries": 0,
+      "duration": 966209,
+      "completedAt": "2026-05-07T18:53:01.268Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 31383,
+          "inputTokens": 49,
+          "costUsd": 5.51489675,
+          "durationMs": 526455,
+          "windDownReason": null,
+          "diffHash": "cade0b97a3d72e57d85f7ce873e66f75d31448afde7fe30c41d11d7aae415093",
+          "timestamp": "2026-05-07T18:45:51.034Z"
         }
       ],
       "builderLoopEndReason": "ready_for_review"
@@ -274,72 +322,52 @@
       "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "10-mutation-tests",
-      "status": "failed",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests",
-      "completionTag": null,
-      "retries": 1,
-      "duration": 1634700,
-      "completedAt": null,
-      "failedAt": "2026-05-07T06:53:40.519Z",
+      "id": "10-mutation-tests.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/10-mutation-tests.builder-progress",
+      "retries": 0,
+      "duration": 598530,
+      "completedAt": "2026-05-07T18:46:53.665Z",
+      "failedAt": null,
       "builderInvocations": [
         {
           "attempt": 1,
-          "endReason": "more_work_explicit",
-          "outputTokens": 12360,
-          "inputTokens": 14,
-          "costUsd": 1.9555537500000002,
-          "durationMs": 195434,
-          "windDownReason": "ACs 2/3/4 require Stryker mutation captures that the active greywall sandbox blocks at the kernel level; operator must run the host-side recipe (stryker.baseline.config.mjs + scripts/phase-10-record-*.mjs) outside greywall before Phase 10 can mark READY_FOR_REVIEW",
-          "diffHash": null,
-          "timestamp": "2026-05-07T06:48:08.402Z"
-        },
-        {
-          "attempt": 2,
-          "endReason": "more_work_explicit",
-          "outputTokens": 3200,
-          "inputTokens": 9,
-          "costUsd": 1.27679525,
-          "durationMs": 52324,
-          "windDownReason": "operator must run Stryker outside greywall to capture both mutation scores; in-sandbox bypass is architecturally impossible",
-          "diffHash": null,
-          "timestamp": "2026-05-07T06:49:08.700Z"
-        },
-        {
-          "attempt": 3,
-          "endReason": "more_work_explicit",
-          "outputTokens": 4615,
-          "inputTokens": 12,
-          "costUsd": 1.5842214999999997,
-          "durationMs": 75133,
-          "windDownReason": "Stryker mutation scores must be captured by the operator outside greywall (ACs 2, 3, 4 require numeric scores; in-sandbox child-proxy IPC raises EPERM).",
-          "diffHash": null,
-          "timestamp": "2026-05-07T06:50:31.987Z"
-        },
-        {
-          "attempt": 4,
-          "endReason": "more_work_explicit",
-          "outputTokens": 4126,
-          "inputTokens": 13,
-          "costUsd": 1.6349872500000002,
-          "durationMs": 72920,
-          "windDownReason": "AC2/AC3/AC4 require Stryker capture outside greywall — operator must run the documented host-side recipe (see continuation 6 in builder-progress.md) before the next continuation can clear the gate.",
-          "diffHash": null,
-          "timestamp": "2026-05-07T06:51:53.736Z"
-        },
-        {
-          "attempt": 5,
-          "endReason": "halt_max_continuations",
-          "outputTokens": 6724,
-          "inputTokens": 15,
-          "costUsd": 1.8670535000000001,
-          "durationMs": 98433,
-          "windDownReason": "ACs 2/3/4 require operator-side Stryker capture outside greywall; in-sandbox builders cannot proceed.",
-          "diffHash": null,
-          "timestamp": "2026-05-07T06:53:40.516Z"
+          "endReason": "ready_for_review",
+          "outputTokens": 14900,
+          "inputTokens": 39,
+          "costUsd": 4.275793000000001,
+          "durationMs": 296544,
+          "windDownReason": null,
+          "diffHash": "dbe6186a04b161cd05340f823fe2cfd5dfeea808c5cd6ea6f5eaaa37aeee712e",
+          "timestamp": "2026-05-07T18:42:01.179Z"
         }
       ],
-      "builderLoopEndReason": "halt_max_continuations"
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "10-mutation-tests",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests",
+      "completionTag": "ridgeline/phase/fascicle-migration/10-mutation-tests",
+      "retries": 0,
+      "duration": 572527,
+      "completedAt": "2026-05-07T18:46:27.754Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 18146,
+          "inputTokens": 70,
+          "costUsd": 7.223740749999998,
+          "durationMs": 414378,
+          "windDownReason": null,
+          "diffHash": "64f7f7d6a0932a19f4056a0feccb9ccfccb8878f07f30353eb8c8031e72fef80",
+          "timestamp": "2026-05-07T18:43:58.885Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "11-cleanup-deletions",

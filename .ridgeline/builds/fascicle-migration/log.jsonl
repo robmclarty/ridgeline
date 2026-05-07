@@ -90,3 +90,29 @@
 {"timestamp":"2026-05-07T06:44:44.748Z","level":"info","phase":"10-mutation-tests","message":"Retrying (1/2) — Phase 10 fails: Stryker mutation testing — the foundational tool this entire phase is built around — could not be executed under the active sandbox. Both required workarounds (RIDGELINE_SANDBOX=0 and vitest pool: 'forks') were attempted and verified non-functional; AC2 and AC3 are not numerically satisfied (both score files have captured: false, score: null). AC4's gate script accepts this DEFERRED state and exits 0, so no numeric assertion is ever made. AC1, AC5, AC6, AC7, AC8, AC9 pass. The spec is explicit that the absolute pre-migration score MUST be captured at this phase before Phase 11 deletes src/engine/pipeline/ — that capture has not happened."}
 {"timestamp":"2026-05-07T06:44:44.749Z","level":"info","phase":"10-mutation-tests","message":"Retry 1: building..."}
 {"timestamp":"2026-05-07T06:53:40.518Z","level":"info","phase":"10-mutation-tests","message":"Builder loop halted: halt_max_continuations"}
+{"timestamp":"2026-05-07T18:36:53.400Z","level":"info","phase":null,"message":"Reconciled state: added 3 new phase(s) (08-leaf-flows.builder-progress, 09-build-auto-sigint-dogfood.builder-progress, 10-mutation-tests.builder-progress)"}
+{"timestamp":"2026-05-07T18:36:53.402Z","level":"info","phase":null,"message":"Resuming build 'fascicle-migration' from phase 12/17"}
+{"timestamp":"2026-05-07T18:36:54.058Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
+{"timestamp":"2026-05-07T18:36:54.061Z","level":"info","phase":null,"message":"Starting build: fascicle-migration (17 phases)\n"}
+{"timestamp":"2026-05-07T18:36:54.119Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
+{"timestamp":"2026-05-07T18:36:54.121Z","level":"info","phase":null,"message":"\nWave: 4 parallel phases (08-leaf-flows.builder-progress, 09-build-auto-sigint-dogfood.builder-progress, 10-mutation-tests.builder-progress, 10-mutation-tests)"}
+{"timestamp":"2026-05-07T18:36:54.864Z","level":"info","phase":"08-leaf-flows.builder-progress","message":"Phase 10/17: 08-leaf-flows.builder-progress"}
+{"timestamp":"2026-05-07T18:36:54.864Z","level":"info","phase":"09-build-auto-sigint-dogfood.builder-progress","message":"Phase 12/17: 09-build-auto-sigint-dogfood.builder-progress"}
+{"timestamp":"2026-05-07T18:36:54.864Z","level":"info","phase":"10-mutation-tests.builder-progress","message":"Phase 14/17: 10-mutation-tests.builder-progress"}
+{"timestamp":"2026-05-07T18:36:54.864Z","level":"info","phase":"10-mutation-tests","message":"Phase 15/17: 10-mutation-tests"}
+{"timestamp":"2026-05-07T18:36:55.300Z","level":"info","phase":"08-leaf-flows.builder-progress","message":"Building..."}
+{"timestamp":"2026-05-07T18:36:55.350Z","level":"info","phase":"09-build-auto-sigint-dogfood.builder-progress","message":"Building..."}
+{"timestamp":"2026-05-07T18:36:55.353Z","level":"info","phase":"10-mutation-tests.builder-progress","message":"Building..."}
+{"timestamp":"2026-05-07T18:36:55.356Z","level":"info","phase":"10-mutation-tests","message":"Building..."}
+{"timestamp":"2026-05-07T18:42:01.460Z","level":"info","phase":"10-mutation-tests.builder-progress","message":"Reviewing..."}
+{"timestamp":"2026-05-07T18:43:54.121Z","level":"info","phase":"08-leaf-flows.builder-progress","message":"Reviewing..."}
+{"timestamp":"2026-05-07T18:43:59.004Z","level":"info","phase":"10-mutation-tests","message":"Reviewing..."}
+{"timestamp":"2026-05-07T18:45:51.138Z","level":"info","phase":"09-build-auto-sigint-dogfood.builder-progress","message":"Reviewing..."}
+{"timestamp":"2026-05-07T18:46:27.754Z","level":"info","phase":"10-mutation-tests","message":"PASSED (573s)"}
+{"timestamp":"2026-05-07T18:46:53.666Z","level":"info","phase":"10-mutation-tests.builder-progress","message":"PASSED (599s)"}
+{"timestamp":"2026-05-07T18:49:32.863Z","level":"info","phase":"08-leaf-flows.builder-progress","message":"PASSED (758s)"}
+{"timestamp":"2026-05-07T18:53:01.270Z","level":"info","phase":"09-build-auto-sigint-dogfood.builder-progress","message":"PASSED (966s)"}
+{"timestamp":"2026-05-07T18:53:07.118Z","level":"error","phase":null,"message":"Merge conflict for 10-mutation-tests.builder-progress: "}
+{"timestamp":"2026-05-07T18:53:07.118Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/10-mutation-tests.builder-progress"}
+{"timestamp":"2026-05-07T18:53:10.134Z","level":"error","phase":null,"message":"Merge conflict for 10-mutation-tests: docs/parallel-wave-fixes.md"}
+{"timestamp":"2026-05-07T18:53:10.134Z","level":"info","phase":null,"message":"Branch preserved: ridgeline/fascicle-migration/10-mutation-tests"}

@@ -515,7 +515,103 @@
       "cacheCreationInputTokens": 144124,
       "durationMs": 98433,
       "timestamp": "2026-05-07T06:53:40.517Z"
+    },
+    {
+      "phase": "10-mutation-tests.builder-progress",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 4.275793000000001,
+      "inputTokens": 39,
+      "outputTokens": 14900,
+      "cacheReadInputTokens": 5402211,
+      "cacheCreationInputTokens": 181410,
+      "durationMs": 296544,
+      "timestamp": "2026-05-07T18:42:01.180Z"
+    },
+    {
+      "phase": "08-leaf-flows.builder-progress",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 7.080336499999999,
+      "inputTokens": 69,
+      "outputTokens": 19346,
+      "cacheReadInputTokens": 10686399,
+      "cacheCreationInputTokens": 190240,
+      "durationMs": 409196,
+      "timestamp": "2026-05-07T18:43:53.927Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 7.223740749999998,
+      "inputTokens": 70,
+      "outputTokens": 18146,
+      "cacheReadInputTokens": 10996467,
+      "cacheCreationInputTokens": 193093,
+      "durationMs": 414378,
+      "timestamp": "2026-05-07T18:43:58.886Z"
+    },
+    {
+      "phase": "09-build-auto-sigint-dogfood.builder-progress",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 5.51489675,
+      "inputTokens": 49,
+      "outputTokens": 31383,
+      "cacheReadInputTokens": 6943007,
+      "cacheCreationInputTokens": 191037,
+      "durationMs": 526455,
+      "timestamp": "2026-05-07T18:45:51.034Z"
+    },
+    {
+      "phase": "10-mutation-tests",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.2981513999999998,
+      "inputTokens": 27,
+      "outputTokens": 6731,
+      "cacheReadInputTokens": 1312053,
+      "cacheCreationInputTokens": 67314,
+      "durationMs": 148707,
+      "timestamp": "2026-05-07T18:46:27.712Z"
+    },
+    {
+      "phase": "10-mutation-tests.builder-progress",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.7955030999999997,
+      "inputTokens": 27,
+      "outputTokens": 13188,
+      "cacheReadInputTokens": 1792240,
+      "cacheCreationInputTokens": 76532,
+      "durationMs": 292147,
+      "timestamp": "2026-05-07T18:46:53.622Z"
+    },
+    {
+      "phase": "08-leaf-flows.builder-progress",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 2.26344025,
+      "inputTokens": 27,
+      "outputTokens": 21025,
+      "cacheReadInputTokens": 2060934,
+      "cacheCreationInputTokens": 111101,
+      "durationMs": 338694,
+      "timestamp": "2026-05-07T18:49:32.817Z"
+    },
+    {
+      "phase": "09-build-auto-sigint-dogfood.builder-progress",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 2.16567635,
+      "inputTokens": 27,
+      "outputTokens": 21289,
+      "cacheReadInputTokens": 1830381,
+      "cacheCreationInputTokens": 89420,
+      "durationMs": 430061,
+      "timestamp": "2026-05-07T18:53:01.201Z"
     }
   ],
-  "totalCostUsd": 286.63791399999997
+  "totalCostUsd": 318.25545209999996
 }
