@@ -1902,3 +1902,52 @@ Phase 6-A complete. All five atoms (builder, reviewer, planner, refiner, researc
 [06-atoms-a] DONE
 
 READY_FOR_REVIEW
+[ridgeline] [06-atoms-a] Reviewing...
+[review:06-atoms-a] Starting review
+
+I'll verify each acceptance criterion methodically. Let me start by examining the actual state of the work.
+[Bash] ls src/engine/atoms/ src/engine/atoms/__tests__/ src/engine/atoms/__tests__/__fixtures__/ 2>&1
+[Bash] ls src/engine/pipeline/ 2>&1
+[Bash] cat .ridgeline/builds/fascicle-migration/phase-6-check.json 2>&1 | head -10
+[review:06-atoms-a] AC1, AC9, AC12 visible. Now verifying AC3 (stable.prompt import via _shape), AC4 (no banned imports), AC8 (test count), and running the check command.
+[Agent] Run `npm run check` from /Users/robmclarty/Projects/ridgeline/code/ridgeline and report:
+[Bash] grep -l "model_call" src/engine/atoms/*.atom.ts 2>&1
+[Bash] grep -E "^import.*stable\\.prompt|^import.*from.*_shape" src/engine/atoms/*.atom.ts src/engine/atoms/_shape.ts 2>&1
+[Read] src/engine/atoms/_shape.ts
+[Bash] npm run check 2>&1; echo "EXIT_CODE:$?"
+[Read] src/engine/atoms/__tests__/byte-stability.test.ts
+[Bash] grep -rE 'from "(\.\./)*pipeline|claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)"' src/engine/atoms/ 2>&1; echo "E…
+[Bash] grep -rn "process\.on\(.SIGINT" src/cli.ts 2>&1; echo "EXIT_CODE:$?"
+[Bash] grep -rn 'process\.on.*SIGINT' src/cli.ts 2>&1; echo "EXIT_CODE:$?"
+[Bash] cat .check/summary.json 2>/dev/null | python3 -c "import json,sys; d=json.load(sys.stdin); [print(k, d[k].get('ok'), d[k].get('exitCode')) for k in d]" 2>&1
+[Read] .check/summary.json
+[Bash] npx vitest run --reporter=verbose 2>&1 | tail -20
+Continuing verification of AC3 (ast-grep rule fires correctly), AC5 (5 fixtures), AC6 (byte-stability test structure), AC7 (referential schema equality), and AC11 (build still on old pipeline).
+[Read] rules/atom-must-import-stable-prompt.yml
+[Read] src/engine/atoms/__tests__/reviewer.test.ts
+[Read] src/engine/atoms/__tests__/planner.test.ts
+[Read] src/engine/atoms/builder.atom.ts
+[Bash] grep -rn "from .*atoms\|builderAtom\|reviewerAtom\|plannerAtom\|refinerAtom\|researcherAtom" src/commands/ 2>&1 | head -20
+[review:06-atoms-a] All 12 ACs verified. Composing verdict.
+
+Findings:
+
+- **AC1** ✓ — `src/engine/atoms/` contains `builder.atom.ts`, `reviewer.atom.ts`, `planner.atom.ts`, `refiner.atom.ts`, `researcher.atom.ts` plus helpers (`_shape.ts`, `_prompt.document.ts`) and the pre-existing `index.ts` scaffold.
+- **AC2** ✓ — Each atom exports a `Step` factory (`builderAtom`, `reviewerAtom`, etc.) returning `Step<Args, GenerateResult<...>>`. Confirmed by reading each file plus the per-atom unit tests importing each factory directly.
+- **AC3** ✓ — Each atom uses `compose("<name>", sequence([shaper, model_call({...})]))`. The spec text `pipe(promptShaper, model_call(...))` is honored conceptually; the deviation (using `sequence` since fascicle's `pipe` signature is `(Step, fn)` not `(Step, Step)`) is well-documented in the handoff. The ast-grep rule `atom-must-import-stable-prompt.yml` (severity `error`) is in place at `rules/`, asserts `model_call($$$)` inside `src/engine/atoms/*.atom.ts` requires an import of `../claude/stable.prompt` or `./_shape` (the helper that imports from stable.prompt). `_shape.ts` line 1 imports `buildStablePrompt` from `../claude/stable.prompt`. struct check exit 0.
+- **AC4** ✓ — `grep -rE 'from "(\.\./)*pipeline|claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types)"' src/engine/atoms/` returned zero matches.
+- **AC5** ✓ — All five fixture files present at `src/engine/atoms/__tests__/__fixtures__/byte-stability.{builder,reviewer,planner,refiner,researcher}.json`, each containing `{ args, modelCallInput }`.
+- **AC6** ✓ — `byte-stability.test.ts` runs each atom's `shape<X>ModelCallInput(args)` and asserts `expect(out).toBe(fixture.modelCallInput)`. All 5 sub-tests pass.
+- **AC7** ✓ — `reviewer.test.ts:28` asserts `expect(opts.schema).toBe(reviewVerdictSchema)`; `planner.test.ts:30` asserts `expect(opts.schema).toBe(planArtifactSchema)` — both referential identity, not deep equality.
+- **AC8** ✓ — Each of 5 atoms has unit test(s) under `src/engine/atoms/__tests__/<atom>.test.ts` using `stubEngine()` from `_stub.engine.ts` (fully vi-mocked Engine). No real `claude_cli` provider invoked.
+- **AC9** ✓ — `src/engine/pipeline/` contains all original `*.exec.ts` files (build, plan, refine, research, review, ensemble, etc.) intact. `grep -rn "builderAtom\|reviewerAtom\|plannerAtom\|refinerAtom\|researcherAtom" src/commands/` returned zero matches — no command consumes the new atoms.
+- **AC10** ✓ — `npm run check` exits 0; all 8 sub-tools (types, lint, struct, agents, dead, docs, spell, test) report `ok: true`. 1278 tests pass across 127 test files.
+- **AC11** ✓ — Pipeline files unchanged on disk and consumed only by the existing command paths. The atoms are unconsumed by any command (grep verified), so `ridgeline build` runs through the old pipeline by construction. Smoke-test by harness external to the binary under migration is consistent with the constraint that "the migration is executed by a separately installed stable ridgeline binary."
+- **AC12** ✓ — `.ridgeline/builds/fascicle-migration/phase-6-check.json` exists with `ok: true` and 8 sub-checks all `ok: true, exit_code: 0`.
+
+Constraint adherence: camelCase ridgeline-side (builderAtom, reviewVerdictSchema), snake_case fascicle imports preserved (compose, model_call, sequence, step), `no-pipeline-imports` and `no-console-in-engine-substrate` rules lifted from `hint` to `error` per their own deferred-lift comments. No console.* or process.stdout writes in atoms (struct check passed). No emoji literals. zod 4.x used for schemas. No `### Tool Failure` section in handoff; deviations are reasoned design decisions, not tool fallbacks.
+
+Visual review skipped — diff touches no visual code (no `.tsx`/`.svg`/`.css`/tailwind), and design.md content explicitly states "No visual surface."
+[ridgeline] [06-atoms-a] PASSED (1614s)
+
+[ridgeline] ── Phase 9/14: 07-atoms-b ──
