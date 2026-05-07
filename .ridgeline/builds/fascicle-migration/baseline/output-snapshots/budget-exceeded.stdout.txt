@@ -1,0 +1,4 @@
+
+[ridgeline] ── Phase 1/1: 01-scaffold ──
+[ridgeline] [01-scaffold] Budget exceeded: $1.05 > $1.00
+[ridgeline] Budget limit reached: $1.05 > $1.00

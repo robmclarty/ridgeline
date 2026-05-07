@@ -266,6 +266,52 @@ defined threshold rather than letting it run unbounded.
 project. The checkpoint tag preserves the known-good state.[^3] The builder can
 retry with targeted feedback or the user can intervene manually.
 
+## Trajectory Translation
+
+Ridgeline's trajectory log (`.ridgeline/builds/<name>/trajectory.jsonl`) is
+the single chronological record of everything that happened during a build:
+plan starts, build/review starts and completes, phase advances, phase
+failures, budget events. The substrate underneath the harness is the
+`fascicle` library, which emits its own internal `TrajectoryEvent` shape
+(span starts, span ends, custom emits) as flows run.
+
+These two shapes do not match. Fascicle's events are organised around its
+composition primitives (every `compose(name, ...)`, `model_call`,
+`retry`, `parallel` etc. emits span-level entries), and span-stamped
+internal mechanics are not what fascicle-viewer or ridgeline's external
+.jsonl consumers expect. Ridgeline therefore **translates** fascicle's
+events into its existing on-disk shape rather than writing them
+verbatim:
+
+- `src/engine/adapters/ridgeline_trajectory_logger.ts` recognises
+  ridgeline-shaped events (`{ kind: "ridgeline_trajectory", entry }`)
+  and appends the inner `entry` to `trajectory.jsonl` using
+  `appendTrajectoryEntry()` from `src/stores/trajectory.ts`.
+- `src/engine/adapters/ridgeline_budget_subscriber.ts` recognises
+  ridgeline-shaped cost events
+  (`{ kind: "ridgeline_cost", id, entry }`) and appends them to
+  `budget.json`.
+- Other fascicle event kinds (`span_start`, `span_end`, raw
+  `emit`) are intentionally dropped on the floor at the .jsonl
+  boundary -- they remain visible to in-process subscribers but never
+  hit disk in fascicle's native shape.
+
+The decision to translate rather than emit verbatim was deliberate:
+preserving the existing on-disk schema means `fascicle-viewer`,
+external dashboards, and anything else that read pre-migration
+`trajectory.jsonl` files keep working without modification.
+New ridgeline-emitted event types use camelCase identifiers (the
+ridgeline-side naming convention); fascicle-emitted kinds keep
+their snake_case names exactly as fascicle emits them, on the rare
+occasions the in-process stream is consumed directly.
+
+A small consequence: when adding a new diagnostic event in
+`src/engine/{flows,atoms,composites,adapters}/`, prefer
+`ctx.trajectory.emit({ kind: "ridgeline_trajectory", entry: ... })`
+over a direct `console.error` or `process.stderr.write`. The former
+flows through the adapter into `trajectory.jsonl`; the latter clutters
+the terminal and isn't visible to downstream readers.
+
 ## Industry Trends
 
 The patterns ridgeline implements are not unique -- they are emerging across the

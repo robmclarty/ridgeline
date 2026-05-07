@@ -659,7 +659,19 @@
       "cacheCreationInputTokens": 236557,
       "durationMs": 270333,
       "timestamp": "2026-05-07T21:08:03.677Z"
+    },
+    {
+      "phase": "12-docs-invariants-golden",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 19.5369415,
+      "inputTokens": 135,
+      "outputTokens": 54457,
+      "cacheReadInputTokens": 30746989,
+      "cacheCreationInputTokens": 435424,
+      "durationMs": 1032659,
+      "timestamp": "2026-05-07T21:25:24.921Z"
     }
   ],
-  "totalCostUsd": 388.3494412999999
+  "totalCostUsd": 407.8863827999999
 }

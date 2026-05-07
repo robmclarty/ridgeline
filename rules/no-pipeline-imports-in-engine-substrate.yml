@@ -1,11 +1,10 @@
 id: no-pipeline-imports-in-engine-substrate
-# Activates at Phase 4 (atoms) and Phase 5 (leaf flows).
-# Rationale: atoms, composites, flows, and adapters must not import from
-# the soon-to-be-deleted `src/engine/pipeline/` or from
-# `src/engine/claude/{claude.exec,stream.parse,stream.result,stream.display,stream.types}.ts`.
-# Severity is `hint` while these directories are still empty in Phase 0.
-# Phase 4 lifts to `error` once atoms/ has content.
-message: Files under src/engine/{flows,atoms,composites,adapters}/ may not import from src/engine/pipeline/ or src/engine/claude/{claude.exec,stream.*}. Use the new fascicle-based atoms and adapters.
+# Phase 12 — atoms, composites, flows, and adapters must not import from
+# the deleted `src/engine/pipeline/` directory or from the deleted
+# `src/engine/claude/{claude.exec,stream.parse,stream.result,stream.display,stream.types}.ts`
+# files. Both targets are removed at Phase 11; this rule guards regression
+# if either path reappears in the new substrate.
+message: Files under src/engine/{flows,atoms,composites,adapters}/ may not import from src/engine/pipeline/ or src/engine/claude/{claude.exec,stream.*}. The substrate is fascicle-based; use atoms, composites, adapters, and flows.
 severity: error
 language: typescript
 files:
@@ -13,12 +12,10 @@ files:
   - "src/engine/composites/**/*.ts"
   - "src/engine/flows/**/*.ts"
   - "src/engine/adapters/**/*.ts"
+ignores:
+  - "src/engine/**/__tests__/**/*.ts"
 rule:
-  any:
-    - pattern: import $$$ from "$$$/pipeline/$$$"
-    - pattern: import $$$ from "$$$/pipeline"
-    - pattern: import $$$ from "$$$/claude/claude.exec"
-    - pattern: import $$$ from "$$$/claude/stream.parse"
-    - pattern: import $$$ from "$$$/claude/stream.result"
-    - pattern: import $$$ from "$$$/claude/stream.display"
-    - pattern: import $$$ from "$$$/claude/stream.types"
+  kind: import_statement
+  has:
+    kind: string
+    regex: '(pipeline/|claude/(claude\.exec|stream\.parse|stream\.result|stream\.display|stream\.types))'

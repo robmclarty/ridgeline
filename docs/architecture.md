@@ -7,10 +7,76 @@ planner, builder, reviewer -- driven by the Claude CLI.[^1] The harness manages
 state through git checkpoints, tracks costs, and supports resumable execution
 when things go wrong.
 
-Ridgeline itself is lightweight: a single runtime dependency (commander for
-CLI parsing) and the Claude CLI installed on the host. Everything else --
-planning, implementation, verification -- is delegated to Claude agents with
-scoped tool permissions.
+Ridgeline is a thin shell over an orchestration core. The shell handles CLI
+parsing, file I/O (state.json, phases, handoff, feedback, budget,
+trajectory), git checkpoints, sandbox detection, and agent prompt assembly.
+The core -- composition primitives, retry, parallelism, abort propagation,
+trajectory event delivery, checkpoint storage, and the Claude subprocess
+provider -- is supplied by the [fascicle](https://www.npmjs.com/package/fascicle)
+library. Ridgeline depends on `fascicle`, `zod` (for the Zod schemas the
+core's `model_call` validates against), `commander` (for CLI parsing), and
+the Claude CLI binary on the host. Everything else -- planning,
+implementation, verification -- is delegated to Claude agents with scoped
+tool permissions.
+
+## Shell + Core Layering
+
+The substrate boundary lives between the shell and the core:
+
+```text
+┌──────────────────── Ridgeline shell ─────────────────────┐
+│  src/commands/<name>.ts     CLI entry points            │
+│  src/main.ts                commander wiring + SIGINT    │
+│  src/stores/                state.json, phases, handoff │
+│  src/engine/flows/          per-command fascicle flows  │
+│  src/engine/atoms/          model_call-based steps      │
+│  src/engine/composites/     phase, graph_drain, ...     │
+│  src/engine/adapters/       trajectory, checkpoint, ... │
+│  src/engine/engine.factory  makeRidgelineEngine(cfg)    │
+└──────────────────────────────────────────────────────────┘
+                            ↑
+                            │  uses fascicle primitives
+                            │  (snake_case at the call site)
+                            ↓
+┌──────────────────── Fascicle core ───────────────────────┐
+│  create_engine, model_call, run, sequence, parallel,    │
+│  pipe, retry, fallback, timeout, loop, branch, map,     │
+│  compose, checkpoint, suspend, scope, stash, use,       │
+│  describe, adversarial, ensemble, tournament,           │
+│  consensus, claude_cli provider, typed errors,          │
+│  TrajectoryLogger / CheckpointStore contracts           │
+└──────────────────────────────────────────────────────────┘
+```
+
+Ridgeline-side identifiers stay camelCase (`makeRidgelineEngine`,
+`buildFlow`, `runClaudeOneShot`); fascicle imports stay snake_case as
+exported (`run`, `model_call`, `aborted_error`, `tee_logger`). The
+boundary is intentionally visible at every call site -- there are no
+alias re-exports that hide which side a symbol came from. An ast-grep
+rule blocks `export ... as <camelCaseName>` re-exports of fascicle
+exports.
+
+Each command invocation constructs exactly one fascicle Engine via
+`makeRidgelineEngine(cfg)` and disposes it in a `finally` block:
+
+```ts
+const engine = makeRidgelineEngine(cfg)
+try {
+  await run(flow, input, { trajectory, checkpoint_store })
+} finally {
+  await engine.dispose()
+}
+```
+
+Plugin discovery (`discoverPluginDirs`) and cleanup
+(`cleanupPluginDirs`) bracket the engine lifecycle from the outside.
+Sandbox enforcement, auth mode, plugin dirs, setting sources, model
+aliases (`opus`, `sonnet`, `haiku`), and timeouts are all baked into
+the Engine at factory time so call sites never carry transport-level
+concerns.
+
+Ridgeline itself is otherwise lightweight: the runtime dependency set
+is `fascicle` + `zod` + `commander` + the Claude CLI binary.
 
 ## Pipeline Flow
 

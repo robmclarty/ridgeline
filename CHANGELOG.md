@@ -41,6 +41,21 @@
   `src/engine/retry.policy.ts` for retry-vs-abort classification against
   fascicle's typed error classes (`rate_limit_error`, `provider_error`,
   `aborted_error`, `schema_validation_error`, etc.).
+- **Sandbox module split.** `src/engine/claude/sandbox.greywall.ts` is
+  removed. `src/engine/claude/sandbox.policy.ts` now exports
+  `buildSandboxPolicy(args): SandboxProviderConfig | undefined` (the
+  fascicle `claude_cli` sandbox config builder), plus the
+  `DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED` /
+  `DEFAULT_NETWORK_ALLOWLIST_STRICT` constants and the legacy
+  `greywallProvider`. `src/engine/claude/sandbox.ts` is reduced to the
+  `detectSandbox(mode)` helper; `src/engine/claude/sandbox.types.ts`
+  retains the `SandboxProvider` type. Engine factory consumers should
+  call `buildSandboxPolicy({ sandboxFlag, buildPath })` and pass the
+  result into `claude_cli.sandbox`; legacy spawn-wrapper consumers can
+  still import `greywallProvider` from `sandbox.policy.ts`. An ast-grep
+  rule (`no-child-process-in-sandbox`) blocks `node:child_process`
+  imports in `sandbox.ts` and `sandbox.types.ts` to prevent the
+  spawn-wrapping responsibility from drifting back.
 
 ### Added
 

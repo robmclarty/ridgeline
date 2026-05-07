@@ -1,0 +1,5 @@
+
+[ridgeline] ── Phase 1/2: 01-scaffold ──
+[ridgeline] [01-scaffold] Building...
+[ridgeline] Interrupted by SIGINT — cleaning up.
+[ridgeline] Worktree removed.

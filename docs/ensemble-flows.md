@@ -6,8 +6,15 @@ the spec against external sources), and **planning** (turning a spec into
 phases). All three flows run multiple specialist agents in parallel, each
 bringing a different perspective, then merge their proposals through a
 synthesizer agent. The underlying engine is identical -- a generic
-`invokeEnsemble<TDraft>` function parameterized by draft type, agent
-directory, and prompt construction.
+`runEnsemble<TDraft>` function parameterized by draft type, agent directory,
+and prompt construction.
+
+The ensemble runner is built on top of fascicle's composition primitives
+(`parallel`, `sequence`, `model_call`, `retry`) and uses fascicle's typed
+errors so partial failures (timeouts, parse errors) classify cleanly. The
+specialist atoms in `src/engine/atoms/` (planner, specifier, researcher,
+refiner) are the per-call building blocks; the ensemble runner glues them
+into the parallel-then-synthesize shape described below.
 
 This document explains the shared ensemble engine, the three flows built on
 it, and why the pattern improves output quality.

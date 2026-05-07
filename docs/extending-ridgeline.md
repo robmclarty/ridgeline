@@ -337,6 +337,70 @@ The builder can query the MCP server for endpoint schemas, authentication
 requirements, and response formats -- pulling live documentation rather than
 relying on what was current when the spec was written.
 
+## Atoms, Composites, Flows, and Adapters
+
+Ridgeline's orchestration core is the `fascicle` library. Internally,
+ridgeline composes its build pipeline from four kinds of small units
+that all conform to fascicle's `Step<i, o>` contract. Plugin authors
+who want to build entirely new orchestrations on top of ridgeline's
+substrate can consume the same primitives.
+
+| Unit | Lives in | Purpose |
+|------|----------|---------|
+| **Atom** | `src/engine/atoms/` | A single Claude call shaped by `model_call({ engine, model, system, schema? })`. Builder, reviewer, planner, refiner, researcher, specialist, sensors-collect, plan.review, specialist.verdict, specifier. |
+| **Composite** | `src/engine/composites/` | A reusable orchestration pattern: `phase` (build/review retry), `graph_drain` (bounded concurrency), `worktree_isolated` (per-phase git worktrees, index-order merge), `diff_review` (build → commit → diff → review), `cost_capped` (abort the inner step at a cumulative-USD ceiling). |
+| **Flow** | `src/engine/flows/` | One per CLI subcommand. Each flow returns a fascicle `Step` that the command runs via `await run(flow, input, opts)`. |
+| **Adapter** | `src/engine/adapters/` | Bridges between fascicle contracts and ridgeline's on-disk shapes: `createRidgelineTrajectoryLogger`, `createRidgelineCheckpointStore`, `createRidgelineBudgetSubscriber`. |
+
+### Building Your Own Flow
+
+```ts
+import { run, sequence, retry } from "fascicle"
+import {
+  makeRidgelineEngine,
+  builderAtom,
+  reviewerAtom,
+  createRidgelineTrajectoryLogger,
+} from "ridgeline/engine"
+
+const engine = makeRidgelineEngine({
+  sandboxFlag: "semi-locked",
+  pluginDirs: [],
+  settingSources: ["user", "project", "local"],
+  buildPath: "/tmp/my-flow",
+})
+
+const myFlow = sequence([
+  builderAtom({ engine, model: "opus", roleSystem: "You are a builder..." }),
+  reviewerAtom({ engine, model: "opus", roleSystem: "You are a reviewer..." }),
+])
+
+const trajectory = createRidgelineTrajectoryLogger("/tmp/my-flow")
+
+try {
+  const out = await run(myFlow, { /* atom inputs */ }, { trajectory })
+  console.log(out)
+} finally {
+  await engine.dispose()
+}
+```
+
+Two rules worth highlighting:
+
+- **One Engine per command invocation, disposed in `finally`.** Never
+  share an Engine across overlapping calls. The factory is the only
+  authorised caller of fascicle's `create_engine`; an ast-grep rule
+  blocks `create_engine` imports anywhere else.
+- **Snake-case stays at the call site.** Fascicle's `run`, `model_call`,
+  `sequence`, `retry`, `aborted_error` etc. are imported with their
+  original snake_case names. Don't alias them to camelCase via
+  `export ... as` — the boundary between ridgeline and fascicle is
+  meant to be visible.
+
+The atom factories accept stub Engines too, so you can unit-test new
+flows without spawning Claude. See `src/engine/atoms/__tests__/_stub.engine.ts`
+for the canned `GenerateResult` pattern.
+
 ## Tuning Your Builds
 
 The extension system is designed for iteration. Start simple, observe results,
