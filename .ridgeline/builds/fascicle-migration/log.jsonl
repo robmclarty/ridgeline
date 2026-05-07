@@ -134,3 +134,6 @@
 {"timestamp":"2026-05-07T20:07:09.347Z","level":"info","phase":null,"message":"Phase dependencies detected — using wave-based scheduling"}
 {"timestamp":"2026-05-07T20:07:09.351Z","level":"info","phase":"11-cleanup-deletions","message":"Phase 16/17: 11-cleanup-deletions"}
 {"timestamp":"2026-05-07T20:07:09.502Z","level":"info","phase":"11-cleanup-deletions","message":"Building..."}
+{"timestamp":"2026-05-07T21:03:33.342Z","level":"info","phase":"11-cleanup-deletions","message":"Reviewing..."}
+{"timestamp":"2026-05-07T21:08:03.731Z","level":"info","phase":"11-cleanup-deletions","message":"PASSED (3654s)"}
+{"timestamp":"2026-05-07T21:08:03.731Z","level":"info","phase":"12-docs-invariants-golden","message":"Phase 17/17: 12-docs-invariants-golden"}

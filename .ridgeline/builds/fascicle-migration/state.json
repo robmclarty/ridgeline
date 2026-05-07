@@ -371,12 +371,12 @@
     },
     {
       "id": "11-cleanup-deletions",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/11-cleanup-deletions",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/11-cleanup-deletions",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 3654327,
+      "completedAt": "2026-05-07T21:08:03.730Z",
       "failedAt": null,
       "builderInvocations": [
         {
