@@ -123,7 +123,7 @@ read-only and don't need host access. The asymmetry is intentional: only the
 specific tool that requires loopback IPC runs outside the sandbox; everything
 that *checks* its output runs sandboxed.
 
-### Resumeability
+### Resumability
 
 If the operator interrupts a host-side phase mid-run (Ctrl-C, machine
 reboot), the next `ridgeline build resume` should detect the dangling
