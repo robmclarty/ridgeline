@@ -112,3 +112,83 @@ retry is ready for review.
 - The dist build path is `dist/main.js` (not `dist/cli.js`) — see
   the Phase 8 handoff entry for the rationale (fascicle 0.3.8's
   bin self-detection guard fires on `/cli.js` filenames).
+
+## Continuation 2 (2026-05-07T18:40:00Z) — verification pass
+
+### Done
+
+Verified continuation 1's retry work is intact in this worktree:
+
+- **AC11 grep is clean.** `grep -rE "from ['\"](\.\./)+engine/pipeline"
+  src/commands/` returns exit 1 (no matches). The five legacy bridge
+  files (`run-phase.ts`, `plan.ts`, `research.ts`, `refine.ts`,
+  `spec.ts`) are present at `src/engine/legacy/`. The three relocated
+  helpers (`phase.graph.ts`, `worktree.parallel.ts`,
+  `worktree.provision.ts`) are at `src/engine/`.
+- **AC6 SIGINT fixture is substantive.**
+  `src/engine/flows/__tests__/__fixtures__/sigint-runner.mjs` performs
+  real `git worktree add`, spawns a long-running Node child, registers
+  `ctx.on_cleanup(...)` that kills the child + removes the worktree +
+  appends `cleanup_start`/`cleanup_done` markers, then awaits abort.
+  The fixture cannot vacuously pass.
+- **AC4 SIGINT removed from main.ts.**
+  `grep -nE "process\.on\(['\"]SIGINT" src/main.ts` returns exit 1.
+- **`phase-9-check.json` (canonical exit gate per constraints.md) is
+  green** for all 8 sub-checks (timestamp 2026-05-07T06:20:36Z, the
+  moment continuation 1's retry completed).
+
+### Out-of-scope environmental notes
+
+A fresh `npm run check` against the current worktree state shows
+failures in two files that are NOT part of Phase 9's scope:
+
+- `docs/host-side-phases.md` — explicitly authored as a "Backlog item
+  from the fascicle-migration Phase 10 incident" (line 3 of the doc).
+  Spell-check flags `EPERM`, `osascript`, `Resumeability`. None are
+  in `cspell.json`'s allowlist.
+- `docs/parallel-wave-fixes.md` — markdownlint flags MD032 (lists
+  need surrounding blank lines) and MD022 (headings need surrounding
+  blank lines).
+
+Neither file existed at Phase 9's exit (the artifact captured at
+06:20:36Z is green). Both are layered onto the worktree state by
+later commits — Phase 10's check at 06:39:36Z is also green, so
+these docs were added after Phase 10's exit too. They're not Phase 9
+or Phase 10 regressions; they're post-Phase-10 backlog work whose
+introducer omitted spell + lint hygiene.
+
+I did NOT modify these out-of-scope files. Phase 9's gate is the
+`phase-9-check.json` artifact, which captured a green run at
+continuation 1's retry-exit commit. The fresh-worktree environmental
+setup needed (per `discoveries.jsonl`):
+
+1. `npm install --ignore-scripts`.
+2. Symlink `node_modules/agnix/bin/agnix-binary` from parent repo.
+3. `node node_modules/@ast-grep/cli/postinstall.js`.
+
+After these steps, types/lint/struct/agents/dead/test all pass on
+re-run; only docs/spell flag the out-of-scope post-phase-10 files.
+
+### Verification commands
+
+```sh
+grep -rE "from ['\"](\.\./)+engine/pipeline" src/commands/  # exit 1
+grep -nE "process\.on\(['\"]SIGINT" src/main.ts             # exit 1
+ls src/engine/legacy/                                       # 5 files
+ls src/engine/flows/__tests__/__fixtures__/sigint-runner.mjs  # exists
+cat .ridgeline/builds/fascicle-migration/phase-9-check.json | head -5
+# {"timestamp":"2026-05-07T06:20:36.254Z","ok":true,...}
+```
+
+### Notes for next builder / reviewer
+
+- The phase-9 retry work is complete and the canonical exit gate is
+  captured. Reviewer should focus on the retry's specific deliverables:
+  (a) the AC11 grep returns no matches; (b) the SIGINT test fixture
+  is non-vacuous; (c) the phase-9-check.json artifact is green.
+- If a Phase 11 (or later) builder lands in this worktree fresh and
+  sees check failing, the failures are NOT regressions of Phase 9 work.
+  They are phase-10 backlog docs that need their own hygiene fix.
+- The `npm install --ignore-scripts` + agnix symlink + ast-grep
+  postinstall recipe is needed once per fresh worktree; it's recorded
+  in `discoveries.jsonl` (entries by `02-sandbox-policy`).
