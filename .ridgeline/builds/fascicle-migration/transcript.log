@@ -3938,3 +3938,9 @@ I'll start by orienting on the current state — the prior continuation reported
 [Bash] pwd && git log --oneline -5 && git status
 [Read] .ridgeline/builds/fascicle-migration/phases/10-mutation…
 [Bash] ls src/engine/legacy/ 2>&1
+[ridgeline] Resuming build 'fascicle-migration' from phase 16/17
+[ridgeline] Sandbox: greywall (semi-locked)
+[ridgeline] Starting build: fascicle-migration (17 phases)
+[ridgeline] Phase dependencies detected — using wave-based scheduling
+
+[ridgeline] ── Phase 16/17: 11-cleanup-deletions ──
