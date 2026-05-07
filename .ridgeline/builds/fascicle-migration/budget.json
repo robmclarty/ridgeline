@@ -83,7 +83,127 @@
       "cacheCreationInputTokens": 201620,
       "durationMs": 235880,
       "timestamp": "2026-05-06T23:12:18.030Z"
+    },
+    {
+      "phase": "01-foundation-baseline",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 0.9096529,
+      "inputTokens": 10,
+      "outputTokens": 9279,
+      "cacheReadInputTokens": 346196,
+      "cacheCreationInputTokens": 69976,
+      "durationMs": 158368,
+      "timestamp": "2026-05-06T23:14:56.495Z"
+    },
+    {
+      "phase": "03-adapters",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 16.18683325,
+      "inputTokens": 183,
+      "outputTokens": 80786,
+      "cacheReadInputTokens": 25156559,
+      "cacheCreationInputTokens": 252175,
+      "durationMs": 1435432,
+      "timestamp": "2026-05-06T23:39:00.892Z"
+    },
+    {
+      "phase": "05-composites",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 14.659158749999996,
+      "inputTokens": 156,
+      "outputTokens": 68525,
+      "cacheReadInputTokens": 22628268,
+      "cacheCreationInputTokens": 259071,
+      "durationMs": 1517793,
+      "timestamp": "2026-05-06T23:40:23.353Z"
+    },
+    {
+      "phase": "05-composites",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.4902834500000002,
+      "inputTokens": 17,
+      "outputTokens": 11593,
+      "cacheReadInputTokens": 1089036,
+      "cacheCreationInputTokens": 85928,
+      "durationMs": 216516,
+      "timestamp": "2026-05-06T23:44:00.004Z"
+    },
+    {
+      "phase": "03-adapters",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 3.902251000000001,
+      "inputTokens": 64,
+      "outputTokens": 21148,
+      "cacheReadInputTokens": 5461612,
+      "cacheCreationInputTokens": 100676,
+      "durationMs": 680822,
+      "timestamp": "2026-05-06T23:50:29.965Z"
+    },
+    {
+      "phase": "03-adapters",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 2.7257198,
+      "inputTokens": 40,
+      "outputTokens": 11723,
+      "cacheReadInputTokens": 2469993,
+      "cacheCreationInputTokens": 177371,
+      "durationMs": 233467,
+      "timestamp": "2026-05-06T23:54:23.538Z"
+    },
+    {
+      "phase": "02-sandbox-policy",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 27.69507799999999,
+      "inputTokens": 246,
+      "outputTokens": 122113,
+      "cacheReadInputTokens": 45088865,
+      "cacheCreationInputTokens": 333618,
+      "durationMs": 3020761,
+      "timestamp": "2026-05-07T00:05:26.639Z"
+    },
+    {
+      "phase": "02-sandbox-policy",
+      "role": "reviewer",
+      "attempt": 0,
+      "costUsd": 1.0081418,
+      "inputTokens": 13,
+      "outputTokens": 7856,
+      "cacheReadInputTokens": 197859,
+      "cacheCreationInputTokens": 80960,
+      "durationMs": 199730,
+      "timestamp": "2026-05-07T00:08:46.484Z"
+    },
+    {
+      "phase": "02-sandbox-policy",
+      "role": "builder",
+      "attempt": 1,
+      "costUsd": 6.828768249999999,
+      "inputTokens": 79,
+      "outputTokens": 43063,
+      "cacheReadInputTokens": 8718982,
+      "cacheCreationInputTokens": 220653,
+      "durationMs": 1975856,
+      "timestamp": "2026-05-07T00:41:50.366Z"
+    },
+    {
+      "phase": "02-sandbox-policy",
+      "role": "builder",
+      "attempt": 2,
+      "costUsd": 0,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "durationMs": 54041,
+      "timestamp": "2026-05-07T00:42:53.450Z"
     }
   ],
-  "totalCostUsd": 12.3791245
+  "totalCostUsd": 87.78501169999998
 }

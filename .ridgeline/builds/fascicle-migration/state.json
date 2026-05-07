@@ -13,12 +13,12 @@
   "phases": [
     {
       "id": "01-foundation-baseline",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/01-foundation-baseline",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/01-foundation-baseline",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 404578,
+      "completedAt": "2026-05-06T23:14:56.549Z",
       "failedAt": null,
       "builderInvocations": [
         {
@@ -37,23 +37,73 @@
     },
     {
       "id": "02-sandbox-policy",
-      "status": "pending",
+      "status": "failed",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy",
       "completionTag": null,
-      "retries": 0,
-      "duration": null,
+      "retries": 1,
+      "duration": 5276498,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": "2026-05-07T00:42:53.452Z",
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "more_work_implicit",
+          "outputTokens": 43063,
+          "inputTokens": 79,
+          "costUsd": 6.828768249999999,
+          "durationMs": 1975856,
+          "windDownReason": "no marker emitted",
+          "diffHash": "9b8f7bb2fc9265eef213612516755abbdfdac9b0d9dbe26d1b1747e8a5b1ce19",
+          "timestamp": "2026-05-07T00:41:50.364Z"
+        },
+        {
+          "attempt": 2,
+          "endReason": "halt_no_progress",
+          "outputTokens": 0,
+          "inputTokens": 0,
+          "costUsd": 0,
+          "durationMs": 54041,
+          "windDownReason": "no marker emitted",
+          "diffHash": "9b8f7bb2fc9265eef213612516755abbdfdac9b0d9dbe26d1b1747e8a5b1ce19",
+          "timestamp": "2026-05-07T00:42:53.449Z"
+        }
+      ],
+      "builderLoopEndReason": "halt_no_progress"
     },
     {
       "id": "03-adapters",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-adapters",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/03-adapters",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 2366497,
+      "completedAt": "2026-05-06T23:54:23.586Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "more_work_explicit",
+          "outputTokens": 80786,
+          "inputTokens": 183,
+          "costUsd": 16.18683325,
+          "durationMs": 1435432,
+          "windDownReason": "agents check (agnix binary) blocked by sandbox network; AC #10 requires zero-exit npm run check which can only be confirmed after agnix is available",
+          "diffHash": "70b986bb87fa52169a4b02658615fd38ecdc2347ba12f058f84711e6a5537ed7",
+          "timestamp": "2026-05-06T23:39:00.891Z"
+        },
+        {
+          "attempt": 2,
+          "endReason": "ready_for_review",
+          "outputTokens": 21148,
+          "inputTokens": 64,
+          "costUsd": 3.902251000000001,
+          "durationMs": 680822,
+          "windDownReason": null,
+          "diffHash": "70b986bb87fa52169a4b02658615fd38ecdc2347ba12f058f84711e6a5537ed7",
+          "timestamp": "2026-05-06T23:50:29.965Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "04-engine-factory",
@@ -67,13 +117,27 @@
     },
     {
       "id": "05-composites",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/05-composites",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/05-composites",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 1742885,
+      "completedAt": "2026-05-06T23:44:00.045Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 68525,
+          "inputTokens": 156,
+          "costUsd": 14.659158749999996,
+          "durationMs": 1517793,
+          "windDownReason": null,
+          "diffHash": "72623be0be1f0a0f65df9e80316f10a56251c0cb4de41d236667761ea21487ce",
+          "timestamp": "2026-05-06T23:40:23.352Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "06-atoms-a",
