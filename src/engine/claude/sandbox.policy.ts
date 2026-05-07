@@ -37,6 +37,116 @@ const semiLockedWritePaths = (): string[] => {
   ]
 }
 
+/**
+ * Default network allowlist for `--sandbox semi-locked`.
+ *
+ * Mirrors the pre-migration `DEFAULT_NETWORK_ALLOWLIST` resolved by
+ * src/stores/settings.ts (CLAUDE_REQUIRED_DOMAINS + ecosystem hosts), captured
+ * as the source of truth in
+ * .ridgeline/builds/fascicle-migration/baseline/sandbox-allowlist.semi-locked.json.
+ * Any addition is a widening — explicitly forbidden by Phase 2's spec.
+ */
+export const DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED: readonly string[] = Object.freeze([
+  "api.anthropic.com",
+  "downloads.claude.ai",
+  "http-intake.logs.us5.datadoghq.com",
+  "registry.npmjs.org",
+  "nodejs.org",
+  "objects.githubusercontent.com",
+  "raw.githubusercontent.com",
+  "pypi.org",
+  "files.pythonhosted.org",
+  "crates.io",
+  "static.crates.io",
+  "rubygems.org",
+  "proxy.golang.org",
+  "github.com",
+  "gitlab.com",
+  "bitbucket.org",
+])
+
+/**
+ * Default network allowlist for `--sandbox strict`.
+ *
+ * Identical host set to semi-locked because pre-migration ridgeline's allowlist
+ * resolver is independent of sandbox mode (mode varies toolchain *profiles*
+ * and write paths, not the host filter). Captured in
+ * .ridgeline/builds/fascicle-migration/baseline/sandbox-allowlist.strict.json
+ * as the upper bound; strict mode may legitimately narrow but never widens.
+ */
+export const DEFAULT_NETWORK_ALLOWLIST_STRICT: readonly string[] = Object.freeze([
+  "api.anthropic.com",
+  "downloads.claude.ai",
+  "http-intake.logs.us5.datadoghq.com",
+  "registry.npmjs.org",
+  "nodejs.org",
+  "objects.githubusercontent.com",
+  "raw.githubusercontent.com",
+  "pypi.org",
+  "files.pythonhosted.org",
+  "crates.io",
+  "static.crates.io",
+  "rubygems.org",
+  "proxy.golang.org",
+  "github.com",
+  "gitlab.com",
+  "bitbucket.org",
+])
+
+/**
+ * Structural mirror of fascicle's internal `SandboxProviderConfig` (not exported
+ * by fascicle 0.3.x). Phase 4's engine factory passes the result of
+ * `buildSandboxPolicy` straight into `claude_cli.sandbox`; structural typing
+ * lets the values flow through without an alias re-export.
+ */
+export type SandboxProviderConfig =
+  | {
+      readonly kind: "bwrap"
+      readonly network_allowlist?: readonly string[]
+      readonly additional_write_paths?: readonly string[]
+    }
+  | {
+      readonly kind: "greywall"
+      readonly network_allowlist?: readonly string[]
+      readonly additional_write_paths?: readonly string[]
+    }
+
+export type SandboxFlag = "off" | "semi-locked" | "strict"
+
+export type BuildSandboxPolicyArgs = {
+  sandboxFlag: SandboxFlag
+  buildPath: string
+}
+
+/**
+ * Map ridgeline's `--sandbox` flag values to fascicle's `SandboxProviderConfig`.
+ *
+ * - `off`: no sandbox; returns `undefined`.
+ * - `semi-locked` / `strict`: greywall with a non-widened allowlist + per-build
+ *   write paths. `buildPath` is always the first entry of
+ *   `additional_write_paths`.
+ */
+export const buildSandboxPolicy = (
+  args: BuildSandboxPolicyArgs,
+): SandboxProviderConfig | undefined => {
+  if (args.sandboxFlag === "off") return undefined
+
+  const isStrict = args.sandboxFlag === "strict"
+  const network_allowlist = isStrict
+    ? [...DEFAULT_NETWORK_ALLOWLIST_STRICT]
+    : [...DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED]
+
+  const additional_write_paths = isStrict
+    ? [args.buildPath, "/tmp"]
+    : [args.buildPath, "/tmp", ...semiLockedWritePaths()]
+
+  return {
+    kind: "greywall",
+    network_allowlist,
+    additional_write_paths,
+  }
+}
+
 /** Ensure a greyproxy allow rule exists for the given domain. */
 const ensureRule = async (domain: string, existingDestinations: Set<string>): Promise<void> => {
   if (existingDestinations.has(domain)) return
@@ -126,4 +236,18 @@ export const greywallProvider: SandboxProvider = {
       "--",
     ]
   },
+}
+
+/**
+ * Cross-platform `which`-style probe used by `detectSandbox` to decide whether
+ * the greywall CLI is on the host. Lives here so sandbox.ts can stay free of
+ * `node:child_process` (enforced by an ast-grep rule).
+ */
+export const isAvailable = (cmd: string): boolean => {
+  try {
+    execFileSync("which", [cmd], { stdio: ["pipe", "pipe", "pipe"] })
+    return true
+  } catch {
+    return false
+  }
 }
