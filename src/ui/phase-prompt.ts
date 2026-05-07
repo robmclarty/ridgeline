@@ -80,7 +80,14 @@ export const runPhaseApproval = async (
 
   if (!opts.isTTY) {
     const decision = opts.nonTTYDecision ?? "continue"
-    stream.write(`(non-TTY: auto-${decision})\n`)
+    if (decision === "stop") {
+      stream.write(
+        "(non-TTY: cannot prompt — pausing build. Run with a TTY to approve, " +
+        "or omit --require-phase-approval to let the build run unattended.)\n",
+      )
+    } else {
+      stream.write(`(non-TTY: auto-${decision})\n`)
+    }
     return decision
   }
 

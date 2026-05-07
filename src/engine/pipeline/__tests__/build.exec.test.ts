@@ -160,7 +160,7 @@ describe("invokeBuilder", () => {
   })
 
   it("includes reviewer feedback when feedbackPath exists", async () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true)
+    vi.mocked(fs.existsSync).mockImplementation((p) => String(p).includes("feedback"))
     vi.mocked(fs.readFileSync).mockImplementation((p) => {
       if (String(p).includes("feedback")) return "Fix the broken test"
       return "phase spec"
@@ -175,6 +175,7 @@ describe("invokeBuilder", () => {
   })
 
   it("omits feedback section when feedbackPath is null", async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false)
     vi.mocked(invokeClaude).mockResolvedValue(makeClaudeResult())
 
     await invokeBuilder(makeConfig(), makePhase(), null)
@@ -184,6 +185,7 @@ describe("invokeBuilder", () => {
   })
 
   it("returns the ClaudeResult", async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false)
     const expected = makeClaudeResult({ result: "built successfully" })
     vi.mocked(invokeClaude).mockResolvedValue(expected)
 
@@ -192,6 +194,7 @@ describe("invokeBuilder", () => {
   })
 
   it("calls flush and cleanupPluginDirs in finally block", async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false)
     const flush = vi.fn()
     vi.mocked(createDisplayCallbacks).mockReturnValue({ onStdout: vi.fn(), flush })
     vi.mocked(invokeClaude).mockRejectedValue(new Error("claude failed"))
@@ -200,5 +203,17 @@ describe("invokeBuilder", () => {
 
     expect(flush).toHaveBeenCalled()
     expect(cleanupPluginDirs).toHaveBeenCalled()
+  })
+
+  it("includes the cross-phase discoveries path in the user prompt", async () => {
+    vi.mocked(fs.existsSync).mockReturnValue(false)
+    vi.mocked(invokeClaude).mockResolvedValue(makeClaudeResult())
+
+    await invokeBuilder(makeConfig({ buildDir: "/main/.ridgeline/builds/myapp" }), makePhase(), null)
+
+    const call = vi.mocked(invokeClaude).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## Cross-Phase Discoveries")
+    expect(call.userPrompt).toContain("/main/.ridgeline/builds/myapp/discoveries.jsonl")
+    expect(call.userPrompt).toContain("Log is currently empty.")
   })
 })

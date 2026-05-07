@@ -88,7 +88,10 @@ describe("runPhaseApproval", () => {
       nonTTYDecision: "stop",
     })
     expect(decision).toBe("stop")
-    expect(chunks.join("")).toContain("(non-TTY: auto-stop)")
+    const output = chunks.join("")
+    expect(output).toContain("non-TTY")
+    expect(output).toContain("pausing build")
+    expect(output).toContain("--require-phase-approval")
   })
 
   it("renders the completed and next phase ids in the prompt", async () => {
