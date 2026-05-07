@@ -38,7 +38,14 @@
     { "file": "src/engine/pipeline/build.exec.ts", "exports": ["BuilderInvocationExtras"] },
     { "file": "src/ui/phase-prompt.ts", "exports": ["PhaseApprovalDecision", "PhaseApprovalContext", "PhaseApprovalOptions"] },
     { "file": "src/ui/graceful-stop.ts", "exports": ["GracefulStopOptions", "GracefulStopHandle"] },
-    { "file": "src/engine/engine.factory.ts", "exports": ["RidgelineEngineConfig"] }
+    { "file": "src/engine/engine.factory.ts", "exports": ["RidgelineEngineConfig"] },
+    { "file": "src/engine/atoms/builder.atom.ts", "exports": ["BuilderArgs", "BuilderExtras", "BuilderAtomDeps", "builderAtom", "shapeBuilderModelCallInput"] },
+    { "file": "src/engine/atoms/reviewer.atom.ts", "exports": ["ReviewerArgs", "ReviewerSensorFinding", "ReviewerShapeContext", "ReviewerAtomDeps", "reviewerAtom", "shapeReviewerModelCallInput"] },
+    { "file": "src/engine/atoms/planner.atom.ts", "exports": ["PlannerArgs", "PlannerAtomDeps", "plannerAtom", "shapePlannerModelCallInput"] },
+    { "file": "src/engine/atoms/refiner.atom.ts", "exports": ["RefinerArgs", "RefinerAtomDeps", "refinerAtom", "shapeRefinerModelCallInput"] },
+    { "file": "src/engine/atoms/researcher.atom.ts", "exports": ["ResearcherArgs", "ResearcherAtomDeps", "ResearcherSpecialistDraft", "researcherAtom", "shapeResearcherModelCallInput"] },
+    { "file": "src/engine/atoms/_prompt.document.ts", "exports": ["AtomPromptDocument"] },
+    { "file": "src/engine/schemas.ts", "exports": ["reviewVerdictSchema", "planArtifactSchema", "ReviewVerdictSchema", "PlanArtifactSchema"] }
   ],
   "duplicates": {
     "ignore": [
@@ -52,6 +59,10 @@
       "src/engine/composites/worktree_isolated.ts",
       "src/engine/composites/diff_review.ts",
       "src/engine/composites/cost_capped.ts",
+      "src/engine/atoms/_prompt.document.ts",
+      "src/engine/atoms/builder.atom.ts",
+      "src/engine/atoms/reviewer.atom.ts",
+      "src/engine/atoms/researcher.atom.ts",
       "src/sensors/playwright.ts",
       "src/sensors/a11y.ts",
       "src/sensors/vision.ts",

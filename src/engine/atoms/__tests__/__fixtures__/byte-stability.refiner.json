@@ -1,0 +1,12 @@
+{
+  "args": {
+    "specMd": "# Spec\n\nThe spec.\n",
+    "researchMd": "# Research\n\nFindings.\n",
+    "constraintsMd": "# Constraints\n\n- TypeScript strict.\n",
+    "tasteMd": "# Taste\n\n- ESM only.\n",
+    "changelogMd": "## Iteration 1\n\nFirst changes.\n",
+    "buildDir": "/tmp/build",
+    "iterationNumber": 2
+  },
+  "modelCallInput": "## spec.md\n\n<!-- role: data -->\n# Spec\n\nThe spec.\n\n\n## research.md\n\n<!-- role: data -->\n# Research\n\nFindings.\n\n\n## spec.changelog.md (your prior changes)\n\n<!-- role: data -->\n## Iteration 1\n\nFirst changes.\n\n\n## constraints.md\n\n<!-- role: data -->\n# Constraints\n\n- TypeScript strict.\n\n\n## taste.md\n\n<!-- role: data -->\n# Taste\n\n- ESM only.\n\n\n## Output\n\n1. Rewrite the spec incorporating research findings. Write the revised spec to: /tmp/build/spec.md\n2. Document your changes. Write the changelog to: /tmp/build/spec.changelog.md\n   - Read the existing spec.changelog.md first, then prepend a new ## Iteration 2 section.\nUse the Write tool for both files."
+}

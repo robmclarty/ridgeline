@@ -1713,3 +1713,192 @@ All 14 criteria pass. Constraints honored. Check command green.
 [ridgeline] [04-engine-factory] PASSED (974s)
 
 [ridgeline] ── Phase 8/14: 06-atoms-a ──
+[ridgeline] [06-atoms-a] Building...
+[06-atoms-a] Starting: implement first 5 atoms (builder, reviewer, planner, refiner, researcher) plus byte-stability fixture infrastructure.
+[Bash] ls .ridgeline/builds/fascicle-migration/phases/ 2>/dev/null | head -20
+[Bash] ls src/engine/atoms/ 2>/dev/null
+[Bash] ls src/engine/pipeline/ 2>/dev/null
+[Bash] ls src/engine/claude/ 2>/dev/null
+[Read] src/engine/claude/stable.prompt.ts
+[Read] src/engine/claude/claude.exec.ts
+[Read] src/engine/pipeline/build.exec.ts
+[Read] src/engine/pipeline/pipeline.shared.ts
+[Read] src/engine/pipeline/review.exec.ts
+[ToolSearch]
+[TodoWrite]
+[Read] src/engine/pipeline/plan.exec.ts
+[Read] src/engine/pipeline/refine.exec.ts
+[Read] src/engine/pipeline/research.exec.ts
+[Bash] ls node_modules/fascicle/dist/ | head -30
+[Bash] cat node_modules/fascicle/package.json | head -50
+[Bash] wc -l node_modules/fascicle/dist/index.d.ts
+[Grep] ^export|^declare|^interface|^type|model_call|ModelCall|class.*Step
+[Read] node_modules/fascicle/dist/index.d.ts
+[Bash] grep -rln "review_verdict\|reviewVerdict\|ReviewVerdict\|plan_artifact\|planArtifact\|PlanArtifact" src/ 2>/dev/null | head -30
+[Grep] ReviewVerdict|review_verdict|reviewVerdict|PlanArtifact|plan_artifact|planArtifact
+[Read] src/types.ts
+[Read] src/stores/feedback.verdict.ts
+[Read] src/stores/feedback.parse.ts
+[Bash] grep -rln "z\.object\|zod" src/ 2>/dev/null | head -10
+[Bash] grep -rln "zod" src/ 2>/dev/null | head -10
+[Grep] zod
+[Bash] ls node_modules/zod 2>/dev/null && cat package.json | head -50
+[Grep] planner\.md|invokePlanner|plan\.exec|plan_artifact
+[Grep] planner|invokePlanner|invokeEnsemble
+[Bash] grep -n "invokePlanner\|export const invokePlanner\|export async function invokePlanner" src/engine/pipeline/ensemble.exec.ts
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Bash] grep -n "assemblePlannerSpecialistUserPrompt\|assemblePlannerSynthesizerUserPrompt\|SPECIALIST_PROPOSAL_SCHEMA\|buildPlannerSpecialistPrompt" src/e…
+[Read] src/engine/pipeline/ensemble.exec.ts
+[Bash] grep -n "function pipe\|^const pipe\|^function pipe" node_modules/fascicle/dist/index.js | head -5
+[Read] node_modules/fascicle/dist/index.js
+[Bash] ls src/engine/composites/__tests__/ src/engine/__tests__/ 2>/dev/null | head -30
+[Read] src/engine/composites/__tests__/_helpers.ts
+[Read] src/engine/__tests__/engine.factory.test.ts
+[Read] src/engine/engine.factory.ts
+[Bash] ls src/engine/composites/
+[Read] src/engine/composites/phase.ts
+[TodoWrite]
+[Bash] grep -n "export const compose\|GenerateResult\|registers_kind\b\|register_kind" node_modules/fascicle/dist/index.d.ts | head -10
+[Read] node_modules/fascicle/dist/index.d.ts
+Now I have a clear picture. Let me look at the existing AST-grep rules to understand the format.
+[Bash] ls rules/ 2>/dev/null
+[Read] rules/no-create-engine-outside-factory.yml
+[Read] rules/no-pipeline-imports-in-engine-substrate.yml
+[Bash] grep -n "function model_call\|model_call =\|const model_call" node_modules/fascicle/dist/index.js | head -5
+[Read] node_modules/fascicle/dist/index.js
+[Read] rules/no-fascicle-alias-reexports.yml
+[Read] rules/no-console-in-engine-substrate.yml
+[Read] src/engine/atoms/index.ts
+[Read] src/engine/pipeline/prompt.document.ts
+[Bash] cat tsconfig.check.json tsconfig.json 2>/dev/null
+Let me examine what's needed for the prompt document and start creating files.
+[Write] src/engine/schemas.ts
+Now let me create a small prompt document helper local to atoms (to avoid pipeline imports):
+[Write] src/engine/atoms/_prompt.document.ts
+Now the asset usage instructions need to live somewhere (used by builder atom):
+[Read] src/engine/pipeline/pipeline.shared.ts
+Now let me create a shared shape helper module for atoms:
+[Write] src/engine/atoms/_shape.ts
+[TodoWrite]
+[Write] src/engine/atoms/builder.atom.ts
+[Write] src/engine/atoms/reviewer.atom.ts
+[Write] src/engine/atoms/planner.atom.ts
+[Write] src/engine/atoms/refiner.atom.ts
+[Write] src/engine/atoms/researcher.atom.ts
+[TodoWrite]
+Now let me write the ast-grep rule. Let me first look at the existing tests to understand structure:
+[Bash] ls sgconfig.yml 2>/dev/null && cat sgconfig.yml 2>/dev/null
+[Write] rules/atom-must-import-stable-prompt.yml
+Let me verify the ast-grep rule works by running it:
+[Bash] npx ast-grep scan -r rules/atom-must-import-stable-prompt.yml 2>&1 | head -30
+[Bash] npx ast-grep scan -r rules/atom-must-import-stable-prompt.yml src/engine/atoms 2>&1 | head -30; echo "---exit:$?---"
+[Bash] cat > /tmp/_test_violation.atom.ts << 'EOF'
+[Bash] cat > /tmp/_probe.atom.ts << 'EOF'
+The ast-grep rule works. Now let me also bump severity on no-pipeline-imports-in-engine-substrate per its comment:
+[Bash] grep -rn "from \"\\.\\./pipeline\\|claude/claude\\.exec\\|claude/stream\\." src/engine/atoms sr…
+Now let me also lift the no-pipeline-imports rule from hint to error since atoms are now populated:
+[Edit] rules/no-pipeline-imports-in-engine-substrate.yml
+Now lift the console rule too:
+[Edit] rules/no-console-in-engine-substrate.yml
+[Bash] npx ast-grep scan src 2>&1 | tail -30; echo "exit:$?"
+All rules pass. Now let me check the typecheck before continuing:
+[Bash] npm run typecheck 2>&1 | tail -40
+[Edit] src/engine/atoms/builder.atom.ts
+[Edit] src/engine/atoms/refiner.atom.ts
+[Edit] src/engine/atoms/researcher.atom.ts
+[Bash] npm run typecheck 2>&1 | tail -30
+Typecheck passes. Now let me create byte-stability fixtures by running the shapers. I'll write a small generator first:
+[Bash] mkdir -p src/engine/atoms/__tests__/__fixtures__
+Let me hand-craft the fixture args, then run a script to compute expected outputs:
+[Write] src/engine/atoms/__tests__/__fixtures__/byte-stability.builder.json
+[Write] src/engine/atoms/__tests__/__fixtures__/byte-stability.reviewer.json
+[Write] src/engine/atoms/__tests__/__fixtures__/byte-stability.planner.json
+[Write] src/engine/atoms/__tests__/__fixtures__/byte-stability.refiner.json
+[Write] src/engine/atoms/__tests__/__fixtures__/byte-stability.researcher.json
+Now let me write a small node script that runs each shaper with the args from the fixture and prints the expected output, so I can populate the `modelCallInput` field:
+[Bash] cat > /tmp/_gen_fixtures.mjs << 'EOF'
+[Bash] cat > _gen_fixtures.mjs << 'EOF'
+[Bash] cat > _gen_fixtures.cjs << 'EOF'
+[Bash] ls node_modules/.bin/ | grep -E "tsx|ts-node" | head -5
+Let me use vitest's transform to run a small script that populates fixtures:
+[Write] src/engine/atoms/__tests__/_gen_fixtures.test.ts
+[Bash] GEN_BYTE_STABILITY_FIXTURES=1 npx vitest run src/engine/atoms/__tests__/_gen_fixtures.test.ts 2>&1 | tail -20
+Fixtures populated. Now let me delete the generator test and write the actual byte-stability test:
+[Bash] rm src/engine/atoms/__tests__/_gen_fixtures.test.ts
+[Write] src/engine/atoms/__tests__/byte-stability.test.ts
+[Bash] npx vitest run src/engine/atoms/__tests__/byte-stability.test.ts 2>&1 | tail -15
+[TodoWrite]
+[Read] src/engine/composites/__tests__/phase.test.ts
+[Write] src/engine/atoms/__tests__/_stub.engine.ts
+[Read] node_modules/fascicle/dist/index.d.ts
+[Edit] src/engine/atoms/__tests__/_stub.engine.ts
+Now let me write the per-atom unit tests:
+[Write] src/engine/atoms/__tests__/builder.test.ts
+[Write] src/engine/atoms/__tests__/reviewer.test.ts
+[Write] src/engine/atoms/__tests__/planner.test.ts
+[Write] src/engine/atoms/__tests__/refiner.test.ts
+[Write] src/engine/atoms/__tests__/researcher.test.ts
+[Bash] npx vitest run src/engine/atoms 2>&1 | tail -40
+All atom tests pass. Now let me run the full check:
+[Bash] npm run check 2>&1 | tail -50
+[Bash] cat .check/dead.txt 2>/dev/null | head -100
+[Bash] ls .check/ && cat .check/summary.json 2>/dev/null | head -100
+[Bash] cat .check/dead.stdout.txt 2>/dev/null | head -100
+[Read] .fallowrc.json
+Now let me clean up the issues. First, remove the duplicate re-exports from `_shape.ts`:
+[Edit] src/engine/atoms/_shape.ts
+Now update atoms to import `createPromptDocument` from `_prompt.document` directly:
+[Edit] src/engine/atoms/builder.atom.ts
+[Edit] src/engine/atoms/reviewer.atom.ts
+[Edit] src/engine/atoms/planner.atom.ts
+[Edit] src/engine/atoms/refiner.atom.ts
+[Edit] src/engine/atoms/researcher.atom.ts
+Now update fallow config to ignore the forward-declared type exports and the transitional duplicates:
+[Edit] .fallowrc.json
+[Edit] .fallowrc.json
+[Bash] npm run check 2>&1 | tail -25
+[Bash] cat .check/dead.stdout.txt 2>/dev/null | head -50
+[Bash] npx fallow --help 2>&1 | head -40
+[Bash] npx fallow config-schema 2>&1 | grep -A2 -i "duplic\|allowDup" | head -50
+[Bash] npx fallow config-schema 2>&1 | python3 -c "import json, sys; s=json.load(sys.stdin); print(json.dumps(s.get('properties', {}).get('severity', {}), indent=2))" 2>&1 | head -50
+[Bash] npx fallow config-schema 2>&1 | head -300 | tail -150
+[Bash] npx fallow config-schema 2>&1 | grep -B1 -A30 '"SeverityConfig"\|"severity"\s*:' | head -80
+[Bash] npx fallow config-schema 2>&1 > /tmp/fallow.json && python3 -c "import json; s=json.load(open('/tmp/fallow.json')); print(json.dumps(s.get('properties', {}).get('severity', s.get('\$defs', {}).get('S…
+[Bash] python3 -c "import json; s=json.load(open('/tmp/fallow.json')); rules=s.get('\$defs',{}).get('Rules', {}); print(json.dumps(rules, indent=2)[:2500])"
+[Bash] python3 -c "import json; s=json.load(open('/tmp/fallow.json')); print('\n'.join(sorted(s.get('\$defs', {}).keys())))"
+[Bash] python3 -c "import json; s=json.load(open('/tmp/fallow.json')); print(json.dumps(s.get('\$defs', {}).get('PartialRulesConfig'), indent=2))" | head -100
+Let me rename atom prompt-document exports to avoid the duplicate exports clash:
+[Edit] src/engine/atoms/_prompt.document.ts
+[Edit] src/engine/atoms/_prompt.document.ts
+Now update _shape.ts and atom files:
+[Edit] src/engine/atoms/_shape.ts
+[Grep] PromptDocument
+[Edit] src/engine/atoms/_shape.ts
+[Edit] src/engine/atoms/_shape.ts
+[Read] src/engine/atoms/_shape.ts
+[Edit] src/engine/atoms/_shape.ts
+Now update the atom files to use the new name:
+[Bash] grep -rn "createPromptDocument\|PromptDocument" src/engine/atoms/*.ts src/engine/atoms/__tests__/*.ts 2>/dev/null | grep -v "Atom"
+[Bash] cd /Users/robmclarty/Projects/ridgeline/code/ridgeline
+Now update the fallow config:
+[Edit] .fallowrc.json
+[Bash] npm run check 2>&1 | tail -25
+All checks green. Let me capture the phase artifact and verify everything:
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-6-check.json && cat .ridgeline/builds/fascicle-migration/phase-6-check.json | python3 -c "import json,sys; s=json.load(sys.stdin); pr…
+[Bash] node dist/cli.js --help 2>&1 | head -5; echo "---exit:$?---"
+[Bash] npm run build 2>&1 | tail -5; node dist/cli.js --help >/dev/null 2>&1; echo "build+run exit:$?"
+Now let me verify all acceptance criteria:
+[Bash] echo "=== AC1: atoms exist ==="
+[TodoWrite]
+Now let me append the handoff for Phase 6:
+[Bash] tail -3 .ridgeline/builds/fascicle-migration/handoff.md
+[Bash] cat >> .ridgeline/builds/fascicle-migration/handoff.md << 'EOF'
+[Bash] npm run check 2>&1 | tail -25
+All green. Let me update the phase artifact one final time so it reflects the post-handoff state, and verify everything is in order:
+[Bash] cp .check/summary.json .ridgeline/builds/fascicle-migration/phase-6-check.json
+[TodoWrite]
+Phase 6-A complete. All five atoms (builder, reviewer, planner, refiner, researcher) are implemented as `compose(name, sequence([shaper, model_call({...})]))`. Five byte-stability fixtures pin the `ModelCallInput` strings; 13 atom unit tests pass (including referential schema-equality tests for reviewer/planner). The new `atom-must-import-stable-prompt` ast-grep rule enforces the stable-prompt import boundary; `no-pipeline-imports` and `no-console-in-engine-substrate` are lifted to `error`. The pre-migration pipeline is untouched and `npm run check` is green across all 8 sub-checks. `phase-6-check.json` captured.
+
+[06-atoms-a] DONE
+
+READY_FOR_REVIEW

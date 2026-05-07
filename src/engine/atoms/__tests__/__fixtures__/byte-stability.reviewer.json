@@ -1,0 +1,24 @@
+{
+  "args": {
+    "phaseMd": "# Phase 2: Build atoms\n\n## Acceptance Criteria\n\n1. Atoms exist.\n",
+    "diff": "diff --git a/foo.ts b/foo.ts\nindex 1..2 100644\n--- a/foo.ts\n+++ b/foo.ts\n@@ -1 +1 @@\n-old\n+new\n",
+    "constraintsMd": "# Constraints\n\n- TypeScript strict.\n",
+    "projectDesignMd": null,
+    "featureDesignMd": "# Feature Design\n\nNo visual surface.\n",
+    "sensorFindings": [
+      {
+        "severity": "warning",
+        "kind": "playwright",
+        "summary": "no dev server detected",
+        "path": null
+      }
+    ],
+    "matchedShapeContexts": [
+      {
+        "name": "non-visual",
+        "reviewerContext": "No UI."
+      }
+    ]
+  },
+  "modelCallInput": "## Phase Spec\n\n<!-- role: data -->\n# Phase 2: Build atoms\n\n## Acceptance Criteria\n\n1. Atoms exist.\n\n\n## Git Diff (checkpoint to HEAD)\n\n<!-- role: data -->\n```diff\ndiff --git a/foo.ts b/foo.ts\nindex 1..2 100644\n--- a/foo.ts\n+++ b/foo.ts\n@@ -1 +1 @@\n-old\n+new\n\n```\n\n## constraints.md\n\n<!-- role: data -->\n# Constraints\n\n- TypeScript strict.\n\n\n## Feature Design\n\n<!-- role: data -->\n# Feature Design\n\nNo visual surface.\n\n\n## Sensor Findings (from builder loop)\n\n<!-- role: data -->\n- [warning] playwright: no dev server detected\n\n## Visual Design Review Context\n\nThe following visual design heuristics apply to this phase:\n\n### non-visual\n\nNo UI.\n\n**Review rules for design.md:**\n- Hard token violations (specific values with imperative language) → severity: blocking\n- Soft guidance deviations (directional language) → severity: suggestion"
+}

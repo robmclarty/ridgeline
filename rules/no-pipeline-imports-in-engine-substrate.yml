@@ -6,7 +6,7 @@ id: no-pipeline-imports-in-engine-substrate
 # Severity is `hint` while these directories are still empty in Phase 0.
 # Phase 4 lifts to `error` once atoms/ has content.
 message: Files under src/engine/{flows,atoms,composites,adapters}/ may not import from src/engine/pipeline/ or src/engine/claude/{claude.exec,stream.*}. Use the new fascicle-based atoms and adapters.
-severity: hint
+severity: error
 language: typescript
 files:
   - "src/engine/atoms/**/*.ts"

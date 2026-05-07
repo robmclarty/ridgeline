@@ -1,0 +1,20 @@
+{
+  "args": {
+    "specMd": "# Spec\n\nThe spec.\n",
+    "buildDir": "/tmp/build",
+    "drafts": [
+      {
+        "perspective": "academic",
+        "draft": "Academic findings."
+      },
+      {
+        "perspective": "practitioner",
+        "draft": "Practitioner findings."
+      }
+    ],
+    "existingResearchMd": "# Existing\n\nPrior research.\n",
+    "changelogMd": "## Iteration 1\n",
+    "iterationNumber": 2
+  },
+  "modelCallInput": "## spec.md\n\n<!-- role: data -->\n# Spec\n\nThe spec.\n\n\n## Specialist Research Reports\n\n<!-- role: data -->\n### Academic Specialist Report\n\nAcademic findings.\n\n---\n\n### Practitioner Specialist Report\n\nPractitioner findings.\n\n---\n\n\n## Existing research.md (to be updated, not replaced)\n\n<!-- role: data -->\n# Existing\n\nPrior research.\n\n\n## spec.changelog.md (recommendations already acted on)\n\n<!-- role: data -->\n## Iteration 1\n\n\n## Current Iteration\n\n<!-- role: data -->\nIteration: 2\n\n## Output\n\nWrite the updated research report to: /tmp/build/research.md\nUse the Write tool to create the file."
+}

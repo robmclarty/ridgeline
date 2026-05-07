@@ -185,7 +185,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 87339,
+          "inputTokens": 155,
+          "costUsd": 18.65311775,
+          "durationMs": 1401762,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T04:05:07.637Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
       "id": "07-atoms-b",

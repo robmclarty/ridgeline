@@ -1,0 +1,24 @@
+id: atom-must-import-stable-prompt
+# Rationale: every atom calling `model_call(...)` must route the prompt
+# through `src/engine/claude/stable.prompt.ts` (directly or via a helper that
+# re-exports it) so the prompt-cache hit rate is preserved. If any atom
+# bypasses the shaper, prompt-cache hit rate degrades silently and costs
+# balloon without a visible signal. The rule fires when an atom file calls
+# `model_call(` without a sibling import resolving to claude/stable.prompt.
+message: Atoms that call model_call(...) must import from "../claude/stable.prompt" (directly or via a re-exporting helper). Route the prompt through the stable shaper to preserve the prompt-cache hit rate.
+severity: error
+language: typescript
+files:
+  - "src/engine/atoms/*.atom.ts"
+rule:
+  pattern: model_call($$$)
+  inside:
+    stopBy: end
+    kind: program
+    not:
+      has:
+        stopBy: end
+        any:
+          - pattern: import $$$ from "../claude/stable.prompt"
+          - pattern: import $$$ from "./_shape"
+          - pattern: import $$$ from "./_shape.ts"
