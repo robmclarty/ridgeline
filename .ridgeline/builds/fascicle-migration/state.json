@@ -85,13 +85,14 @@
     },
     {
       "id": "03-adapters.builder-progress",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-adapters.builder-progress",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/03-adapters",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 0,
+      "completedAt": "2026-05-07T03:16:00.000Z",
+      "failedAt": null,
+      "note": "Orphan twin from reconcile. 03-adapters source landed via a61bbb4 (manual) + c16e6be (synthesized artifacts); marked complete to avoid redundant rebuild."
     },
     {
       "id": "03-adapters",
