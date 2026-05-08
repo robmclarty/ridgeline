@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { DetectionReport } from "../../engine/detect/index.js"
+import type { DetectionReport } from "../../engine/project-type.js"
 import { renderPreflight } from "../preflight.js"
 import { stripAnsi } from "../color.js"
 

@@ -1,6 +1,6 @@
 import { PassThrough, Writable } from "node:stream"
 import { describe, expect, it } from "vitest"
-import type { DetectionReport } from "../engine/detect/index.js"
+import type { DetectionReport } from "../engine/project-type.js"
 import { runPreflight } from "../ui/preflight.js"
 
 const visualReport: DetectionReport = {

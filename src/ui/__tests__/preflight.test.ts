@@ -1,6 +1,6 @@
 import { PassThrough, Writable } from "node:stream"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { DetectionReport } from "../../engine/detect/index.js"
+import type { DetectionReport } from "../../engine/project-type.js"
 import { renderPreflight, runPreflight } from "../preflight.js"
 import { stripAnsi } from "../color.js"
 

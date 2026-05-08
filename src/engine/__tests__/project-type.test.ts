@@ -2,9 +2,9 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { detect } from "../index.js"
+import { detect } from "../project-type.js"
 
-const FIXTURES = path.resolve(__dirname, "../../../../test/fixtures")
+const FIXTURES = path.resolve(__dirname, "../../../test/fixtures")
 
 describe("detect", () => {
   describe("fixture projects", () => {

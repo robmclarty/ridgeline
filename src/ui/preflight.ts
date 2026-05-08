@@ -1,5 +1,5 @@
 import * as readline from "node:readline"
-import type { DetectionReport, SensorName } from "../engine/detect/index.js"
+import type { DetectionReport, SensorName } from "../engine/project-type.js"
 import { bold, dimInfo, hint, warning } from "./color.js"
 import { minCacheableTokens } from "../engine/claude/stable.prompt.js"
 

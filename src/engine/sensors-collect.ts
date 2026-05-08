@@ -1,4 +1,4 @@
-import type { SensorName } from "./detect/index.js"
+import type { SensorName } from "./project-type.js"
 import type { SensorAdapter, SensorFinding, SensorInput } from "../sensors/index.js"
 import playwrightSensor from "../sensors/playwright.js"
 import visionSensor from "../sensors/vision.js"

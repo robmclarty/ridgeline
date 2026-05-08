@@ -35,7 +35,7 @@ vi.mock("../../../git.js", () => ({
   commitAll: vi.fn(),
 }))
 
-vi.mock("../../detect/index.js", () => ({
+vi.mock("../../project-type.js", () => ({
   detect: vi.fn(),
 }))
 
@@ -57,7 +57,7 @@ import { runBuilderLoop } from "../../builder-loop.js"
 import type { BuilderLoopOutcome } from "../../builder-loop.js"
 import type { BuilderInvocation } from "../../../types.js"
 import { runReviewer } from "../../reviewer.js"
-import { detect } from "../../detect/index.js"
+import { detect } from "../../project-type.js"
 import { collectSensorFindings } from "../../sensors-collect.js"
 import { printWarn } from "../../../ui/output.js"
 
