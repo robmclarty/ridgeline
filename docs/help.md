@@ -66,7 +66,7 @@ can be a file path to an existing document or a natural language description.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for shaper agent |
+| `--model <name>` | from settings, else `opus` | Model for shaper agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 
 ```sh
@@ -92,7 +92,7 @@ each demo, pick one, and the picked direction's tokens seed the
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for direction-advisor |
+| `--model <name>` | from settings, else `opus` | Model for direction-advisor |
 | `--timeout <minutes>` | `15` | Max duration |
 | `--count <n>` | from settings, else `2` | Number of directions (2 or 3) |
 | `--thorough` | -- | Alias for `--count 3` |
@@ -115,7 +115,7 @@ name is given). Reads any existing `directions/picked.txt` and
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for designer agent |
+| `--model <name>` | from settings, else `opus` | Model for designer agent |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 
 ```sh
@@ -137,7 +137,7 @@ raw text — the synthesizer preserves it alongside `shape.md`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for specifier agents |
+| `--model <name>` | from settings, else `opus` | Model for specifier agents |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
 | `--specialists <n>` | `3` | Number of specialists (1, 2, or 3) |
@@ -158,7 +158,7 @@ editing markdown rather than answering chat questions.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for shaper, designer, specifier |
+| `--model <name>` | from settings, else `opus` | Model for shaper, designer, specifier |
 | `--timeout <minutes>` | `10` | Max duration per turn |
 | `--max-budget-usd <n>` | none | Halt if cumulative cost exceeds this amount |
 | `--specialists <n>` | `3` | Number of specialists (1, 2, or 3) |
@@ -178,7 +178,7 @@ Research the spec using web sources. Optional step between `spec` and `plan`.
 |------|---------|-------------|
 | `--quick` | off | Run a single random specialist instead of the full ensemble |
 | `--auto [N]` | off | Auto-loop: research + refine for N iterations (default 2 if no number given) |
-| `--model <name>` | from settings, else `cli-opus` | Model for research agents |
+| `--model <name>` | from settings, else `opus` | Model for research agents |
 | `--timeout <minutes>` | `15` | Max duration per agent |
 | `--max-budget-usd <n>` | none | Halt if cumulative research cost exceeds this amount |
 | `--specialists <n>` | `3` | Number of specialists (1, 2, or 3) |
@@ -198,7 +198,7 @@ what changed. Run after reviewing/editing research.md.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for refiner agent |
+| `--model <name>` | from settings, else `opus` | Model for refiner agent |
 | `--timeout <minutes>` | `10` | Max duration |
 
 ```sh
@@ -216,7 +216,7 @@ issues, a one-shot revision pass runs.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for planner agents |
+| `--model <name>` | from settings, else `opus` | Model for planner agents |
 | `--timeout <minutes>` | `120` | Max planning duration |
 | `--constraints <path>` | auto | Path to constraints file |
 | `--taste <path>` | auto | Path to taste file |
@@ -246,7 +246,7 @@ phase if previous state exists.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for builder and reviewer |
+| `--model <name>` | from settings, else `opus` | Model for builder and reviewer |
 | `--timeout <minutes>` | `120` | Max duration per phase (or `unlimited` for a 24h catchall) |
 | `--check-timeout <seconds>` | `1200` | Max duration for check command |
 | `--max-retries <n>` | `2` | Max retry loops per phase |
@@ -312,7 +312,7 @@ when present. See [Retrospective](retrospective.md) for the format.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--model <name>` | from settings, else `cli-opus` | Model for retrospective agent |
+| `--model <name>` | from settings, else `opus` | Model for retrospective agent |
 | `--timeout <minutes>` | `10` | Max duration |
 
 ### `ridgeline clean`

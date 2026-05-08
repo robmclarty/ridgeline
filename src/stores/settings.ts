@@ -243,7 +243,7 @@ export const resolveSandboxExtras = (ridgelineDir: string): SandboxExtras => {
 
 /** Resolve the model to use: CLI opt wins, then settings.json, then built-in default. */
 export const resolveModel = (optModel: string | undefined, ridgelineDir: string): string =>
-  optModel ?? loadSettings(ridgelineDir).model ?? "cli-opus"
+  optModel ?? loadSettings(ridgelineDir).model ?? "opus"
 
 export const loadSettings = (ridgelineDir: string): RidgelineSettings => {
   const settingsPath = path.join(ridgelineDir, "settings.json")

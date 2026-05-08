@@ -4,7 +4,7 @@
   "description": "Build harness for long-horizon software execution",
   "license": "Apache-2.0",
   "bin": {
-    "ridgeline": "dist/main.js"
+    "ridgeline": "dist/cli.js"
   },
   "engines": {
     "node": ">=24.0.0"

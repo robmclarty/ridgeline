@@ -26,7 +26,7 @@ The substrate boundary lives between the shell and the core:
 ```text
 ┌──────────────────── Ridgeline shell ─────────────────────┐
 │  src/commands/<name>.ts     CLI entry points            │
-│  src/main.ts                commander wiring + SIGINT    │
+│  src/cli.ts                 commander wiring + SIGINT    │
 │  src/stores/                state.json, phases, handoff │
 │  src/engine/flows/          per-command fascicle flows  │
 │  src/engine/atoms/          model_call-based steps      │

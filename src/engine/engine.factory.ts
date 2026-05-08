@@ -1,5 +1,5 @@
 // `--timeout <minutes>` maps onto two distinct fascicle timeouts: stall (per-call), startup (constant 120s).
-import { create_engine, type Engine, type EngineConfig } from "fascicle"
+import { create_engine, type AliasTable, type Engine, type EngineConfig } from "fascicle"
 import {
   buildSandboxPolicy,
   DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED,
@@ -7,6 +7,18 @@ import {
   type SandboxFlag,
   type SandboxProviderConfig,
 } from "./claude/sandbox.policy.js"
+
+// When no ANTHROPIC_API_KEY is set, route the anthropic-default aliases through
+// the claude_cli subprocess so subscription users aren't forced to learn the
+// cli-* alias spelling.
+const CLAUDE_CLI_ALIAS_OVERRIDES: AliasTable = {
+  opus: { provider: "claude_cli", model_id: "claude-opus-4-7" },
+  sonnet: { provider: "claude_cli", model_id: "claude-sonnet-4-6" },
+  haiku: { provider: "claude_cli", model_id: "claude-haiku-4-5" },
+  "claude-opus": { provider: "claude_cli", model_id: "claude-opus-4-7" },
+  "claude-sonnet": { provider: "claude_cli", model_id: "claude-sonnet-4-6" },
+  "claude-haiku": { provider: "claude_cli", model_id: "claude-haiku-4-5" },
+}
 
 const STARTUP_TIMEOUT_MS = 120_000
 const DEFAULT_STALL_TIMEOUT_MS = 300_000
@@ -61,5 +73,6 @@ export const makeRidgelineEngine = (cfg: RidgelineEngineConfig): Engine => {
     providers.anthropic = { api_key: anthropicKey }
   }
 
-  return create_engine({ providers })
+  const aliases = anthropicKey ? undefined : CLAUDE_CLI_ALIAS_OVERRIDES
+  return create_engine({ providers, aliases })
 }

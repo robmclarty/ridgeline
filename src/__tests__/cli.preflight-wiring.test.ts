@@ -2,7 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { describe, expect, it } from "vitest"
 
-const CLI_SRC = fs.readFileSync(path.resolve(__dirname, "../main.ts"), "utf-8")
+const CLI_SRC = fs.readFileSync(path.resolve(__dirname, "../cli.ts"), "utf-8")
 
 const splitActions = (src: string): Array<{ name: string; body: string }> => {
   const blocks: Array<{ name: string; body: string }> = []

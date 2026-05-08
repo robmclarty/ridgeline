@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from "node:fs"
 import * as path from "node:path"
 import { describe, expect, it } from "vitest"
-import { program } from "../main.js"
+import { program } from "../cli.js"
 
 const baselineDir = path.resolve(
   process.cwd(),

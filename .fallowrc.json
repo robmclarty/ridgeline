@@ -77,7 +77,6 @@
       "**/__tests__/**",
       "scripts/**",
       "src/cli.ts",
-      "src/main.ts",
       "src/engine/ensemble.ts",
       "src/engine/specifier.ts",
       "src/engine/legacy-shared.ts",

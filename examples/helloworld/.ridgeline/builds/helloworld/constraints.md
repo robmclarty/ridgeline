@@ -1,36 +1,43 @@
 # Constraints
 
-## Language and Runtime
+## Language and runtime
 
-- JavaScript (ES2020+ syntax compatible with Node.js 18+).
-- Node.js >= 18 LTS.
-- CommonJS module system. Do not introduce `"type": "module"` in `package.json`.
+- Language: JavaScript (ES2020+ syntax compatible with the target Node runtime)
+- Module system: CommonJS (`module.exports`, `require`). Do not use ESM (`import`/`export`) and do not add `"type": "module"` to `package.json`
+- Runtime: Node.js >= 18 (LTS). The script must run under stock Node with no flags
 
-## Layout
+## Directory layout
 
-- Flat layout: a single source file `hello.js` at the repository root, alongside the existing `package.json`.
-- No `src/`, `lib/`, or `dist/` directories.
+- Flat layout: source file `hello.js` at the project root
+- No `src/`, `dist/`, or `lib/` directories — overkill for a single file
+- Tests, if added, live in `__tests__/` or as sibling `*.test.js` files
 
 ## Naming
 
-- `camelCase` for functions and variables.
-- The exported greeting function MUST be named `greet`.
-- File name is lowercase: `hello.js`.
-- Booleans (if introduced) use `is`/`has`/`should` prefixes.
+- File name: `hello.js` (lowercase, no separators)
+- Function name: `greet` (camelCase)
+- Boolean variables, if any, use `is`/`has`/`should` prefixes
 
-## API Style
+## API style
 
-- CommonJS exports via `module.exports = { greet }` so destructuring works (`const { greet } = require('./hello')`).
-- The function signature is `greet(name?: string): string` — synchronous and pure.
-- Direct-execution detection uses `require.main === module`.
-- Output uses `console.log(...)` so the trailing newline is implicit.
+- Export shape: `module.exports = { greet }` (object-shaped export, not bare-function default)
+- Direct-execution guard: `if (require.main === module) { ... }` at the bottom of the file
+- Output channel for the script path: `console.log(greet())` (relies on `console.log`'s trailing newline)
 
 ## Dependencies
 
-- Zero runtime dependencies. Do not add anything to `dependencies` or `devDependencies`.
+- Zero runtime dependencies
+- Zero dev dependencies beyond what is already declared in `package.json`
+- If tests are added, use Node's built-in `node:test` and `node:assert/strict` — no Jest, Mocha, Chai, or other framework
+
+## Package metadata
+
+- `package.json` `main` field must be `"hello.js"`
+- No `bin` entry, no shebang line
+- No additional npm scripts beyond what is required by the check command
 
 ## Check Command
 
 ```
-node -e "const { greet } = require('./hello'); if (greet('Alice') !== 'Hello, Alice!') process.exit(1); if (greet() !== 'Hello, world!') process.exit(1); if (greet('') !== 'Hello, world!') process.exit(1); if (greet(null) !== 'Hello, world!') process.exit(1);" && test "$(node hello.js)" = "Hello, world!"
+node -e "const { greet } = require('./hello'); if (greet('Alice') !== 'Hello, Alice!') process.exit(1); if (greet() !== 'Hello, world!') process.exit(1); if (greet('') !== 'Hello, world!') process.exit(1);" && test "$(node hello.js)" = "Hello, world!"
 ```

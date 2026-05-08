@@ -2,19 +2,26 @@
 
 ## Code style
 
-- Keep the entire implementation under ~20 lines.
-- Two-space indentation, single quotes, semicolons, trailing newline at end of file.
-- Prefer `const` over `let`; never use `var`.
-- Use template literals (`` `Hello, ${name}!` ``) for string interpolation rather than concatenation.
-
-## Reading order
-
-The file should read top-to-bottom as: function definition → export → direct-execution guard. A reader scanning the file should see the `greet` function first, since it is the concept being demonstrated.
+- Use a named function declaration (`function greet(name) { ... }`) for the export, not an arrow assigned to a `const` — keeps the name in stack traces
+- Use a single `const DEFAULT_NAME = 'world'` constant rather than inlining the default string in two places
+- Use template literals for the greeting string: `` `Hello, ${name}!` ``
+- Coalesce the input once at the top of `greet` (e.g., `name = name || DEFAULT_NAME`); avoid scattering fallback logic
+- Two-space indentation, single quotes, semicolons — match typical Node.js convention
+- Keep the entire implementation under ~20 lines
 
 ## Comments
 
-Default to no comments. The code is small enough and the names descriptive enough that comments would be noise. Do not add a file-header comment, JSDoc block, or "why" comments unless the behavior is genuinely non-obvious.
+- Default to no comments. The code is self-explanatory at this size
+- Do not document what `greet` does — the name and one-line body are self-evident
+- The `require.main === module` idiom is standard Node.js and does not need a comment
 
-## Tests
+## Tests (if added)
 
-No test framework. The check command's inline `node -e` assertions are the verification surface. If tests are ever added, prefer the built-in `node:test` over external frameworks to preserve the zero-dependency posture.
+- Use `node:test` and `node:assert/strict` exclusively
+- Test file: `hello.test.js` colocated with `hello.js`
+- One `test(...)` block per acceptance criterion with a descriptive name
+- Exercise the direct-execution path via `child_process.spawnSync('node', ['hello.js'])` and assert on `stdout` and `status`
+
+## Commit format
+
+- Conventional Commits style: `feat: add greet function`, `chore: wire main field`, etc.
