@@ -189,8 +189,8 @@ Claude vision analyzes each image and returns structured metadata:
 
 ### Tier 4: Sprite Packing
 
-Runs with `--pack`. Uses free-tex-packer-core to produce PixiJS-compatible
-sprite atlases.
+Runs with `--pack`. Uses an in-house packer (`maxrects-packer` + `sharp`) to
+produce PixiJS-compatible sprite atlases.
 
 - Groups assets by category
 - Packs into 2048×2048 PNG atlases with JSON metadata
