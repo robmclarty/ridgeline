@@ -22,7 +22,7 @@
   },
   {
     "flags": "--model <name>",
-    "description": "Model for direction-advisor agent (defaults to settings.json model, or 'cli-opus')",
+    "description": "Model for direction-advisor agent (defaults to settings.json model, or 'opus')",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

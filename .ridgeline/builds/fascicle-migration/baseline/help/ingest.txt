@@ -7,7 +7,7 @@ file so you can edit them by hand before running plan.
 
 Options:
   --model <name>        Model for shaper, designer, and specifier (defaults to
-                        settings.json model, or 'cli-opus')
+                        settings.json model, or 'opus')
   --timeout <minutes>   Max duration per turn in minutes (default: "10")
   --max-budget-usd <n>  Halt if cumulative cost exceeds this amount
   --specialists <n>     Number of ensemble specialists (1, 2, or 3). Default: 3

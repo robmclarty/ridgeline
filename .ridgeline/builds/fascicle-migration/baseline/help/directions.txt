@@ -6,7 +6,7 @@ design-specialists then picks one against --inspiration.
 
 Options:
   --model <name>       Model for direction-advisor agent (defaults to
-                       settings.json model, or 'cli-opus')
+                       settings.json model, or 'opus')
   --timeout <minutes>  Max duration in minutes (default: "15")
   --count <n>          Number of directions to generate. Overrides
                        settings.directions.count

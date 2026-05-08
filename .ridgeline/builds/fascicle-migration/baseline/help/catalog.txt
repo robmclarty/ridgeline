@@ -10,6 +10,6 @@ Options:
   --pack               Generate sprite atlases after cataloging
   --batch              Batch multiple images per vision call
   --model <name>       Model for vision and classification (defaults to
-                       settings.json model, or 'cli-opus')
+                       settings.json model, or 'opus')
   --timeout <minutes>  Max duration per AI call in minutes (default: "5")
   -h, --help           display help for command

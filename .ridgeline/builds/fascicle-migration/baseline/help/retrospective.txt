@@ -4,7 +4,7 @@ Analyze a completed build and extract learnings for future builds
 
 Options:
   --model <name>       Model for retrospective agent (defaults to settings.json
-                       model, or 'cli-opus')
+                       model, or 'opus')
   --timeout <minutes>  Max duration in minutes (default: "10")
   --specialists <n>    Number of ensemble specialists (1, 2, or 3). Default: 3
   --thorough           Alias for --specialists 3 (the default)

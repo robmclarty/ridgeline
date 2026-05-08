@@ -64,7 +64,7 @@
   },
   {
     "flags": "--model <name>",
-    "description": "Model for all stages (defaults to settings.json model, or 'cli-opus')",
+    "description": "Model for all stages (defaults to settings.json model, or 'opus')",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

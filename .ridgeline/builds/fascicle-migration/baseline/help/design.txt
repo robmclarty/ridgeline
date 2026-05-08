@@ -4,7 +4,7 @@ Establish or update visual design system (design.md)
 
 Options:
   --model <name>       Model for designer agent (defaults to settings.json
-                       model, or 'cli-opus')
+                       model, or 'opus')
   --timeout <minutes>  Max duration per turn in minutes (default: "10")
   --specialists <n>    Number of ensemble specialists (1, 2, or 3). Default: 3
   --thorough           Alias for --specialists 3 (the default)

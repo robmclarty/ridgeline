@@ -15,7 +15,7 @@
   },
   {
     "flags": "--model <name>",
-    "description": "Model for research agents (defaults to settings.json model, or 'cli-opus')",
+    "description": "Model for research agents (defaults to settings.json model, or 'opus')",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false
