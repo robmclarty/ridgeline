@@ -83,8 +83,10 @@
   outcome comparison in `docs/fascicle-migration/`.
 - Added `BACKLOG.md` tracking anthropic-API capability gaps (skills,
   tool-use, agent discovery still require the `claude_cli` route).
-- Skipped version `v0.12.1` — the tag was already taken by an unrelated
-  commit on a sibling branch.
+- Skipped version `v0.12.1` — the tag was already taken on `main` by a
+  reverted phase-3 adapters attempt that fascicle has since re-landed
+  cleanly. Versioning resumes at `v0.12.2` here so the tag namespace
+  stays unambiguous after the fascicle branch is merged.
 
 ## v0.12.0 — 2026-05-06
 
