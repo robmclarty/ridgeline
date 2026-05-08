@@ -12,7 +12,7 @@ vi.mock("node:child_process", async () => {
   return { ...actual, execFileSync: vi.fn() }
 })
 
-import { greywallProvider } from "../sandbox.greywall"
+import { greywallProvider } from "../sandbox.policy.js"
 
 const EMPTY_EXTRAS = { writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] }
 

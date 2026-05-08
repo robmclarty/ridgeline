@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execFileSync } from "node:child_process"
-import { AssetCatalog, AssetEntry, LayoutRegion } from "./types"
-import { hint, warning } from "../ui/color"
+import { AssetCatalog, AssetEntry, LayoutRegion } from "./types.js"
+import { hint, warning } from "../ui/color.js"
 
 type VisionOptions = {
   model: string

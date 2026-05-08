@@ -1,0 +1,9 @@
+[
+  {
+    "flags": "--port <number>",
+    "description": "Port to bind (default 4411, falls back to next free port if taken)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  }
+]

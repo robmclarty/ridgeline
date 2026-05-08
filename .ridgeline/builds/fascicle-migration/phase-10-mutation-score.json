@@ -1,0 +1,14 @@
+{
+  "captured": true,
+  "captured_at": "2026-05-07T15:12:46.541Z",
+  "scope": "src/engine/{flows,atoms,composites,adapters}/**/*.ts",
+  "environment": "host (outside greywall)",
+  "score": 65.42261251372119,
+  "killed": 588,
+  "survived": 240,
+  "timeout": 8,
+  "no_coverage": 75,
+  "compile_errors": 0,
+  "runtime_errors": 4,
+  "ignored": 0
+}

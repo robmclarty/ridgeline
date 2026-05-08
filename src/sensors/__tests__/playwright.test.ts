@@ -9,7 +9,7 @@ import playwrightSensor, {
   resolveDevServerPort,
   runPlaywrightSensor,
   sanitizeViewLabel,
-} from "../playwright"
+} from "../playwright.js"
 
 describe("parsePortFromShape", () => {
   it("extracts the port from a ## Runtime block", () => {
@@ -223,7 +223,7 @@ describe("runPlaywrightSensor (stubbed)", () => {
                 setTimeout(() => reject(new Error("Timeout exceeded")), opts.timeout ?? 10)
               }),
           },
-        }) as unknown as ReturnType<typeof import("../playwright").runPlaywrightSensor> as never,
+        }) as unknown as ReturnType<typeof import("../playwright.js").runPlaywrightSensor> as never,
         launchTimeoutMs: 50,
       },
     )
@@ -270,7 +270,7 @@ describe("sandbox launch args", () => {
                 throw new Error("stub — not launching")
               },
             },
-          }) as unknown as ReturnType<typeof import("../playwright").runPlaywrightSensor> as never,
+          }) as unknown as ReturnType<typeof import("../playwright.js").runPlaywrightSensor> as never,
         },
       )
       expect(capturedArgs).toHaveLength(1)
@@ -297,7 +297,7 @@ describe("sandbox launch args", () => {
                 throw new Error("stub — not launching")
               },
             },
-          }) as unknown as ReturnType<typeof import("../playwright").runPlaywrightSensor> as never,
+          }) as unknown as ReturnType<typeof import("../playwright.js").runPlaywrightSensor> as never,
         },
       )
       expect(capturedArgs[0]).toEqual([])

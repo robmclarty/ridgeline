@@ -1,4 +1,4 @@
-import type { SandboxMode, SandboxExtras } from "../../stores/settings"
+import type { SandboxMode, SandboxExtras } from "../../stores/settings.js"
 
 export type SandboxBuildArgsOptions = {
   mode: SandboxMode

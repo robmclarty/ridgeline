@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { RidgelineConfig } from "./types"
-import { resolveFile, parseCheckCommand } from "./stores/inputs"
+import { RidgelineConfig } from "./types.js"
+import { resolveFile, parseCheckCommand } from "./stores/inputs.js"
 import {
   resolveNetworkAllowlist,
   resolveModel,
@@ -13,11 +13,12 @@ import {
   resolveSandboxExtras,
   resolveTimeoutMinutes,
   resolveRequirePhaseApproval,
-} from "./stores/settings"
+} from "./stores/settings.js"
 
 // Load version from package.json at runtime
 export const loadVersion = (): string => {
   // Try dist location first (installed), then source root
+  const __dirname = path.dirname(new URL(import.meta.url).pathname)
   for (const rel of [path.join(__dirname, "..", "package.json"), path.join(__dirname, "..", "..", "package.json")]) {
     try {
       const pkg = JSON.parse(fs.readFileSync(rel, "utf-8"))

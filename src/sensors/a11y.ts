@@ -1,12 +1,15 @@
-import type { SensorAdapter, SensorFinding, SensorInput } from "./index"
-import { resolveDevServerPort } from "./playwright"
+import { createRequire } from "node:module"
+import type { SensorAdapter, SensorFinding, SensorInput } from "./index.js"
+import { resolveDevServerPort } from "./playwright.js"
+
+const nodeRequire = createRequire(import.meta.url)
 
 const PLAYWRIGHT_INSTALL_HINT =
   "npm install --save-dev playwright && npx playwright install chromium"
 
 const isPlaywrightResolvable = (): boolean => {
   try {
-    require.resolve("playwright")
+    nodeRequire.resolve("playwright")
     return true
   } catch {
     return false
@@ -51,10 +54,10 @@ type A11yLoadPlaywright = () => PlaywrightModule
 type ResolveAxePath = () => string
 
 const defaultA11yLoadPlaywright: A11yLoadPlaywright = () =>
-  require("playwright") as PlaywrightModule
+  nodeRequire("playwright") as PlaywrightModule
 
 const defaultResolveAxePath: ResolveAxePath = () =>
-  require.resolve("axe-core")
+  nodeRequire.resolve("axe-core")
 
 const unresolvableFinding = (): SensorFinding => ({
   kind: "a11y",

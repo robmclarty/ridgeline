@@ -1,10 +1,14 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo, printError, printWarn } from "../ui/output"
-import { invokeClaude } from "../engine/claude/claude.exec"
-import { createDisplayCallbacks } from "../engine/claude/stream.display"
-import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { getInputSource } from "../stores/state"
+import { run } from "fascicle"
+import { printInfo, printError, printWarn } from "../ui/output.js"
+import { runClaudeOneShot } from "../engine/claude.runner.js"
+import { createStreamDisplay } from "../ui/claude-stream-display.js"
+import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
+import { getInputSource } from "../stores/state.js"
+import { resolveSandboxMode } from "../stores/settings.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { retroRefineFlow, type RetroRefineFlowInput } from "../engine/flows/retro-refine.flow.js"
 
 type RetroRefineOpts = {
   model: string
@@ -122,41 +126,68 @@ export const runRetroRefine = async (
 
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("retro-refiner.md")
-  const { onStdout, flush } = createDisplayCallbacks({ projectRoot: process.cwd() })
 
   printInfo(`Producing refined input for build '${buildName}'...`)
 
+  const engine = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
+    timeoutMinutes: opts.timeout,
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: buildDir,
+  })
+
+  const flow = retroRefineFlow({
+    executor: async (input: RetroRefineFlowInput) => {
+      const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
+      try {
+        return await runClaudeOneShot({
+          engine,
+          model: input.model,
+          system: input.systemPrompt,
+          prompt: input.userPrompt,
+          allowedTools: ["Read", "Glob", "Grep"],
+          onChunk,
+        })
+      } finally {
+        flush()
+      }
+    },
+  })
+
+  let result
   try {
-    const result = await invokeClaude({
-      systemPrompt,
-      userPrompt,
-      model: opts.model,
-      allowedTools: ["Read", "Glob", "Grep"],
-      cwd: process.cwd(),
-      timeoutMs: opts.timeout * 60 * 1000,
-      onStdout,
-    })
-
-    const body = result.result?.trim() ?? ""
-    if (!body) {
-      printWarn("retro-refiner produced empty output; refined-input.md not written.")
-      return
+    try {
+      const out = await run(flow, {
+        systemPrompt,
+        userPrompt,
+        model: opts.model,
+        timeoutMs: opts.timeout * 60 * 1000,
+      }, { install_signal_handlers: false })
+      result = out.result
+    } finally {
+      await engine.dispose()
     }
-
-    if (!isWellFormedRefinement(body)) {
-      printWarn(
-        `retro-refiner output did not start with '${REFINED_INPUT_HEADING}'; ` +
-          `refined-input.md not written.`,
-      )
-      return
-    }
-
-    const outputPath = path.join(buildDir, "refined-input.md")
-    fs.writeFileSync(outputPath, body + "\n")
-    printInfo(`Refined input written to ${path.relative(process.cwd(), outputPath)}`)
   } catch (err) {
     printError(`retro-refine failed: ${err instanceof Error ? err.message : String(err)}`)
-  } finally {
-    flush()
+    return
   }
+
+  const body = result.result?.trim() ?? ""
+  if (!body) {
+    printWarn("retro-refiner produced empty output; refined-input.md not written.")
+    return
+  }
+
+  if (!isWellFormedRefinement(body)) {
+    printWarn(
+      `retro-refiner output did not start with '${REFINED_INPUT_HEADING}'; ` +
+        `refined-input.md not written.`,
+    )
+    return
+  }
+
+  const outputPath = path.join(buildDir, "refined-input.md")
+  fs.writeFileSync(outputPath, body + "\n")
+  printInfo(`Refined input written to ${path.relative(process.cwd(), outputPath)}`)
 }

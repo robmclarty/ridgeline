@@ -1,15 +1,19 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
-import { printInfo, printError } from "../ui/output"
-import { invokeSpecifier, SpecEnsembleConfig } from "../engine/pipeline/specify.exec"
-import { advancePipeline, getMatchedShapes } from "../stores/state"
+import { run } from "fascicle"
+import { printInfo, printError } from "../ui/output.js"
+import { runSpecifyEnsemble, type SpecEnsembleConfig } from "../engine/specifier.js"
+import { advancePipeline, getMatchedShapes } from "../stores/state.js"
 import {
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
   DEFAULT_SPECIALIST_COUNT,
-} from "../stores/settings"
-import { resolveInput } from "./input"
-import { askQuestion } from "./qa-workflow"
+  resolveSandboxMode,
+} from "../stores/settings.js"
+import { resolveInput } from "./input.js"
+import { askQuestion } from "./qa-workflow.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { specFlow, type SpecFlowInput } from "../engine/flows/spec.flow.js"
 
 export type SpecOptions = {
   model: string
@@ -102,19 +106,38 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     }
   }
 
-  const config: SpecEnsembleConfig = {
-    model: opts.model,
+  const engine = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
     timeoutMinutes: opts.timeout,
-    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
-    maxBudgetUsd: opts.maxBudgetUsd ?? null,
-    buildDir,
-    matchedShapes: getMatchedShapes(buildDir),
-    specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
-    userInput,
-    inferGapFlagging: opts.inferGapFlagging,
-  }
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: buildDir,
+  })
 
-  const result = await invokeSpecifier(shapeMd, config)
+  const flow = specFlow({
+    executor: async (input: SpecFlowInput) => {
+      const config: SpecEnsembleConfig = {
+        model: opts.model,
+        timeoutMinutes: opts.timeout,
+        specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
+        maxBudgetUsd: opts.maxBudgetUsd ?? null,
+        buildDir: input.buildDir,
+        matchedShapes: getMatchedShapes(input.buildDir),
+        specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
+        userInput,
+        inferGapFlagging: opts.inferGapFlagging,
+      }
+      return runSpecifyEnsemble(input.shapeMd, config)
+    },
+  })
+
+  let result
+  try {
+    const out = await run(flow, { shapeMd, buildDir, buildName }, { install_signal_handlers: false })
+    result = out.ensemble
+  } finally {
+    await engine.dispose()
+  }
 
   // Update pipeline state
   advancePipeline(buildDir, buildName, "spec")

@@ -1,0 +1,14 @@
+{
+  "args": {
+    "specMd": "# Spec\n\nDecompose into phases.\n",
+    "constraintsMd": "# Constraints\n\n- TypeScript strict.\n",
+    "tasteMd": "# Taste\n\n- ESM only.\n",
+    "extraContext": null,
+    "projectDesignMd": null,
+    "featureDesignMd": null,
+    "model": "opus",
+    "phaseTokenLimit": 50000,
+    "phaseBudgetLimit": 5
+  },
+  "modelCallInput": "## spec.md\n\n<!-- role: data -->\n# Spec\n\nDecompose into phases.\n\n\n## constraints.md\n\n<!-- role: data -->\n# Constraints\n\n- TypeScript strict.\n\n\n## taste.md\n\n<!-- role: data -->\n# Taste\n\n- ESM only.\n\n\n## Target Model\n\nThe builder will use the `opus` model.\n\n## Phase Budget\n\nStay below ~50,000 output tokens (~$5 USD) per phase — treat it as a hard maximum, not a target. Aim for 50–70% of the ceiling. If a phase would approach or exceed it, split. Splitting is cheap; a too-large phase risks timeout and truncation.\n\n## Output Format\n\nIMPORTANT: Respond with ONLY a JSON object. No prose, no markdown, no commentary. Just the JSON."
+}

@@ -10,7 +10,7 @@ vi.mock("node:readline", () => ({
   }),
 }))
 
-import { askBuildName } from "../prompt"
+import { askBuildName } from "../prompt.js"
 
 describe("prompt", () => {
   beforeEach(() => {

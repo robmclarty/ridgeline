@@ -1,22 +1,39 @@
 {
   "buildName": "helloworld",
-  "startedAt": "2026-04-02T15:56:41.062Z",
+  "startedAt": "2026-05-08T02:18:36.341Z",
   "pipeline": {
     "shape": "complete",
     "spec": "complete",
     "plan": "complete",
-    "build": "complete"
+    "build": "complete",
+    "design": "skipped",
+    "research": "skipped",
+    "refine": "skipped"
   },
   "phases": [
     {
-      "id": "01-hello-script",
+      "id": "01-hello-module",
       "status": "complete",
-      "checkpointTag": "ridgeline/checkpoint/helloworld/01-hello-script",
-      "completionTag": "ridgeline/phase/helloworld/01-hello-script",
+      "checkpointTag": "ridgeline/checkpoint/helloworld/01-hello-module",
+      "completionTag": "ridgeline/phase/helloworld/01-hello-module",
       "retries": 0,
-      "duration": 48796,
-      "completedAt": "2026-04-02T15:57:29.884Z",
-      "failedAt": null
+      "duration": 108387,
+      "completedAt": "2026-05-08T02:20:25.459Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 3206,
+          "inputTokens": 11,
+          "costUsd": 0.30070925000000004,
+          "durationMs": 49363,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-08T02:19:35.378Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     }
   ]
 }

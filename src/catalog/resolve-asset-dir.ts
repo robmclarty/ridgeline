@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { loadSettings } from "../stores/settings"
+import { loadSettings } from "../stores/settings.js"
 
 /**
  * Resolve the asset directory in priority order:

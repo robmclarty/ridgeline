@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execFileSync } from "node:child_process"
-import { MediaType } from "./types"
-import { warning } from "../ui/color"
+import { MediaType } from "./types.js"
+import { warning } from "../ui/color.js"
 
 type ClassificationResult = {
   category: string
@@ -135,7 +135,7 @@ Respond with ONLY valid JSON:
 }
 
 /** Invoke Claude and parse the classification result. */
-const invokeClaude = (
+const runClaudeJsonClassify = (
   prompt: string,
   model: string,
   timeoutMs: number,
@@ -181,7 +181,7 @@ export const classifyWithAI = (
 ): ClassificationResult => {
   if (mediaType === "image") {
     const prompt = IMAGE_CLASSIFY_PROMPT.replace("{filename}", filename)
-    return invokeClaude(prompt, model, timeoutMs, filename, absPath)
+    return runClaudeJsonClassify(prompt, model, timeoutMs, filename, absPath)
   }
 
   const stat = fs.statSync(absPath)
@@ -197,5 +197,5 @@ export const classifyWithAI = (
   }
 
   const prompt = buildNonImagePrompt(filename, ext, mediaType, stat.size, contentPreview)
-  return invokeClaude(prompt, model, timeoutMs, filename)
+  return runClaudeJsonClassify(prompt, model, timeoutMs, filename)
 }

@@ -1,0 +1,33 @@
+{
+  "timestamp": "2026-05-07T06:42:58.055Z",
+  "threshold": 4,
+  "scope": "src/engine/composites/__tests__/<name>.test.ts",
+  "composites": {
+    "phase": {
+      "count": 5,
+      "file": "src/engine/composites/__tests__/phase.test.ts",
+      "ok": true
+    },
+    "graph_drain": {
+      "count": 5,
+      "file": "src/engine/composites/__tests__/graph_drain.test.ts",
+      "ok": true
+    },
+    "worktree_isolated": {
+      "count": 5,
+      "file": "src/engine/composites/__tests__/worktree_isolated.test.ts",
+      "ok": true
+    },
+    "diff_review": {
+      "count": 5,
+      "file": "src/engine/composites/__tests__/diff_review.test.ts",
+      "ok": true
+    },
+    "cost_capped": {
+      "count": 5,
+      "file": "src/engine/composites/__tests__/cost_capped.test.ts",
+      "ok": true
+    }
+  },
+  "ok": true
+}

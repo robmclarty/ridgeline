@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   rewindTo: vi.fn(() => []),
   getPipelineStatus: vi.fn(() => ({
     shape: "complete",
@@ -16,14 +16,14 @@ vi.mock("../../stores/state", () => ({
   })),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
 }))
 
-import { rewindTo, getPipelineStatus } from "../../stores/state"
-import { printError, printInfo } from "../../ui/output"
-import { runRewind } from "../rewind"
+import { rewindTo, getPipelineStatus } from "../../stores/state.js"
+import { printError, printInfo } from "../../ui/output.js"
+import { runRewind } from "../rewind.js"
 
 describe("commands/rewind", () => {
   let origCwd: string

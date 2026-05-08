@@ -1,0 +1,58 @@
+[
+  {
+    "flags": "--asset-dir <path>",
+    "description": "Path to asset directory",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--batch",
+    "description": "Batch multiple images per vision call",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--classify",
+    "description": "AI-classify uncategorized files into categories",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--describe",
+    "description": "Add vision-based descriptions for all assets",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--force",
+    "description": "Re-process all assets ignoring content hash",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--model <name>",
+    "description": "Model for vision and classification (defaults to settings.json model, or 'opus')",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--pack",
+    "description": "Generate sprite atlases after cataloging",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--timeout <minutes>",
+    "description": "Max duration per AI call in minutes",
+    "defaultValue": "5",
+    "mandatory": false,
+    "hidden": false
+  }
+]

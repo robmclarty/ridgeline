@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
-import { ReviewVerdict } from "../types"
-import { generateFeedback } from "./feedback.verdict"
+import { ReviewVerdict } from "../types.js"
+import { generateFeedback } from "./feedback.verdict.js"
 
 // Compute the feedback file path from a phase spec filepath
 export const feedbackPath = (phaseFilepath: string): string =>

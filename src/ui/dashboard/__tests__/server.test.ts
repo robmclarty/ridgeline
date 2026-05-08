@@ -3,9 +3,9 @@ import { EventEmitter } from "node:events"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { PassThrough } from "node:stream"
-import { makeTempDir, trackTempDir } from "../../../../test/setup"
-import { createDashboardApp, DashboardApp, startDashboard } from "../server"
-import type { BuildState, BudgetState } from "../../../types"
+import { makeTempDir, trackTempDir } from "../../../../test/setup.js"
+import { createDashboardApp, DashboardApp, startDashboard } from "../server.js"
+import type { BuildState, BudgetState } from "../../../types.js"
 
 const SAMPLE_STATE: BuildState = {
   buildName: "demo",

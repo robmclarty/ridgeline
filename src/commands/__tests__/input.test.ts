@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import { resolveInput, resolveInputBundle } from "../input"
+import { makeTempDir } from "../../../test/setup.js"
+import { resolveInput, resolveInputBundle } from "../input.js"
 
 const cleanupDirs: string[] = []
 afterEach(() => {

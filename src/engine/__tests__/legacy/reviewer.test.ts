@@ -1,0 +1,216 @@
+import { describe, it, expect, vi, beforeEach } from "vitest"
+import { makeConfig, makePhase, makeClaudeResult, passVerdict } from "../../../../test/factories.js"
+
+vi.mock("../../claude-process.js", () => ({
+  runClaudeProcess: vi.fn(),
+}))
+
+vi.mock("../../discovery/agent.registry.js", () => ({
+  buildAgentRegistry: vi.fn(() => ({
+    getCorePrompt: vi.fn(() => "reviewer system prompt"),
+    getSpecialists: vi.fn(() => []),
+    getSpecialist: vi.fn(() => null),
+    getContext: vi.fn(() => null),
+    getGaps: vi.fn(() => null),
+    getSubAgents: vi.fn(() => []),
+    getAgentsFlag: vi.fn(() => ({})),
+  })),
+}))
+
+vi.mock("../../../ui/claude-stream-display.js", () => ({
+  createLegacyStdoutDisplay: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
+}))
+
+vi.mock("../../../git.js", () => ({
+  getDiff: vi.fn(() => "diff --git a/file.ts"),
+}))
+
+vi.mock("../../../stores/feedback.verdict.js", () => ({
+  parseVerdict: vi.fn(() => ({
+    passed: true,
+    summary: "All good",
+    criteriaResults: [],
+    issues: [],
+    suggestions: [],
+  })),
+}))
+
+vi.mock("../../discovery/plugin.scan.js", () => ({
+  cleanupPluginDirs: vi.fn(),
+  discoverPluginDirs: vi.fn(() => []),
+}))
+
+vi.mock("../../../stores/state.js", () => ({
+  getMatchedShapes: vi.fn(() => []),
+}))
+
+vi.mock("../../../shapes/detect.js", () => ({
+  loadShapeDefinitions: vi.fn(() => []),
+}))
+
+vi.mock("../../legacy-shared.js", () => ({
+  prepareAgentsAndPlugins: vi.fn(() => ({ agents: undefined, pluginDirs: [] })),
+  appendDesign: vi.fn(),
+  commonInvokeOptions: vi.fn(() => ({
+    agents: undefined,
+    pluginDirs: undefined,
+    cwd: "/tmp",
+    timeoutMs: 7200000,
+    onStdout: vi.fn(),
+    onStderr: vi.fn(),
+    sandboxProvider: null,
+    networkAllowlist: [],
+    additionalWritePaths: ["/tmp/build"],
+  })),
+}))
+
+vi.mock("node:fs", async () => {
+  const actual = await vi.importActual<typeof import("node:fs")>("node:fs")
+  return {
+    ...actual,
+    readFileSync: vi.fn(() => "phase spec content"),
+  }
+})
+
+import { runReviewer } from "../../reviewer.js"
+import { runClaudeProcess } from "../../claude-process.js"
+import { buildAgentRegistry } from "../../discovery/agent.registry.js"
+import { createLegacyStdoutDisplay } from "../../../ui/claude-stream-display.js"
+import { getDiff } from "../../../git.js"
+import { parseVerdict } from "../../../stores/feedback.verdict.js"
+import { cleanupPluginDirs } from "../../discovery/plugin.scan.js"
+import { appendDesign } from "../../legacy-shared.js"
+import { getMatchedShapes } from "../../../stores/state.js"
+import { loadShapeDefinitions } from "../../../shapes/detect.js"
+
+beforeEach(() => vi.clearAllMocks())
+
+describe("runReviewer", () => {
+  it("calls runClaudeProcess with reviewer system prompt", async () => {
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    expect(buildAgentRegistry).toHaveBeenCalled()
+    expect(runClaudeProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemPrompt: "reviewer system prompt",
+        allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent", "Skill"],
+      }),
+    )
+  })
+
+  it("does not include Write or Edit in allowed tools", async () => {
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(runClaudeProcess).mock.calls[0][0]
+    expect(call.allowedTools).not.toContain("Write")
+    expect(call.allowedTools).not.toContain("Edit")
+  })
+
+  it("includes phase spec in user prompt", async () => {
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(runClaudeProcess).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## Phase Spec")
+    expect(call.userPrompt).toContain("phase spec content")
+  })
+
+  it("includes git diff when changes exist", async () => {
+    vi.mocked(getDiff).mockReturnValue("diff --git a/file.ts\n+new line")
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(runClaudeProcess).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## Git Diff")
+    expect(call.userPrompt).toContain("```diff")
+    expect(call.userPrompt).toContain("diff --git a/file.ts")
+  })
+
+  it("shows 'No changes detected' when diff is empty", async () => {
+    vi.mocked(getDiff).mockReturnValue("")
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(runClaudeProcess).mock.calls[0][0]
+    expect(call.userPrompt).toContain("No changes detected")
+  })
+
+  it("includes constraints section", async () => {
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(runClaudeProcess).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## constraints.md")
+  })
+
+  it("calls parseVerdict on the result text", async () => {
+    const result = makeClaudeResult({ result: "verdict json here" })
+    vi.mocked(runClaudeProcess).mockResolvedValue(result)
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    expect(parseVerdict).toHaveBeenCalledWith("verdict json here")
+  })
+
+  it("returns both result and verdict", async () => {
+    const result = makeClaudeResult()
+    vi.mocked(runClaudeProcess).mockResolvedValue(result)
+    vi.mocked(parseVerdict).mockReturnValue(passVerdict)
+
+    const output = await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    expect(output.result).toBe(result)
+    expect(output.verdict).toEqual({ ...passVerdict, sensorFindings: [] })
+  })
+
+  it("calls appendDesign with the config", async () => {
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+
+    const config = makeConfig()
+    await runReviewer(config, makePhase(), "checkpoint-tag")
+
+    expect(appendDesign).toHaveBeenCalledWith(
+      expect.objectContaining({ instruction: expect.any(Function), render: expect.any(Function) }),
+      config,
+    )
+  })
+
+  it("includes visual review context when shapes matched", async () => {
+    vi.mocked(runClaudeProcess).mockResolvedValue(makeClaudeResult())
+    vi.mocked(getMatchedShapes).mockReturnValue(["web-visual"])
+    vi.mocked(loadShapeDefinitions).mockReturnValue([
+      {
+        name: "web-visual",
+        keywords: ["web", "browser"],
+        reviewerContext: "Check responsive behavior at mobile/tablet/desktop viewports.",
+      },
+    ])
+
+    await runReviewer(makeConfig(), makePhase(), "checkpoint-tag")
+
+    const call = vi.mocked(runClaudeProcess).mock.calls[0][0]
+    expect(call.userPrompt).toContain("## Visual Design Review Context")
+    expect(call.userPrompt).toContain("Check responsive behavior at mobile/tablet/desktop viewports.")
+  })
+
+  it("calls flush and cleanupPluginDirs in finally block", async () => {
+    const flush = vi.fn()
+    vi.mocked(createLegacyStdoutDisplay).mockReturnValue({ onStdout: vi.fn(), flush })
+    vi.mocked(runClaudeProcess).mockRejectedValue(new Error("claude failed"))
+
+    await expect(
+      runReviewer(makeConfig(), makePhase(), "checkpoint-tag"),
+    ).rejects.toThrow("claude failed")
+
+    expect(flush).toHaveBeenCalled()
+    expect(cleanupPluginDirs).toHaveBeenCalled()
+  })
+})

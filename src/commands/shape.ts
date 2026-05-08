@@ -1,14 +1,14 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
-import { printInfo, printError } from "../ui/output"
-import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { advancePipeline, recordMatchedShapes } from "../stores/state"
-import { resolveBuildDir } from "../config"
-import { loadShapeDefinitions, detectShapes } from "../shapes/detect"
-import { runDesign, runDesignAuto } from "./design"
-import { askQuestion, runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow"
-import { resolveInput } from "./input"
+import { printInfo, printError } from "../ui/output.js"
+import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
+import { advancePipeline, recordMatchedShapes } from "../stores/state.js"
+import { resolveBuildDir } from "../config.js"
+import { loadShapeDefinitions, detectShapes } from "../shapes/detect.js"
+import { runDesign, runDesignAuto } from "./design.js"
+import { askQuestion, runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow.js"
+import { resolveInput } from "./input.js"
 
 const SHAPE_OUTPUT_SCHEMA = JSON.stringify({
   type: "object",

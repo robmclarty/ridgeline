@@ -3,7 +3,7 @@
 // Frames animate a lit segment bouncing left-to-right then right-to-left:
 //   [=   ] → [==  ] → … → [  ==] → [   =] → [  ==] → … → [=   ] (ping-pong)
 
-import { clearLineSequence, hint } from "./color"
+import { clearLineSequence, hint } from "./color.js"
 
 const FRAMES = [
   "[=   ]",

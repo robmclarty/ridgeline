@@ -3,20 +3,22 @@ export {
   parseFrontmatter,
   discoverAgentsInDir,
   buildAgentsFlag,
-} from './discovery/agent.scan'
-export { type SpecialistDef, buildAgentRegistry } from './discovery/agent.registry'
-export { invokeBuilder } from './pipeline/build.exec'
-export { type InvokeOptions, invokeClaude } from './claude/claude.exec'
-export { runPhase } from './pipeline/phase.sequence'
-export { invokePlanner } from './pipeline/ensemble.exec'
+} from './discovery/agent.scan.js'
+export { type SpecialistDef, buildAgentRegistry } from './discovery/agent.registry.js'
 export {
   discoverPluginDirs,
   cleanupPluginDirs,
-} from './discovery/plugin.scan'
-export { invokeReviewer } from './pipeline/review.exec'
+} from './discovery/plugin.scan.js'
+
+export { makeRidgelineEngine, type RidgelineEngineConfig } from './engine.factory.js'
+
+export { runClaudeOneShot, toClaudeResult, type RunClaudeOptions } from './claude.runner.js'
+
+export { builderAtom, reviewerAtom, plannerAtom, refinerAtom, researcherAtom } from './atoms/index.js'
+export { phase, graph_drain, worktree_isolated, diff_review, cost_capped } from './composites/index.js'
 export {
-  parseStreamLine,
-  createStreamHandler,
-} from './claude/stream.parse'
-export { extractResult } from './claude/stream.result'
-export { createDisplayCallbacks } from './claude/stream.display'
+  createRidgelineTrajectoryLogger,
+  createRidgelineCheckpointStore,
+  createRidgelineBudgetSubscriber,
+} from './adapters/index.js'
+export { buildFlow, autoFlow } from './flows/index.js'

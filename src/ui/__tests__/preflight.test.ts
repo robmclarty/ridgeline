@@ -1,8 +1,8 @@
 import { PassThrough, Writable } from "node:stream"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { DetectionReport } from "../../engine/detect"
-import { renderPreflight, runPreflight } from "../preflight"
-import { stripAnsi } from "../color"
+import type { DetectionReport } from "../../engine/project-type.js"
+import { renderPreflight, runPreflight } from "../preflight.js"
+import { stripAnsi } from "../color.js"
 
 const ESC = String.fromCharCode(27)
 const BOX_DRAWING = /[─-╿]/

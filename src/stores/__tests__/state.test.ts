@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, reconcilePhases, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo, rebuildStateFromTrajectory } from "../state"
-import type { PhaseInfo, BuildState, PipelineState } from "../../types"
+import { makeTempDir } from "../../../test/setup.js"
+import { loadState, saveState, initState, updatePhaseStatus, getNextIncompletePhase, resetRetries, reconcilePhases, recordMatchedShapes, getMatchedShapes, getPipelineStatus, advancePipeline, markBuildRunning, getNextPipelineStage, rewindTo, rebuildStateFromTrajectory } from "../state.js"
+import type { PhaseInfo, BuildState, PipelineState } from "../../types.js"
 
 // Mock tags module for getNextIncompletePhase and trajectory recovery
-vi.mock("../tags", () => ({
+vi.mock("../tags.js", () => ({
   checkpointTagName: vi.fn((buildName: string, phaseId: string) => `ridgeline/checkpoint/${buildName}/${phaseId}`),
   completionTagName: vi.fn((buildName: string, phaseId: string) => `ridgeline/phase/${buildName}/${phaseId}`),
   verifyCompletionTag: vi.fn(() => true),
@@ -23,7 +23,7 @@ const defaultPipeline: PipelineState = {
   build: "pending",
 }
 
-import { verifyCompletionTag, cleanupBuildTags } from "../tags"
+import { verifyCompletionTag, cleanupBuildTags } from "../tags.js"
 
 const samplePhases: PhaseInfo[] = [
   { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/phases/01-scaffold.md", dependsOn: [] },

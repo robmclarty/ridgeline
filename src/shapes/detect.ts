@@ -8,6 +8,7 @@ type ShapeDefinition = {
 }
 
 function resolveShapesDir(): string | null {
+  const __dirname = path.dirname(new URL(import.meta.url).pathname)
   const candidates = [
     path.join(__dirname),
     path.join(__dirname, "..", "shapes"),

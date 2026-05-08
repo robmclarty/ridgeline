@@ -2,11 +2,11 @@ import { describe, it, expect, beforeAll, afterAll, vi } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execSync } from "node:child_process"
-import { isClaudeAvailable, setupE2eDir } from "./helpers"
-import { runBuild } from "../../src/commands/build"
-import type { RidgelineConfig } from "../../src/types"
-import type { BuildState } from "../../src/types"
-import type { BudgetState } from "../../src/types"
+import { isClaudeAvailable, setupE2eDir } from "./helpers.js"
+import { runBuild } from "../../src/commands/build.js"
+import type { RidgelineConfig } from "../../src/types.js"
+import type { BuildState } from "../../src/types.js"
+import type { BudgetState } from "../../src/types.js"
 
 describe.skipIf(!isClaudeAvailable())("e2e: full pipeline", () => {
   let dir: string

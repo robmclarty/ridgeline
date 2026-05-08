@@ -1,9 +1,9 @@
 import { describe, it, expect, afterAll } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { isClaudeAvailable } from "./helpers"
-import { invokeClaude } from "../../src/engine/claude/claude.exec"
-import { extractResult } from "../../src/engine/claude/stream.result"
+import { isClaudeAvailable } from "./helpers.js"
+import { runClaudeProcess } from "../../src/engine/claude-process.js"
+import { extractClaudeResultFromNdjson } from "../../src/engine/claude-process.js"
 import { spawn } from "node:child_process"
 
 /**
@@ -105,7 +105,7 @@ describe.skipIf(!isClaudeAvailable())("e2e: planner specialist", () => {
     tmpDir = fs.mkdtempSync(path.join(require("node:os").tmpdir(), "ridgeline-planner-e2e-"))
 
     // Invoke Claude directly with --json-schema
-    const result = await invokeClaude({
+    const result = await runClaudeProcess({
       systemPrompt: SYSTEM_PROMPT,
       userPrompt: USER_PROMPT,
       model: "sonnet",
@@ -125,7 +125,7 @@ describe.skipIf(!isClaudeAvailable())("e2e: planner specialist", () => {
     // Log regardless of outcome so we can diagnose
     if (result.result.length === 0) {
       console.log("\n=== result.result is EMPTY — fallback did not fire ===")
-      console.log("This means assistant text events were not collected by extractResult")
+      console.log("This means assistant text events were not collected by extractClaudeResultFromNdjson")
     }
 
     // The result should be non-empty
@@ -243,9 +243,9 @@ describe.skipIf(!isClaudeAvailable())("e2e: planner specialist", () => {
       }
     }
 
-    // Verify extractResult can produce a result from this raw output
-    const extracted = extractResult(rawOutput)
-    console.log("\n=== extractResult output ===")
+    // Verify extractClaudeResultFromNdjson can produce a result from this raw output
+    const extracted = extractClaudeResultFromNdjson(rawOutput)
+    console.log("\n=== extractClaudeResultFromNdjson output ===")
     console.log("result length:", extracted.result.length)
     console.log("result (first 300):", extracted.result.slice(0, 300))
 

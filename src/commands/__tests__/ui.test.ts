@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir, trackTempDir } from "../../../test/setup"
-import { findMostRecentBuild, runUi } from "../ui"
-import type { DashboardServer } from "../../ui/dashboard/server"
+import { makeTempDir, trackTempDir } from "../../../test/setup.js"
+import { findMostRecentBuild, runUi } from "../ui.js"
+import type { DashboardServer } from "../../ui/dashboard/server.js"
 
 const writeBuild = (cwd: string, name: string, mtimeOffsetMs: number): void => {
   const dir = path.join(cwd, ".ridgeline", "builds", name)

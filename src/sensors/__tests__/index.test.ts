@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
-import { SENSOR_REGISTRY, collectSensorFindings } from "../../engine/pipeline/sensors.collect"
-import type { SensorAdapter, SensorFinding } from "../index"
+import { SENSOR_REGISTRY, collectSensorFindings } from "../../engine/sensors-collect.js"
+import type { SensorAdapter, SensorFinding } from "../index.js"
 
 describe("SENSOR_REGISTRY", () => {
   it("declares all four sensors unconditionally", () => {

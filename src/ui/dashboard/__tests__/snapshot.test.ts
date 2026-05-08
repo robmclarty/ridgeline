@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { buildSnapshot } from "../snapshot"
-import type { BudgetState, BuildState, TrajectoryEntry } from "../../../types"
+import { buildSnapshot } from "../snapshot.js"
+import type { BudgetState, BuildState, TrajectoryEntry } from "../../../types.js"
 
 const baseState = (overrides: Partial<BuildState> = {}): BuildState => ({
   buildName: "demo",

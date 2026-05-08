@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("../../git", () => ({
+vi.mock("../../git.js", () => ({
   createTag: vi.fn(),
   tagExists: vi.fn(() => true),
   isWorkingTreeDirty: vi.fn(() => false),
@@ -8,7 +8,7 @@ vi.mock("../../git", () => ({
   deleteTagsByPrefix: vi.fn(),
 }))
 
-import { createTag, tagExists, isWorkingTreeDirty, commitAll, deleteTagsByPrefix } from "../../git"
+import { createTag, tagExists, isWorkingTreeDirty, commitAll, deleteTagsByPrefix } from "../../git.js"
 import {
   checkpointTagName,
   completionTagName,
@@ -16,7 +16,7 @@ import {
   createCompletionTag,
   verifyCompletionTag,
   cleanupBuildTags,
-} from "../tags"
+} from "../tags.js"
 
 describe("tags", () => {
   beforeEach(() => {

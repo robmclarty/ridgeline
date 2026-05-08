@@ -12,7 +12,7 @@ import {
   writeStablePromptFile,
   __resetStablePromptState,
   __trackedTempFiles,
-} from "../stable.prompt"
+} from "../stable.prompt.js"
 
 const sampleConstraints = "# Constraints\n\n- use TypeScript\n- use strict mode\n"
 const sampleTaste = "# Taste\n\n- prefer pure functions\n"

@@ -277,6 +277,54 @@ retries are exhausted:
 The user can then inspect the code, edit the phase spec or constraints, and
 re-run `ridgeline build my-feature`. The harness resumes from the failed phase.[^2]
 
+## Resume: Two Independent Tiers
+
+Ridgeline's resume model has two independent tiers that never overlap or
+share files. They serve different timescales and are owned by different
+parts of the substrate.
+
+**Outer (cross-process) resume — state.json + git tags.** Owned
+exclusively by `src/stores/state.ts` and `src/stores/tags.ts`. Survives
+process exit, machine reboot, network outage, and SIGINT. When the user
+re-runs `ridgeline build <name>`, the harness reads
+`.ridgeline/builds/<name>/state.json` plus the build's git tags
+(`ridgeline/checkpoint/<build>/<phase>` and
+`ridgeline/phase/<build>/<phase>`) to determine which phases are
+already `complete` and which to restart from. This contract is preserved
+unchanged across the substrate migration.
+
+**Inner (intra-run) memoization — fascicle CheckpointStore.** Owned by
+the fascicle core and adapted to ridgeline's filesystem layout via
+`createRidgelineCheckpointStore(buildDir)`. Writes only under
+`.ridgeline/builds/<name>/state/<step-id>.json` -- never under
+`state.json`, never as a git tag. Lets a single in-process fascicle
+flow skip already-completed steps when a step retries or a flow
+restarts within the same process. Disposable: the inner directory can
+be deleted between runs without harming outer resume.
+
+The two tiers are deliberately disjoint. `state.json` and the git tags
+are the sole source of truth for cross-process resume; the
+`<buildDir>/state/` directory is sole source of truth for in-process
+step memoization. They never read or write each other's files. This is
+enforced by review and by the path scoping inside each adapter.
+
+```text
+.ridgeline/builds/<build-name>/
+├── state.json            ← outer resume (stores/state.ts)
+├── state/                ← inner memoization (fascicle CheckpointStore)
+│   ├── builder.json
+│   ├── reviewer.json
+│   └── ...
+├── trajectory.jsonl      ← event log (translated from fascicle events)
+└── ...
+```
+
+Why two tiers? Outer resume is durable but coarse — it tracks whole
+phases. Inner memoization is fine-grained but ephemeral — it tracks
+individual steps within a single fascicle `run()` invocation. Both are
+useful; sharing state between them would couple their lifecycles in
+ways that make either layer harder to reason about.
+
 ## Step 9: Completion
 
 When all phases pass:

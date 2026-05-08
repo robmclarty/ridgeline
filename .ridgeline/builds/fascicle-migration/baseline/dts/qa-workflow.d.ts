@@ -1,4 +1,5 @@
 import * as readline from "node:readline";
+import type { Engine } from "fascicle";
 type QAQuestion = {
     question: string;
     suggestedAnswer?: string;
@@ -12,6 +13,7 @@ export declare const normalizeQuestion: (q: string | QAQuestion) => QAQuestion;
 export declare const parseQAResponse: (resultText: string) => QAResponse;
 export declare const askQuestion: (rl: readline.Interface, prompt: string) => Promise<string>;
 type QAOpts = {
+    engine?: Engine;
     model: string;
     questionLabel?: string;
 };
@@ -24,6 +26,7 @@ export declare const runQAIntake: (rl: readline.Interface, systemPrompt: string,
     qa: QAResponse;
 }>;
 type OneShotOpts = {
+    engine?: Engine;
     systemPrompt: string;
     userPrompt: string;
     model: string;
@@ -45,7 +48,7 @@ export declare const runOneShotCall: (opts: OneShotOpts) => Promise<{
 /**
  * Run the output turn — invoke Claude for the final output (no QA schema).
  */
-export declare const runOutputTurn: (systemPrompt: string, userPrompt: string, model: string, timeoutMs: number, sessionId: string, statusMessage: string, jsonSchema?: string) => Promise<{
+export declare const runOutputTurn: (systemPrompt: string, userPrompt: string, model: string, timeoutMs: number, sessionId: string, statusMessage: string, jsonSchema?: string, engine?: Engine) => Promise<{
     result: string;
     sessionId: string;
 }>;

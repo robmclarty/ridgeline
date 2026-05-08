@@ -1,17 +1,21 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo, printError } from "../ui/output"
-import { invokeResearcher, ResearchConfig } from "../engine/pipeline/research.exec"
-import { advancePipeline } from "../stores/state"
-import { logTrajectory } from "../stores/trajectory"
-import { recordCost } from "../stores/budget"
+import { run } from "fascicle"
+import { printInfo, printError } from "../ui/output.js"
+import { runResearchEnsemble, type ResearchConfig } from "../engine/researcher.js"
+import { advancePipeline } from "../stores/state.js"
+import { logTrajectory } from "../stores/trajectory.js"
+import { recordCost } from "../stores/budget.js"
 import {
   resolveResearchAllowlist,
+  resolveSandboxMode,
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
   DEFAULT_SPECIALIST_COUNT,
-} from "../stores/settings"
-import { printResearchSummary } from "../ui/summary"
-import { runRefine } from "./refine"
+} from "../stores/settings.js"
+import { printResearchSummary } from "../ui/summary.js"
+import { runRefine } from "./refine.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { researchFlow, type ResearchFlowInput } from "../engine/flows/research.flow.js"
 
 type ResearchOptions = {
   model: string
@@ -60,24 +64,51 @@ const runSingleResearch = async (
 
   const iteration = iterationNumber ?? deriveIterationNumber(existingResearchMd)
 
-  const config: ResearchConfig = {
-    model: opts.model,
+  const engine = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
     timeoutMinutes: opts.timeout,
-    specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
-    maxBudgetUsd: opts.maxBudgetUsd ?? null,
-    buildDir,
-    isQuick: opts.isQuick,
-    specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
-    networkAllowlist: resolveResearchAllowlist(ridgelineDir),
-    existingResearchMd,
-    changelogMd,
-    iterationNumber: iteration,
-  }
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: buildDir,
+  })
+
+  const flow = researchFlow({
+    executor: async (input: ResearchFlowInput) => {
+      const config: ResearchConfig = {
+        model: opts.model,
+        timeoutMinutes: opts.timeout,
+        specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
+        maxBudgetUsd: opts.maxBudgetUsd ?? null,
+        buildDir: input.buildDir,
+        isQuick: input.isQuick,
+        specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
+        networkAllowlist: resolveResearchAllowlist(ridgelineDir),
+        existingResearchMd,
+        changelogMd,
+        iterationNumber: input.iterationNumber,
+      }
+      return runResearchEnsemble(input.specMd, input.constraintsMd, input.tasteMd, config)
+    },
+  })
 
   logTrajectory(buildDir, "research_start", null,
     `Research started (${opts.isQuick ? "quick" : "full"} mode, iteration ${iteration})`)
 
-  const result = await invokeResearcher(specMd, constraintsMd, tasteMd, config)
+  let result
+  try {
+    const out = await run(flow, {
+      specMd,
+      constraintsMd,
+      tasteMd,
+      buildDir,
+      buildName,
+      iterationNumber: iteration,
+      isQuick: opts.isQuick,
+    }, { install_signal_handlers: false })
+    result = out.ensemble
+  } finally {
+    await engine.dispose()
+  }
 
   // Record costs
   for (let i = 0; i < result.specialistResults.length; i++) {

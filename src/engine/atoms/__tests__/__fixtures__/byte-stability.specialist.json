@@ -1,0 +1,12 @@
+{
+  "args": {
+    "userPrompt": "## shape.md\n\n<!-- role: data -->\n# Shape\n\nThe shape body.\n",
+    "extraSections": [
+      {
+        "heading": "Cross-Specialist Annotations",
+        "content": "Annotations from another specialist."
+      }
+    ]
+  },
+  "modelCallInput": "## shape.md\n\n<!-- role: data -->\n# Shape\n\nThe shape body.\n\n\n## Cross-Specialist Annotations\n\n<!-- role: data -->\nAnnotations from another specialist."
+}

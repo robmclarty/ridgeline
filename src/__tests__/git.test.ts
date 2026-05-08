@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { execSync } from "node:child_process"
-import { makeTempDir, initTestRepo } from "../../test/setup"
+import { makeTempDir, initTestRepo } from "../../test/setup.js"
 import {
   getCurrentSha,
   isWorkingTreeDirty,
@@ -14,7 +14,7 @@ import {
   getChangedFileContents,
   deleteTag,
   deleteTagsByPrefix,
-} from "../git"
+} from "../git.js"
 
 const initTempRepo = (): string => {
   const dir = makeTempDir()

@@ -1,0 +1,32 @@
+id: no-ansi-escape-in-engine-substrate
+# Phase 12 — terminal output across the migration must not introduce new ANSI
+# escape sequences in the new substrate directories. Color and cursor-control
+# styling is the responsibility of src/ui/* (where the existing palette lives);
+# atoms/composites/flows/adapters route diagnostics through ctx.trajectory.emit
+# instead of writing styled bytes. This rule blocks any escaped ANSI ESC byte
+# in string or template literals under those directories. A literal ESC byte
+# (0x1B) in source is independently caught by the structural check pipeline.
+message: No ANSI escape sequences in src/engine/{flows,atoms,composites,adapters}/. Use ctx.trajectory.emit(...) for diagnostics; styling lives in src/ui/*.
+severity: error
+language: typescript
+files:
+  - "src/engine/atoms/**/*.ts"
+  - "src/engine/composites/**/*.ts"
+  - "src/engine/flows/**/*.ts"
+  - "src/engine/adapters/**/*.ts"
+ignores:
+  - "src/engine/**/__tests__/**/*.ts"
+rule:
+  any:
+    - kind: string
+      regex: '\\x1[bB]'
+    - kind: string
+      regex: '\\u001[bB]'
+    - kind: string
+      regex: '\\u\{0*1[bB]\}'
+    - kind: template_string
+      regex: '\\x1[bB]'
+    - kind: template_string
+      regex: '\\u001[bB]'
+    - kind: template_string
+      regex: '\\u\{0*1[bB]\}'

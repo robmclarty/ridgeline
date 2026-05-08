@@ -1,47 +1,47 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../qa-workflow", () => ({
+vi.mock("../qa-workflow.js", () => ({
   runOneShotCall: vi.fn(),
   runQAIntake: vi.fn(),
   runOutputTurn: vi.fn(),
   askQuestion: vi.fn(),
 }))
 
-vi.mock("../design", () => ({
+vi.mock("../design.js", () => ({
   runDesign: vi.fn(async () => undefined),
   runDesignAuto: vi.fn(async () => undefined),
 }))
 
-vi.mock("../../engine/discovery/agent.registry", () => ({
+vi.mock("../../engine/discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: () => "(stub shaper system prompt)",
   })),
 }))
 
-vi.mock("../../shapes/detect", () => ({
+vi.mock("../../shapes/detect.js", () => ({
   loadShapeDefinitions: vi.fn(() => []),
   detectShapes: vi.fn(),
 }))
 
-vi.mock("../../config", () => ({
+vi.mock("../../config.js", () => ({
   resolveBuildDir: vi.fn((buildName: string, _opts: unknown) =>
     path.join(process.cwd(), ".ridgeline", "builds", buildName),
   ),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
   printWarn: vi.fn(),
 }))
 
-import { runOneShotCall } from "../qa-workflow"
-import { runDesign, runDesignAuto } from "../design"
-import { detectShapes } from "../../shapes/detect"
-import { runShapeAuto } from "../shape"
+import { runOneShotCall } from "../qa-workflow.js"
+import { runDesign, runDesignAuto } from "../design.js"
+import { detectShapes } from "../../shapes/detect.js"
+import { runShapeAuto } from "../shape.js"
 
 const buildName = "test-shape-auto"
 const baseOpts = { model: "opus", timeout: 10 }

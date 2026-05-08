@@ -1,0 +1,8 @@
+
+[ridgeline] ── Phase 1/1: 01-scaffold ──
+[ridgeline] [01-scaffold] FAILED: retries exhausted
+[ridgeline] Recovery: git reset --hard ridgeline/checkpoint/<BUILD>/01-scaffold
+[ridgeline] Options:
+[ridgeline]   1. Edit spec.md and re-run: ridgeline plan <BUILD> && ridgeline build <BUILD>
+[ridgeline]   2. Edit the phase spec directly: .ridgeline/builds/<BUILD>/phases/01-scaffold.md
+[ridgeline]   3. Resume after manual fixes: ridgeline build <BUILD>

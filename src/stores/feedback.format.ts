@@ -1,4 +1,4 @@
-import { ReviewIssue, ReviewVerdict } from "../types"
+import { ReviewIssue, ReviewVerdict } from "../types.js"
 
 // Format a ReviewIssue for display
 export const formatIssue = (issue: ReviewIssue): string => {

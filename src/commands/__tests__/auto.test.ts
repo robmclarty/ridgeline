@@ -1,54 +1,55 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../create", () => ({
+vi.mock("../create.js", () => ({
   runCreate: vi.fn(async () => undefined),
   // The orchestrator imports persistInputSourceIfPath from create — provide a no-op
   // so tests can supply input file paths without hitting real fs/state machinery.
   persistInputSourceIfPath: vi.fn(),
 }))
 
-vi.mock("../directions", () => ({
+vi.mock("../directions.js", () => ({
   runDirectionsAuto: vi.fn(async () => undefined),
 }))
 
-vi.mock("../research", () => ({
+vi.mock("../research.js", () => ({
   runResearch: vi.fn(async () => undefined),
 }))
 
-vi.mock("../retrospective", () => ({
+vi.mock("../retrospective.js", () => ({
   runRetrospective: vi.fn(async () => undefined),
 }))
 
-vi.mock("../retro-refine", () => ({
+vi.mock("../retro-refine.js", () => ({
   runRetroRefine: vi.fn(async () => undefined),
 }))
 
-vi.mock("../../config", () => ({
+vi.mock("../../config.js", () => ({
   resolveBuildDir: vi.fn((buildName: string) =>
     path.join(process.cwd(), ".ridgeline", "builds", buildName),
   ),
 }))
 
-vi.mock("../../stores/settings", () => ({
+vi.mock("../../stores/settings.js", () => ({
   resolveSpecialistTimeoutSeconds: vi.fn(() => 600),
+  resolveSandboxMode: vi.fn(() => "off"),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
   printWarn: vi.fn(),
 }))
 
-import { runCreate } from "../create"
-import { runDirectionsAuto } from "../directions"
-import { runResearch } from "../research"
-import { runRetrospective } from "../retrospective"
-import { runRetroRefine } from "../retro-refine"
-import { runAuto } from "../auto"
-import { recordMatchedShapes } from "../../stores/state"
+import { runCreate } from "../create.js"
+import { runDirectionsAuto } from "../directions.js"
+import { runResearch } from "../research.js"
+import { runRetrospective } from "../retrospective.js"
+import { runRetroRefine } from "../retro-refine.js"
+import { runAuto } from "../auto.js"
+import { recordMatchedShapes } from "../../stores/state.js"
 
 const baseOpts = {
   model: "opus",

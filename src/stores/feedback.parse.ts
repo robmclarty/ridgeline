@@ -1,4 +1,4 @@
-import { ReviewIssue, ReviewVerdict } from "../types"
+import { ReviewIssue, ReviewVerdict } from "../types.js"
 
 // Normalize an issue entry — accept both string and object forms
 const normalizeIssue = (item: unknown, severity: "blocking" | "suggestion"): ReviewIssue => {

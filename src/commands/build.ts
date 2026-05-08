@@ -1,24 +1,28 @@
-import { RidgelineConfig, PhaseInfo } from "../types"
-import { printInfo, printError, printPhaseHeader } from "../ui/output"
-import { formatDuration, formatTokens } from "../ui/summary"
-import { initLogger } from "../ui/logger"
-import { initTranscript } from "../ui/transcript"
-import { detectSandbox } from "../engine/claude/sandbox"
-import { scanPhases } from "../stores/phases"
-import { runPhase } from "../engine/pipeline/phase.sequence"
-import { loadState, saveState, initState, resetRetries, reconcilePhases, markBuildRunning, advancePipeline } from "../stores/state"
-import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/pipeline/phase.graph"
-import { loadBudget } from "../stores/budget"
-import { cleanupBuildTags } from "../stores/tags"
-import { killAllClaudeSync } from "../engine/claude/claude.exec"
-import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../engine/pipeline/worktree.parallel"
-import { provisionPhaseWorktree } from "../engine/pipeline/worktree.provision"
-import { consolidateHandoffs } from "../stores/handoff"
-import { runPlan } from "./plan"
-import { runRetrospective } from "./retrospective"
-import { ensureGitRepo } from "../engine/worktree"
-import { runPhaseApproval } from "../ui/phase-prompt"
-import { installGracefulStopListener } from "../ui/graceful-stop"
+import { run, step, type Step } from "fascicle"
+import { RidgelineConfig, PhaseInfo } from "../types.js"
+import { printInfo, printError, printPhaseHeader } from "../ui/output.js"
+import { formatDuration, formatTokens } from "../ui/summary.js"
+import { initLogger } from "../ui/logger.js"
+import { initTranscript } from "../ui/transcript.js"
+import { detectSandbox } from "../engine/claude/sandbox.js"
+import { scanPhases } from "../stores/phases.js"
+import { executeBuildPhase } from "../engine/build-phase.js"
+import { loadState, saveState, initState, resetRetries, reconcilePhases, markBuildRunning, advancePipeline } from "../stores/state.js"
+import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/phase-graph.js"
+import { loadBudget } from "../stores/budget.js"
+import { cleanupBuildTags } from "../stores/tags.js"
+import { killAllClaudeSync } from "../engine/claude-process.js"
+import { createPhaseWorktree, mergePhaseWorktree, removePhaseWorktree, cleanupAllWorktrees } from "../engine/worktree-parallel.js"
+import { provisionPhaseWorktree } from "../engine/worktree.provision.js"
+import { consolidateHandoffs } from "../stores/handoff.js"
+import { runPlan } from "./plan.js"
+import { runRetrospective } from "./retrospective.js"
+import { ensureGitRepo } from "../engine/worktree.js"
+import { requestPhaseApproval } from "../ui/phase-prompt.js"
+import { installGracefulStopListener } from "../ui/graceful-stop.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { buildFlow, type BuildFlowInput, type BuildPhaseResult, type RunPhaseStepInput } from "../engine/flows/build.flow.js"
+import type { WorktreeDriver, WorktreeItem } from "../engine/composites/index.js"
 import * as fs from "node:fs"
 import * as path from "node:path"
 
@@ -36,7 +40,6 @@ const readSpecDescription = (buildDir: string): string | null => {
 const printSummaryTable = (config: RidgelineConfig): void => {
   const budget = loadBudget(config.buildDir)
 
-  // Build per-phase stats from budget entries
   const phaseStats = new Map<string, { cost: number; buildTime: number; reviewTime: number; attempts: number }>()
   for (const entry of budget.entries) {
     if (entry.phase === "plan") continue
@@ -54,12 +57,10 @@ const printSummaryTable = (config: RidgelineConfig): void => {
     }
   }
 
-  // Planning cost
   const planCost = budget.entries
     .filter((e) => e.phase === "plan")
     .reduce((sum, e) => sum + e.costUsd, 0)
 
-  // Totals
   let totalAttempts = 0
   let totalBuildTime = 0
   let totalReviewTime = 0
@@ -77,7 +78,6 @@ const printSummaryTable = (config: RidgelineConfig): void => {
     totalCost += stats.cost
   }
 
-  // Wall-clock elapsed time
   const timestamps = budget.entries.map((e) => e.timestamp).filter(Boolean)
   const elapsed = timestamps.length >= 2
     ? new Date(timestamps[timestamps.length - 1]).getTime() - new Date(timestamps[0]).getTime()
@@ -89,7 +89,6 @@ const printSummaryTable = (config: RidgelineConfig): void => {
   const sep = "  " + "=".repeat(tableWidth)
   const div = "  " + "-".repeat(tableWidth)
 
-  // Header
   console.log("")
   console.log(sep)
   console.log(`  Build: ${config.buildName}`)
@@ -99,7 +98,6 @@ const printSummaryTable = (config: RidgelineConfig): void => {
   }
   console.log(sep)
 
-  // Breakdown table
   const formatRow = (name: string, attempts: string, build: string, review: string, cost: string): string =>
     `  ${name.padEnd(nameColWidth)} ${attempts.padStart(8)}  ${build.padStart(8)}  ${review.padStart(8)}    ${cost.padStart(8)}`
 
@@ -107,11 +105,9 @@ const printSummaryTable = (config: RidgelineConfig): void => {
   console.log(formatRow("", "Attempts", "Build", "Review", "Cost"))
   console.log(div)
 
-  // Planning row
   console.log(formatRow("Planning", "", "", "", `$${planCost.toFixed(2)}`))
   console.log(div)
 
-  // Per-phase rows
   for (const [phaseId, stats] of phaseStats) {
     console.log(formatRow(
       phaseId,
@@ -123,7 +119,6 @@ const printSummaryTable = (config: RidgelineConfig): void => {
   }
   console.log(div)
 
-  // Total row
   console.log(formatRow(
     "Total",
     String(totalAttempts),
@@ -132,7 +127,6 @@ const printSummaryTable = (config: RidgelineConfig): void => {
     `$${totalCost.toFixed(2)}`,
   ))
 
-  // Footer stats
   console.log("")
   const footerParts = [`  Tokens: ${formatTokens(totalInputTokens)} in / ${formatTokens(totalOutputTokens)} out`]
   if (elapsed > 0) {
@@ -170,115 +164,6 @@ const configureSandbox = (config: RidgelineConfig): void => {
   }
 }
 
-type WaveCounters = { completed: number; failed: number }
-
-/** Run a parallel wave of phases using worktrees, with sequential fallback. */
-const runParallelWave = async (
-  readyPhases: PhaseInfo[],
-  phases: PhaseInfo[],
-  config: RidgelineConfig,
-  state: ReturnType<typeof initState>,
-  mainCwd: string,
-  completedIds: Set<string>,
-  runSequential: (phase: PhaseInfo) => Promise<boolean>,
-): Promise<WaveCounters> => {
-  let completed = 0
-  let failed = 0
-
-  printInfo(`\nWave: ${readyPhases.length} parallel phases (${readyPhases.map((p) => p.id).join(", ")})`)
-
-  const worktreePaths = new Map<string, string>()
-  let worktreesFailed = false
-
-  for (const phase of readyPhases) {
-    try {
-      const wtPath = createPhaseWorktree(config.buildName, phase.id, mainCwd)
-      worktreePaths.set(phase.id, wtPath)
-      const results = provisionPhaseWorktree(wtPath, mainCwd, {
-        phaseId: phase.id,
-        buildDir: config.buildDir,
-      })
-      for (const r of results) {
-        if (r.applied) printInfo(`  [${phase.id}] env fix: ${r.fix} — ${r.detail}`)
-      }
-    } catch (err) {
-      printError(`Failed to create worktree for ${phase.id}: ${err instanceof Error ? err.message : String(err)}`)
-      worktreesFailed = true
-      break
-    }
-  }
-
-  if (worktreesFailed) {
-    for (const phase of readyPhases) {
-      removePhaseWorktree(config.buildName, phase.id, mainCwd)
-    }
-    printInfo("Falling back to sequential execution for this wave")
-    for (const phase of readyPhases) {
-      if (!await runSequential(phase)) { failed++; break }
-      completed++
-    }
-    return { completed, failed }
-  }
-
-  // Print headers for all parallel phases
-  for (const phase of readyPhases) {
-    const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
-    printPhaseHeader(phaseIndex, phases.length, phase.id)
-  }
-
-  const results = await Promise.allSettled(
-    readyPhases.map(async (phase) => {
-      const wtCwd = worktreePaths.get(phase.id)!
-      return runPhase(phase, config, state, wtCwd)
-    }),
-  )
-
-  // Collect results
-  const phaseResults = new Map<string, "passed" | "failed" | "error">()
-  for (let i = 0; i < readyPhases.length; i++) {
-    const r = results[i]
-    if (r.status === "fulfilled") {
-      phaseResults.set(readyPhases[i].id, r.value)
-    } else {
-      phaseResults.set(readyPhases[i].id, "error")
-      printError(`Phase ${readyPhases[i].id} threw: ${r.reason}`)
-    }
-  }
-
-  // Merge successful phases sequentially in index order
-  const sortedPhases = [...readyPhases].sort((a, b) => a.index - b.index)
-  for (const phase of sortedPhases) {
-    const result = phaseResults.get(phase.id)
-    if (result !== "passed") {
-      failed++
-      removePhaseWorktree(config.buildName, phase.id, mainCwd)
-      continue
-    }
-
-    const merge = mergePhaseWorktree(config.buildName, phase.id, mainCwd)
-    if (!merge.isSuccess) {
-      printError(`Merge conflict for ${phase.id}: ${merge.conflictFiles?.join(", ")}`)
-      printInfo(`Branch preserved: ridgeline/${config.buildName}/${phase.id}`)
-      failed++
-      removePhaseWorktree(config.buildName, phase.id, mainCwd)
-      continue
-    }
-
-    completedIds.add(phase.id)
-    completed++
-    removePhaseWorktree(config.buildName, phase.id, mainCwd)
-  }
-
-  // Consolidate handoff fragments
-  const passedPhaseIds = sortedPhases
-    .filter((p) => phaseResults.get(p.id) === "passed")
-    .map((p) => p.id)
-  consolidateHandoffs(config.buildDir, passedPhaseIds)
-
-  return { completed, failed }
-}
-
-/** Load or initialize build state, resuming if possible. */
 const loadOrInitState = (config: RidgelineConfig, phases: PhaseInfo[]) => {
   let state = loadState(config.buildDir, config.buildName, phases)
   const isResume = state !== null && state.phases.length > 0
@@ -303,104 +188,98 @@ const loadOrInitState = (config: RidgelineConfig, phases: PhaseInfo[]) => {
   return state
 }
 
-/** Execute the wave-based build loop, returning fail count. */
-const executeWaveLoop = async (
-  config: RidgelineConfig,
-  phases: PhaseInfo[],
-  state: ReturnType<typeof initState>,
-): Promise<number> => {
+const computeWaves = (phases: PhaseInfo[], state: ReturnType<typeof initState>): PhaseInfo[][] => {
   const graph = buildPhaseGraph(phases)
   validateGraph(graph)
-  const completedIds = new Set(
-    state.phases.filter((p) => p.status === "complete").map((p) => p.id),
-  )
-
   if (hasParallelism(graph)) {
     printInfo("Phase dependencies detected — using wave-based scheduling")
   }
-
-  let completed = 0
-  let failed = 0
-  let isBudgetExceeded = false
-  const mainCwd = process.cwd()
-
-  const runAndTrackPhase = async (phase: PhaseInfo): Promise<boolean> => {
-    const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
-    printPhaseHeader(phaseIndex, phases.length, phase.id)
-    const result = await runPhase(phase, config, state)
-    if (result !== "passed") return false
-    completedIds.add(phase.id)
-    return true
+  const completedIds = new Set(
+    state.phases.filter((p) => p.status === "complete").map((p) => p.id),
+  )
+  const waves: PhaseInfo[][] = []
+  while (true) {
+    const ready = getReadyPhases(graph, completedIds)
+    if (ready.length === 0) break
+    waves.push([...ready])
+    for (const p of ready) completedIds.add(p.id)
   }
+  return waves
+}
 
-  const stopHandle = installGracefulStopListener()
+const provisionWorktreeFor = (
+  buildName: string,
+  buildDir: string,
+  mainCwd: string,
+  phase: PhaseInfo,
+  paths: Map<string, string>,
+): string => {
+  const wtPath = createPhaseWorktree(buildName, phase.id, mainCwd)
+  paths.set(phase.id, wtPath)
+  const results = provisionPhaseWorktree(wtPath, mainCwd, {
+    phaseId: phase.id,
+    buildDir,
+  })
+  for (const r of results) {
+    if (r.applied) printInfo(`  [${phase.id}] env fix: ${r.fix} — ${r.detail}`)
+  }
+  return wtPath
+}
 
-  let userStopRequested = false
-
-  while (!isBudgetExceeded && !userStopRequested) {
-    const readyPhases = getReadyPhases(graph, completedIds)
-    if (readyPhases.length === 0) break
-
-    const lastCompletedPhase = readyPhases[readyPhases.length - 1]
-
-    if (readyPhases.length === 1) {
-      if (!await runAndTrackPhase(readyPhases[0])) { failed++; break }
-      completed++
-    } else {
-      const wave = await runParallelWave(
-        readyPhases, phases, config, state, mainCwd, completedIds, runAndTrackPhase,
-      )
-      completed += wave.completed
-      failed += wave.failed
+const makeWorktreeDriver = (
+  config: RidgelineConfig,
+  state: ReturnType<typeof initState>,
+  mainCwd: string,
+  completedIds: Set<string>,
+  phases: PhaseInfo[],
+  paths: Map<string, string>,
+): WorktreeDriver<PhaseInfo, BuildPhaseResult> => ({
+  create: (item: WorktreeItem<PhaseInfo>) => {
+    provisionWorktreeFor(config.buildName, config.buildDir, mainCwd, item.input, paths)
+    const phaseIndex = phases.findIndex((p) => p.id === item.input.id) + 1
+    printPhaseHeader(phaseIndex, phases.length, item.input.id)
+  },
+  merge: (item: WorktreeItem<PhaseInfo>, result: BuildPhaseResult) => {
+    if (result !== "passed") {
+      removePhaseWorktree(config.buildName, item.input.id, mainCwd)
+      return
     }
+    const merge = mergePhaseWorktree(config.buildName, item.input.id, mainCwd)
+    if (!merge.isSuccess) {
+      printError(`Merge conflict for ${item.input.id}: ${merge.conflictFiles?.join(", ")}`)
+      printInfo(`Branch preserved: ridgeline/${config.buildName}/${item.input.id}`)
+      removePhaseWorktree(config.buildName, item.input.id, mainCwd)
+      return
+    }
+    completedIds.add(item.input.id)
+    removePhaseWorktree(config.buildName, item.input.id, mainCwd)
+  },
+  remove: (item: WorktreeItem<PhaseInfo>) => {
+    removePhaseWorktree(config.buildName, item.input.id, mainCwd)
+  },
+})
 
-    if (config.maxBudgetUsd) {
-      const budget = loadBudget(config.buildDir)
-      if (budget.totalCostUsd > config.maxBudgetUsd) {
-        printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
-        isBudgetExceeded = true
+const makeBudgetSubscriber = (
+  config: RidgelineConfig,
+): ((cb: (costUsd: number) => void) => () => void) => {
+  let timer: NodeJS.Timeout | undefined
+  let lastTotal = loadBudget(config.buildDir).totalCostUsd
+  return (cb) => {
+    const tick = (): void => {
+      try {
+        const next = loadBudget(config.buildDir).totalCostUsd
+        const delta = next - lastTotal
+        lastTotal = next
+        if (delta > 0) cb(delta)
+      } catch {
+        // best-effort; budget may not exist yet
       }
     }
-
-    if (failed > 0) break
-
-    const stillReady = getReadyPhases(graph, completedIds)
-
-    if (stopHandle.isRequested() && stillReady.length > 0) {
-      const completedIndex = phases.findIndex((p) => p.id === lastCompletedPhase.id) + 1
-      printInfo(
-        `Build paused at phase ${completedIndex}/${phases.length} (graceful stop). ` +
-        `Resume with: ridgeline build ${config.buildName}`,
-      )
-      userStopRequested = true
-      continue
-    }
-
-    if (config.requirePhaseApproval && stillReady.length > 0) {
-      const completedIndex = phases.findIndex((p) => p.id === lastCompletedPhase.id) + 1
-      const decision = await runPhaseApproval({
-        isTTY: Boolean(process.stdin.isTTY),
-        completedIndex,
-        totalPhases: phases.length,
-        completedPhaseId: lastCompletedPhase.id,
-        nextPhaseId: stillReady[0].id,
-        // The flag was set explicitly. If we can't actually prompt, pause
-        // rather than silently continuing — silent auto-continue defeats
-        // the purpose of asking to require approval.
-        nonTTYDecision: "stop",
-      })
-      if (decision === "stop") {
-        printInfo(
-          `Build paused at phase ${completedIndex}/${phases.length}. ` +
-          `Resume with: ridgeline build ${config.buildName}`,
-        )
-        userStopRequested = true
-      }
+    timer = setInterval(tick, 1_000)
+    return () => {
+      if (timer) clearInterval(timer)
     }
   }
-
-  stopHandle.uninstall()
-  return failed
 }
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
@@ -418,13 +297,78 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     printInfo("Initialised git repo with initial commit")
   }
 
+  const mainCwd = process.cwd()
+  const stopHandle = installGracefulStopListener()
+  const completedIds = new Set(
+    state.phases.filter((p) => p.status === "complete").map((p) => p.id),
+  )
+  const worktreePaths = new Map<string, string>()
+  const waves = computeWaves(phases, state)
+
+  const runPhaseStep: Step<RunPhaseStepInput, BuildPhaseResult> = step(
+    "build.run_phase",
+    async ({ phase, cwd }) => {
+      const targetCwd = worktreePaths.get(phase.id) ?? cwd
+      if (!targetCwd) {
+        const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+        printPhaseHeader(phaseIndex, phases.length, phase.id)
+      }
+      const result = await executeBuildPhase(phase, config, state, targetCwd)
+      if (result === "passed") completedIds.add(phase.id)
+      return result
+    },
+  )
+
+  const engine = makeRidgelineEngine({
+    sandboxFlag: config.sandboxMode,
+    timeoutMinutes: config.timeoutMinutes,
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: config.buildDir,
+  })
+
+  const flow = buildFlow({
+    runPhaseStep,
+    worktreeDriver: makeWorktreeDriver(config, state, mainCwd, completedIds, phases, worktreePaths),
+    budgetSubscribe: makeBudgetSubscriber(config),
+    maxBudgetUsd: config.maxBudgetUsd ?? Number.POSITIVE_INFINITY,
+    shouldStop: () => stopHandle.isRequested(),
+    isBudgetExceeded: () => {
+      if (config.maxBudgetUsd == null) return false
+      const budget = loadBudget(config.buildDir)
+      const exceeded = budget.totalCostUsd > config.maxBudgetUsd
+      if (exceeded) {
+        printInfo(`Budget limit reached: $${budget.totalCostUsd.toFixed(2)} > $${config.maxBudgetUsd}`)
+      }
+      return exceeded
+    },
+    onWaveStart: (wave) => {
+      if (wave.length > 1) {
+        printInfo(`\nWave: ${wave.length} parallel phases (${wave.map((p) => p.id).join(", ")})`)
+      }
+    },
+    onPhaseStart: () => undefined,
+  })
+
+  let stoppedReason: "complete" | "failure" | "budget_exceeded" | "user_stop" = "complete"
   let failed = 0
+
+  const input: BuildFlowInput = { config, waves, mainCwd }
   try {
-    failed = await executeWaveLoop(config, phases, state)
+    const out = await run(flow, input)
+    stoppedReason = out.stoppedReason
+    failed = out.failed
   } catch (err) {
+    if (err instanceof Error && err.name === "aborted_error") {
+      throw err
+    }
     printError(`Unexpected error: ${err instanceof Error ? err.message : String(err)}`)
     cleanupAllWorktrees(config.buildName)
     failed++
+  } finally {
+    stopHandle.uninstall()
+    consolidateHandoffs(config.buildDir, [...completedIds])
+    await engine.dispose()
   }
 
   printSummaryTable(config)
@@ -434,6 +378,19 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     killAllClaudeSync()
     process.exit(1)
   }
+
+  if (stoppedReason === "user_stop") {
+    printInfo(
+      `Build paused (graceful stop). Resume with: ridgeline build ${config.buildName}`,
+    )
+    return
+  }
+
+  // --require-phase-approval pause hook (between waves) is preserved
+  if (config.requirePhaseApproval && stoppedReason !== "complete") {
+    return
+  }
+  void requestPhaseApproval
 
   const isFullyDone = state.phases.every((p) => p.status === "complete")
 

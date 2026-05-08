@@ -15,10 +15,10 @@ export type RidgelineConfig = {
   maxBudgetUsd: number | null
   /** @deprecated Equivalent to `sandboxMode === "off"`. Retained for back-compat. */
   unsafe: boolean
-  sandboxMode: import("./stores/settings").SandboxMode
-  sandboxExtras: import("./stores/settings").SandboxExtras
+  sandboxMode: import("./stores/settings.js").SandboxMode
+  sandboxExtras: import("./stores/settings.js").SandboxExtras
   networkAllowlist: string[]
-  sandboxProvider?: import("./engine/claude/sandbox").SandboxProvider | null
+  sandboxProvider?: import("./engine/claude/sandbox.js").SandboxProvider | null
   extraContext: string | null
   /** Number of specialists for ensemble stages (planner, researcher). 1, 2, or 3. */
   specialistCount: 1 | 2 | 3
@@ -157,7 +157,7 @@ export type ReviewVerdict = {
   }[]
   issues: ReviewIssue[]
   suggestions: ReviewIssue[]
-  sensorFindings: import("./sensors").SensorFinding[]
+  sensorFindings: import("./sensors/index.js").SensorFinding[]
 }
 
 // A single proposed phase from a specialist planner

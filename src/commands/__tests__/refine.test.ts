@@ -1,35 +1,35 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/pipeline/refine.exec", () => ({
-  invokeRefiner: vi.fn(),
+vi.mock("../../engine/refiner.js", () => ({
+  runRefiner: vi.fn(),
 }))
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   advancePipeline: vi.fn(),
 }))
 
-vi.mock("../../stores/trajectory", () => ({
+vi.mock("../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
 }))
 
-vi.mock("../../stores/budget", () => ({
+vi.mock("../../stores/budget.js", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
 }))
 
-import { invokeRefiner } from "../../engine/pipeline/refine.exec"
-import { advancePipeline } from "../../stores/state"
-import { logTrajectory } from "../../stores/trajectory"
-import { recordCost } from "../../stores/budget"
-import { printError } from "../../ui/output"
-import { runRefine } from "../refine"
+import { runRefiner } from "../../engine/refiner.js"
+import { advancePipeline } from "../../stores/state.js"
+import { logTrajectory } from "../../stores/trajectory.js"
+import { recordCost } from "../../stores/budget.js"
+import { printError } from "../../ui/output.js"
+import { runRefine } from "../refine.js"
 
 const makeRefinerResult = () => ({
   success: true,
@@ -57,7 +57,7 @@ describe("commands/refine", () => {
     buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
     fs.mkdirSync(buildDir, { recursive: true })
 
-    vi.mocked(invokeRefiner).mockResolvedValue(makeRefinerResult())
+    vi.mocked(runRefiner).mockResolvedValue(makeRefinerResult())
   })
 
   afterEach(() => {
@@ -100,15 +100,15 @@ describe("commands/refine", () => {
     expect(printError).toHaveBeenCalledWith(expect.stringContaining("constraints.md not found"))
   })
 
-  it("calls invokeRefiner with correct arguments", async () => {
+  it("calls runRefiner with correct arguments", async () => {
     fs.writeFileSync(path.join(buildDir, "spec.md"), "spec content")
     fs.writeFileSync(path.join(buildDir, "research.md"), "research content")
     fs.writeFileSync(path.join(buildDir, "constraints.md"), "constraints content")
 
     await runRefine(buildName, defaultOpts)
 
-    expect(invokeRefiner).toHaveBeenCalledTimes(1)
-    const [specMd, researchMd, constraintsMd] = vi.mocked(invokeRefiner).mock.calls[0]
+    expect(runRefiner).toHaveBeenCalledTimes(1)
+    const [specMd, researchMd, constraintsMd] = vi.mocked(runRefiner).mock.calls[0]
     expect(specMd).toBe("spec content")
     expect(researchMd).toBe("research content")
     expect(constraintsMd).toBe("constraints content")
@@ -151,7 +151,7 @@ describe("commands/refine", () => {
     await runRefine(buildName, defaultOpts)
 
     // Should derive iteration 3 from 2 existing iterations
-    const config = vi.mocked(invokeRefiner).mock.calls[0][4]
+    const config = vi.mocked(runRefiner).mock.calls[0][4]
     expect(config.iterationNumber).toBe(3)
   })
 })

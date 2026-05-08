@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { DetectionReport } from "../../engine/detect"
-import { renderPreflight } from "../preflight"
-import { stripAnsi } from "../color"
+import type { DetectionReport } from "../../engine/project-type.js"
+import { renderPreflight } from "../preflight.js"
+import { stripAnsi } from "../color.js"
 
 const visualReport: DetectionReport = {
   projectType: "web",

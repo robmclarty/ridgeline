@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import * as path from "node:path"
 
-vi.mock("../stores/inputs", () => ({
+vi.mock("../stores/inputs.js", () => ({
   resolveFile: vi.fn(),
   parseCheckCommand: vi.fn(),
 }))
 
-vi.mock("../stores/settings", () => ({
+vi.mock("../stores/settings.js", () => ({
   resolveNetworkAllowlist: vi.fn(() => ["registry.npmjs.org"]),
   loadSettings: vi.fn(() => ({})),
   resolveModel: vi.fn((optModel: string | undefined) => optModel ?? "opus"),
@@ -22,8 +22,8 @@ vi.mock("../stores/settings", () => ({
   resolveRequirePhaseApproval: vi.fn((_dir: string, cli: boolean | undefined) => cli === true),
 }))
 
-import { resolveConfig, loadVersion } from "../config"
-import { resolveFile, parseCheckCommand } from "../stores/inputs"
+import { resolveConfig, loadVersion } from "../config.js"
+import { resolveFile, parseCheckCommand } from "../stores/inputs.js"
 
 const mockResolveFile = vi.mocked(resolveFile)
 const mockParseCheckCommand = vi.mocked(parseCheckCommand)

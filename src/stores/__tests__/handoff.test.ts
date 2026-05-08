@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import { readHandoff, ensureHandoffExists, ensurePhaseHandoffExists, consolidateHandoffs } from "../handoff"
+import { makeTempDir } from "../../../test/setup.js"
+import { readHandoff, ensureHandoffExists, ensurePhaseHandoffExists, consolidateHandoffs } from "../handoff.js"
 
 describe("handoff", () => {
   let tmpDir: string

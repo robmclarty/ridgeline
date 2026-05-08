@@ -1,0 +1,30 @@
+[
+  {
+    "flags": "--specialists <n>",
+    "description": "Number of ensemble specialists (1, 2, or 3). Default: 3",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--thorough",
+    "description": "Alias for --specialists 3 (the default)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--to <stage>",
+    "description": "Stage to rewind to (shape, spec, research, refine, plan)",
+    "defaultValue": null,
+    "mandatory": true,
+    "hidden": false
+  },
+  {
+    "flags": "-y, --yes",
+    "description": "Skip the preflight confirmation prompt",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  }
+]

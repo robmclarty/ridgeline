@@ -1,8 +1,8 @@
 import { describe, it, expect, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { withFileLock } from "../file-lock"
-import { makeTempDir } from "../../../test/setup"
+import { withFileLock } from "../file-lock.js"
+import { makeTempDir } from "../../../test/setup.js"
 
 describe("withFileLock", () => {
   let tmpDir: string

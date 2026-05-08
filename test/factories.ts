@@ -1,4 +1,4 @@
-import type { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../src/types"
+import type { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../src/types.js"
 
 export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfig => ({
   buildName: "test-build",

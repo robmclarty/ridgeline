@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir, trackTempDir } from "../../../../test/setup"
-import { watchAppend, watchJson } from "../watcher"
+import { makeTempDir, trackTempDir } from "../../../../test/setup.js"
+import { watchAppend, watchJson } from "../watcher.js"
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 

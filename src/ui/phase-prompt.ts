@@ -1,5 +1,5 @@
 import * as readline from "node:readline"
-import { bold, dimInfo, hint } from "./color"
+import { bold, dimInfo, hint } from "./color.js"
 
 export type PhaseApprovalDecision = "continue" | "stop"
 
@@ -72,7 +72,7 @@ const parseAnswer = (raw: string): PhaseApprovalDecision => {
  * In non-TTY environments (CI, piped) the function auto-resolves to
  * `nonTTYDecision` (default `continue`) and writes a single notice line.
  */
-export const runPhaseApproval = async (
+export const requestPhaseApproval = async (
   opts: PhaseApprovalOptions,
 ): Promise<PhaseApprovalDecision> => {
   const stream = opts.stream ?? process.stdout

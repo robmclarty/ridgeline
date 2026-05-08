@@ -1,5 +1,5 @@
 import { hex as contrastHex } from "wcag-contrast"
-import { parseHexRgb, Rgb } from "./dashboard/hex"
+import { parseHexRgb, Rgb } from "./dashboard/hex.js"
 
 const TEXT_FALLBACK = "#E5E7EB"
 const MAX_L_PERCENT = 98

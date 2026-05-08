@@ -45,7 +45,7 @@ In CI (no TTY) the prompt line is replaced with a dim
 
 ### Detection
 
-The detector (`src/engine/detect/`) returns a `DetectionReport`:
+The detector (`src/engine/project-type.ts`) returns a `DetectionReport`:
 
 ```ts
 interface DetectionReport {

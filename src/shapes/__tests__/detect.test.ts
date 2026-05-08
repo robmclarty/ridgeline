@@ -10,7 +10,7 @@ vi.mock("node:fs", async () => {
 })
 
 import * as fs from "node:fs"
-import { loadShapeDefinitions, detectShapes } from "../detect"
+import { loadShapeDefinitions, detectShapes } from "../detect.js"
 
 const webVisual = {
   name: "web-visual",

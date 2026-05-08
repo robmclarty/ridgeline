@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo, printError } from "../ui/output"
-import { rewindTo, getPipelineStatus } from "../stores/state"
-import { PipelineStage } from "../types"
+import { printInfo, printError } from "../ui/output.js"
+import { rewindTo, getPipelineStatus } from "../stores/state.js"
+import { PipelineStage } from "../types.js"
 
 const VALID_STAGES: PipelineStage[] = ["shape", "design", "spec", "research", "refine", "plan"]
 

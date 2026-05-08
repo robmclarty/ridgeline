@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
 // Mock process.cwd() to use temp directories
 const originalCwd = process.cwd.bind(process)
@@ -21,7 +21,7 @@ afterEach(() => {
 const loadModule = async () => {
   // Clear module cache to ensure fresh import with mocked cwd
   vi.resetModules()
-  return import("../resolve-asset-dir")
+  return import("../resolve-asset-dir.js")
 }
 
 describe("resolveAssetDir", () => {

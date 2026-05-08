@@ -14,7 +14,7 @@ vi.mock("node:fs", async () => {
 })
 
 import * as fs from "node:fs"
-import { buildAgentRegistry, clearRegistryCache } from "../agent.registry"
+import { buildAgentRegistry, clearRegistryCache } from "../agent.registry.js"
 
 beforeEach(() => {
   vi.clearAllMocks()

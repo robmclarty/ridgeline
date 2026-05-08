@@ -2,82 +2,84 @@
 
 import * as path from "node:path"
 import { Command, Option } from "commander"
-import { loadVersion, resolveConfig } from "./config"
-import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings"
-import { RidgelineConfig } from "./types"
-import { disableLogger } from "./ui/logger"
-import { askBuildName } from "./ui/prompt"
-import { runShape, runShapeAuto } from "./commands/shape"
-import { runDesign, runDesignAuto } from "./commands/design"
-import { runDirections, runDirectionsAuto } from "./commands/directions"
-import { runSpec } from "./commands/spec"
-import { runIngest } from "./commands/ingest"
-import { runPlan } from "./commands/plan"
-import { runDryRun } from "./commands/dry-run"
-import { runBuild } from "./commands/build"
-import { runCreate } from "./commands/create"
-import { runAuto, StopAfter } from "./commands/auto"
-import { runRewind } from "./commands/rewind"
-import { runRetrospective } from "./commands/retrospective"
-import { runRetroRefine } from "./commands/retro-refine"
-import { runResearch } from "./commands/research"
-import { runRefine } from "./commands/refine"
-import { runCatalog } from "./commands/catalog"
-import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui"
-import { resolveInputBundle } from "./commands/input"
-import { resolveNameAndInput, parseAutoCount } from "./utils/cli-args"
-import { killAllClaude, killAllClaudeSync } from "./engine/claude/claude.exec"
-import { enforceFlavourRemoved } from "./utils/flavour-removed"
-import { detect } from "./engine/detect"
-import { runPreflight, type StablePromptInfo } from "./ui/preflight"
-import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "./ui/preflight.toolprobe"
-import { detectSandbox } from "./engine/claude/sandbox"
-import { resolveStablePrompt } from "./engine/pipeline/pipeline.shared"
-import { approximateTokenCount } from "./engine/claude/stable.prompt"
+import { loadVersion, resolveConfig } from "./config.js"
+import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings.js"
+import { RidgelineConfig } from "./types.js"
+import { disableLogger } from "./ui/logger.js"
+import { askBuildName } from "./ui/prompt.js"
+import { runShape, runShapeAuto } from "./commands/shape.js"
+import { runDesign, runDesignAuto } from "./commands/design.js"
+import { runDirections, runDirectionsAuto } from "./commands/directions.js"
+import { runSpec } from "./commands/spec.js"
+import { runIngest } from "./commands/ingest.js"
+import { runPlan } from "./commands/plan.js"
+import { runDryRun } from "./commands/dry-run.js"
+import { runBuild } from "./commands/build.js"
+import { runCreate } from "./commands/create.js"
+import { runAuto, StopAfter } from "./commands/auto.js"
+import { runRewind } from "./commands/rewind.js"
+import { runRetrospective } from "./commands/retrospective.js"
+import { runRetroRefine } from "./commands/retro-refine.js"
+import { runResearch } from "./commands/research.js"
+import { runRefine } from "./commands/refine.js"
+import { runCatalog } from "./commands/catalog.js"
+import { runUi, DEFAULT_PORT as UI_DEFAULT_PORT } from "./commands/ui.js"
+import { resolveInputBundle } from "./commands/input.js"
+import { resolveNameAndInput, parseAutoCount } from "./utils/cli-args.js"
+import { killAllClaudeSync } from "./engine/claude-process.js"
+import { enforceFlavourRemoved } from "./utils/flavour-removed.js"
+import { detectProject } from "./engine/project-type.js"
+import { runPreflight, type StablePromptInfo } from "./ui/preflight.js"
+import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "./ui/preflight.toolprobe.js"
+import { detectSandbox } from "./engine/claude/sandbox.js"
+import { resolveStablePrompt } from "./engine/legacy-shared.js"
+import { approximateTokenCount } from "./engine/claude/stable.prompt.js"
 
-enforceFlavourRemoved(process.argv.slice(2))
-
-// Deprecation pre-check: --deep-ensemble is renamed to --thorough.
-// --thorough is now an alias for --specialists 3 (the default).
-// Emit on every run (not once per session) so the user always sees it.
-{
-  const rawArgs = process.argv.slice(2)
-  const hasDeep = rawArgs.includes("--deep-ensemble")
-  if (hasDeep) {
-    console.error("[deprecated] --deep-ensemble is now --specialists 3 (default); continuing")
-  }
-  const hasUnsafe = rawArgs.includes("--unsafe")
-  if (hasUnsafe) {
-    console.error("[deprecated] --unsafe is now --sandbox=off; continuing")
-  }
+const isMainModule = (): boolean => {
+  const argv1 = process.argv[1]
+  if (!argv1) return false
+  return argv1.endsWith("/cli.js") || argv1.endsWith("/cli.ts")
 }
 
-// Kill all Claude subprocesses on Ctrl+C before exiting
-process.on("SIGINT", () => {
-  killAllClaude()
-  setTimeout(() => process.exit(130), 2500)
-})
+if (isMainModule()) {
+  enforceFlavourRemoved(process.argv.slice(2))
 
-// Kill Claude subprocesses on unhandled errors before crashing
-process.on("uncaughtException", (err) => {
-  killAllClaudeSync()
-  console.error("Fatal error:", err.message)
-  process.exit(1)
-})
+  // Deprecation pre-check: --deep-ensemble is renamed to --thorough.
+  // --thorough is now an alias for --specialists 3 (the default).
+  // Emit on every run (not once per session) so the user always sees it.
+  const rawArgs = process.argv.slice(2)
+  if (rawArgs.includes("--deep-ensemble")) {
+    console.error("[deprecated] --deep-ensemble is now --specialists 3 (default); continuing")
+  }
+  if (rawArgs.includes("--unsafe")) {
+    console.error("[deprecated] --unsafe is now --sandbox=off; continuing")
+  }
 
-process.on("unhandledRejection", (reason) => {
-  killAllClaudeSync()
-  console.error(
-    "Unhandled rejection:",
-    reason instanceof Error ? reason.message : String(reason),
-  )
-  process.exit(1)
-})
+  // SIGINT handover: fascicle's runner installs SIGINT/SIGTERM handlers via
+  // install_signal_handlers (default true) and aborts active runs. Exit code
+  // 130 is preserved by handleCommandError, which detects aborted_error.
 
-// Belt-and-suspenders: clean up any remaining subprocesses on exit
-process.on("exit", () => {
-  killAllClaudeSync()
-})
+  // Kill Claude subprocesses on unhandled errors before crashing
+  process.on("uncaughtException", (err) => {
+    killAllClaudeSync()
+    console.error("Fatal error:", err.message)
+    process.exit(1)
+  })
+
+  process.on("unhandledRejection", (reason) => {
+    killAllClaudeSync()
+    console.error(
+      "Unhandled rejection:",
+      reason instanceof Error ? reason.message : String(reason),
+    )
+    process.exit(1)
+  })
+
+  // Belt-and-suspenders: clean up any remaining subprocesses on exit
+  process.on("exit", () => {
+    killAllClaudeSync()
+  })
+}
 
 type Opts = Record<string, string | boolean | undefined>
 
@@ -90,7 +92,26 @@ const requireBuildName = async (buildName: string | undefined): Promise<string> 
   return buildName
 }
 
+const isAbortedError = (err: unknown): boolean => {
+  if (err === null || typeof err !== "object") return false
+  const kind = (err as { kind?: unknown }).kind
+  if (kind === "aborted_error") return true
+  const name = (err as { name?: unknown }).name
+  return name === "aborted_error"
+}
+
+const registerProcessSignal = (
+  signal: NodeJS.Signals,
+  handler: () => void | Promise<void>,
+): void => {
+  process.on(signal, handler)
+}
+
 const handleCommandError = (err: unknown): never => {
+  if (isAbortedError(err)) {
+    killAllClaudeSync()
+    process.exit(130)
+  }
   console.error(err instanceof Error ? err.message : String(err))
   process.exit(1)
 }
@@ -123,7 +144,7 @@ const stablePromptInfoFromConfig = (config: RidgelineConfig): StablePromptInfo |
 
 const runPreflightGuard = async (config?: RidgelineConfig): Promise<void> => {
   const { specialistCount, isYes } = detectPreflightFlags()
-  const report = await detect(process.cwd(), { specialistCount })
+  const report = await detectProject(process.cwd(), { specialistCount })
   await runPreflight(report, {
     yes: isYes,
     isTTY: Boolean(process.stdin.isTTY),
@@ -583,9 +604,9 @@ addAutoOption(addPreflightOptions(program
 program
   .command("clean")
   .description("Clean up build artifacts")
-  .action(() => {
+  .action(async () => {
     try {
-      const { runClean } = require("./commands/clean")
+      const { runClean } = await import("./commands/clean.js")
       runClean(process.cwd())
     } catch (err) {
       handleCommandError(err)
@@ -607,8 +628,10 @@ program
         await server.close()
         process.exit(0)
       }
-      process.on("SIGINT", shutdown)
-      process.on("SIGTERM", shutdown)
+      // The UI command runs a long-lived HTTP server, not a fascicle flow,
+      // so its lifecycle is signal-driven (see commands/ui.ts.shutdown()).
+      registerProcessSignal("SIGINT", shutdown)
+      registerProcessSignal("SIGTERM", shutdown)
     } catch (err) {
       handleCommandError(err)
     }
@@ -617,13 +640,17 @@ program
 program
   .command("check")
   .description("Check project prerequisites and tooling")
-  .action(() => {
+  .action(async () => {
     try {
-      const { runCheck } = require("./commands/check")
+      const { runCheck } = await import("./commands/check.js")
       runCheck()
     } catch (err) {
       handleCommandError(err)
     }
   })
 
-program.parse()
+export { program }
+
+if (isMainModule()) {
+  program.parse()
+}

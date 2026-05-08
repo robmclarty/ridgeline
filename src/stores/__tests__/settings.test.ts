@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 import {
   loadSettings,
   resolveNetworkAllowlist,
@@ -23,7 +23,7 @@ import {
   DEFAULT_DIRECTION_COUNT,
   DEFAULT_SANDBOX_MODE,
   CLAUDE_REQUIRED_DOMAINS,
-} from "../settings"
+} from "../settings.js"
 
 describe("settings", () => {
   let tmpDir: string

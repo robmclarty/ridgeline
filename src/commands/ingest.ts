@@ -1,11 +1,11 @@
 import * as path from "node:path"
-import { printInfo, printError } from "../ui/output"
-import { resolveInputBundle, ResolvedBundle } from "./input"
-import { runShapeAuto } from "./shape"
-import { runSpec, SpecOptions } from "./spec"
-import { resolveBuildDir } from "../config"
-import { resolveSpecialistTimeoutSeconds } from "../stores/settings"
-import { recordInputSource } from "../stores/state"
+import { printInfo, printError } from "../ui/output.js"
+import { resolveInputBundle, ResolvedBundle } from "./input.js"
+import { runShapeAuto } from "./shape.js"
+import { runSpec, SpecOptions } from "./spec.js"
+import { resolveBuildDir } from "../config.js"
+import { resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
+import { recordInputSource } from "../stores/state.js"
 
 type IngestOptions = {
   model: string

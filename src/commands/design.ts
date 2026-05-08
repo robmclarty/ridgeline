@@ -1,20 +1,20 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
-import { printInfo, printWarn } from "../ui/output"
-import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { advancePipeline } from "../stores/state"
-import { runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow"
-import { resolveAssetDirSafe } from "../catalog/resolve-asset-dir"
-import { AssetCatalog } from "../catalog/types"
-import { countByField } from "./catalog"
+import { printInfo, printWarn } from "../ui/output.js"
+import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
+import { advancePipeline } from "../stores/state.js"
+import { runQAIntake, runOutputTurn, runOneShotCall } from "./qa-workflow.js"
+import { resolveAssetDirSafe } from "../catalog/resolve-asset-dir.js"
+import { AssetCatalog } from "../catalog/types.js"
+import { countByField } from "./catalog.js"
 import {
   downloadReference,
   parseReferenceFinderOutput,
   writeVisualAnchorsMd,
   type DownloadedReference,
   type ReferenceFinding,
-} from "../references/download"
+} from "../references/download.js"
 
 /**
  * Reusable directive that asks the agent to append a non-rendering
@@ -71,7 +71,7 @@ const loadCatalogContext = async (
     const assetDir = resolveAssetDirSafe(buildName, undefined)
     if (assetDir) {
       printInfo("Assets found but no catalog exists. Running catalog...")
-      const { runCatalog } = await import("./catalog")
+      const { runCatalog } = await import("./catalog.js")
       await runCatalog(buildName, {
         model: opts.model,
         timeout: opts.timeout,

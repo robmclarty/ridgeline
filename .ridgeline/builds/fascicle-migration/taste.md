@@ -47,14 +47,14 @@ The migration has no UI surface, but several output-medium preferences guide new
   - no emoji literals or new ANSI escape sequences in new directories
   - no `export ... as <camelCaseName>` re-export of fascicle-snake_case symbols
 - Snapshot tests for `ridgeline --help` and per-subcommand `--help` lock byte equality against `baseline/help/`. Snapshot tests for `tsc --emitDeclarationOnly` output lock byte equality against `baseline/dts/`.
-- Stryker mutation testing scoped to `src/engine/{flows,atoms,composites,adapters}/**/*.ts` at Phase 7; mutation score must be ≥ the Phase 0 baseline recorded for `src/engine/pipeline/`.
+- Stryker mutation testing scoped to `src/engine/{flows,atoms,composites,adapters}/**/*.ts` at Phase 7; mutation score must be ≥ the Phase 0 baseline recorded for `src/engine/pipeline/` (captured at Phase 7 outside the sandbox if Phase 0's run was blocked, e.g., greywall TCP-IPC EPERM).
 - Greywall integration tests pass at Phase 2 exit with zero modifications to the tests themselves — if a test needs adjusting, that's a red flag to investigate the policy builder, not the test.
 - Worktree merge-order regression test deliberately stalls higher-index phases to prove `worktree_isolated` merges in `index_order`, not `completion_order`.
 - SIGINT regression test confirms exit code 130 is preserved after fascicle's `install_signal_handlers` default takes over, and that worktrees plus claude subprocesses are torn down (no orphans visible in `ps`).
 
 ## Commit Format
 
-- Phase exit commits use subject prefix `phase-N:` followed by a short imperative summary (e.g., `phase-2: tier 1 composites + greywall integration tests green`).
+- Phase exit commits are produced by the ridgeline builder loop, which owns commit naming. No specific subject prefix is required; the `phase-<N>-check.json` artifact is the phase-exit signal.
 - Intermediate commits within a phase follow Conventional Commits matching repo history: `feat(scope):`, `fix(scope):`, `chore(scope):`, `docs:`, `refactor(engine):`. Reference `fascicle-migration` in the body for traceability when useful.
 - One phase per PR (or one phase split into ≤ 3 PRs if > 800 LOC). Every PR ends with `npm run check` green and `ridgeline build` operational.
 - PR descriptions for migration work list the old → new test mapping (when tests are rewritten at a higher abstraction level) and the plugin-surface audit results (when applicable).

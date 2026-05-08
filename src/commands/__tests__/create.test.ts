@@ -1,46 +1,46 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../shape", () => ({
+vi.mock("../shape.js", () => ({
   runShape: vi.fn(async () => undefined),
   runShapeAuto: vi.fn(async () => undefined),
 }))
 
-vi.mock("../spec", () => ({
+vi.mock("../spec.js", () => ({
   runSpec: vi.fn(async () => undefined),
 }))
 
-vi.mock("../plan", () => ({
+vi.mock("../plan.js", () => ({
   runPlan: vi.fn(async () => undefined),
 }))
 
-vi.mock("../build", () => ({
+vi.mock("../build.js", () => ({
   runBuild: vi.fn(async () => undefined),
 }))
 
-vi.mock("../../config", () => ({
+vi.mock("../../config.js", () => ({
   resolveBuildDir: vi.fn((buildName: string, _opts: unknown) =>
     path.join(process.cwd(), ".ridgeline", "builds", buildName),
   ),
   resolveConfig: vi.fn((buildName: string) => ({ buildName })),
 }))
 
-vi.mock("../../stores/settings", () => ({
+vi.mock("../../stores/settings.js", () => ({
   resolveSpecialistTimeoutSeconds: vi.fn(() => 600),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
 }))
 
-import { runShape, runShapeAuto } from "../shape"
-import { runSpec } from "../spec"
-import { runPlan } from "../plan"
-import { runBuild } from "../build"
-import { runCreate } from "../create"
+import { runShape, runShapeAuto } from "../shape.js"
+import { runSpec } from "../spec.js"
+import { runPlan } from "../plan.js"
+import { runBuild } from "../build.js"
+import { runCreate } from "../create.js"
 
 const baseOpts = {
   model: "opus",

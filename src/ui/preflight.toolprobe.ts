@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process"
-import type { SandboxProvider } from "../engine/claude/sandbox.types"
-import type { SandboxMode, SandboxExtras } from "../stores/settings"
-import type { SensorName } from "../engine/detect"
+import type { SandboxProvider } from "../engine/claude/sandbox.types.js"
+import type { SandboxMode, SandboxExtras } from "../stores/settings.js"
+import type { SensorName } from "../engine/project-type.js"
 
 const PROBE_TIMEOUT_MS = 30_000
 

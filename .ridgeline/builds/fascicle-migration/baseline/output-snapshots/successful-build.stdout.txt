@@ -1,0 +1,7 @@
+
+[ridgeline] ── Phase 1/2: 01-scaffold ──
+[ridgeline] [01-scaffold] PASS
+
+[ridgeline] ── Phase 2/2: 02-core ──
+[ridgeline] [02-core] PASS
+[ridgeline] Build complete: 2/2 phase(s) passed, $0.42 spent.

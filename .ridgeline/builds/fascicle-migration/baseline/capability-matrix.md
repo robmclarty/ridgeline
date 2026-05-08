@@ -1,8 +1,10 @@
 # Fascicle claude_cli capability matrix (pinned baseline)
 
-Version pinned in `package.json`: `fascicle ^0.3.8`
+Version pinned in `package.json`: `fascicle 0.3.8` (exact-pinned)
 Verified against: `node_modules/fascicle/dist/index.d.ts`, `node_modules/fascicle/dist/index.js`
 Captured: 2026-05-05
+Re-verified at Phase 7 (2026-05-06): every row below re-checked against the
+pinned 0.3.8 dist; no drift detected.
 
 This document records the runtime contract every later phase relies on. Each row is verified against the pinned fascicle source — no row is assumed.
 
@@ -191,3 +193,35 @@ The `ai` peer is required by fascicle but NOT installed by ridgeline because the
 - Phase 6 (engine factory + flows): `RunOptions.install_signal_handlers` default is `true`; `auth_mode: 'auto'` preserves OAuth.
 - Phase 7 (build/auto + SIGINT): `aborted_error` short-circuits retry layers; `install_signal_handlers: true` torn down on SIGINT with exit code 130.
 - Phase 8 (cleanup): typed error classes (`aborted_error`, `provider_error`, `rate_limit_error`, `schema_validation_error`, etc.) exported from fascicle root match `instanceof` checks replacing `FATAL_PATTERNS`.
+
+## Phase 7 re-verification (2026-05-06)
+
+Each row in this matrix was re-verified against the pinned `fascicle@0.3.8`
+distribution at Phase 7 exit:
+
+- `package.json` resolves `fascicle` to exactly `0.3.8`; `node_modules/fascicle/package.json` reports `"version": "0.3.8"`.
+- `auth_mode` default — confirmed `(config.auth_mode ?? "auto")` in
+  `node_modules/fascicle/dist/index.js`.
+- `startup_timeout_ms` default — confirmed `config.startup_timeout_ms ?? 12e4`.
+- `stall_timeout_ms` default — confirmed `config.stall_timeout_ms ?? 3e5`.
+- `install_signal_handlers` (run runner) default — confirmed `options.install_signal_handlers !== false`.
+- `install_signal_handlers` (bench runner) default — confirmed `options.install_signal_handlers ?? false`.
+- `skip_probe` — declared in `ClaudeCliProviderConfig` (`readonly skip_probe?: boolean`),
+  no consuming reference in `dist/index.js`. **Drift: none — same as Phase 0
+  baseline.** The engine factory still sets the field; whether 0.3.8 honors
+  it is a Phase 6/8 (build/auto + dogfood) verification concern, not a
+  Phase 7 blocker. No change to the type or runtime behavior between Phase
+  0 capture and Phase 7 re-verification.
+- `SandboxProviderConfig` discriminated union — `'bwrap'` and `'greywall'`
+  variants present; no third kind added in 0.3.8.
+- `RunOptions` shape — `install_signal_handlers`, `trajectory`,
+  `checkpoint_store`, `resume_data` present; no fields added in 0.3.8.
+- `Engine.generate<t>` signature unchanged.
+- Adapter subpath `fascicle/adapters` — still NOT exported by 0.3.8 (only
+  `"."` exported); ridgeline-side adapters remain authoritative.
+- Required peer `ai` (`^6.0.0`) — still required by package.json, still
+  NOT installed by ridgeline (claude_cli provider built into fascicle
+  does not import `ai`); npm warns at install time, not an error.
+
+**No drift detected. Matrix unchanged below this footer; capability
+contract intact for Phase 8/9 consumers.**

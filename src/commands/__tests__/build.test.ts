@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import type { RidgelineConfig } from "../../types"
+import { makeTempDir } from "../../../test/setup.js"
+import type { RidgelineConfig } from "../../types.js"
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
   printPhaseHeader: vi.fn(),
 }))
 
-vi.mock("../../stores/trajectory", () => ({
+vi.mock("../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -23,15 +23,16 @@ vi.mock("../../stores/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../stores/phases", () => ({
+vi.mock("../../stores/phases.js", () => ({
   scanPhases: vi.fn(() => []),
 }))
 
-vi.mock("../../engine/pipeline/phase.sequence", () => ({
-  runPhase: vi.fn(),
+vi.mock("../../engine/build-phase.js", () => ({
+  executeBuildPhase: vi.fn(),
+  makeRunPhaseStep: vi.fn(),
 }))
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   loadState: vi.fn(() => null),
   saveState: vi.fn(),
   initState: vi.fn((name, phases) => ({
@@ -55,33 +56,33 @@ vi.mock("../../stores/state", () => ({
   advancePipeline: vi.fn(),
 }))
 
-vi.mock("../../stores/budget", () => ({
+vi.mock("../../stores/budget.js", () => ({
   loadBudget: vi.fn(() => ({ entries: [], totalCostUsd: 0 })),
 }))
 
-vi.mock("../../stores/tags", () => ({
+vi.mock("../../stores/tags.js", () => ({
   cleanupBuildTags: vi.fn(),
 }))
 
-vi.mock("../plan", () => ({
+vi.mock("../plan.js", () => ({
   runPlan: vi.fn(),
 }))
 
-vi.mock("../../engine/claude/sandbox", () => ({
+vi.mock("../../engine/claude/sandbox.js", () => ({
   detectSandbox: vi.fn(() => ({ provider: null, warning: null })),
 }))
 
-vi.mock("../../engine/worktree", () => ({
+vi.mock("../../engine/worktree.js", () => ({
   ensureGitRepo: vi.fn(() => false),
 }))
 
-import { runBuild } from "../build"
-import { scanPhases } from "../../stores/phases"
-import { runPhase } from "../../engine/pipeline/phase.sequence"
-import { loadState, resetRetries } from "../../stores/state"
-import { loadBudget } from "../../stores/budget"
-import { detectSandbox } from "../../engine/claude/sandbox"
-import { printInfo } from "../../ui/output"
+import { runBuild } from "../build.js"
+import { scanPhases } from "../../stores/phases.js"
+import { executeBuildPhase } from "../../engine/build-phase.js"
+import { loadState, resetRetries } from "../../stores/state.js"
+import { loadBudget } from "../../stores/budget.js"
+import { detectSandbox } from "../../engine/claude/sandbox.js"
+import { printInfo } from "../../ui/output.js"
 
 describe("commands/run", () => {
   let tmpDir: string
@@ -142,10 +143,10 @@ describe("commands/run", () => {
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(executeBuildPhase).mockResolvedValue("passed")
 
     await runBuild(config)
-    expect(runPhase).toHaveBeenCalledTimes(2)
+    expect(executeBuildPhase).toHaveBeenCalledTimes(2)
   })
 
   it("halts on first phase failure", async () => {
@@ -155,7 +156,7 @@ describe("commands/run", () => {
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(runPhase).mockResolvedValue("failed")
+    vi.mocked(executeBuildPhase).mockResolvedValue("failed")
 
     try {
       await runBuild(config)
@@ -163,7 +164,7 @@ describe("commands/run", () => {
       // process.exit throws
     }
 
-    expect(runPhase).toHaveBeenCalledTimes(1)
+    expect(executeBuildPhase).toHaveBeenCalledTimes(1)
   })
 
   it("calls resetRetries and prints resume message when state exists", async () => {
@@ -178,7 +179,7 @@ describe("commands/run", () => {
       pipeline: { shape: "complete", design: "skipped", spec: "complete", research: "skipped", refine: "skipped", plan: "complete", build: "pending" },
       phases: [{ id: "01-scaffold", status: "failed", checkpointTag: "", completionTag: null, retries: 1, duration: null, completedAt: null, failedAt: "2024-01-01" }],
     })
-    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(executeBuildPhase).mockResolvedValue("passed")
 
     await runBuild(config)
 
@@ -193,7 +194,7 @@ describe("commands/run", () => {
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(executeBuildPhase).mockResolvedValue("passed")
 
     // After first phase, budget exceeds limit
     vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 15.00 })
@@ -202,7 +203,7 @@ describe("commands/run", () => {
     await runBuild(config)
 
     // Only ran first phase because budget exceeded after it
-    expect(runPhase).toHaveBeenCalledTimes(1)
+    expect(executeBuildPhase).toHaveBeenCalledTimes(1)
     expect(printInfo).toHaveBeenCalledWith(expect.stringContaining("Budget limit reached"))
   })
 
@@ -212,7 +213,7 @@ describe("commands/run", () => {
     ]
 
     vi.mocked(scanPhases).mockReturnValue(phases)
-    vi.mocked(runPhase).mockResolvedValue("passed")
+    vi.mocked(executeBuildPhase).mockResolvedValue("passed")
     vi.mocked(loadBudget).mockReturnValue({ entries: [], totalCostUsd: 0 })
 
     config.unsafe = true

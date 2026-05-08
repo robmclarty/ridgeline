@@ -1,10 +1,14 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { printInfo, printError } from "../ui/output"
-import { invokeRefiner, RefineConfig } from "../engine/pipeline/refine.exec"
-import { advancePipeline } from "../stores/state"
-import { logTrajectory } from "../stores/trajectory"
-import { recordCost } from "../stores/budget"
+import { run } from "fascicle"
+import { printInfo, printError } from "../ui/output.js"
+import { runRefiner, type RefineConfig } from "../engine/refiner.js"
+import { advancePipeline } from "../stores/state.js"
+import { logTrajectory } from "../stores/trajectory.js"
+import { recordCost } from "../stores/budget.js"
+import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { refineFlow, type RefineFlowInput } from "../engine/flows/refine.flow.js"
+import { resolveSandboxMode } from "../stores/settings.js"
 
 type RefineOptions = {
   model: string
@@ -12,7 +16,6 @@ type RefineOptions = {
   iterationNumber?: number
 }
 
-/** Derive the next iteration number from existing spec.changelog.md content. */
 const deriveRefineIterationNumber = (changelogMd: string | null): number => {
   if (!changelogMd) return 1
   const matches = changelogMd.match(/^## Iteration \d+/gm)
@@ -54,17 +57,47 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
 
   const iterationNumber = opts.iterationNumber ?? deriveRefineIterationNumber(changelogMd)
 
-  const config: RefineConfig = {
-    model: opts.model,
+  const ridgelineDir = path.join(process.cwd(), ".ridgeline")
+  const engine = makeRidgelineEngine({
+    sandboxFlag: resolveSandboxMode(ridgelineDir, undefined),
     timeoutMinutes: opts.timeout,
-    buildDir,
-    changelogMd,
-    iterationNumber,
-  }
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: buildDir,
+  })
+
+  const flow = refineFlow({
+    executor: async (input: RefineFlowInput) => {
+      const config: RefineConfig = {
+        model: input.model,
+        timeoutMinutes: input.timeoutMinutes,
+        buildDir: input.buildDir,
+        changelogMd: input.changelogMd,
+        iterationNumber: input.iterationNumber,
+      }
+      return runRefiner(input.specMd, input.researchMd, input.constraintsMd, input.tasteMd, config)
+    },
+  })
 
   logTrajectory(buildDir, "refine_start", null, `Refine started (iteration ${iterationNumber})`)
 
-  const result = await invokeRefiner(specMd, researchMd, constraintsMd, tasteMd, config)
+  let result
+  try {
+    const out = await run(flow, {
+      specMd,
+      researchMd,
+      constraintsMd,
+      tasteMd,
+      model: opts.model,
+      timeoutMinutes: opts.timeout,
+      buildDir,
+      changelogMd,
+      iterationNumber,
+    }, { install_signal_handlers: false })
+    result = out.result
+  } finally {
+    await engine.dispose()
+  }
 
   recordCost(buildDir, "refine", "refiner", 0, result)
 

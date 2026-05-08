@@ -1,4 +1,4 @@
-import { createTag, tagExists, isWorkingTreeDirty, commitAll, deleteTagsByPrefix } from "../git"
+import { createTag, tagExists, isWorkingTreeDirty, commitAll, deleteTagsByPrefix } from "../git.js"
 
 export const checkpointTagName = (buildName: string, phaseId: string): string =>
   `ridgeline/checkpoint/${buildName}/${phaseId}`

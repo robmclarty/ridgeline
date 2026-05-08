@@ -9,7 +9,7 @@ vi.mock("node:fs", async () => {
   }
 })
 
-import { resolveAgentPrompt } from "../agent.prompt"
+import { resolveAgentPrompt } from "../agent.prompt.js"
 import * as fs from "node:fs"
 
 beforeEach(() => vi.clearAllMocks())

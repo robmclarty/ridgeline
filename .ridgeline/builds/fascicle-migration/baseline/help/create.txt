@@ -19,6 +19,7 @@ Options:
   --context <text>                       Extra context appended to builder and planner prompts
   --sandbox <mode>                       Sandbox mode: off | semi-locked (default) | strict
   --unsafe                               Alias for --sandbox=off (deprecated)
+  --require-phase-approval               Pause between phases for explicit user confirmation before continuing
   --specialists <n>                      Number of ensemble specialists (1, 2, or 3). Default: 3
   --thorough                             Alias for --specialists 3 (the default)
   -y, --yes                              Skip the preflight confirmation prompt

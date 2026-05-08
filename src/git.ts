@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process"
-import { printWarn } from "./ui/output"
+import * as fs from "node:fs"
+import * as path from "node:path"
+import { printWarn } from "./ui/output.js"
 
 const run = (cmd: string, cwd?: string): string =>
   execSync(cmd, { cwd, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }).trim()
@@ -51,8 +53,6 @@ export const getChangedFileNames = (fromTag: string, cwd?: string): string[] => 
 export const getChangedFileContents = (fromTag: string, cwd?: string): Map<string, string> => {
   const files = getChangedFileNames(fromTag, cwd)
   const contents = new Map<string, string>()
-  const fs = require("node:fs")
-  const path = require("node:path")
   const root = cwd ?? process.cwd()
   for (const file of files) {
     const fullPath = path.join(root, file)

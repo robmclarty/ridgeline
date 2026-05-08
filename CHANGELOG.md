@@ -1,36 +1,172 @@
 # Changelog
 
-## v0.12.1 — 2026-05-06
+## v0.12.4 — 2026-05-07
 
-### Added
+### Changed
 
-- **Pre-wave environment provisioning hook.** Phase worktrees created
-  for parallel waves are now post-processed by a fixer registry that
-  mirrors known package binaries from the main worktree's
-  `node_modules/` into the new worktree if missing. First entry: agnix's
-  platform binary, whose postinstall download is blocked by the
-  semi-locked sandbox. Eliminates the per-phase rediscovery pattern
-  where every parallel builder independently burned time working
-  around the same blocker. Extensible — new fixers register as
-  `{ pkg, binPath, why }` triples.
-- **Cross-phase discoveries log.** Parallel builders now share an
-  append-only `discoveries.jsonl` in the main worktree (absolute path
-  injected into the builder prompt). Builders consult it before
-  working around environmental blockers and append their own entries
-  when they find a fix. Advisory only — entries are hints, not
-  directives. Gitignored so concurrent writes never become a
-  merge-conflict source.
+- Bumped fascicle to 0.4.0 and unwound the 0.3.x workarounds in the engine
+  factory: `auth_mode` is back to `"auto"`, the greywall sandbox is restored
+  on fascicle-routed calls (retrospective, refine), and `SandboxProviderConfig`
+  is exported again.
+
+## v0.12.3 — 2026-05-07
+
+### Changed
+
+- **Default `--model` flipped from `cli-opus` to `opus`.** The prior default
+  was a fascicle-internal routing alias that the Claude CLI doesn't accept,
+  so the spec stage failed with "model may not exist" on a subscription-only
+  install. `opus` is recognized by both the direct claude-process path and
+  fascicle's resolver. Help text and `docs/help.md` updated to match.
+- **Replaced `free-tex-packer-core` with an in-house packer** built on
+  `sharp` (already a dependency) and `maxrects-packer`. The old dep was at
+  its last published version and pulled in `jimp@0.2.x` → `request`,
+  `mkdirp@0.5`, `jpeg-js`, `minimist`, `form-data`, `tough-cookie`, `qs` —
+  accounting for all 10 npm audit findings (5 critical, 2 high, 3 moderate).
+  `npm audit` now reports 0 vulnerabilities. Same `packAtlases` API, same
+  PixiJS-compatible JSON + PNG output.
 
 ### Fixed
 
-- **`--require-phase-approval` honours the flag in non-TTY
-  environments.** Previously the prompt silently auto-continued under
-  any pipe/redirect (CI, agent harnesses, editor integrations),
-  defeating the purpose of asking for approval. The flag now pauses
-  the build with a clear notice telling the user to resume from a TTY
-  or omit the flag for unattended runs.
+- **Retrospective and refine phases bypass fascicle's sandbox.** On a
+  subscription-only (no `ANTHROPIC_API_KEY`) install, retrospective was
+  failing with `provider 'anthropic' is not configured` because fascicle's
+  `build_env` wasn't inheriting `process.env` and couldn't locate the
+  `claude`/`greywall` binaries. The engine factory now uses `auth_mode:
+  "oauth"` and registers `anthropic→claude_cli` alias overrides for
+  opus/sonnet/haiku when no API key is present.
+
+### Internal
+
+- Renamed CLI entry `src/main.ts` → `src/cli.ts` and dropped the stale
+  `dist/main.js` artifact. `package.json` `bin` now points at `dist/cli.js`
+  and `isMainModule` matches `/cli.{js,ts}`. Five CLI tests that read the
+  entry source were updated to follow the rename.
+- Refreshed CLI help/options snapshot baselines for the `opus` default.
+- Updated helloworld e2e fixtures: pre-phase pipeline state, builder output
+  for two runs, retrospective output, and final transcript log.
+
+## v0.12.2 — 2026-05-07
+
+### Changed
+
+- **`detect()` renamed to `detectProject()`; module relocated.**
+  `src/engine/detect/index.ts` is now `src/engine/project-type.ts`, and
+  call sites read as `detectProject(cwd)` — disambiguating it from the
+  unrelated `shapes/detect.ts` (shape-tag matching). All 11 importers,
+  the `.fallowrc.json` `ignoreExports` entry, and
+  `docs/preflight-and-sensors.md` updated; tests moved to
+  `src/engine/__tests__/project-type.test.ts`.
+
+### Fixed
+
+- **Parallel-wave reliability — three independent fixes** from the
+  fascicle-migration dogfood: `--require-phase-approval` now pauses
+  correctly in non-TTY environments (was silently auto-continuing,
+  defeating the flag); a pre-wave environment-provisioning hook
+  (`worktree.provision.ts`) mirrors known package binaries (e.g.
+  agnix's platform binary) from the main worktree into freshly-created
+  phase worktrees so each parallel builder doesn't independently
+  rediscover the postinstall sandbox block; and a shared cross-phase
+  `discoveries.jsonl` log (atomic append-only JSONL, gitignored) lets
+  parallel builders see each other's environment fixes instead of
+  working around the same blocker in isolation.
+
+### Internal
+
+- Dropped orphaned `scripts/phase-build*` helper scripts left over from
+  the pre-fascicle pipeline (commit 9d5d6f9).
+- Landed the actual `feat(engine): anthropic api provider` integration
+  commit (067f75d) — the user-visible behaviour was already documented
+  in v0.12.0; this is the matching code change.
+- Recorded fascicle-migration build retrospective, telemetry, and
+  outcome comparison in `docs/fascicle-migration/`.
+- Added `BACKLOG.md` tracking anthropic-API capability gaps (skills,
+  tool-use, agent discovery still require the `claude_cli` route).
+- Skipped version `v0.12.1` — the tag was already taken on `main` by a
+  reverted phase-3 adapters attempt that fascicle has since re-landed
+  cleanly. Versioning resumes at `v0.12.2` here so the tag namespace
+  stays unambiguous after the fascicle branch is merged.
 
 ## v0.12.0 — 2026-05-06
+
+### Added
+
+- **Direct Anthropic API provider.** When `ANTHROPIC_API_KEY` is set,
+  the engine factory registers fascicle's `anthropic` provider
+  alongside `claude_cli`. Use `--model sonnet` or
+  `--model anthropic:claude-haiku-4-5` to route a call through the
+  direct API instead of the Claude CLI subprocess. Skills, tools, and
+  agent discovery still require the CLI route — model selection is
+  per-call but capability surface depends on which provider you pick.
+
+### Breaking — for consumers
+
+- **Default model changed from `opus` to `cli-opus`.** Bare model names
+  (`opus`, `sonnet`, `haiku`, `claude-opus`, `claude-sonnet`,
+  `claude-haiku`) now resolve to fascicle's `anthropic` provider per
+  fascicle's built-in alias table, not to `claude_cli`. The CLI/OAuth
+  route uses the `cli-` prefix (`cli-opus`, `cli-sonnet`,
+  `cli-haiku`). If you previously relied on `--model opus` going
+  through the Claude CLI subscription, switch to `--model cli-opus`,
+  or set `model: "cli-opus"` in `.ridgeline/settings.json`.
+- **`RIDGELINE_ALIASES` removed.** Ridgeline no longer ships its own
+  alias table; resolution is delegated entirely to fascicle's
+  defaults. Model id strings (`claude-opus-4-7`, etc.) are no longer
+  pinned ridgeline-side — they ride with `npm update fascicle`.
+
+- **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
+  supported. Reinstall ridgeline against Node 24 (or newer); the CI matrix
+  has been updated to test Node 24 only. This bump rides with the internal
+  fascicle migration so the runtime ABI stays aligned across the substrate
+  swap.
+
+### Breaking — for plugin authors
+
+- **Internal pipeline directory removed.** `src/engine/pipeline/` and
+  `src/engine/claude/{claude.exec,stream.parse,stream.result,stream.display,stream.types}.ts`
+  no longer exist. The following exports from `src/engine/index.ts` are
+  removed: `invokeBuilder`, `invokePlanner`, `invokeReviewer`, `runPhase`,
+  `invokeClaude`, `parseStreamLine`, `createStreamHandler`, `extractResult`,
+  `createDisplayCallbacks`. Plugin authors that imported any of these
+  symbols must migrate to the new substrate exports: `makeRidgelineEngine`,
+  `runClaudeOneShot`, the atom/composite/adapter/flow barrels, and the
+  fascicle `Engine.generate` API. The legacy spawn-and-stream behaviour
+  has been internalised under `src/engine/claude-process.ts` (the
+  `runClaudeProcess` function) for in-tree use only. The fascicle
+  `claude_cli` provider is now the canonical Claude subprocess driver
+  for new code paths.
+- **Internal symbol renames.** `invokeBuilder → runBuilder`,
+  `invokeReviewer → runReviewer`, `invokePlanner → runEnsemblePlanner`,
+  `invokeRefiner → runRefiner`, `invokeResearcher → runResearchEnsemble`,
+  `invokeSpecifier → runSpecifyEnsemble`, `invokeEnsemble → runEnsemble`,
+  `runPhase → executeBuildPhase`, `FATAL_PATTERNS → FATAL_ERROR_PATTERNS`,
+  `classifyError → classifyBuildError`, `createDisplayCallbacks →
+  createLegacyStdoutDisplay` (in `src/ui/claude-stream-display.ts`).
+- **File renames** to comply with the new substrate's basename rules:
+  `phase.graph.ts → phase-graph.ts`, `worktree.parallel.ts →
+  worktree-parallel.ts`. Bridge directory `src/engine/legacy/` deleted —
+  consumers should import from the new module locations directly.
+- **`FATAL_PATTERNS` and `classifyError` removed in favour of typed-error
+  retry policy.** Use `shouldRetry(err)` from
+  `src/engine/retry.policy.ts` for retry-vs-abort classification against
+  fascicle's typed error classes (`rate_limit_error`, `provider_error`,
+  `aborted_error`, `schema_validation_error`, etc.).
+- **Sandbox module split.** `src/engine/claude/sandbox.greywall.ts` is
+  removed. `src/engine/claude/sandbox.policy.ts` now exports
+  `buildSandboxPolicy(args): SandboxProviderConfig | undefined` (the
+  fascicle `claude_cli` sandbox config builder), plus the
+  `DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED` /
+  `DEFAULT_NETWORK_ALLOWLIST_STRICT` constants and the legacy
+  `greywallProvider`. `src/engine/claude/sandbox.ts` is reduced to the
+  `detectSandbox(mode)` helper; `src/engine/claude/sandbox.types.ts`
+  retains the `SandboxProvider` type. Engine factory consumers should
+  call `buildSandboxPolicy({ sandboxFlag, buildPath })` and pass the
+  result into `claude_cli.sandbox`; legacy spawn-wrapper consumers can
+  still import `greywallProvider` from `sandbox.policy.ts`. An ast-grep
+  rule (`no-child-process-in-sandbox`) blocks `node:child_process`
+  imports in `sandbox.ts` and `sandbox.types.ts` to prevent the
+  spawn-wrapping responsibility from drifting back.
 
 ### Added
 
@@ -87,14 +223,6 @@
   by a 24-hour catchall for genuinely-hung processes.
 - The plan-reviewer flags any phase exceeding 70% of the ceiling and
   rejects any phase exceeding it (was: "substantially exceeds").
-
-### Breaking — for consumers
-
-- **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
-  supported. Reinstall ridgeline against Node 24 (or newer); the CI matrix
-  has been updated to test Node 24 only. This bump rides with the internal
-  fascicle migration so the runtime ABI stays aligned across the substrate
-  swap.
 
 ### Internal
 

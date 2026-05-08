@@ -1,95 +1,443 @@
 {
   "buildName": "fascicle-migration",
-  "startedAt": "2026-05-06T04:23:44.504Z",
+  "startedAt": "2026-05-06T23:08:11.299Z",
   "pipeline": {
-    "shape": "complete",
-    "design": "complete",
-    "spec": "complete",
+    "shape": "pending",
+    "design": "skipped",
+    "spec": "pending",
     "research": "skipped",
     "refine": "skipped",
     "plan": "complete",
-    "build": "running"
+    "build": "complete"
   },
   "phases": [
     {
-      "id": "01-scaffold-and-baselines",
-      "status": "failed",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/01-scaffold-and-baselines",
-      "completionTag": null,
-      "retries": 3,
-      "duration": 1931659,
-      "completedAt": null,
-      "failedAt": "2026-05-06T04:55:57.235Z"
+      "id": "01-foundation-baseline",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/01-foundation-baseline",
+      "completionTag": "ridgeline/phase/fascicle-migration/01-foundation-baseline",
+      "retries": 0,
+      "duration": 404578,
+      "completedAt": "2026-05-06T23:14:56.549Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 15383,
+          "inputTokens": 35,
+          "costUsd": 2.7947214999999996,
+          "durationMs": 235880,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-06T23:12:18.030Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "02-adapters",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-adapters",
-      "completionTag": null,
+      "id": "02-sandbox-policy.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/02-sandbox-policy.builder-progress",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 1502095,
+      "completedAt": "2026-05-07T02:19:11.896Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 59350,
+          "inputTokens": 154,
+          "costUsd": 12.987842999999998,
+          "durationMs": 1273998,
+          "windDownReason": null,
+          "diffHash": "c1ecf87d5b8049f5dd6b1d05409a979a66bee5f3fa24d714a51f09e3983b24e4",
+          "timestamp": "2026-05-07T02:15:32.764Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "03-sandbox-policy",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-sandbox-policy",
-      "completionTag": null,
+      "id": "02-sandbox-policy",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/02-sandbox-policy",
+      "completionTag": "ridgeline/phase/fascicle-migration/02-sandbox-policy",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 1396656,
+      "completedAt": "2026-05-07T02:17:26.556Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 70662,
+          "inputTokens": 94,
+          "costUsd": 10.246442,
+          "durationMs": 1120017,
+          "windDownReason": null,
+          "diffHash": "11aa9a895bab95f11a25bae13eaa4c98a83e3b0324f494f32976961682a82940",
+          "timestamp": "2026-05-07T02:12:58.687Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "04-tier1-composites",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/04-tier1-composites",
-      "completionTag": null,
+      "id": "03-adapters.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-adapters.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/03-adapters",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 0,
+      "completedAt": "2026-05-07T03:16:00.000Z",
+      "failedAt": null,
+      "note": "Orphan twin from reconcile. 03-adapters source landed via a61bbb4 (manual) + c16e6be (synthesized artifacts); marked complete to avoid redundant rebuild."
     },
     {
-      "id": "05-atoms",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/05-atoms",
-      "completionTag": null,
+      "id": "03-adapters",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/03-adapters",
+      "completionTag": "ridgeline/phase/fascicle-migration/03-adapters",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 2366497,
+      "completedAt": "2026-05-06T23:54:23.586Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "more_work_explicit",
+          "outputTokens": 80786,
+          "inputTokens": 183,
+          "costUsd": 16.18683325,
+          "durationMs": 1435432,
+          "windDownReason": "agents check (agnix binary) blocked by sandbox network; AC #10 requires zero-exit npm run check which can only be confirmed after agnix is available",
+          "diffHash": "70b986bb87fa52169a4b02658615fd38ecdc2347ba12f058f84711e6a5537ed7",
+          "timestamp": "2026-05-06T23:39:00.891Z"
+        },
+        {
+          "attempt": 2,
+          "endReason": "ready_for_review",
+          "outputTokens": 21148,
+          "inputTokens": 64,
+          "costUsd": 3.902251000000001,
+          "durationMs": 680822,
+          "windDownReason": null,
+          "diffHash": "70b986bb87fa52169a4b02658615fd38ecdc2347ba12f058f84711e6a5537ed7",
+          "timestamp": "2026-05-06T23:50:29.965Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "06-engine-factory-and-leaf-flows",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/06-engine-factory-and-leaf-flows",
-      "completionTag": null,
+      "id": "04-engine-factory",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/04-engine-factory",
+      "completionTag": "ridgeline/phase/fascicle-migration/04-engine-factory",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 973895,
+      "completedAt": "2026-05-07T03:41:37.461Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 44118,
+          "inputTokens": 100,
+          "costUsd": 9.244394250000003,
+          "durationMs": 754229,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T03:38:06.623Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "07-build-auto-and-sigint",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/07-build-auto-and-sigint",
-      "completionTag": null,
+      "id": "05-composites",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/05-composites",
+      "completionTag": "ridgeline/phase/fascicle-migration/05-composites",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 1742885,
+      "completedAt": "2026-05-06T23:44:00.045Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 68525,
+          "inputTokens": 156,
+          "costUsd": 14.659158749999996,
+          "durationMs": 1517793,
+          "windDownReason": null,
+          "diffHash": "72623be0be1f0a0f65df9e80316f10a56251c0cb4de41d236667761ea21487ce",
+          "timestamp": "2026-05-06T23:40:23.352Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     },
     {
-      "id": "08-cleanup-docs-and-mutation",
-      "status": "pending",
-      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-cleanup-docs-and-mutation",
-      "completionTag": null,
+      "id": "06-atoms-a",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/06-atoms-a",
+      "completionTag": "ridgeline/phase/fascicle-migration/06-atoms-a",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
-      "failedAt": null
+      "duration": 1614314,
+      "completedAt": "2026-05-07T04:08:31.834Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 87339,
+          "inputTokens": 155,
+          "costUsd": 18.65311775,
+          "durationMs": 1401762,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T04:05:07.637Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "07-atoms-b",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/07-atoms-b",
+      "completionTag": "ridgeline/phase/fascicle-migration/07-atoms-b",
+      "retries": 0,
+      "duration": 1132076,
+      "completedAt": "2026-05-07T04:27:23.956Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 60708,
+          "inputTokens": 115,
+          "costUsd": 12.8689695,
+          "durationMs": 943976,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T04:24:23.966Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "08-leaf-flows.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/08-leaf-flows.builder-progress",
+      "retries": 0,
+      "duration": 757955,
+      "completedAt": "2026-05-07T18:49:32.862Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 19346,
+          "inputTokens": 69,
+          "costUsd": 7.080336499999999,
+          "durationMs": 409196,
+          "windDownReason": null,
+          "diffHash": "ea2a32e69652d59789272e638e13339e052e267a4bd276e530ad3bdb304d616d",
+          "timestamp": "2026-05-07T18:43:53.926Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "08-leaf-flows",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/08-leaf-flows",
+      "completionTag": "ridgeline/phase/fascicle-migration/08-leaf-flows",
+      "retries": 0,
+      "duration": 3492387,
+      "completedAt": "2026-05-07T05:25:36.410Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 41648,
+          "inputTokens": 104,
+          "costUsd": 10.608984000000001,
+          "durationMs": 753748,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T05:22:44.763Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "09-build-auto-sigint-dogfood.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/09-build-auto-sigint-dogfood.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/09-build-auto-sigint-dogfood.builder-progress",
+      "retries": 0,
+      "duration": 966209,
+      "completedAt": "2026-05-07T18:53:01.268Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 31383,
+          "inputTokens": 49,
+          "costUsd": 5.51489675,
+          "durationMs": 526455,
+          "windDownReason": null,
+          "diffHash": "cade0b97a3d72e57d85f7ce873e66f75d31448afde7fe30c41d11d7aae415093",
+          "timestamp": "2026-05-07T18:45:51.034Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "09-build-auto-sigint-dogfood",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/09-build-auto-sigint-dogfood",
+      "completionTag": "ridgeline/phase/fascicle-migration/09-build-auto-sigint-dogfood",
+      "retries": 0,
+      "duration": 3649358,
+      "completedAt": "2026-05-07T06:26:25.818Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 78251,
+          "inputTokens": 139,
+          "costUsd": 18.35610675,
+          "durationMs": 1261398,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T06:23:33.451Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "10-mutation-tests.builder-progress",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests.builder-progress",
+      "completionTag": "ridgeline/phase/fascicle-migration/10-mutation-tests.builder-progress",
+      "retries": 0,
+      "duration": 598530,
+      "completedAt": "2026-05-07T18:46:53.665Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 14900,
+          "inputTokens": 39,
+          "costUsd": 4.275793000000001,
+          "durationMs": 296544,
+          "windDownReason": null,
+          "diffHash": "dbe6186a04b161cd05340f823fe2cfd5dfeea808c5cd6ea6f5eaaa37aeee712e",
+          "timestamp": "2026-05-07T18:42:01.179Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "10-mutation-tests",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/10-mutation-tests",
+      "completionTag": "ridgeline/phase/fascicle-migration/10-mutation-tests",
+      "retries": 0,
+      "duration": 572527,
+      "completedAt": "2026-05-07T18:46:27.754Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 18146,
+          "inputTokens": 70,
+          "costUsd": 7.223740749999998,
+          "durationMs": 414378,
+          "windDownReason": null,
+          "diffHash": "64f7f7d6a0932a19f4056a0feccb9ccfccb8878f07f30353eb8c8031e72fef80",
+          "timestamp": "2026-05-07T18:43:58.885Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "11-cleanup-deletions",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/11-cleanup-deletions",
+      "completionTag": "ridgeline/phase/fascicle-migration/11-cleanup-deletions",
+      "retries": 0,
+      "duration": 3654327,
+      "completedAt": "2026-05-07T21:08:03.730Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "more_work_explicit",
+          "outputTokens": 39701,
+          "inputTokens": 67,
+          "costUsd": 9.18966125,
+          "durationMs": 699850,
+          "windDownReason": "deletion sequence (pipeline/, claude streams, legacy bridges) and consumer migration (~5 invokeClaude callers, 3 createDisplayCallbacks callers) plus runPhase/ensemble atom-stack rewrite remain.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T20:18:58.248Z"
+        },
+        {
+          "attempt": 2,
+          "endReason": "more_work_explicit",
+          "outputTokens": 69555,
+          "inputTokens": 144,
+          "costUsd": 27.6690455,
+          "durationMs": 1146372,
+          "windDownReason": "heavyweight rewrites (runPhase composite, ensemble composite, leaf-flow command migrations) and the deletion sequence remain; budget exhausted by the bridge utilities and 4 consumer migrations.",
+          "diffHash": null,
+          "timestamp": "2026-05-07T20:38:12.911Z"
+        },
+        {
+          "attempt": 3,
+          "endReason": "ready_for_review",
+          "outputTokens": 92652,
+          "inputTokens": 162,
+          "costUsd": 28.438528500000007,
+          "durationMs": 1511927,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T21:03:33.116Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
+    },
+    {
+      "id": "12-docs-invariants-golden",
+      "status": "complete",
+      "checkpointTag": "ridgeline/checkpoint/fascicle-migration/12-docs-invariants-golden",
+      "completionTag": "ridgeline/phase/fascicle-migration/12-docs-invariants-golden",
+      "retries": 0,
+      "duration": 1372935,
+      "completedAt": "2026-05-07T21:30:56.725Z",
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 54457,
+          "inputTokens": 135,
+          "costUsd": 19.5369415,
+          "durationMs": 1032659,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-07T21:25:24.920Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     }
   ]
 }

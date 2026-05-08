@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
-import type { RidgelineConfig } from "../../types"
+import { makeTempDir } from "../../../test/setup.js"
+import type { RidgelineConfig } from "../../types.js"
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
 }))
 
-vi.mock("../../stores/trajectory", () => ({
+vi.mock("../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
   makeTrajectoryEntry: vi.fn(() => ({
     timestamp: "2024-01-01T00:00:00.000Z",
@@ -21,20 +21,20 @@ vi.mock("../../stores/trajectory", () => ({
   })),
 }))
 
-vi.mock("../../stores/phases", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../stores/phases")>()
+vi.mock("../../stores/phases.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../stores/phases.js")>()
   return {
     ...actual,
     scanPhases: vi.fn(() => []),
   }
 })
 
-vi.mock("../plan", () => ({
+vi.mock("../plan.js", () => ({
   runPlan: vi.fn(),
 }))
 
-import { runDryRun } from "../dry-run"
-import { scanPhases } from "../../stores/phases"
+import { runDryRun } from "../dry-run.js"
+import { scanPhases } from "../../stores/phases.js"
 
 describe("commands/dry-run", () => {
   let tmpDir: string

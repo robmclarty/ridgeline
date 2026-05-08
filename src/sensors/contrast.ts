@@ -1,7 +1,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { hex } from "wcag-contrast"
-import type { ColorPair, SensorAdapter, SensorFinding, SensorInput } from "./index"
+import type { ColorPair, SensorAdapter, SensorFinding, SensorInput } from "./index.js"
 
 const WCAG_AA_NORMAL = 4.5
 const HEX_TOKEN = /#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})\b/g

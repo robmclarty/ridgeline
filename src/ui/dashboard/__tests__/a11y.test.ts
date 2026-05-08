@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
-import { renderCss } from "../css"
-import { renderHtml } from "../html"
-import type { DashboardSnapshot } from "../snapshot"
+import { renderCss } from "../css.js"
+import { renderHtml } from "../html.js"
+import type { DashboardSnapshot } from "../snapshot.js"
 
 const fixture = (status: DashboardSnapshot["status"]): DashboardSnapshot => ({
   buildName: status === "idle" ? null : "demo",

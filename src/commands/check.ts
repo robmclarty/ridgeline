@@ -1,4 +1,4 @@
-import { printInfo } from "../ui/output"
+import { printInfo } from "../ui/output.js"
 
 export const runCheck = (): void => {
   console.log("")

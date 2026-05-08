@@ -1,35 +1,58 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/claude/claude.exec", () => ({
-  invokeClaude: vi.fn(),
+vi.mock("../../engine/claude.runner.js", () => ({
+  runClaudeOneShot: vi.fn(),
 }))
 
-vi.mock("../../engine/claude/stream.display", () => ({
-  createDisplayCallbacks: vi.fn(() => ({ onStdout: vi.fn(), flush: vi.fn() })),
+vi.mock("../../ui/claude-stream-display.js", () => ({
+  createStreamDisplay: vi.fn(() => ({ onChunk: vi.fn(), flush: vi.fn() })),
 }))
 
-vi.mock("../../engine/discovery/agent.registry", () => ({
+vi.mock("../../engine/engine.factory.js", () => ({
+  makeRidgelineEngine: vi.fn(() => ({
+    generate: vi.fn(),
+    register_alias: vi.fn(),
+    unregister_alias: vi.fn(),
+    resolve_alias: vi.fn(),
+    list_aliases: vi.fn(),
+    register_price: vi.fn(),
+    resolve_price: vi.fn(),
+    list_prices: vi.fn(),
+    dispose: vi.fn(async () => {}),
+  })),
+}))
+
+vi.mock("../../engine/discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: () => "(stub retro-refiner system prompt)",
   })),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
   printWarn: vi.fn(),
 }))
 
-import { invokeClaude } from "../../engine/claude/claude.exec"
-import { printError, printWarn, printInfo } from "../../ui/output"
-import { runRetroRefine } from "../retro-refine"
-import { recordInputSource } from "../../stores/state"
+import { runClaudeOneShot } from "../../engine/claude.runner.js"
+import { printError, printWarn, printInfo } from "../../ui/output.js"
+import { runRetroRefine } from "../retro-refine.js"
+import { recordInputSource } from "../../stores/state.js"
 
 const opts = { model: "opus", timeout: 10 }
 const REFINED_HEADING = "# Refined input (from retrospective)"
+
+const claudeResult = (text: string) => ({
+  result: text,
+  success: true,
+  durationMs: 1000,
+  costUsd: 0.1,
+  sessionId: "s1",
+  usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
+})
 
 describe("commands/retro-refine", () => {
   let origCwd: string
@@ -62,14 +85,14 @@ describe("commands/retro-refine", () => {
   it("warns and exits when learnings.md is missing", async () => {
     await runRetroRefine(buildName, opts)
     expect(printWarn).toHaveBeenCalledWith(expect.stringMatching(/learnings\.md is empty or missing/))
-    expect(invokeClaude).not.toHaveBeenCalled()
+    expect(runClaudeOneShot).not.toHaveBeenCalled()
   })
 
   it("warns when learnings.md is present but empty", async () => {
     fs.writeFileSync(path.join(ridgelineDir, "learnings.md"), "   \n\n  ")
     await runRetroRefine(buildName, opts)
     expect(printWarn).toHaveBeenCalledWith(expect.stringMatching(/learnings\.md is empty or missing/))
-    expect(invokeClaude).not.toHaveBeenCalled()
+    expect(runClaudeOneShot).not.toHaveBeenCalled()
   })
 
   it("writes refined-input.md when learnings.md exists and output starts with the expected heading", async () => {
@@ -79,14 +102,7 @@ describe("commands/retro-refine", () => {
     fs.writeFileSync(sourcePath, "Original idea.")
     recordInputSource(buildDir, buildName, sourcePath)
 
-    vi.mocked(invokeClaude).mockResolvedValue({
-      result: `${REFINED_HEADING}\n\nRefined body here.\n`,
-      success: true,
-      durationMs: 1000,
-      costUsd: 0.1,
-      sessionId: "s1",
-      usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
-    })
+    vi.mocked(runClaudeOneShot).mockResolvedValue(claudeResult(`${REFINED_HEADING}\n\nRefined body here.\n`))
 
     await runRetroRefine(buildName, opts)
 
@@ -99,14 +115,7 @@ describe("commands/retro-refine", () => {
 
   it("does not write the file when output is missing the expected heading", async () => {
     fs.writeFileSync(path.join(ridgelineDir, "learnings.md"), "## Build: test\nLearnings.\n")
-    vi.mocked(invokeClaude).mockResolvedValue({
-      result: "Some output without the right heading.",
-      success: true,
-      durationMs: 1000,
-      costUsd: 0.1,
-      sessionId: "s1",
-      usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
-    })
+    vi.mocked(runClaudeOneShot).mockResolvedValue(claudeResult("Some output without the right heading."))
 
     await runRetroRefine(buildName, opts)
 
@@ -118,19 +127,12 @@ describe("commands/retro-refine", () => {
     fs.writeFileSync(path.join(ridgelineDir, "learnings.md"), "## Build: test\nLearnings.\n")
     recordInputSource(buildDir, buildName, "/nonexistent/path/idea.md")
 
-    vi.mocked(invokeClaude).mockResolvedValue({
-      result: `${REFINED_HEADING}\n\nBody.\n`,
-      success: true,
-      durationMs: 1000,
-      costUsd: 0.1,
-      sessionId: "s1",
-      usage: { inputTokens: 0, outputTokens: 0, cacheReadInputTokens: 0, cacheCreationInputTokens: 0 },
-    })
+    vi.mocked(runClaudeOneShot).mockResolvedValue(claudeResult(`${REFINED_HEADING}\n\nBody.\n`))
 
     await runRetroRefine(buildName, opts)
 
     expect(fs.existsSync(path.join(buildDir, "refined-input.md"))).toBe(true)
-    const callArgs = vi.mocked(invokeClaude).mock.calls[0][0]
-    expect(callArgs.userPrompt).toContain("could not be read")
+    const callArgs = vi.mocked(runClaudeOneShot).mock.calls[0][0]
+    expect(callArgs.prompt).toContain("could not be read")
   })
 })

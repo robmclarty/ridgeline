@@ -1,7 +1,7 @@
 import { PassThrough, Writable } from "node:stream"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { runPhaseApproval } from "../phase-prompt"
-import { stripAnsi } from "../color"
+import { requestPhaseApproval } from "../phase-prompt.js"
+import { stripAnsi } from "../color.js"
 
 const captureWritable = (): { stream: Writable; chunks: string[] } => {
   const chunks: string[] = []
@@ -14,7 +14,7 @@ const captureWritable = (): { stream: Writable; chunks: string[] } => {
   return { stream, chunks }
 }
 
-describe("runPhaseApproval", () => {
+describe("requestPhaseApproval", () => {
   let originalNoColor: string | undefined
 
   beforeEach(() => {
@@ -38,7 +38,7 @@ describe("runPhaseApproval", () => {
     const { stream } = captureWritable()
     const input = new PassThrough()
     setTimeout(() => input.write("\n"), 0)
-    const decision = await runPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
+    const decision = await requestPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
     expect(decision).toBe("continue")
   })
 
@@ -46,7 +46,7 @@ describe("runPhaseApproval", () => {
     const { stream } = captureWritable()
     const input = new PassThrough()
     setTimeout(() => input.write("Y\n"), 0)
-    const decision = await runPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
+    const decision = await requestPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
     expect(decision).toBe("continue")
   })
 
@@ -54,7 +54,7 @@ describe("runPhaseApproval", () => {
     const { stream } = captureWritable()
     const input = new PassThrough()
     setTimeout(() => input.write("n\n"), 0)
-    const decision = await runPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
+    const decision = await requestPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
     expect(decision).toBe("stop")
   })
 
@@ -62,7 +62,7 @@ describe("runPhaseApproval", () => {
     const { stream } = captureWritable()
     const input = new PassThrough()
     setTimeout(() => input.write("q\n"), 0)
-    const decision = await runPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
+    const decision = await requestPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
     expect(decision).toBe("stop")
   })
 
@@ -70,7 +70,7 @@ describe("runPhaseApproval", () => {
     const { stream, chunks } = captureWritable()
     const input = new PassThrough()
     const before = Date.now()
-    const decision = await runPhaseApproval({ ...baseCtx, isTTY: false, stream, input })
+    const decision = await requestPhaseApproval({ ...baseCtx, isTTY: false, stream, input })
     const elapsed = Date.now() - before
     expect(decision).toBe("continue")
     expect(elapsed).toBeLessThan(200)
@@ -80,7 +80,7 @@ describe("runPhaseApproval", () => {
   it("respects nonTTYDecision='stop' for non-TTY environments", async () => {
     const { stream, chunks } = captureWritable()
     const input = new PassThrough()
-    const decision = await runPhaseApproval({
+    const decision = await requestPhaseApproval({
       ...baseCtx,
       isTTY: false,
       stream,
@@ -98,7 +98,7 @@ describe("runPhaseApproval", () => {
     const { stream, chunks } = captureWritable()
     const input = new PassThrough()
     setTimeout(() => input.write("\n"), 0)
-    await runPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
+    await requestPhaseApproval({ ...baseCtx, isTTY: true, stream, input })
     const text = stripAnsi(chunks.join(""))
     expect(text).toContain("01-scaffold")
     expect(text).toContain("02-api")
@@ -109,7 +109,7 @@ describe("runPhaseApproval", () => {
     const { stream, chunks } = captureWritable()
     const input = new PassThrough()
     setTimeout(() => input.write("\n"), 0)
-    await runPhaseApproval({
+    await requestPhaseApproval({
       ...baseCtx,
       completedIndex: 3,
       nextPhaseId: "end",

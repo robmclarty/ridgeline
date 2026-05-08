@@ -1,0 +1,23 @@
+{
+  "args": {
+    "constraintsMd": "# Constraints\n\n- TypeScript strict.\n- ESM only.\n",
+    "tasteMd": "# Taste\n\n- Boolean prefixes is/has/should.\n",
+    "extraContext": "Avoid emoji in CLI output.",
+    "projectDesignMd": null,
+    "featureDesignMd": "# Feature Design\n\nNo visual surface.\n",
+    "assetCatalogPath": "/tmp/build/asset-catalog.json",
+    "learningsMd": "Lesson: prefer typed errors.",
+    "handoffMd": "## Phase 1\n\nDone.\n",
+    "phaseMd": "# Phase 2: Build atoms\n\n## Goal\n\nDo the thing.\n\n## Acceptance Criteria\n\n1. Atoms exist.\n",
+    "checkCommand": "npm run check",
+    "handoffTargetPath": "/tmp/build/handoff.md",
+    "discoveriesSection": "Path: /tmp/build/discoveries.jsonl\n\nLog is currently empty.",
+    "feedbackMd": null,
+    "extras": {
+      "continuationPreamble": null,
+      "budgetInstruction": "Soft target: ~50,000 output tokens.\nHard limit: ~143,531 output tokens.",
+      "progressFilePath": "/tmp/build/phases/02-atoms.builder-progress.md"
+    }
+  },
+  "modelCallInput": "## constraints.md\n\n<!-- role: data -->\n# Constraints\n\n- TypeScript strict.\n- ESM only.\n\n\n## taste.md\n\n<!-- role: data -->\n# Taste\n\n- Boolean prefixes is/has/should.\n\n\n## Additional Context\n\n<!-- role: data -->\nAvoid emoji in CLI output.\n\n## Feature Design\n\n<!-- role: data -->\n# Feature Design\n\nNo visual surface.\n\n\n## Available Assets\n\nRead the asset catalog at /tmp/build/asset-catalog.json to understand what visual assets are available and how to use them. Do NOT attempt to interpret image files directly. The catalog contains visual descriptions, dimensions, animation metadata, and usage hints for every asset.\n\nKey rules for using assets:\n- Load packed atlases from ./assets/packed/ using their JSON manifests\n- Use the spritesheet JSON frame data for animations, never hardcode pixel offsets\n- Respect the suggested_anchor for positioning (bottom-center for characters, top-left for tiles and backgrounds)\n- Respect the suggested_z_layer for render ordering\n- Use nearest-neighbor scaling for pixel art (CSS: image-rendering: pixelated)\n- Layout assets marked is_reference_only are mockups, not in-game graphics.\n  Read their layout_regions to understand spatial arrangement and build the\n  equivalent in code using the actual UI assets.\n- Tile assets marked is_tileable can be repeated to fill areas\n- Background assets go behind everything, at z_layer \"background\"\n- For React: use <img> or <canvas> with the atlas JSON data\n- For PixiJS: use PIXI.Spritesheet with the packed JSON directly\n- The catalog may contain warnings about palette mismatches or other suggestions.\n  These are informational only. Trust the user's asset files as provided.\n\n## Learnings from Previous Builds\n\n<!-- role: data -->\nLesson: prefer typed errors.\n\n## handoff.md\n\n<!-- role: data -->\n## Phase 1\n\nDone.\n\n\n## Phase Spec\n\n<!-- role: data -->\n# Phase 2: Build atoms\n\n## Goal\n\nDo the thing.\n\n## Acceptance Criteria\n\n1. Atoms exist.\n\n\n## Check Command\n\nRun this command after making changes to verify correctness:\n\n```\nnpm run check\n```\n\n## Handoff File\n\nAppend your handoff notes to: /tmp/build/handoff.md\n\n## Cross-Phase Discoveries\n\nPath: /tmp/build/discoveries.jsonl\n\nLog is currently empty.\n\n## Builder Budget\n\nSoft target: ~50,000 output tokens.\nHard limit: ~143,531 output tokens.\n\n## Builder Progress File\n\nAppend continuation entries to: /tmp/build/phases/02-atoms.builder-progress.md"
+}

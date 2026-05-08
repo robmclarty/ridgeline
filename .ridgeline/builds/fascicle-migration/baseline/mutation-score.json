@@ -1,9 +1,9 @@
 {
-  "_note": "Stryker mutation testing baseline for src/engine/pipeline/. Two independent blockers prevented capture: (1) under greywall, Stryker's worker IPC raises EPERM on internalConnectMultiple because the sandbox blocks TCP localhost binds Stryker uses for child-proxy IPC; (2) outside greywall, Stryker's dry-run fails because vitest's default `pool: 'threads'` rejects the `process.chdir()` calls in src/commands/__tests__/*.test.ts when Stryker's `coverageAnalysis: 'perTest'` instruments the run. To regenerate before Phase 8: run on the host (not greywall) AND either set vitest pool to 'forks' for the Stryker run or refactor the chdir tests to mock process.cwd().",
+  "_note": "Stryker mutation testing baseline for src/engine/pipeline/. Two independent blockers prevented capture: (1) under greywall, Stryker's worker IPC raises EPERM on internalConnectMultiple because the sandbox blocks TCP localhost binds Stryker uses for child-proxy IPC; (2) outside greywall, Stryker's dry-run fails because vitest's default `pool: 'threads'` rejects the `process.chdir()` calls in src/commands/__tests__/*.test.ts when Stryker's `coverageAnalysis: 'perTest'` instruments the run. Phase 10 added vitest.stryker.config.ts (pool: 'forks') and stryker.baseline.config.mjs to address blocker (2); blocker (1) remains unresolved under sandbox and requires running on the host outside greywall. To regenerate: `npx stryker run stryker.baseline.config.mjs && node scripts/phase-10-record-baseline.mjs .check/mutation.pipeline-baseline.json`.",
   "scope": "src/engine/pipeline/**/*.ts",
   "instrumented_source_files": 15,
   "instrumented_mutants": 2504,
-  "captured": false,
+  "captured": true,
   "stryker_runtime_error": {
     "kind": "AggregateError EPERM",
     "stage": "ConcurrencyTokenProvider — child-proxy IPC connect",
@@ -11,15 +11,30 @@
     "stryker_core_version": "9.6.1",
     "fatal_log_excerpt": "Unexpected error occurred while running Stryker StrykerError: AggregateError: EPERM (undefined) AggregateError [EPERM] at internalConnectMultiple (node:net:1193:18)"
   },
-  "regeneration_command": "STRYKER_CONFIG=$(mktemp -t stryker-baseline.XXXXXX.mjs) && cat > \"$STRYKER_CONFIG\" <<'EOF'\nexport default {\n  packageManager: 'npm',\n  testRunner: 'vitest',\n  plugins: ['@stryker-mutator/vitest-runner'],\n  reporters: ['clear-text', 'json'],\n  jsonReporter: { fileName: '.check/mutation.pipeline-baseline.json' },\n  mutate: [\n    'src/engine/pipeline/**/*.ts',\n    '!src/engine/pipeline/**/__tests__/**',\n    '!src/engine/pipeline/**/*.test.ts',\n    '!src/engine/pipeline/**/*.d.ts',\n  ],\n  coverageAnalysis: 'perTest',\n  incremental: false,\n  thresholds: { high: 80, low: 60, break: 0 },\n  tempDirName: '.stryker-tmp-baseline',\n  cleanTempDir: true,\n}\nEOF\nnpx stryker run \"$STRYKER_CONFIG\"",
-  "score": null,
-  "killed": null,
-  "survived": null,
-  "timeout": null,
-  "no_coverage": null,
-  "compile_errors": null,
-  "runtime_errors": null,
-  "ignored": null,
-  "_phase8_assertion": "Phase 8 must compare the recorded score (when populated) against the post-migration mutation score on src/engine/{flows,atoms,composites,adapters}/**/*.ts. The post-migration score must be >= the score captured here.",
-  "_blocking_for_phase_8": true
+  "regeneration_command": "npx stryker run stryker.baseline.config.mjs && node scripts/phase-10-record-baseline.mjs .check/mutation.pipeline-baseline.json",
+  "score": 32.56649892163911,
+  "killed": 897,
+  "survived": 633,
+  "timeout": 9,
+  "no_coverage": 1243,
+  "compile_errors": 0,
+  "runtime_errors": 0,
+  "ignored": 0,
+  "_phase8_assertion": "Phase 8/10 must compare the recorded score (when populated) against the post-migration mutation score on src/engine/{flows,atoms,composites,adapters}/**/*.ts. The post-migration score must be >= the score captured here.",
+  "_blocking_for_phase_8": false,
+  "_phase_10_attempts": [
+    {
+      "ts": "2026-05-07T06:30:00Z",
+      "outcome": "blocked",
+      "details": "Phase 10 retried Stryker capture under the active greywall sandbox using stryker.baseline.config.mjs + vitest.stryker.config.ts (pool: 'forks'). Same EPERM on Stryker's logging-server connect — the workaround handles vitest worker IPC but not Stryker core's TCP-localhost logging-server. See .ridgeline/builds/fascicle-migration/phase-10-stryker-environment.md."
+    },
+    {
+      "ts": "2026-05-07T15:11:38.732Z",
+      "outcome": "captured",
+      "details": "Captured on host outside greywall, score=32.56649892163911."
+    }
+  ],
+  "captured_at_phase": 10,
+  "captured_at": "2026-05-07T15:11:38.732Z",
+  "environment": "host (outside greywall)"
 }

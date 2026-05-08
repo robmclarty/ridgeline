@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { detectFlavourFlag, flavourRemovedMessage, enforceFlavourRemoved } from "../flavour-removed"
+import { detectFlavourFlag, flavourRemovedMessage, enforceFlavourRemoved } from "../flavour-removed.js"
 
 const PIPELINE_COMMANDS = [
   "shape",

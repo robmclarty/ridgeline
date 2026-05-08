@@ -1,7 +1,7 @@
-import { renderCss } from "./css"
-import { renderClientScript } from "./client"
-import { faviconDataUri } from "./favicon"
-import type { DashboardSnapshot } from "./snapshot"
+import { renderCss } from "./css.js"
+import { renderClientScript } from "./client.js"
+import { faviconDataUri } from "./favicon.js"
+import type { DashboardSnapshot } from "./snapshot.js"
 
 export interface RenderHtmlOptions {
   buildName: string | null

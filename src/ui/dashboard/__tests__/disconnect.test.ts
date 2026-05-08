@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest"
-import { renderClientScript } from "../client"
-import { renderCss } from "../css"
-import { renderHtml } from "../html"
-import { buildSnapshot } from "../snapshot"
-import type { BuildState, BudgetState } from "../../../types"
+import { renderClientScript } from "../client.js"
+import { renderCss } from "../css.js"
+import { renderHtml } from "../html.js"
+import { buildSnapshot } from "../snapshot.js"
+import type { BuildState, BudgetState } from "../../../types.js"
 
 const STATE: BuildState = {
   buildName: "demo",

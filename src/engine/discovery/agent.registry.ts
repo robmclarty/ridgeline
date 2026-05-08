@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { parseFrontmatter, discoverAgentsInDir, buildAgentsFlag, DiscoveredAgent } from "./agent.scan"
+import { parseFrontmatter, discoverAgentsInDir, buildAgentsFlag, DiscoveredAgent } from "./agent.scan.js"
 
 export type SpecialistDef = {
   perspective: string
@@ -32,6 +32,7 @@ type AgentRegistry = {
 
 /** Resolve the built-in agents/ directory across dist and src layouts. */
 const resolveAgentsDir = (): string | null => {
+  const __dirname = path.dirname(new URL(import.meta.url).pathname)
   const candidates = [
     path.join(__dirname, "..", "agents"),
     path.join(__dirname, "..", "..", "agents"),

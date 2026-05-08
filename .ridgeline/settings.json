@@ -1,10 +1,13 @@
 {
   "model": "opus",
   "specialistTimeoutSeconds": 900,
+  "timeoutMinutes": "unlimited",
   "planner": {
-    "phaseBudgetLimit": 25,
-    "phaseTokenLimit": 120000,
+    "phaseBudgetLimit": "unlimited",
     "specialistCount": 3
+  },
+  "build": {
+    "requirePhaseApproval": false
   },
   "sandbox": {
     "mode": "semi-locked"

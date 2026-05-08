@@ -1,5 +1,5 @@
 import * as path from "node:path"
-import { ClaudeResult } from "../types"
+import { ClaudeResult } from "../types.js"
 
 export const formatDuration = (ms: number): string => {
   const seconds = Math.round(ms / 1000)

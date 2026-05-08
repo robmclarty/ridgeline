@@ -1,25 +1,25 @@
-export { loadBudget, saveBudget, recordCost, getTotalCost } from './budget'
+export { loadBudget, saveBudget, recordCost, getTotalCost } from './budget.js'
 export {
   parseVerdict,
   formatIssue,
   generateFeedback,
-} from './feedback.verdict'
+} from './feedback.verdict.js'
 export {
   feedbackPath,
   archiveFeedbackPath,
   readFeedback,
   writeFeedback,
   archiveFeedback,
-} from './feedback.io'
-export { readHandoff, ensureHandoffExists } from './handoff'
-export { resolveFile, parseCheckCommand } from './inputs'
+} from './feedback.io.js'
+export { readHandoff, ensureHandoffExists } from './handoff.js'
+export { resolveFile, parseCheckCommand } from './inputs.js'
 export {
   PHASE_FILENAME_PATTERN,
   isPhaseFile,
   parsePhaseFilename,
   parsePhaseContent,
   scanPhases,
-} from './phases'
+} from './phases.js'
 export {
   loadState,
   saveState,
@@ -27,7 +27,7 @@ export {
   updatePhaseStatus,
   resetRetries,
   getNextIncompletePhase,
-} from './state'
+} from './state.js'
 export {
   checkpointTagName,
   completionTagName,
@@ -35,5 +35,5 @@ export {
   createCompletionTag,
   verifyCompletionTag,
   cleanupBuildTags,
-} from './tags'
-export { logTrajectory, readTrajectory } from './trajectory'
+} from './tags.js'
+export { logTrajectory, readTrajectory } from './trajectory.js'

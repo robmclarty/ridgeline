@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events"
 import { Writable } from "node:stream"
 import { describe, expect, it, vi } from "vitest"
-import { installGracefulStopListener } from "../graceful-stop"
+import { installGracefulStopListener } from "../graceful-stop.js"
 
 const captureWritable = (): { stream: Writable; chunks: string[] } => {
   const chunks: string[] = []

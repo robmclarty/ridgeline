@@ -1,0 +1,28 @@
+{"timestamp":"2026-05-08T01:44:16.656Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
+{"timestamp":"2026-05-08T01:44:16.663Z","level":"info","phase":null,"message":"Starting build: helloworld (1 phases)\n"}
+{"timestamp":"2026-05-08T01:44:16.743Z","level":"info","phase":"01-hello-module","message":"Phase 1/1: 01-hello-module"}
+{"timestamp":"2026-05-08T01:44:16.880Z","level":"info","phase":"01-hello-module","message":"Building..."}
+{"timestamp":"2026-05-08T01:45:11.808Z","level":"info","phase":"01-hello-module","message":"Reviewing..."}
+{"timestamp":"2026-05-08T01:46:10.274Z","level":"info","phase":"01-hello-module","message":"PASSED (113s)"}
+{"timestamp":"2026-05-08T01:46:10.382Z","level":"info","phase":null,"message":"Running retrospective for build 'helloworld'..."}
+{"timestamp":"2026-05-08T01:46:10.383Z","level":"error","phase":null,"message":"Retrospective failed: provider 'anthropic' is not configured on this engine"}
+{"timestamp":"2026-05-08T01:46:10.384Z","level":"info","phase":null,"message":"── retrospective (auto) ──"}
+{"timestamp":"2026-05-08T01:46:10.384Z","level":"info","phase":null,"message":"Running retrospective for build 'helloworld'..."}
+{"timestamp":"2026-05-08T01:46:10.384Z","level":"error","phase":null,"message":"Retrospective failed: provider 'anthropic' is not configured on this engine"}
+{"timestamp":"2026-05-08T01:46:10.385Z","level":"info","phase":null,"message":"── retro-refine (auto) ──"}
+{"timestamp":"2026-05-08T01:46:10.385Z","level":"warn","phase":null,"message":"learnings.md is empty or missing under /Users/robmclarty/Projects/ridgeline/code/ridgeline/examples/helloworld/.ridgeline. Run 'ridgeline retrospective helloworld' first to populate it."}
+{"timestamp":"2026-05-08T01:46:10.385Z","level":"info","phase":null,"message":"Auto run complete for build \"helloworld\"."}
+{"timestamp":"2026-05-08T02:18:36.932Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
+{"timestamp":"2026-05-08T02:18:36.934Z","level":"info","phase":null,"message":"Starting build: helloworld (1 phases)\n"}
+{"timestamp":"2026-05-08T02:18:37.027Z","level":"info","phase":"01-hello-module","message":"Phase 1/1: 01-hello-module"}
+{"timestamp":"2026-05-08T02:18:37.173Z","level":"info","phase":"01-hello-module","message":"Building..."}
+{"timestamp":"2026-05-08T02:19:35.486Z","level":"info","phase":"01-hello-module","message":"Reviewing..."}
+{"timestamp":"2026-05-08T02:20:25.460Z","level":"info","phase":"01-hello-module","message":"PASSED (108s)"}
+{"timestamp":"2026-05-08T02:20:25.583Z","level":"info","phase":null,"message":"Running retrospective for build 'helloworld'..."}
+{"timestamp":"2026-05-08T02:20:25.587Z","level":"error","phase":null,"message":"Retrospective failed: spawn greywall ENOENT"}
+{"timestamp":"2026-05-08T02:20:25.588Z","level":"info","phase":null,"message":"── retrospective (auto) ──"}
+{"timestamp":"2026-05-08T02:20:25.588Z","level":"info","phase":null,"message":"Running retrospective for build 'helloworld'..."}
+{"timestamp":"2026-05-08T02:20:25.589Z","level":"error","phase":null,"message":"Retrospective failed: spawn greywall ENOENT"}
+{"timestamp":"2026-05-08T02:20:25.589Z","level":"info","phase":null,"message":"── retro-refine (auto) ──"}
+{"timestamp":"2026-05-08T02:20:25.590Z","level":"warn","phase":null,"message":"learnings.md is empty or missing under /Users/robmclarty/Projects/ridgeline/code/ridgeline/examples/helloworld/.ridgeline. Run 'ridgeline retrospective helloworld' first to populate it."}
+{"timestamp":"2026-05-08T02:20:25.590Z","level":"info","phase":null,"message":"Auto run complete for build \"helloworld\"."}

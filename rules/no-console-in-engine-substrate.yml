@@ -6,7 +6,7 @@ id: no-console-in-engine-substrate
 # trajectory.jsonl carries substrate detail. Severity is `hint` while these
 # directories are empty; Phase 4 lifts to `error` once atoms/ has content.
 message: No `console.*` or `process.stdout/stderr.write(...)` in src/engine/{flows,atoms,composites,adapters}/. Route diagnostics through ctx.trajectory.emit(...).
-severity: hint
+severity: error
 language: typescript
 files:
   - "src/engine/atoms/**/*.ts"

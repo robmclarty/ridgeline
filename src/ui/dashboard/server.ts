@@ -1,14 +1,14 @@
 import * as http from "node:http"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { loadBudget } from "../../stores/budget"
-import { loadState } from "../../stores/state"
-import { readTrajectory } from "../../stores/trajectory"
-import type { BudgetState, BuildState, TrajectoryEntry } from "../../types"
-import { renderHtml } from "./html"
-import { buildSnapshot, DashboardSnapshot } from "./snapshot"
-import { createEventBuffer, EventName } from "./events"
-import { watchAppend, watchJson } from "./watcher"
+import { loadBudget } from "../../stores/budget.js"
+import { loadState } from "../../stores/state.js"
+import { readTrajectory } from "../../stores/trajectory.js"
+import type { BudgetState, BuildState, TrajectoryEntry } from "../../types.js"
+import { renderHtml } from "./html.js"
+import { buildSnapshot, DashboardSnapshot } from "./snapshot.js"
+import { createEventBuffer, EventName } from "./events.js"
+import { watchAppend, watchJson } from "./watcher.js"
 
 export interface StartDashboardOptions {
   buildName: string | null

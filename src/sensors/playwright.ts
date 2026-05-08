@@ -1,14 +1,17 @@
 import * as fs from "node:fs"
 import * as http from "node:http"
 import * as path from "node:path"
-import type { SensorAdapter, SensorFinding, SensorInput } from "./index"
+import { createRequire } from "node:module"
+import type { SensorAdapter, SensorFinding, SensorInput } from "./index.js"
+
+const nodeRequireForPlaywright = createRequire(import.meta.url)
 
 const PLAYWRIGHT_INSTALL_HINT =
   "npm install --save-dev playwright && npx playwright install chromium"
 
 const isPlaywrightResolvable = (): boolean => {
   try {
-    require.resolve("playwright")
+    nodeRequireForPlaywright.resolve("playwright")
     return true
   } catch {
     return false
@@ -183,7 +186,7 @@ export const sanitizeViewLabel = (label: string): string => {
 type LoadPlaywright = () => PlaywrightModule
 
 const defaultLoadPlaywright: LoadPlaywright = () =>
-  require("playwright") as PlaywrightModule
+  nodeRequireForPlaywright("playwright") as PlaywrightModule
 
 const unresolvableFinding = (): SensorFinding => ({
   kind: "screenshot",

@@ -1,6 +1,6 @@
-import { log } from "./logger"
-import { appendTranscript } from "./transcript"
-import { error, warning } from "./color"
+import { log } from "./logger.js"
+import { appendTranscript } from "./transcript.js"
+import { error, warning } from "./color.js"
 
 export const printInfo = (msg: string): void => {
   const line = `[ridgeline] ${msg}`

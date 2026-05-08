@@ -17,6 +17,8 @@ export type CreateOptions = {
     isQuiet?: boolean;
     /** Number of specialists for ensemble stages (forwarded to runSpec). */
     specialistCount?: 1 | 2 | 3;
+    /** Pause between phases for explicit user confirmation; forwarded to runBuild. */
+    requirePhaseApproval?: boolean;
 };
 /**
  * Persist the original input path to state.json when the user supplied a

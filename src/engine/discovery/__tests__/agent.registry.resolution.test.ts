@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest"
-import { buildAgentRegistry, clearRegistryCache } from "../agent.registry"
+import { buildAgentRegistry, clearRegistryCache } from "../agent.registry.js"
 
 beforeEach(() => {
   clearRegistryCache()

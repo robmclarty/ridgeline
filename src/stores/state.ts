@@ -1,10 +1,10 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { BuildState, PhaseState, PhaseInfo, PipelineState, PipelineStage } from "../types"
-import { checkpointTagName, completionTagName, verifyCompletionTag, cleanupBuildTags } from "./tags"
-import { readTrajectory } from "./trajectory"
-import { atomicWriteSync } from "../utils/atomic-write"
-import { withFileLock } from "../utils/file-lock"
+import { BuildState, PhaseState, PhaseInfo, PipelineState, PipelineStage } from "../types.js"
+import { checkpointTagName, completionTagName, verifyCompletionTag, cleanupBuildTags } from "./tags.js"
+import { readTrajectory } from "./trajectory.js"
+import { atomicWriteSync } from "../utils/atomic-write.js"
+import { withFileLock } from "../utils/file-lock.js"
 
 const statePath = (buildDir: string): string =>
   path.join(buildDir, "state.json")
@@ -140,8 +140,8 @@ export const updatePhaseStatus = (
  * and drops entries whose phase file no longer exists. Idempotent.
  *
  * Handles cases like sub-phase splits (01 → 01a/01b) performed between runs:
- * without reconciliation, the new files aren't in state.phases and runPhase
- * throws "Phase <id> not found in state".
+ * without reconciliation, the new files aren't in state.phases and the phase
+ * dispatcher throws "Phase <id> not found in state".
  */
 export const reconcilePhases = (
   state: BuildState,

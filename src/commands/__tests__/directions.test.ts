@@ -1,32 +1,32 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../qa-workflow", () => ({
+vi.mock("../qa-workflow.js", () => ({
   runOneShotCall: vi.fn(),
 }))
 
-vi.mock("../../engine/discovery/agent.registry", () => ({
+vi.mock("../../engine/discovery/agent.registry.js", () => ({
   buildAgentRegistry: vi.fn(() => ({
     getCorePrompt: () => "(stub system prompt)",
     getSpecialist: () => ({ overlay: "(stub design-specialist prompt)" }),
   })),
 }))
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   getMatchedShapes: vi.fn(),
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printWarn: vi.fn(),
   printError: vi.fn(),
 }))
 
-import { runOneShotCall } from "../qa-workflow"
-import { getMatchedShapes } from "../../stores/state"
-import { runDirections } from "../directions"
+import { runOneShotCall } from "../qa-workflow.js"
+import { getMatchedShapes } from "../../stores/state.js"
+import { runDirections } from "../directions.js"
 
 const stubAgentRun = (outputDir: string, ids: string[]): void => {
   vi.mocked(runOneShotCall).mockImplementation(async () => {
@@ -104,7 +104,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     stubAgentRun(outputDir, ["01-foo", "02-bar"])
     stubReadlinePick("01-foo")
-    const { runDirections: rerun } = await import("../directions")
+    const { runDirections: rerun } = await import("../directions.js")
     await rerun(buildName, { model: "opus", timeout: 15 })
 
     expect(runOneShotCall).toHaveBeenCalledTimes(1)
@@ -119,7 +119,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     stubAgentRun(outputDir, ["01-a", "02-b", "03-c"])
     stubReadlinePick("02-b")
-    const { runDirections: rerun } = await import("../directions")
+    const { runDirections: rerun } = await import("../directions.js")
     await rerun(buildName, { model: "opus", timeout: 15, count: 3 })
 
     const call = vi.mocked(runOneShotCall).mock.calls[0][0]
@@ -132,7 +132,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     stubAgentRun(outputDir, ["01-foo", "02-bar"])
     stubReadlinePick("none")
-    const { runDirections: rerun } = await import("../directions")
+    const { runDirections: rerun } = await import("../directions.js")
     await rerun(buildName, { model: "opus", timeout: 15 })
 
     expect(fs.existsSync(path.join(outputDir, "picked.txt"))).toBe(false)
@@ -143,7 +143,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     stubAgentRun(outputDir, ["01-foo", "02-bar"])
     stubReadlinePick("99-bogus")
-    const { runDirections: rerun } = await import("../directions")
+    const { runDirections: rerun } = await import("../directions.js")
     await expect(rerun(buildName, { model: "opus", timeout: 15 })).rejects.toThrow(
       /does not match any generated direction/,
     )
@@ -194,7 +194,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     const ids = ["01-tactile", "02-brutalist", "03-gemcut"]
     stubAutoSpecialistsAndPicker(outputDir, ids, `PICKED: ${ids[1]}`)
-    const { runDirectionsAuto } = await import("../directions")
+    const { runDirectionsAuto } = await import("../directions.js")
     await runDirectionsAuto(buildName, {
       model: "opus",
       timeout: 15,
@@ -212,7 +212,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     stubAutoSpecialistsAndPicker(outputDir, ["01-a", "02-b"], "PICKED: ambiguous")
     stubReadlinePick("01-a")
-    const { runDirectionsAuto } = await import("../directions")
+    const { runDirectionsAuto } = await import("../directions.js")
     await runDirectionsAuto(buildName, {
       model: "opus",
       timeout: 15,
@@ -228,7 +228,7 @@ describe("commands/directions", () => {
     const outputDir = path.join(buildDir, "directions")
     stubAutoSpecialistsAndPicker(outputDir, ["01-a", "02-b"], null)
     stubReadlinePick("02-b")
-    const { runDirectionsAuto } = await import("../directions")
+    const { runDirectionsAuto } = await import("../directions.js")
     await runDirectionsAuto(buildName, {
       model: "opus",
       timeout: 15,
@@ -242,7 +242,7 @@ describe("commands/directions", () => {
 
   it("runDirectionsAuto skips entirely when shape is non-visual", async () => {
     vi.mocked(getMatchedShapes).mockReturnValue(["backend-api"])
-    const { runDirectionsAuto } = await import("../directions")
+    const { runDirectionsAuto } = await import("../directions.js")
     await runDirectionsAuto(buildName, { model: "opus", timeout: 15, count: 3 })
     expect(runOneShotCall).not.toHaveBeenCalled()
   })

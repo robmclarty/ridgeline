@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { printInfo, printError, printPhase } from "../output"
+import { printInfo, printError, printPhase } from "../output.js"
 
 describe("output", () => {
   describe("printInfo", () => {

@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { stripAnsi } from "./color"
+import { stripAnsi } from "./color.js"
 
 let transcriptFilePath: string | null = null
 let isEnabled = true

@@ -1,11 +1,11 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { CatalogOptions } from "../catalog/types"
-import { resolveAssetDir } from "../catalog/resolve-asset-dir"
-import { buildCatalog, CatalogResult } from "../catalog/build-catalog"
-import { describeAssets } from "../catalog/vision-describe"
-import { packAtlases } from "../catalog/pack-sprites"
-import { printInfo } from "../ui/output"
+import { CatalogOptions } from "../catalog/types.js"
+import { resolveAssetDir } from "../catalog/resolve-asset-dir.js"
+import { buildCatalog, CatalogResult } from "../catalog/build-catalog.js"
+import { describeAssets } from "../catalog/vision-describe.js"
+import { packAtlases } from "../catalog/pack-sprites.js"
+import { printInfo } from "../ui/output.js"
 
 /** Count items by a string field and format as an indented list. */
 export const countByField = (

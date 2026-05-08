@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { atomicWriteSync } from "../atomic-write"
-import { makeTempDir } from "../../../test/setup"
+import { atomicWriteSync } from "../atomic-write.js"
+import { makeTempDir } from "../../../test/setup.js"
 
 describe("atomicWriteSync", () => {
   let tmpDir: string

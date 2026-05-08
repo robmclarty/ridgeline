@@ -1,11 +1,11 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import * as readline from "node:readline"
-import { printInfo, printWarn } from "../ui/output"
-import { buildAgentRegistry } from "../engine/discovery/agent.registry"
-import { runOneShotCall } from "./qa-workflow"
-import { getMatchedShapes } from "../stores/state"
-import { resolveInputBundle, ResolvedBundle } from "./input"
+import { printInfo, printWarn } from "../ui/output.js"
+import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
+import { runOneShotCall } from "./qa-workflow.js"
+import { getMatchedShapes } from "../stores/state.js"
+import { resolveInputBundle, ResolvedBundle } from "./input.js"
 
 type DirectionsOptions = {
   model: string

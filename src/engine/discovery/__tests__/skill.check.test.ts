@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { parseSkillCompatibility, formatSkillAvailability, checkRecommendedSkills } from "../skill.check"
-import type { SkillAvailability } from "../skill.check"
+import { parseSkillCompatibility, formatSkillAvailability, checkRecommendedSkills } from "../skill.check.js"
+import type { SkillAvailability } from "../skill.check.js"
 
 describe("parseSkillCompatibility", () => {
   it("extracts compatibility from valid frontmatter", () => {

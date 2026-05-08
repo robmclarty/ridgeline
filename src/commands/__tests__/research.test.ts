@@ -1,45 +1,46 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
-import { makeTempDir } from "../../../test/setup"
+import { makeTempDir } from "../../../test/setup.js"
 
-vi.mock("../../engine/pipeline/research.exec", () => ({
-  invokeResearcher: vi.fn(),
+vi.mock("../../engine/researcher.js", () => ({
+  runResearchEnsemble: vi.fn(),
 }))
 
-vi.mock("../../stores/state", () => ({
+vi.mock("../../stores/state.js", () => ({
   advancePipeline: vi.fn(),
 }))
 
-vi.mock("../../stores/trajectory", () => ({
+vi.mock("../../stores/trajectory.js", () => ({
   logTrajectory: vi.fn(),
 }))
 
-vi.mock("../../stores/budget", () => ({
+vi.mock("../../stores/budget.js", () => ({
   recordCost: vi.fn(),
 }))
 
-vi.mock("../../stores/settings", () => ({
+vi.mock("../../stores/settings.js", () => ({
   resolveResearchAllowlist: vi.fn(() => []),
+  resolveSandboxMode: vi.fn(() => "semi-locked"),
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS: 600,
   DEFAULT_SPECIALIST_COUNT: 3,
 }))
 
-vi.mock("../../ui/output", () => ({
+vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
   printError: vi.fn(),
 }))
 
-vi.mock("../refine", () => ({
+vi.mock("../refine.js", () => ({
   runRefine: vi.fn(),
 }))
 
-import { invokeResearcher } from "../../engine/pipeline/research.exec"
-import { advancePipeline } from "../../stores/state"
-import { logTrajectory } from "../../stores/trajectory"
-import { recordCost } from "../../stores/budget"
-import { printError } from "../../ui/output"
-import { runResearch } from "../research"
+import { runResearchEnsemble } from "../../engine/researcher.js"
+import { advancePipeline } from "../../stores/state.js"
+import { logTrajectory } from "../../stores/trajectory.js"
+import { recordCost } from "../../stores/budget.js"
+import { printError } from "../../ui/output.js"
+import { runResearch } from "../research.js"
 
 const makeResult = () => ({
   success: true,
@@ -80,7 +81,7 @@ describe("commands/research", () => {
     buildDir = path.join(tmpDir, ".ridgeline", "builds", buildName)
     fs.mkdirSync(buildDir, { recursive: true })
 
-    vi.mocked(invokeResearcher).mockResolvedValue(makeEnsembleResult())
+    vi.mocked(runResearchEnsemble).mockResolvedValue(makeEnsembleResult())
   })
 
   afterEach(() => {
@@ -112,14 +113,14 @@ describe("commands/research", () => {
     expect(printError).toHaveBeenCalledWith(expect.stringContaining("constraints.md not found"))
   })
 
-  it("calls invokeResearcher with correct config", async () => {
+  it("calls runResearchEnsemble with correct config", async () => {
     fs.writeFileSync(path.join(buildDir, "spec.md"), "spec content")
     fs.writeFileSync(path.join(buildDir, "constraints.md"), "constraints")
 
     await runResearch(buildName, defaultOpts)
 
-    expect(invokeResearcher).toHaveBeenCalledTimes(1)
-    const [specMd, constraintsMd] = vi.mocked(invokeResearcher).mock.calls[0]
+    expect(runResearchEnsemble).toHaveBeenCalledTimes(1)
+    const [specMd, constraintsMd] = vi.mocked(runResearchEnsemble).mock.calls[0]
     expect(specMd).toBe("spec content")
     expect(constraintsMd).toBe("constraints")
   })
