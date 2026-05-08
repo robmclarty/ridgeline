@@ -15,3 +15,4 @@
 {"timestamp":"2026-05-08T02:18:36.932Z","level":"info","phase":null,"message":"Sandbox: greywall (semi-locked)"}
 {"timestamp":"2026-05-08T02:18:36.934Z","level":"info","phase":null,"message":"Starting build: helloworld (1 phases)\n"}
 {"timestamp":"2026-05-08T02:18:37.027Z","level":"info","phase":"01-hello-module","message":"Phase 1/1: 01-hello-module"}
+{"timestamp":"2026-05-08T02:18:37.173Z","level":"info","phase":"01-hello-module","message":"Building..."}

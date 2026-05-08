@@ -48,3 +48,24 @@ All acceptance criteria verified. No git here (helloworld is a self-contained ex
 [ridgeline] Starting build: helloworld (1 phases)
 
 [ridgeline] ── Phase 1/1: 01-hello-module ──
+[ridgeline] [01-hello-module] Building...
+[01-hello-module] Starting: hello.js module + package.json main wiring
+[Bash] ls -la 
+[Read] .ridgeline/builds/helloworld/handoff.md
+[Read] package.json
+Handoff is empty (or just exists). Now let me create `hello.js` and update `package.json`.
+[Write] hello.js
+[Write] package.json
+Now run the binding check command and verify all acceptance criteria.
+[Bash] node -e "const { greet } = require('./hello'); if (greet('Alice') !== 'Hello, Alice!') process.exit(1); if (greet() !== 'Hello, world!') process.exit(1); if (greet('') !== 'Hello, world!') process.ex…
+Check command passes. Let me verify the remaining acceptance criteria explicitly (greet(undefined), no stderr, no output on require, exit status, exact bytes including newline).
+[Bash] node -e "
+[Bash] node -e "require('./hello')" >/tmp/req_out 2>/tmp/req_err; echo "stdout_bytes=$(wc -c </tmp/req_out)"; echo "stderr_bytes=$(wc -c </tmp/req_err)"
+[Bash] node hello.js >/tmp/run_out 2>/tmp/run_err; status=$?; echo "exit=$status"; echo "stderr_bytes=$(wc -c </tmp/run_err)"; xxd /tmp/run_out
+All 15 acceptance criteria pass. Direct-run output is exactly `48 65 6c 6c 6f 2c 20 77 6f 72 6c 64 21 0a` (14 bytes, "Hello, world!\n"), exit 0, no stderr. Now write the handoff.
+[Write] .ridgeline/builds/helloworld/handoff.md
+[01-hello-module] DONE
+
+`hello.js` (14 lines) and `package.json` `main` field wired. Binding check command exits 0; all 15 acceptance criteria verified.
+
+READY_FOR_REVIEW
