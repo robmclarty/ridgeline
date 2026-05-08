@@ -1,5 +1,42 @@
 # Changelog
 
+## v0.12.3 — 2026-05-07
+
+### Changed
+
+- **Default `--model` flipped from `cli-opus` to `opus`.** The prior default
+  was a fascicle-internal routing alias that the Claude CLI doesn't accept,
+  so the spec stage failed with "model may not exist" on a subscription-only
+  install. `opus` is recognized by both the direct claude-process path and
+  fascicle's resolver. Help text and `docs/help.md` updated to match.
+- **Replaced `free-tex-packer-core` with an in-house packer** built on
+  `sharp` (already a dependency) and `maxrects-packer`. The old dep was at
+  its last published version and pulled in `jimp@0.2.x` → `request`,
+  `mkdirp@0.5`, `jpeg-js`, `minimist`, `form-data`, `tough-cookie`, `qs` —
+  accounting for all 10 npm audit findings (5 critical, 2 high, 3 moderate).
+  `npm audit` now reports 0 vulnerabilities. Same `packAtlases` API, same
+  PixiJS-compatible JSON + PNG output.
+
+### Fixed
+
+- **Retrospective and refine phases bypass fascicle's sandbox.** On a
+  subscription-only (no `ANTHROPIC_API_KEY`) install, retrospective was
+  failing with `provider 'anthropic' is not configured` because fascicle's
+  `build_env` wasn't inheriting `process.env` and couldn't locate the
+  `claude`/`greywall` binaries. The engine factory now uses `auth_mode:
+  "oauth"` and registers `anthropic→claude_cli` alias overrides for
+  opus/sonnet/haiku when no API key is present.
+
+### Internal
+
+- Renamed CLI entry `src/main.ts` → `src/cli.ts` and dropped the stale
+  `dist/main.js` artifact. `package.json` `bin` now points at `dist/cli.js`
+  and `isMainModule` matches `/cli.{js,ts}`. Five CLI tests that read the
+  entry source were updated to follow the rename.
+- Refreshed CLI help/options snapshot baselines for the `opus` default.
+- Updated helloworld e2e fixtures: pre-phase pipeline state, builder output
+  for two runs, retrospective output, and final transcript log.
+
 ## v0.12.2 — 2026-05-07
 
 ### Changed
