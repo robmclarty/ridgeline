@@ -69,3 +69,41 @@ All 15 acceptance criteria pass. Direct-run output is exactly `48 65 6c 6c 6f 2c
 `hello.js` (14 lines) and `package.json` `main` field wired. Binding check command exits 0; all 15 acceptance criteria verified.
 
 READY_FOR_REVIEW
+[ridgeline] [01-hello-module] Reviewing...
+[review:01-hello-module] Starting review
+[Bash] ls -la 
+[Read] hello.js
+[Read] package.json
+Files exist. Now let me run the binding check command and verify each acceptance criterion.
+[Bash] node -e "const { greet } = require('./hello'); if (greet('Alice') !== 'Hello, Alice!') process.exit(1); if (greet() !== 'Hello, world!') process.exit(1); if (greet('') !== 'Hello, world!') process.ex…
+[Bash] node -e "
+[Bash] node -e "require('./hello')" >/tmp/req_out 2>/tmp/req_err; echo "stdout_bytes=$(wc -c </tmp/req_out)"; echo "stderr_bytes=$(wc -c </tmp/req_err)"
+[Bash] node hello.js >/tmp/run_out 2>/tmp/run_err; status=$?; echo "exit=$status"; echo "stdout_bytes=$(wc -c </tmp/run_out)"; echo "stderr_bytes=$(wc -c </tmp/run_err)"; echo "stdout_xxd:"; xxd /tmp/run_out
+All checks pass. Walking through each criterion with verified evidence:
+
+- **C1**: `hello.js` exists at `examples/helloworld/hello.js` (project root, 14 lines)
+- **C2**: `typeof require('./hello').greet === 'function'`, `typeof require('./hello') === 'object'` ✓
+- **C3**: `module.exports = { greet }` at `hello.js:10`; destructuring works ✓
+- **C4**: `greet('Alice')` returned `"Hello, Alice!"` ✓
+- **C5**: `greet()` returned `"Hello, world!"` ✓
+- **C6**: `greet(undefined)` returned `"Hello, world!"` ✓
+- **C7**: `greet('')` returned `"Hello, world!"` ✓
+- **C8**: All four invocations completed without throwing and produced no I/O (verified via separate stderr/stdout capture)
+- **C9**: `node -e "require('./hello')"` → stdout=0 bytes, stderr=0 bytes ✓
+- **C10**: `node hello.js` → stdout=14 bytes (`48 65 6c 6c 6f 2c 20 77 6f 72 6c 64 21 0a` = `Hello, world!\n`), stderr=0, exit=0 ✓
+- **C11**: `if (require.main === module) { console.log(greet()); }` at `hello.js:12-14` ✓
+- **C12**: `package.json:4` has `"main": "hello.js"`, resolves to source ✓
+- **C13**: `package.json` has no `dependencies`, no `devDependencies`, no `scripts` ✓
+- **C14**: Source uses `module.exports`/`require` (no `import`/`export`); `package.json` has no `"type": "module"` ✓
+- **C15**: Binding check command exited 0 ✓
+
+Note on `'use strict';` directive: not required by spec but not prohibited by constraints.md or taste.md. File is 14 lines, well under the ~20-line budget. Not a violation.
+[ridgeline] [01-hello-module] PASSED (108s)
+[ridgeline] Running retrospective for build 'helloworld'...
+[ridgeline] ERROR: Retrospective failed: spawn greywall ENOENT
+[ridgeline] ── retrospective (auto) ──
+[ridgeline] Running retrospective for build 'helloworld'...
+[ridgeline] ERROR: Retrospective failed: spawn greywall ENOENT
+[ridgeline] ── retro-refine (auto) ──
+[ridgeline] WARN: learnings.md is empty or missing under /Users/robmclarty/Projects/ridgeline/code/ridgeline/examples/helloworld/.ridgeline. Run 'ridgeline retrospective helloworld' first to populate it.
+[ridgeline] Auto run complete for build "helloworld".
