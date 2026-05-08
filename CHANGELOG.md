@@ -1,5 +1,45 @@
 # Changelog
 
+## v0.12.2 — 2026-05-07
+
+### Changed
+
+- **`detect()` renamed to `detectProject()`; module relocated.**
+  `src/engine/detect/index.ts` is now `src/engine/project-type.ts`, and
+  call sites read as `detectProject(cwd)` — disambiguating it from the
+  unrelated `shapes/detect.ts` (shape-tag matching). All 11 importers,
+  the `.fallowrc.json` `ignoreExports` entry, and
+  `docs/preflight-and-sensors.md` updated; tests moved to
+  `src/engine/__tests__/project-type.test.ts`.
+
+### Fixed
+
+- **Parallel-wave reliability — three independent fixes** from the
+  fascicle-migration dogfood: `--require-phase-approval` now pauses
+  correctly in non-TTY environments (was silently auto-continuing,
+  defeating the flag); a pre-wave environment-provisioning hook
+  (`worktree.provision.ts`) mirrors known package binaries (e.g.
+  agnix's platform binary) from the main worktree into freshly-created
+  phase worktrees so each parallel builder doesn't independently
+  rediscover the postinstall sandbox block; and a shared cross-phase
+  `discoveries.jsonl` log (atomic append-only JSONL, gitignored) lets
+  parallel builders see each other's environment fixes instead of
+  working around the same blocker in isolation.
+
+### Internal
+
+- Dropped orphaned `scripts/phase-build*` helper scripts left over from
+  the pre-fascicle pipeline (commit 9d5d6f9).
+- Landed the actual `feat(engine): anthropic api provider` integration
+  commit (067f75d) — the user-visible behaviour was already documented
+  in v0.12.0; this is the matching code change.
+- Recorded fascicle-migration build retrospective, telemetry, and
+  outcome comparison in `docs/fascicle-migration/`.
+- Added `BACKLOG.md` tracking anthropic-API capability gaps (skills,
+  tool-use, agent discovery still require the `claude_cli` route).
+- Skipped version `v0.12.1` — the tag was already taken by an unrelated
+  commit on a sibling branch.
+
 ## v0.12.0 — 2026-05-06
 
 ### Added
