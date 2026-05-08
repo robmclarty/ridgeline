@@ -5,7 +5,7 @@
     "shape": "complete",
     "spec": "complete",
     "plan": "complete",
-    "build": "running",
+    "build": "complete",
     "design": "skipped",
     "research": "skipped",
     "refine": "skipped"
@@ -13,12 +13,12 @@
   "phases": [
     {
       "id": "01-hello-module",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/helloworld/01-hello-module",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/helloworld/01-hello-module",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 108387,
+      "completedAt": "2026-05-08T02:20:25.459Z",
       "failedAt": null,
       "builderInvocations": [
         {
