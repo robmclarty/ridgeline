@@ -7,7 +7,7 @@ shape.md.
 
 Options:
   --model <name>        Model for specialists and synthesizer (defaults to
-                        settings.json model, or 'opus')
+                        settings.json model, or 'cli-opus')
   --timeout <minutes>   Max duration per turn in minutes (default: "10")
   --max-budget-usd <n>  Halt if cumulative cost exceeds this amount
   --specialists <n>     Number of ensemble specialists (1, 2, or 3). Default: 3

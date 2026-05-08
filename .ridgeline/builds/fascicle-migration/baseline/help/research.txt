@@ -5,7 +5,7 @@ spec and plan)
 
 Options:
   --model <name>        Model for research agents (defaults to settings.json
-                        model, or 'opus')
+                        model, or 'cli-opus')
   --timeout <minutes>   Max duration per agent in minutes (default: "15")
   --max-budget-usd <n>  Halt if cumulative research cost exceeds this amount
   --quick               Run a single random specialist instead of the full

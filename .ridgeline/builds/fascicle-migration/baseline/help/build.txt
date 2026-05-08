@@ -12,7 +12,7 @@ Options:
   --max-retries <n>          Max reviewer retry loops per phase (default: "2")
   --check <command>          Baseline check command (overrides constraints.md)
   --model <name>             Model for builder and reviewer (defaults to
-                             settings.json model, or 'opus')
+                             settings.json model, or 'cli-opus')
   --max-budget-usd <n>       Halt if cumulative cost exceeds this amount
   --constraints <path>       Path to constraints.md
   --taste <path>             Path to taste.md

@@ -4,7 +4,7 @@ Display the plan without executing
 
 Options:
   --model <name>        Model for planner (defaults to settings.json model, or
-                        'opus')
+                        'cli-opus')
   --timeout <minutes>   Max duration for planning (or 'unlimited' for a 24h
                         catchall) (default: "120")
   --constraints <path>  Path to constraints.md

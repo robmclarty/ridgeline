@@ -8,7 +8,7 @@
   },
   {
     "flags": "--model <name>",
-    "description": "Model for shaper agent (defaults to settings.json model, or 'opus')",
+    "description": "Model for shaper agent (defaults to settings.json model, or 'cli-opus')",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

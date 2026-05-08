@@ -106,8 +106,8 @@ describe("settings", () => {
       expect(resolveModel(undefined, tmpDir)).toBe("claude-opus-4-7")
     })
 
-    it("falls back to 'opus' when neither is set", () => {
-      expect(resolveModel(undefined, tmpDir)).toBe("opus")
+    it("falls back to 'cli-opus' when neither is set", () => {
+      expect(resolveModel(undefined, tmpDir)).toBe("cli-opus")
     })
   })
 

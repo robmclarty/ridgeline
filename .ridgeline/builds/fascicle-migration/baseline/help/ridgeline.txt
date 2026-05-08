@@ -8,7 +8,7 @@ Arguments:
 
 Options:
   -V, --version                          output the version number
-  --model <name>                         Model for all stages (defaults to settings.json model, or 'opus')
+  --model <name>                         Model for all stages (defaults to settings.json model, or 'cli-opus')
   --timeout <minutes>                    Max duration per turn in minutes (default: "10")
   --max-budget-usd <n>                   Halt if cumulative cost exceeds this amount
   --max-retries <n>                      Max reviewer retry loops per phase (default: "2")

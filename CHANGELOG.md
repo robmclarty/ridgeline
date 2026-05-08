@@ -2,7 +2,30 @@
 
 ## v0.12.0 — 2026-05-06
 
+### Added
+
+- **Direct Anthropic API provider.** When `ANTHROPIC_API_KEY` is set,
+  the engine factory registers fascicle's `anthropic` provider
+  alongside `claude_cli`. Use `--model sonnet` or
+  `--model anthropic:claude-haiku-4-5` to route a call through the
+  direct API instead of the Claude CLI subprocess. Skills, tools, and
+  agent discovery still require the CLI route — model selection is
+  per-call but capability surface depends on which provider you pick.
+
 ### Breaking — for consumers
+
+- **Default model changed from `opus` to `cli-opus`.** Bare model names
+  (`opus`, `sonnet`, `haiku`, `claude-opus`, `claude-sonnet`,
+  `claude-haiku`) now resolve to fascicle's `anthropic` provider per
+  fascicle's built-in alias table, not to `claude_cli`. The CLI/OAuth
+  route uses the `cli-` prefix (`cli-opus`, `cli-sonnet`,
+  `cli-haiku`). If you previously relied on `--model opus` going
+  through the Claude CLI subscription, switch to `--model cli-opus`,
+  or set `model: "cli-opus"` in `.ridgeline/settings.json`.
+- **`RIDGELINE_ALIASES` removed.** Ridgeline no longer ships its own
+  alias table; resolution is delegated entirely to fascicle's
+  defaults. Model id strings (`claude-opus-4-7`, etc.) are no longer
+  pinned ridgeline-side — they ride with `npm update fascicle`.
 
 - **`engines.node` bumped from `>=20` to `>=24`.** Node 20 is no longer
   supported. Reinstall ridgeline against Node 24 (or newer); the CI matrix

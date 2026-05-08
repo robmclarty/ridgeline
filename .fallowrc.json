@@ -12,7 +12,7 @@
     "src/engine/composites/index.ts",
     "src/engine/adapters/index.ts"
   ],
-  "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast", "@stryker-mutator/vitest-runner", "fascicle", "zod"],
+  "ignoreDependencies": ["colorthief", "axe-core", "wcag-contrast", "@stryker-mutator/vitest-runner", "fascicle", "zod", "@ai-sdk/anthropic", "ai"],
   "ignoreExports": [
     { "file": "src/engine/claude-process.ts", "exports": ["StreamEvent"] },
     { "file": "src/commands/spec.ts", "exports": ["SpecOptions"] },

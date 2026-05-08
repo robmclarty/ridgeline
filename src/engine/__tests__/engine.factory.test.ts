@@ -136,12 +136,51 @@ describe("makeRidgelineEngine", () => {
     expect(cli?.setting_sources).toEqual(settingSources)
   })
 
-  it("does not require ANTHROPIC_API_KEY (no api_key set)", async () => {
+  it("does not require ANTHROPIC_API_KEY for the claude_cli provider", async () => {
+    const original = process.env.ANTHROPIC_API_KEY
+    delete process.env.ANTHROPIC_API_KEY
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "semi-locked" })
+      const cli = lastConfig().providers.claude_cli
+      expect(cli?.api_key).toBeUndefined()
+      expect(cli?.auth_mode).toBe("auto")
+    } finally {
+      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
+      else process.env.ANTHROPIC_API_KEY = original
+    }
+  })
+
+  it("omits the anthropic provider when ANTHROPIC_API_KEY is not set", async () => {
+    const original = process.env.ANTHROPIC_API_KEY
+    delete process.env.ANTHROPIC_API_KEY
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "off" })
+      expect(lastConfig().providers.anthropic).toBeUndefined()
+    } finally {
+      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
+      else process.env.ANTHROPIC_API_KEY = original
+    }
+  })
+
+  it("registers the anthropic provider with the env api_key when ANTHROPIC_API_KEY is set", async () => {
+    const original = process.env.ANTHROPIC_API_KEY
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test-key"
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "off" })
+      expect(lastConfig().providers.anthropic).toEqual({ api_key: "sk-ant-test-key" })
+    } finally {
+      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
+      else process.env.ANTHROPIC_API_KEY = original
+    }
+  })
+
+  it("does not set ridgeline-side aliases (relies on fascicle defaults)", async () => {
     const make = await importFactory()
-    make({ ...baseCfg, sandboxFlag: "semi-locked" })
-    const cli = lastConfig().providers.claude_cli
-    expect(cli?.api_key).toBeUndefined()
-    expect(cli?.auth_mode).toBe("auto")
+    make({ ...baseCfg, sandboxFlag: "off" })
+    expect(lastConfig().aliases).toBeUndefined()
   })
 
   it("named export is `makeRidgelineEngine` (camelCase)", async () => {

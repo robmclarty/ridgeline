@@ -229,7 +229,7 @@ program
 addAutoOrchestratorOptions(addAutoOption(addPreflightOptions(program
   .argument("[build-name]", "Build name (or input path; build name derived from basename)")
   .argument("[input]", "Description text or path to input file/directory")
-  .option("--model <name>", "Model for all stages (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for all stages (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")
@@ -286,7 +286,7 @@ addAutoOrchestratorOptions(addAutoOption(addPreflightOptions(program
 addAutoOption(addPreflightOptions(program
   .command("shape [build-name] [input]")
   .description("Gather project context and produce shape.md")
-  .option("--model <name>", "Model for shaper agent (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for shaper agent (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
     try {
@@ -327,7 +327,7 @@ addAutoOption(program
       "design.md Q&A. Opt-in. Web-visual shapes only. With --auto, dispatches " +
       "N parallel design-specialists then picks one against --inspiration.",
   )
-  .option("--model <name>", "Model for direction-advisor agent (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for direction-advisor agent (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "15")
   .option("--count <n>", "Number of directions to generate. Overrides settings.directions.count")
   .option("--thorough", "Alias for --count 3")
@@ -363,7 +363,7 @@ addAutoOption(program
 addAutoOption(addPreflightOptions(program
   .command("design [build-name]")
   .description("Establish or update visual design system (design.md)")
-  .option("--model <name>", "Model for designer agent (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for designer agent (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
@@ -386,7 +386,7 @@ addAutoOption(addPreflightOptions(program
       "Optionally pass an input: path to a file (convention: idea.md) or raw text " +
       "treated as authoritative source material the synthesizer preserves alongside shape.md.",
   )
-  .option("--model <name>", "Model for specialists and synthesizer (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for specialists and synthesizer (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
@@ -416,7 +416,7 @@ addAutoOption(addPreflightOptions(program
       "`## Inferred / Gaps` section per file so you can edit them by hand " +
       "before running plan.",
   )
-  .option("--model <name>", "Model for shaper, designer, and specifier (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for shaper, designer, and specifier (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per turn in minutes", "10")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")))
   .action(async (buildName: string | undefined, input: string | undefined, opts: Opts) => {
@@ -442,7 +442,7 @@ addAutoOption(addPreflightOptions(program
 addPreflightOptions(program
   .command("research [build-name]")
   .description("Research the spec using web sources to find improvements (optional step between spec and plan)")
-  .option("--model <name>", "Model for research agents (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for research agents (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per agent in minutes", "15")
   .option("--max-budget-usd <n>", "Halt if cumulative research cost exceeds this amount")
   .option("--quick", "Run a single random specialist instead of the full ensemble")
@@ -476,7 +476,7 @@ addPreflightOptions(program
 addAutoOption(addPreflightOptions(program
   .command("refine [build-name]")
   .description("Merge research.md findings into spec.md")
-  .option("--model <name>", "Model for refiner agent (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for refiner agent (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
@@ -496,7 +496,7 @@ program
   .option("--force", "Re-process all assets ignoring content hash")
   .option("--pack", "Generate sprite atlases after cataloging")
   .option("--batch", "Batch multiple images per vision call")
-  .option("--model <name>", "Model for vision and classification (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for vision and classification (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration per AI call in minutes", "5")
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
@@ -516,7 +516,7 @@ program
   })
 
 const addPlanOptions = (cmd: Command): Command => cmd
-  .option("--model <name>", "Model for planner (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for planner (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration for planning (or 'unlimited' for a 24h catchall)", "120")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
@@ -540,7 +540,7 @@ addAutoOption(addPreflightOptions(program
   .option("--check-timeout <seconds>", "Max duration for check command in seconds", "1200")
   .option("--max-retries <n>", "Max reviewer retry loops per phase", "2")
   .option("--check <command>", "Baseline check command (overrides constraints.md)")
-  .option("--model <name>", "Model for builder and reviewer (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for builder and reviewer (defaults to settings.json model, or 'cli-opus')")
   .option("--max-budget-usd <n>", "Halt if cumulative cost exceeds this amount")
   .option("--constraints <path>", "Path to constraints.md")
   .option("--taste <path>", "Path to taste.md")
@@ -566,7 +566,7 @@ addPreflightOptions(program
 addAutoOption(addPreflightOptions(program
   .command("retrospective [build-name]")
   .description("Analyze a completed build and extract learnings for future builds")
-  .option("--model <name>", "Model for retrospective agent (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for retrospective agent (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
@@ -587,7 +587,7 @@ addAutoOption(addPreflightOptions(program
       "and the just-completed build's artifacts. Writes refined-input.md to " +
       "the build directory.",
   )
-  .option("--model <name>", "Model for retro-refiner agent (defaults to settings.json model, or 'opus')")
+  .option("--model <name>", "Model for retro-refiner agent (defaults to settings.json model, or 'cli-opus')")
   .option("--timeout <minutes>", "Max duration in minutes", "10")))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {

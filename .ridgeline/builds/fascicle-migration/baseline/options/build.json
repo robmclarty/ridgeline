@@ -50,7 +50,7 @@
   },
   {
     "flags": "--model <name>",
-    "description": "Model for builder and reviewer (defaults to settings.json model, or 'opus')",
+    "description": "Model for builder and reviewer (defaults to settings.json model, or 'cli-opus')",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false
