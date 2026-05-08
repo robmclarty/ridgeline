@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.12.4 — 2026-05-07
+
+### Changed
+
+- Bumped fascicle to 0.4.0 and unwound the 0.3.x workarounds in the engine
+  factory: `auth_mode` is back to `"auto"`, the greywall sandbox is restored
+  on fascicle-routed calls (retrospective, refine), and `SandboxProviderConfig`
+  is exported again.
+
 ## v0.12.3 — 2026-05-07
 
 ### Changed
