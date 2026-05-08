@@ -89,7 +89,19 @@
       "cacheCreationInputTokens": 15181,
       "durationMs": 2773,
       "timestamp": "2026-05-08T01:44:16.096Z"
+    },
+    {
+      "phase": "01-hello-module",
+      "role": "builder",
+      "attempt": 0,
+      "costUsd": 0.4775905000000001,
+      "inputTokens": 16,
+      "outputTokens": 2548,
+      "cacheReadInputTokens": 353919,
+      "cacheCreationInputTokens": 37388,
+      "durationMs": 46454,
+      "timestamp": "2026-05-08T01:45:11.717Z"
     }
   ],
-  "totalCostUsd": 1.4510157499999998
+  "totalCostUsd": 1.9286062499999999
 }

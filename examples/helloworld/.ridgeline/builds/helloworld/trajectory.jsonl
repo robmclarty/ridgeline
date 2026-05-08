@@ -11,3 +11,7 @@
 {"timestamp":"2026-05-08T01:42:28.603Z","type":"plan_start","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Planning started"}
 {"timestamp":"2026-05-08T01:44:16.090Z","type":"plan_complete","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"Plan reviewer verdict: approved","reason":"approved"}
 {"timestamp":"2026-05-08T01:44:16.096Z","type":"plan_complete","phaseId":null,"duration":91486,"tokens":{"input":27,"output":6524},"costUsd":1.2217185000000002,"summary":"Generated 1 phases"}
+{"timestamp":"2026-05-08T01:44:16.880Z","type":"build_start","phaseId":"01-hello-module","duration":null,"tokens":null,"costUsd":null,"summary":"Build attempt 1 [sandbox: greywall]"}
+{"timestamp":"2026-05-08T01:44:17.069Z","type":"prompt_stable_hash","phaseId":null,"duration":null,"tokens":null,"costUsd":null,"summary":"stable prompt sha256: 7da755a75c06d998747948fa3e6757d5bf5eda793efa052c6d74a58bef18d484","promptStableHash":"7da755a75c06d998747948fa3e6757d5bf5eda793efa052c6d74a58bef18d484"}
+{"timestamp":"2026-05-08T01:45:11.716Z","type":"build_complete","phaseId":"01-hello-module","duration":46454,"tokens":{"input":16,"output":2548},"costUsd":0.4775905000000001,"summary":"Builder invocation 1 complete (ready_for_review)","cacheReadInputTokens":353919,"cacheCreationInputTokens":37388}
+{"timestamp":"2026-05-08T01:45:11.717Z","type":"builder_loop_complete","phaseId":"01-hello-module","duration":null,"tokens":null,"costUsd":null,"summary":"Builder loop end: ready_for_review (1 invocation(s), $0.48, 2548 out tokens)"}

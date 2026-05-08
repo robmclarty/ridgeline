@@ -19,7 +19,21 @@
       "retries": 0,
       "duration": null,
       "completedAt": null,
-      "failedAt": null
+      "failedAt": null,
+      "builderInvocations": [
+        {
+          "attempt": 1,
+          "endReason": "ready_for_review",
+          "outputTokens": 2548,
+          "inputTokens": 16,
+          "costUsd": 0.4775905000000001,
+          "durationMs": 46454,
+          "windDownReason": null,
+          "diffHash": null,
+          "timestamp": "2026-05-08T01:45:11.716Z"
+        }
+      ],
+      "builderLoopEndReason": "ready_for_review"
     }
   ]
 }
