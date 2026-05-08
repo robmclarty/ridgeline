@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.12.5 — 2026-05-07
+
+### Internal
+
+- Merged the `fascicle` branch into `main`. v0.12.0 → v0.12.4 were
+  developed and tagged on `fascicle`; this is the first release cut
+  from the unified `main`. No source changes ride with the merge —
+  the working tree is byte-identical to v0.12.4. Main's reverted
+  phase-3 adapters attempt (commit `c743052`) is now reachable in
+  history but contributes no net change.
+- Untracked `stryker.log` (mutation-testing output that slipped in
+  around the phase-10 work) and added it to `.gitignore`.
+- Corrected the v0.12.2 CHANGELOG note about the skipped v0.12.1
+  tag — it lives on `main` as a reverted phase-3 adapters attempt
+  that fascicle re-landed cleanly, not on an "unrelated sibling
+  branch".
+
 ## v0.12.4 — 2026-05-07
 
 ### Changed
