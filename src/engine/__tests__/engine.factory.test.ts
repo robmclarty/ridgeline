@@ -53,26 +53,36 @@ describe("makeRidgelineEngine", () => {
     return createEngineMock.mock.calls[createEngineMock.mock.calls.length - 1]![0]
   }
 
-  it("passes auth_mode 'oauth' regardless of cfg input", async () => {
+  it("passes auth_mode 'auto' regardless of cfg input", async () => {
     const make = await importFactory()
     for (const sandboxFlag of ["off", "semi-locked", "strict"] as const) {
       createEngineMock.mockClear()
       make({ ...baseCfg, sandboxFlag })
-      expect(lastConfig().providers.claude_cli?.auth_mode).toBe("oauth")
+      expect(lastConfig().providers.claude_cli?.auth_mode).toBe("auto")
     }
   })
 
-  // sandbox is intentionally undefined regardless of sandboxFlag — fascicle's
-  // greywall arg builder uses `--allow-host` / `--rw` flags that the current
-  // greywall release dropped. Sandboxing for fascicle-routed calls is wired
-  // through ridgeline's runClaudeProcess path, not here.
-  it("always passes sandbox=undefined to fascicle's claude_cli provider", async () => {
+  it("returns sandbox=undefined for sandboxFlag='off'", async () => {
     const make = await importFactory()
-    for (const sandboxFlag of ["off", "semi-locked", "strict"] as const) {
+    make({ ...baseCfg, sandboxFlag: "off" })
+    expect(lastConfig().providers.claude_cli?.sandbox).toBeUndefined()
+  })
+
+  it("returns sandbox.kind='greywall' for semi-locked and strict", async () => {
+    const make = await importFactory()
+    for (const sandboxFlag of ["semi-locked", "strict"] as const) {
       createEngineMock.mockClear()
       make({ ...baseCfg, sandboxFlag })
-      expect(lastConfig().providers.claude_cli?.sandbox).toBeUndefined()
+      expect(lastConfig().providers.claude_cli?.sandbox?.kind).toBe("greywall")
     }
+  })
+
+  it("delegates greywall sandbox composition to buildSandboxPolicy (buildPath placement)", async () => {
+    const make = await importFactory()
+    make({ ...baseCfg, sandboxFlag: "strict", buildPath: "/tmp/ridgeline-build-strict" })
+    const sandbox = lastConfig().providers.claude_cli?.sandbox
+    expect(sandbox?.kind).toBe("greywall")
+    expect(sandbox?.additional_write_paths?.[0]).toBe("/tmp/ridgeline-build-strict")
   })
 
   it("sets startup_timeout_ms to 120000 regardless of cfg input", async () => {
@@ -134,7 +144,7 @@ describe("makeRidgelineEngine", () => {
       make({ ...baseCfg, sandboxFlag: "semi-locked" })
       const cli = lastConfig().providers.claude_cli
       expect(cli?.api_key).toBeUndefined()
-      expect(cli?.auth_mode).toBe("oauth")
+      expect(cli?.auth_mode).toBe("auto")
     } finally {
       if (original === undefined) delete process.env.ANTHROPIC_API_KEY
       else process.env.ANTHROPIC_API_KEY = original

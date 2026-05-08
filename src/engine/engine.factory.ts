@@ -1,6 +1,12 @@
 // `--timeout <minutes>` maps onto two distinct fascicle timeouts: stall (per-call), startup (constant 120s).
 import { create_engine, type AliasTable, type Engine, type EngineConfig } from "fascicle"
-import type { SandboxFlag } from "./claude/sandbox.policy.js"
+import {
+  buildSandboxPolicy,
+  DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED,
+  DEFAULT_NETWORK_ALLOWLIST_STRICT,
+  type SandboxFlag,
+  type SandboxProviderConfig,
+} from "./claude/sandbox.policy.js"
 
 // When no ANTHROPIC_API_KEY is set, route the anthropic-default aliases through
 // the claude_cli subprocess so subscription users aren't forced to learn the
@@ -27,22 +33,33 @@ export type RidgelineEngineConfig = {
   readonly additionalWritePaths?: readonly string[]
 }
 
+const resolveSandbox = (cfg: RidgelineEngineConfig): SandboxProviderConfig | undefined => {
+  const policy = buildSandboxPolicy({ sandboxFlag: cfg.sandboxFlag, buildPath: cfg.buildPath })
+  if (!policy) return undefined
+
+  const baseAllowlist = cfg.sandboxFlag === "strict"
+    ? DEFAULT_NETWORK_ALLOWLIST_STRICT
+    : DEFAULT_NETWORK_ALLOWLIST_SEMI_LOCKED
+
+  const network_allowlist = cfg.networkAllowlistOverrides
+    ? [...baseAllowlist, ...cfg.networkAllowlistOverrides]
+    : policy.network_allowlist
+
+  const additional_write_paths = cfg.additionalWritePaths
+    ? [...(policy.additional_write_paths ?? []), ...cfg.additionalWritePaths]
+    : policy.additional_write_paths
+
+  return { kind: policy.kind, network_allowlist, additional_write_paths }
+}
+
 export const makeRidgelineEngine = (cfg: RidgelineEngineConfig): Engine => {
   const stall_timeout_ms =
     cfg.timeoutMinutes !== undefined ? cfg.timeoutMinutes * 60_000 : DEFAULT_STALL_TIMEOUT_MS
 
-  // auth_mode "oauth" (not "auto") so fascicle's build_env inherits process.env
-  // — without it the spawn has no PATH and can't locate `claude`/`greywall`.
-  //
-  // sandbox is intentionally undefined: fascicle 0.3.x emits `--allow-host` /
-  // `--rw` flags that greywall 0.3+ dropped (it now reads filesystem rules from
-  // a JSON settings file, which ridgeline's runClaudeProcess path uses). The
-  // fascicle-routed code paths (retrospective, refine) are read-mostly and run
-  // without a sandbox here until fascicle's greywall integration is updated.
   const providers: EngineConfig["providers"] = {
     claude_cli: {
-      auth_mode: "oauth",
-      sandbox: undefined,
+      auth_mode: "auto",
+      sandbox: resolveSandbox(cfg),
       plugin_dirs: cfg.pluginDirs,
       setting_sources: cfg.settingSources,
       startup_timeout_ms: STARTUP_TIMEOUT_MS,

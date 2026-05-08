@@ -93,11 +93,13 @@ export const DEFAULT_NETWORK_ALLOWLIST_STRICT: readonly string[] = Object.freeze
   "bitbucket.org",
 ])
 
-// Structural mirror of fascicle's internal sandbox provider config. Kept local
-// because the engine factory no longer forwards it to fascicle (fascicle 0.3.x
-// builds greywall args with flags greywall has since dropped); the type still
-// shapes `buildSandboxPolicy`'s output for the parity test suite.
-type SandboxProviderConfig =
+/**
+ * Structural mirror of fascicle's internal `SandboxProviderConfig` (not exported
+ * by fascicle). The engine factory passes `buildSandboxPolicy`'s result straight
+ * into `claude_cli.sandbox`; structural typing lets the values flow through
+ * without an alias re-export.
+ */
+export type SandboxProviderConfig =
   | {
       readonly kind: "bwrap"
       readonly network_allowlist?: readonly string[]
