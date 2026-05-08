@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 vi.mock("../../sensors-collect.js", () => ({
   collectSensorFindings: vi.fn(async () => []),
 }))
-vi.mock("../../detect/index.js", () => ({
-  detect: vi.fn(async () => ({
+vi.mock("../../project-type.js", () => ({
+  detectProject: vi.fn(async () => ({
     projectType: "node",
     isVisualSurface: false,
     detectedDeps: [],

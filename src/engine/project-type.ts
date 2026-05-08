@@ -116,7 +116,7 @@ const detectAssetDir = (cwd: string): boolean => {
   return false
 }
 
-export const detect = async (cwd: string, opts: DetectOptions = {}): Promise<DetectionReport> => {
+export const detectProject = async (cwd: string, opts: DetectOptions = {}): Promise<DetectionReport> => {
   const { deps, hasFile } = readPackageJson(cwd)
 
   const matchedVisualDeps = VISUAL_DEPS.filter((d) => deps.includes(d))

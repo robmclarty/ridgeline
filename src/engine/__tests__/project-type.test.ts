@@ -2,14 +2,14 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { detect } from "../project-type.js"
+import { detectProject } from "../project-type.js"
 
 const FIXTURES = path.resolve(__dirname, "../../../test/fixtures")
 
-describe("detect", () => {
+describe("detectProject", () => {
   describe("fixture projects", () => {
     it("React+Vite with design.md is a visual surface with full sensor suite", async () => {
-      const report = await detect(path.join(FIXTURES, "react-vite-design"))
+      const report = await detectProject(path.join(FIXTURES, "react-vite-design"))
       expect(report.projectType).toBe("web")
       expect(report.isVisualSurface).toBe(true)
       expect(report.detectedDeps).toEqual(expect.arrayContaining(["react", "vite"]))
@@ -19,7 +19,7 @@ describe("detect", () => {
     })
 
     it("pure Node project (express only) has no sensors", async () => {
-      const report = await detect(path.join(FIXTURES, "pure-node"))
+      const report = await detectProject(path.join(FIXTURES, "pure-node"))
       expect(report.projectType).toBe("node")
       expect(report.isVisualSurface).toBe(false)
       expect(report.detectedDeps).toEqual([])
@@ -28,14 +28,14 @@ describe("detect", () => {
     })
 
     it("pure HTML (no package.json) is unknown but visual via filesystem signal", async () => {
-      const report = await detect(path.join(FIXTURES, "pure-html"))
+      const report = await detectProject(path.join(FIXTURES, "pure-html"))
       expect(report.projectType).toBe("unknown")
       expect(report.isVisualSurface).toBe(true)
       expect(report.suggestedSensors.length).toBe(4)
     })
 
     it("Vue+Vite project is web with full sensor suite", async () => {
-      const report = await detect(path.join(FIXTURES, "vue-vite"))
+      const report = await detectProject(path.join(FIXTURES, "vue-vite"))
       expect(report.projectType).toBe("web")
       expect(report.isVisualSurface).toBe(true)
       expect(report.detectedDeps).toEqual(expect.arrayContaining(["vue", "vite"]))
@@ -43,7 +43,7 @@ describe("detect", () => {
     })
 
     it("monorepo root with no visual deps and no visual files is node", async () => {
-      const report = await detect(path.join(FIXTURES, "monorepo-root"))
+      const report = await detectProject(path.join(FIXTURES, "monorepo-root"))
       expect(report.projectType).toBe("node")
       expect(report.isVisualSurface).toBe(false)
       expect(report.detectedDeps).toEqual([])
@@ -64,7 +64,7 @@ describe("detect", () => {
 
     it("treats a single .jsx file (no package.json) as a visual surface", async () => {
       fs.writeFileSync(path.join(tmpDir, "Component.jsx"), "export default () => null\n")
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.isVisualSurface).toBe(true)
       expect(report.projectType).toBe("unknown")
       expect(report.suggestedSensors.length).toBe(4)
@@ -72,7 +72,7 @@ describe("detect", () => {
 
     it("treats a single .svelte file as a visual surface", async () => {
       fs.writeFileSync(path.join(tmpDir, "App.svelte"), "<script></script><div></div>\n")
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.isVisualSurface).toBe(true)
     })
 
@@ -81,7 +81,7 @@ describe("detect", () => {
         fs.mkdirSync(path.join(tmpDir, dir))
         fs.writeFileSync(path.join(tmpDir, dir, "buried.jsx"), "x\n")
       }
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.isVisualSurface).toBe(false)
     })
 
@@ -93,7 +93,7 @@ describe("detect", () => {
       const testFixturesDir = path.join(tmpDir, "test", "fixtures")
       fs.mkdirSync(testFixturesDir, { recursive: true })
       fs.writeFileSync(path.join(testFixturesDir, "App.tsx"), "export {}\n")
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.isVisualSurface).toBe(false)
       expect(report.visualFileExts).toEqual([])
     })
@@ -101,7 +101,7 @@ describe("detect", () => {
     it("populates visualFileExts when the file scan is the only signal", async () => {
       fs.writeFileSync(path.join(tmpDir, "page.html"), "<!doctype html>\n")
       fs.writeFileSync(path.join(tmpDir, "Component.tsx"), "export {}\n")
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.isVisualSurface).toBe(true)
       expect(report.visualFileExts).toEqual(["html", "tsx"])
     })
@@ -112,7 +112,7 @@ describe("detect", () => {
         JSON.stringify({ dependencies: { react: "^18.0.0" } }),
       )
       fs.writeFileSync(path.join(tmpDir, "App.tsx"), "export {}\n")
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.isVisualSurface).toBe(true)
       expect(report.detectedDeps).toContain("react")
       expect(report.visualFileExts).toEqual([])
@@ -131,7 +131,7 @@ describe("detect", () => {
     })
 
     it("handles missing package.json without throwing", async () => {
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.projectType).toBe("unknown")
       expect(report.isVisualSurface).toBe(false)
     })
@@ -139,7 +139,7 @@ describe("detect", () => {
     it("warns and falls back to filesystem on malformed package.json", async () => {
       fs.writeFileSync(path.join(tmpDir, "package.json"), "{ not valid json")
       fs.writeFileSync(path.join(tmpDir, "page.html"), "<!doctype html><html></html>")
-      const report = await detect(tmpDir)
+      const report = await detectProject(tmpDir)
       expect(report.detectedDeps).toEqual([])
       expect(report.isVisualSurface).toBe(true)
     })
@@ -147,30 +147,30 @@ describe("detect", () => {
 
   describe("ensemble size and thoroughness", () => {
     it("defaults to ensemble size 3", async () => {
-      const report = await detect(path.join(FIXTURES, "pure-node"))
+      const report = await detectProject(path.join(FIXTURES, "pure-node"))
       expect(report.suggestedEnsembleSize).toBe(3)
     })
 
     it("returns the requested ensemble size when specialistCount is set", async () => {
-      const report = await detect(path.join(FIXTURES, "pure-node"), { specialistCount: 2 })
+      const report = await detectProject(path.join(FIXTURES, "pure-node"), { specialistCount: 2 })
       expect(report.suggestedEnsembleSize).toBe(2)
     })
 
     it("supports a single-specialist ensemble", async () => {
-      const report = await detect(path.join(FIXTURES, "pure-node"), { specialistCount: 1 })
+      const report = await detectProject(path.join(FIXTURES, "pure-node"), { specialistCount: 1 })
       expect(report.suggestedEnsembleSize).toBe(1)
     })
   })
 
   describe("determinism", () => {
     it("produces byte-identical serialized reports for unchanged inputs", async () => {
-      const a = await detect(path.join(FIXTURES, "react-vite-design"))
-      const b = await detect(path.join(FIXTURES, "react-vite-design"))
+      const a = await detectProject(path.join(FIXTURES, "react-vite-design"))
+      const b = await detectProject(path.join(FIXTURES, "react-vite-design"))
       expect(JSON.stringify(a)).toBe(JSON.stringify(b))
     })
 
     it("sorts detected deps alphabetically", async () => {
-      const report = await detect(path.join(FIXTURES, "react-vite-design"))
+      const report = await detectProject(path.join(FIXTURES, "react-vite-design"))
       const sorted = [...report.detectedDeps].sort()
       expect(report.detectedDeps).toEqual(sorted)
     })
@@ -179,7 +179,7 @@ describe("detect", () => {
   describe("performance", () => {
     it("completes in under 1 second on a small project", async () => {
       const start = Date.now()
-      await detect(path.join(FIXTURES, "react-vite-design"))
+      await detectProject(path.join(FIXTURES, "react-vite-design"))
       expect(Date.now() - start).toBeLessThan(1000)
     })
   })

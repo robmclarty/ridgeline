@@ -36,7 +36,7 @@ vi.mock("../../../git.js", () => ({
 }))
 
 vi.mock("../../project-type.js", () => ({
-  detect: vi.fn(),
+  detectProject: vi.fn(),
 }))
 
 vi.mock("../../sensors-collect.js", () => ({
@@ -57,7 +57,7 @@ import { runBuilderLoop } from "../../builder-loop.js"
 import type { BuilderLoopOutcome } from "../../builder-loop.js"
 import type { BuilderInvocation } from "../../../types.js"
 import { runReviewer } from "../../reviewer.js"
-import { detect } from "../../project-type.js"
+import { detectProject } from "../../project-type.js"
 import { collectSensorFindings } from "../../sensors-collect.js"
 import { printWarn } from "../../../ui/output.js"
 
@@ -175,7 +175,7 @@ describe("build-phase — sensor integration", () => {
   it("phase still passes when a sensor rejects (non-fatal warning)", async () => {
     vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(runReviewer).mockResolvedValue({ result: makeResult(), verdict: passVerdict })
-    vi.mocked(detect).mockResolvedValue({
+    vi.mocked(detectProject).mockResolvedValue({
       projectType: "web",
       isVisualSurface: true,
       detectedDeps: ["react"],
@@ -199,7 +199,7 @@ describe("build-phase — sensor integration", () => {
   it("runs sensors only for suggestedSensors from detect", async () => {
     vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(runReviewer).mockResolvedValue({ result: makeResult(), verdict: passVerdict })
-    vi.mocked(detect).mockResolvedValue({
+    vi.mocked(detectProject).mockResolvedValue({
       projectType: "node",
       isVisualSurface: false,
       detectedDeps: [],
@@ -217,7 +217,7 @@ describe("build-phase — sensor integration", () => {
   it("swallows detect() errors and continues the phase", async () => {
     vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
     vi.mocked(runReviewer).mockResolvedValue({ result: makeResult(), verdict: passVerdict })
-    vi.mocked(detect).mockRejectedValue(new Error("detect blew up"))
+    vi.mocked(detectProject).mockRejectedValue(new Error("detect blew up"))
 
     const result = await executeBuildPhase(phase, config, makeState())
     expect(result).toBe("passed")
@@ -230,7 +230,7 @@ describe("build-phase — sensor integration", () => {
       const verdict: ReviewVerdict = { ...passVerdict, sensorFindings: sensorFindings ?? [] }
       return { result: makeResult(), verdict }
     })
-    vi.mocked(detect).mockResolvedValue({
+    vi.mocked(detectProject).mockResolvedValue({
       projectType: "web",
       isVisualSurface: true,
       detectedDeps: ["react"],

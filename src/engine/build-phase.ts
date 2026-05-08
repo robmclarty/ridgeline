@@ -12,7 +12,7 @@ import { printPhase, printWarn } from "../ui/output.js"
 import { commitAll, isWorkingTreeDirty } from "../git.js"
 import { runReviewer } from "./reviewer.js"
 import { runBuilderLoop } from "./builder-loop.js"
-import { detect } from "./project-type.js"
+import { detectProject } from "./project-type.js"
 import { collectSensorFindings } from "./sensors-collect.js"
 import type { SensorFinding, SensorInput, Viewport } from "../sensors/index.js"
 import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "../ui/preflight.toolprobe.js"
@@ -225,7 +225,7 @@ const runSensorsForPhase = async (
   cwd: string,
 ): Promise<SensorFinding[]> => {
   try {
-    const report = await detect(cwd)
+    const report = await detectProject(cwd)
     if (report.suggestedSensors.length === 0) return []
 
     const baseInput: SensorInput = {

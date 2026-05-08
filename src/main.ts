@@ -28,7 +28,7 @@ import { resolveInputBundle } from "./commands/input.js"
 import { resolveNameAndInput, parseAutoCount } from "./utils/cli-args.js"
 import { killAllClaudeSync } from "./engine/claude-process.js"
 import { enforceFlavourRemoved } from "./utils/flavour-removed.js"
-import { detect } from "./engine/project-type.js"
+import { detectProject } from "./engine/project-type.js"
 import { runPreflight, type StablePromptInfo } from "./ui/preflight.js"
 import { probeSensorsUnderSandbox, formatProbeAbortMessage } from "./ui/preflight.toolprobe.js"
 import { detectSandbox } from "./engine/claude/sandbox.js"
@@ -144,7 +144,7 @@ const stablePromptInfoFromConfig = (config: RidgelineConfig): StablePromptInfo |
 
 const runPreflightGuard = async (config?: RidgelineConfig): Promise<void> => {
   const { specialistCount, isYes } = detectPreflightFlags()
-  const report = await detect(process.cwd(), { specialistCount })
+  const report = await detectProject(process.cwd(), { specialistCount })
   await runPreflight(report, {
     yes: isYes,
     isTTY: Boolean(process.stdin.isTTY),
