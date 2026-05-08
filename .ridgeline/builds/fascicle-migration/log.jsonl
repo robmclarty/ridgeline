@@ -138,3 +138,7 @@
 {"timestamp":"2026-05-07T21:08:03.731Z","level":"info","phase":"11-cleanup-deletions","message":"PASSED (3654s)"}
 {"timestamp":"2026-05-07T21:08:03.731Z","level":"info","phase":"12-docs-invariants-golden","message":"Phase 17/17: 12-docs-invariants-golden"}
 {"timestamp":"2026-05-07T21:08:03.876Z","level":"info","phase":"12-docs-invariants-golden","message":"Building..."}
+{"timestamp":"2026-05-07T21:25:25.065Z","level":"info","phase":"12-docs-invariants-golden","message":"Reviewing..."}
+{"timestamp":"2026-05-07T21:30:56.726Z","level":"info","phase":"12-docs-invariants-golden","message":"PASSED (1373s)"}
+{"timestamp":"2026-05-07T21:30:57.494Z","level":"info","phase":null,"message":"Running retrospective for build 'fascicle-migration'..."}
+{"timestamp":"2026-05-07T21:33:53.857Z","level":"info","phase":null,"message":"Retrospective complete. Learnings appended to .ridgeline/learnings.md"}

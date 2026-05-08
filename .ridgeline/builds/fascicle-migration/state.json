@@ -8,7 +8,7 @@
     "research": "skipped",
     "refine": "skipped",
     "plan": "complete",
-    "build": "running"
+    "build": "complete"
   },
   "phases": [
     {
@@ -417,12 +417,12 @@
     },
     {
       "id": "12-docs-invariants-golden",
-      "status": "pending",
+      "status": "complete",
       "checkpointTag": "ridgeline/checkpoint/fascicle-migration/12-docs-invariants-golden",
-      "completionTag": null,
+      "completionTag": "ridgeline/phase/fascicle-migration/12-docs-invariants-golden",
       "retries": 0,
-      "duration": null,
-      "completedAt": null,
+      "duration": 1372935,
+      "completedAt": "2026-05-07T21:30:56.725Z",
       "failedAt": null,
       "builderInvocations": [
         {
