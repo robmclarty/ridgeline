@@ -1,0 +1,18 @@
+{
+  "model": "opus",
+  "specialistTimeoutSeconds": 1800,
+  "timeoutMinutes": "unlimited",
+  "planner": {
+    "phaseBudgetLimit": "unlimited",
+    "specialistCount": 3
+  },
+  "build": {
+    "requirePhaseApproval": false
+  },
+  "sandbox": {
+    "mode": "off"
+  },
+  "network": {
+    "allowlist": ["*"]
+  }
+}
