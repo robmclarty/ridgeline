@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import * as path from "node:path"
+import { realpathSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config.js"
 import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings.js"
@@ -38,7 +40,11 @@ import { approximateTokenCount } from "./engine/claude/stable.prompt.js"
 const isMainModule = (): boolean => {
   const argv1 = process.argv[1]
   if (!argv1) return false
-  return argv1.endsWith("/cli.js") || argv1.endsWith("/cli.ts")
+  try {
+    return realpathSync(argv1) === fileURLToPath(import.meta.url)
+  } catch {
+    return false
+  }
 }
 
 if (isMainModule()) {
