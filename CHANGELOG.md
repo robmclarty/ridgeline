@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.12.6 — 2026-05-27
+
+### Fixed
+
+- `isMainModule()` now resolves `process.argv[1]` with `realpathSync`
+  and compares it to `fileURLToPath(import.meta.url)`. The previous
+  suffix check on `/cli.js` or `/cli.ts` misfired when ridgeline was
+  invoked through a bin-shim symlink with a different basename.
+
+### Internal
+
+- Seeded an `examples/ridgeline-inspect` spec for a read-only inspector
+  CLI and an unrestricted `.ridgeline/settings.yml` for working on it.
+
 ## v0.12.5 — 2026-05-07
 
 ### Internal
