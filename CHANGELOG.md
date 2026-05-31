@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.12.7 — 2026-05-30
+
+### Added
+
+- Four project-local skills bracket the spec → plan → build flow
+  with validation passes. `/spec-check <name>` and
+  `/build-check <name>` write a verdict file with status `ready` /
+  `needs-attention` / `broken`; `/spec-fix <name>` and
+  `/build-fix <name>` read the verdict, dispatch fix agents grouped
+  by disjoint touches, and loop until ready or a 3-iteration cap is
+  hit.
+
 ## v0.12.6 — 2026-05-27
 
 ### Fixed
