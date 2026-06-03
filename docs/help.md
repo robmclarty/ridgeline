@@ -257,15 +257,31 @@ phase if previous state exists.
 | `--context <text>` | none | Extra context appended to builder and planner prompts |
 | `--sandbox <mode>` | `semi-locked` | Sandbox mode: `off`, `semi-locked`, or `strict` |
 | `--unsafe` | -- | Deprecated alias for `--sandbox=off` |
-| `--require-phase-approval` | off | Pause between phases for explicit user confirmation |
+| `--sequencing <mode>` | `sequential` | Phase execution: `sequential`, `manual`, `wave`, or `wave-N` (see below) |
 | `--no-structured-log` | off | Disable structured logging to `log.jsonl` |
 
 ```sh
 ridgeline build my-feature
-ridgeline build my-feature --sandbox=strict          # tighter isolation
-ridgeline build my-feature --sandbox=off             # opt out (formerly --unsafe)
-ridgeline build my-feature --require-phase-approval  # step phases interactively
+ridgeline build my-feature --sandbox=strict       # tighter isolation
+ridgeline build my-feature --sandbox=off          # opt out (formerly --unsafe)
+ridgeline build my-feature --sequencing manual    # step phases interactively
+ridgeline build my-feature --sequencing wave-2    # parallel waves, 2 phases at a time
 ```
+
+#### Phase sequencing modes
+
+Controlled by `build.sequencing` in `settings.json` or `--sequencing <mode>` on the CLI:
+
+- **`sequential`** *(default)* — phases run one at a time in-place; no
+  worktrees, no merges. Safe for changes that touch overlapping files.
+- **`manual`** — like `sequential`, but pauses between phases and asks
+  `Continue to phase N? [Y/n/q]` before advancing. Answer `n` (or `q`) to
+  exit cleanly with state preserved.
+- **`wave`** — runs the planner's DAG with unbounded parallelism. Each
+  parallel phase runs in its own git worktree; results merge back at the
+  wave boundary. Fastest, but more merge-conflict surface area.
+- **`wave-N`** (positive integer) — same as `wave`, but each computed
+  wave is chunked to at most N phases. `wave-2` is a common sweet spot.
 
 #### Stop controls
 
@@ -275,7 +291,7 @@ While a build is running in a TTY, two non-destructive ways to pause:
   naturally (including any in-flight builder-loop continuations) and the
   orchestrator exits 0 at the next phase boundary. A second press within
   5 seconds escalates to `SIGINT` for "stop now."
-- **`--require-phase-approval`** — pauses between phases and asks `Continue
+- **`--sequencing manual`** — pauses between phases and asks `Continue
   to phase N? [Y/n/q]` before advancing. Answer `n` (or `q`) to exit
   cleanly with state preserved.
 

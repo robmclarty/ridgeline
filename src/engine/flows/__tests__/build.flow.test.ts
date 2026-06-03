@@ -58,6 +58,7 @@ const cannedDeps = (overrides: Partial<BuildFlowDeps> = {}): BuildFlowDeps => {
     budgetSubscribe: () => () => undefined,
     maxBudgetUsd: Number.POSITIVE_INFINITY,
     shouldStop: () => false,
+    sequencing: { kind: "wave", maxConcurrency: Infinity },
     ...overrides,
   }
 }
@@ -96,7 +97,7 @@ const minimalConfig = {
   specialistTimeoutSeconds: 60,
   phaseBudgetLimit: null,
   phaseTokenLimit: 16000,
-  requirePhaseApproval: false,
+  sequencing: { kind: "sequential" } as const,
 }
 
 describe("buildFlow", () => {
@@ -236,5 +237,48 @@ describe("buildFlow", () => {
       "review_start",
       "review_complete",
     ])
+  })
+
+  it("routes multi-phase waves through sequentialWavePath when sequencing is 'sequential'", async () => {
+    const trajectory = recordingTrajectory()
+    const flow = buildFlow(cannedDeps({ sequencing: { kind: "sequential" } }))
+    const out = await run(
+      flow,
+      {
+        config: { ...minimalConfig },
+        waves: [[makePhase("a", 0), makePhase("b", 1)]],
+        mainCwd: "/tmp",
+      },
+      { trajectory: trajectory.logger, install_signal_handlers: false },
+    )
+    const names = spanNames(trajectory.events)
+    // Sequential routing announces the wave but does NOT create worktrees.
+    expect(names).toContain("build.sequential_wave")
+    expect(names).not.toContain("build.worktree_isolated")
+    // wave_start event should mark isolated=false
+    const waveStarts = trajectory.events.filter(
+      (e): e is Extract<TrajectoryEvent, { kind: "emit" }> =>
+        e.kind === "emit" && (e as Record<string, unknown>).build_event === "wave_start",
+    )
+    expect(waveStarts.length).toBeGreaterThan(0)
+    expect((waveStarts[0] as Record<string, unknown>).isolated).toBe(false)
+    expect(out.completed).toBe(2)
+  })
+
+  it("routes multi-phase waves through sequentialWavePath when sequencing is 'manual'", async () => {
+    const trajectory = recordingTrajectory()
+    const flow = buildFlow(cannedDeps({ sequencing: { kind: "manual" } }))
+    await run(
+      flow,
+      {
+        config: { ...minimalConfig },
+        waves: [[makePhase("a", 0), makePhase("b", 1)]],
+        mainCwd: "/tmp",
+      },
+      { trajectory: trajectory.logger, install_signal_handlers: false },
+    )
+    const names = spanNames(trajectory.events)
+    expect(names).toContain("build.sequential_wave")
+    expect(names).not.toContain("build.worktree_isolated")
   })
 })

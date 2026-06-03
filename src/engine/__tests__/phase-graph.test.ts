@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../phase-graph.js"
+import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism, chunkWave } from "../phase-graph.js"
 import { PhaseInfo } from "../../types.js"
 
 const makePhase = (id: string, index: number, dependsOn: string[] = []): PhaseInfo => ({
@@ -141,5 +141,42 @@ describe("hasParallelism", () => {
     ]
     const graph = buildPhaseGraph(phases)
     expect(hasParallelism(graph)).toBe(true)
+  })
+})
+
+describe("chunkWave", () => {
+  const a = makePhase("a", 0)
+  const b = makePhase("b", 1)
+  const c = makePhase("c", 2)
+  const d = makePhase("d", 3)
+
+  it("returns the wave unchanged when maxConcurrency is Infinity", () => {
+    expect(chunkWave([a, b, c], Infinity)).toEqual([[a, b, c]])
+  })
+
+  it("returns the wave unchanged when maxConcurrency >= wave length", () => {
+    expect(chunkWave([a, b], 5)).toEqual([[a, b]])
+    expect(chunkWave([a, b], 2)).toEqual([[a, b]])
+  })
+
+  it("chunks a 3-phase wave into [2, 1] when maxConcurrency=2", () => {
+    expect(chunkWave([a, b, c], 2)).toEqual([[a, b], [c]])
+  })
+
+  it("chunks a 4-phase wave into [2, 2] when maxConcurrency=2", () => {
+    expect(chunkWave([a, b, c, d], 2)).toEqual([[a, b], [c, d]])
+  })
+
+  it("chunks into singletons when maxConcurrency=1 (effectively serial)", () => {
+    expect(chunkWave([a, b, c], 1)).toEqual([[a], [b], [c]])
+  })
+
+  it("preserves order across chunks", () => {
+    const result = chunkWave([a, b, c, d], 3)
+    expect(result.flat().map((p) => p.id)).toEqual(["a", "b", "c", "d"])
+  })
+
+  it("handles an empty wave", () => {
+    expect(chunkWave([], 2)).toEqual([[]])
   })
 })

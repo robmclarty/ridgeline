@@ -8,7 +8,7 @@ import { detectSandbox } from "../engine/claude/sandbox.js"
 import { scanPhases } from "../stores/phases.js"
 import { executeBuildPhase } from "../engine/build-phase.js"
 import { loadState, saveState, initState, resetRetries, reconcilePhases, markBuildRunning, advancePipeline } from "../stores/state.js"
-import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism } from "../engine/phase-graph.js"
+import { buildPhaseGraph, validateGraph, getReadyPhases, hasParallelism, chunkWave } from "../engine/phase-graph.js"
 import { loadBudget } from "../stores/budget.js"
 import { cleanupBuildTags } from "../stores/tags.js"
 import { killAllClaudeSync } from "../engine/claude-process.js"
@@ -188,7 +188,11 @@ const loadOrInitState = (config: RidgelineConfig, phases: PhaseInfo[]) => {
   return state
 }
 
-const computeWaves = (phases: PhaseInfo[], state: ReturnType<typeof initState>): PhaseInfo[][] => {
+const computeWaves = (
+  phases: PhaseInfo[],
+  state: ReturnType<typeof initState>,
+  maxConcurrency: number,
+): PhaseInfo[][] => {
   const graph = buildPhaseGraph(phases)
   validateGraph(graph)
   if (hasParallelism(graph)) {
@@ -201,7 +205,9 @@ const computeWaves = (phases: PhaseInfo[], state: ReturnType<typeof initState>):
   while (true) {
     const ready = getReadyPhases(graph, completedIds)
     if (ready.length === 0) break
-    waves.push([...ready])
+    for (const chunk of chunkWave([...ready], maxConcurrency)) {
+      waves.push(chunk)
+    }
     for (const p of ready) completedIds.add(p.id)
   }
   return waves
@@ -303,7 +309,10 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     state.phases.filter((p) => p.status === "complete").map((p) => p.id),
   )
   const worktreePaths = new Map<string, string>()
-  const waves = computeWaves(phases, state)
+  const maxConcurrency = config.sequencing.kind === "wave"
+    ? config.sequencing.maxConcurrency
+    : 1
+  const waves = computeWaves(phases, state, maxConcurrency)
 
   const runPhaseStep: Step<RunPhaseStepInput, BuildPhaseResult> = step(
     "build.run_phase",
@@ -332,6 +341,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     worktreeDriver: makeWorktreeDriver(config, state, mainCwd, completedIds, phases, worktreePaths),
     budgetSubscribe: makeBudgetSubscriber(config),
     maxBudgetUsd: config.maxBudgetUsd ?? Number.POSITIVE_INFINITY,
+    sequencing: config.sequencing,
     shouldStop: () => stopHandle.isRequested(),
     isBudgetExceeded: () => {
       if (config.maxBudgetUsd == null) return false
@@ -386,8 +396,8 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     return
   }
 
-  // --require-phase-approval pause hook (between waves) is preserved
-  if (config.requirePhaseApproval && stoppedReason !== "complete") {
+  // Manual sequencing pauses between phases for explicit user approval.
+  if (config.sequencing.kind === "manual" && stoppedReason !== "complete") {
     return
   }
   void requestPhaseApproval

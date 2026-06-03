@@ -7,7 +7,7 @@
     "specialistCount": 3
   },
   "build": {
-    "requirePhaseApproval": false
+    "sequencing": "sequential"
   },
   "sandbox": {
     "mode": "off"

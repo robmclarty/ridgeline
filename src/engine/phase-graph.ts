@@ -99,6 +99,22 @@ export const getReadyPhases = (graph: PhaseGraph, completed: Set<string>): Phase
 }
 
 /**
+ * Split a wave into chunks of at most `maxConcurrency` phases. Phases within
+ * the same wave have no inter-dependencies, so chunking is always safe.
+ *
+ * Returns `[wave]` unchanged when `maxConcurrency` is non-finite or already
+ * larger than the wave.
+ */
+export const chunkWave = (wave: PhaseInfo[], maxConcurrency: number): PhaseInfo[][] => {
+  if (!Number.isFinite(maxConcurrency) || maxConcurrency >= wave.length) return [wave]
+  const out: PhaseInfo[][] = []
+  for (let i = 0; i < wave.length; i += maxConcurrency) {
+    out.push(wave.slice(i, i + maxConcurrency))
+  }
+  return out
+}
+
+/**
  * Check if the graph has any parallelism potential (any wave has more than one ready phase).
  */
 export const hasParallelism = (graph: PhaseGraph): boolean => {

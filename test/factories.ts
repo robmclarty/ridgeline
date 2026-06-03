@@ -23,7 +23,7 @@ export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfi
   specialistTimeoutSeconds: 180,
   phaseBudgetLimit: 15,
   phaseTokenLimit: 80000,
-  requirePhaseApproval: false,
+  sequencing: { kind: "sequential" },
   ...overrides,
 })
 

@@ -117,7 +117,7 @@ describe("commands/run", () => {
       specialistTimeoutSeconds: 180,
       phaseBudgetLimit: 15,
       phaseTokenLimit: 80000,
-      requirePhaseApproval: false,
+      sequencing: { kind: "sequential" },
     }
 
     // Mock process.exit to throw instead of exiting

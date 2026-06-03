@@ -1,5 +1,6 @@
 import { aborted_error, branch, compose, map, pipe, sequence, step, type Step } from "fascicle"
 import type { PhaseInfo, RidgelineConfig } from "../../types.js"
+import type { SequencingMode } from "../../stores/settings.js"
 import {
   cost_capped,
   diff_review,
@@ -38,6 +39,7 @@ export type BuildFlowDeps = {
   readonly isBudgetExceeded?: () => boolean
   readonly onWaveStart?: (wave: ReadonlyArray<PhaseInfo>) => void
   readonly onPhaseStart?: (phase: PhaseInfo) => void
+  readonly sequencing: SequencingMode
 }
 
 const buildPhaseStep = (deps: BuildFlowDeps): Step<PhaseInfo, BuildPhaseResult> => {
@@ -148,7 +150,10 @@ const waveBranch = (
 ): Step<ReadonlyArray<PhaseInfo>, ReadonlyArray<BuildPhaseResult>> =>
   branch<ReadonlyArray<PhaseInfo>, ReadonlyArray<BuildPhaseResult>>({
     name: "build.wave_branch",
-    when: (wave) => wave.length > 1,
+    // Only the "wave" sequencing mode uses worktree isolation; "sequential" and
+    // "manual" always run in-place via sequentialWavePath (which already iterates
+    // multi-phase waves at concurrency 1).
+    when: (wave) => wave.length > 1 && deps.sequencing.kind === "wave",
     then: isolatedWavePath(deps),
     otherwise: sequentialWavePath(deps),
   })

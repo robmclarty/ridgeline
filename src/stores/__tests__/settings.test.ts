@@ -22,7 +22,10 @@ import {
   DEFAULT_SPECIALIST_COUNT,
   DEFAULT_DIRECTION_COUNT,
   DEFAULT_SANDBOX_MODE,
+  DEFAULT_SEQUENCING,
   CLAUDE_REQUIRED_DOMAINS,
+  parseSequencing,
+  resolveSequencing,
 } from "../settings.js"
 
 describe("settings", () => {
@@ -387,6 +390,96 @@ describe("settings", () => {
     it("contains common git hosts", () => {
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("github.com")
       expect(DEFAULT_NETWORK_ALLOWLIST).toContain("gitlab.com")
+    })
+  })
+
+  describe("parseSequencing", () => {
+    it("parses 'sequential'", () => {
+      expect(parseSequencing("sequential")).toEqual({ kind: "sequential" })
+    })
+
+    it("parses 'manual'", () => {
+      expect(parseSequencing("manual")).toEqual({ kind: "manual" })
+    })
+
+    it("parses 'wave' as unbounded", () => {
+      expect(parseSequencing("wave")).toEqual({ kind: "wave", maxConcurrency: Infinity })
+    })
+
+    it("parses 'wave-2' as bounded", () => {
+      expect(parseSequencing("wave-2")).toEqual({ kind: "wave", maxConcurrency: 2 })
+    })
+
+    it("parses 'wave-10' as bounded", () => {
+      expect(parseSequencing("wave-10")).toEqual({ kind: "wave", maxConcurrency: 10 })
+    })
+
+    it("rejects 'wave-0' (N must be ≥ 1)", () => {
+      expect(parseSequencing("wave-0")).toBeNull()
+    })
+
+    it("rejects 'wave-' (no number)", () => {
+      expect(parseSequencing("wave-")).toBeNull()
+    })
+
+    it("rejects unknown strings", () => {
+      expect(parseSequencing("foo")).toBeNull()
+      expect(parseSequencing("WAVE")).toBeNull()
+      expect(parseSequencing("wave-abc")).toBeNull()
+    })
+
+    it("rejects non-strings", () => {
+      expect(parseSequencing(undefined)).toBeNull()
+      expect(parseSequencing(null)).toBeNull()
+      expect(parseSequencing(42)).toBeNull()
+      expect(parseSequencing({})).toBeNull()
+    })
+  })
+
+  describe("resolveSequencing", () => {
+    it("returns the default when nothing is set", () => {
+      expect(resolveSequencing(tmpDir)).toEqual(DEFAULT_SEQUENCING)
+    })
+
+    it("reads build.sequencing from settings.json", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ build: { sequencing: "wave-3" } }),
+      )
+      expect(resolveSequencing(tmpDir)).toEqual({ kind: "wave", maxConcurrency: 3 })
+    })
+
+    it("CLI override beats settings.json", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ build: { sequencing: "wave" } }),
+      )
+      expect(resolveSequencing(tmpDir, "manual")).toEqual({ kind: "manual" })
+    })
+
+    it("falls back to settings.json when CLI override is invalid", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ build: { sequencing: "wave" } }),
+      )
+      expect(resolveSequencing(tmpDir, "not-a-mode")).toEqual({
+        kind: "wave",
+        maxConcurrency: Infinity,
+      })
+    })
+
+    it("falls back to default when settings value is invalid", () => {
+      fs.writeFileSync(
+        path.join(tmpDir, "settings.json"),
+        JSON.stringify({ build: { sequencing: "garbage" } }),
+      )
+      expect(resolveSequencing(tmpDir)).toEqual(DEFAULT_SEQUENCING)
+    })
+  })
+
+  describe("DEFAULT_SEQUENCING", () => {
+    it("is sequential", () => {
+      expect(DEFAULT_SEQUENCING).toEqual({ kind: "sequential" })
     })
   })
 })

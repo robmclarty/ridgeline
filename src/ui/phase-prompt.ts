@@ -65,9 +65,9 @@ const parseAnswer = (raw: string): PhaseApprovalDecision => {
 }
 
 /**
- * Pause between phases when `--require-phase-approval` is set. Returns
- * the user's decision: `continue` proceeds, `stop` exits cleanly so the
- * build can be resumed with `ridgeline build <name>`.
+ * Pause between phases when sequencing mode is `"manual"`. Returns the
+ * user's decision: `continue` proceeds, `stop` exits cleanly so the build
+ * can be resumed with `ridgeline build <name>`.
  *
  * In non-TTY environments (CI, piped) the function auto-resolves to
  * `nonTTYDecision` (default `continue`) and writes a single notice line.
@@ -83,7 +83,7 @@ export const requestPhaseApproval = async (
     if (decision === "stop") {
       stream.write(
         "(non-TTY: cannot prompt — pausing build. Run with a TTY to approve, " +
-        "or omit --require-phase-approval to let the build run unattended.)\n",
+        "or use --sequencing sequential to let the build run unattended.)\n",
       )
     } else {
       stream.write(`(non-TTY: auto-${decision})\n`)

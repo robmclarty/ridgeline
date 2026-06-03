@@ -5,8 +5,8 @@ Execute the build pipeline (automatically resumes from last successful phase)
 Options:
   --timeout <minutes>        Max duration per phase in minutes (or 'unlimited'
                              for a 24h catchall) (default: "120")
-  --require-phase-approval   Pause between phases for explicit user confirmation
-                             before continuing
+  --sequencing <mode>        Phase execution: sequential (default) | manual |
+                             wave | wave-N
   --check-timeout <seconds>  Max duration for check command in seconds (default:
                              "1200")
   --max-retries <n>          Max reviewer retry loops per phase (default: "2")

@@ -19,7 +19,11 @@ vi.mock("../stores/settings.js", () => ({
   resolveTimeoutMinutes: vi.fn((_dir: string, cli: string | undefined, defaultMinutes: number) =>
     cli !== undefined ? parseInt(cli, 10) : defaultMinutes,
   ),
-  resolveRequirePhaseApproval: vi.fn((_dir: string, cli: boolean | undefined) => cli === true),
+  resolveSequencing: vi.fn((_dir: string, cli: string | undefined) => {
+    if (cli === "manual") return { kind: "manual" }
+    if (cli === "wave") return { kind: "wave", maxConcurrency: Infinity }
+    return { kind: "sequential" }
+  }),
 }))
 
 import { resolveConfig, loadVersion } from "../config.js"

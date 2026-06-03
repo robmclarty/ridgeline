@@ -12,7 +12,7 @@ import {
   resolveSandboxMode,
   resolveSandboxExtras,
   resolveTimeoutMinutes,
-  resolveRequirePhaseApproval,
+  resolveSequencing,
 } from "./stores/settings.js"
 
 // Load version from package.json at runtime
@@ -103,9 +103,9 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     specialistTimeoutSeconds: resolveSpecialistTimeoutSeconds(ridgelineDir),
     phaseBudgetLimit: resolvePhaseBudgetLimit(ridgelineDir),
     phaseTokenLimit: resolvePhaseTokenLimit(ridgelineDir),
-    requirePhaseApproval: resolveRequirePhaseApproval(
+    sequencing: resolveSequencing(
       ridgelineDir,
-      opts.requirePhaseApproval as boolean | undefined,
+      opts.sequencing as string | undefined,
     ),
   }
 }

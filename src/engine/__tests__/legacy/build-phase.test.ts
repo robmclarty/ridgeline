@@ -143,7 +143,7 @@ const config: RidgelineConfig = {
   specialistTimeoutSeconds: 180,
   phaseBudgetLimit: 15,
   phaseTokenLimit: 80000,
-  requirePhaseApproval: false,
+  sequencing: { kind: "sequential" },
 }
 
 const phase: PhaseInfo = {

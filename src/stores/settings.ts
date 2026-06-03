@@ -48,6 +48,23 @@ export type SandboxExtras = {
   networkAllowlist: string[]
 }
 
+/**
+ * Phase execution strategy.
+ *
+ * - `sequential` runs one phase at a time in-place (no worktrees).
+ * - `manual` is `sequential` plus an inter-phase pause for user confirmation.
+ * - `wave` uses the planner's DAG with unbounded parallelism inside worktrees.
+ * - `wave` with finite `maxConcurrency` chunks each computed wave to at most N
+ *   phases (e.g. the `"wave-2"` setting form).
+ *
+ * `wave-1` is intentionally distinct from `sequential`: it still creates a
+ * worktree per phase (one at a time, with merge-back).
+ */
+export type SequencingMode =
+  | { kind: "sequential" }
+  | { kind: "manual" }
+  | { kind: "wave"; maxConcurrency: number }
+
 type RidgelineSettings = {
   network?: {
     allowlist?: string[]
@@ -87,10 +104,16 @@ type RidgelineSettings = {
   contextWindows?: Record<string, number>
   build?: {
     /**
-     * Pause between phases for explicit user confirmation.
-     * Default `false`. CLI `--require-phase-approval` overrides this.
+     * Phase execution strategy. One of:
+     * - `"sequential"` (default): run phases one at a time, no worktrees.
+     * - `"manual"`: `sequential` + pause between phases for user approval.
+     * - `"wave"`: planner DAG with unbounded parallelism (isolated worktrees).
+     * - `"wave-N"` where N is a positive integer: wave behavior, but each
+     *   computed wave is chunked to size ≤ N.
+     *
+     * CLI `--sequencing <mode>` overrides this.
      */
-    requirePhaseApproval?: boolean
+    sequencing?: string
   }
   directions?: {
     /** Number of visual direction options to generate (2 or 3). Default 2. */
@@ -116,6 +139,7 @@ export const DEFAULT_PHASE_TOKEN_LIMIT = 50000
 export const DEFAULT_SPECIALIST_COUNT: 1 | 2 | 3 = 3
 export const DEFAULT_DIRECTION_COUNT: 2 | 3 = 2
 export const DEFAULT_SANDBOX_MODE: SandboxMode = "semi-locked"
+export const DEFAULT_SEQUENCING: SequencingMode = { kind: "sequential" }
 /**
  * Catchall timeout applied when the user requests `"unlimited"` per-call timeout.
  * Far above any normal phase, but bounded so a truly hung Claude process eventually
@@ -141,17 +165,39 @@ export const resolvePhaseBudgetLimit = (ridgelineDir: string): number | null => 
 }
 
 /**
- * Resolve whether to gate phase advancement on user approval.
- *
- * Precedence: CLI override (true → on) → settings.json → default false.
+ * Parse a sequencing-mode string into its discriminated union form.
+ * Returns `null` for any input that doesn't match a known mode.
  */
-export const resolveRequirePhaseApproval = (
+export const parseSequencing = (raw: unknown): SequencingMode | null => {
+  if (typeof raw !== "string") return null
+  if (raw === "sequential") return { kind: "sequential" }
+  if (raw === "manual") return { kind: "manual" }
+  if (raw === "wave") return { kind: "wave", maxConcurrency: Infinity }
+  const match = /^wave-(\d+)$/.exec(raw)
+  if (match) {
+    const n = parseInt(match[1], 10)
+    if (Number.isFinite(n) && n >= 1) return { kind: "wave", maxConcurrency: n }
+  }
+  return null
+}
+
+/**
+ * Resolve the phase execution strategy.
+ *
+ * Precedence: CLI override → settings.json → default {@link DEFAULT_SEQUENCING}.
+ * Invalid values at any layer fall through to the next.
+ */
+export const resolveSequencing = (
   ridgelineDir: string,
-  cliOverride: boolean | undefined,
-): boolean => {
-  if (cliOverride === true) return true
-  const raw = loadSettings(ridgelineDir).build?.requirePhaseApproval
-  return raw === true
+  cliOverride?: string,
+): SequencingMode => {
+  if (cliOverride !== undefined) {
+    const parsed = parseSequencing(cliOverride)
+    if (parsed) return parsed
+  }
+  const raw = loadSettings(ridgelineDir).build?.sequencing
+  const parsed = parseSequencing(raw)
+  return parsed ?? DEFAULT_SEQUENCING
 }
 
 /**

@@ -63,15 +63,15 @@
     "hidden": false
   },
   {
-    "flags": "--require-phase-approval",
-    "description": "Pause between phases for explicit user confirmation before continuing",
+    "flags": "--sandbox <mode>",
+    "description": "Sandbox mode: off | semi-locked (default) | strict",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false
   },
   {
-    "flags": "--sandbox <mode>",
-    "description": "Sandbox mode: off | semi-locked (default) | strict",
+    "flags": "--sequencing <mode>",
+    "description": "Phase execution: sequential (default) | manual | wave | wave-N",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

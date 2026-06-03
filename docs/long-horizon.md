@@ -182,10 +182,12 @@ criterion.
 
 Two ways to pause a long-running build cleanly without losing state:
 
-**`--require-phase-approval`** — between phases (or wave boundaries) the
+**`--sequencing manual`** — between phases (or wave boundaries) the
 orchestrator pauses and asks `Continue to phase N? [Y/n/q]`. Press Enter
 to proceed, `n` or `q` to exit. State is preserved; resume with
-`ridgeline build <name>`.
+`ridgeline build <name>`. Other sequencing modes (`sequential`, `wave`,
+`wave-N`) control whether phases run serially or in parallel worktrees;
+see `docs/help.md` for the full set.
 
 **Graceful-stop keystroke (`q`)** — while a build is running in a TTY,
 press `q` (or `Ctrl-G`) to request a graceful stop. The current phase

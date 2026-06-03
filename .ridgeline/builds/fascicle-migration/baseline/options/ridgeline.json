@@ -77,13 +77,6 @@
     "hidden": false
   },
   {
-    "flags": "--require-phase-approval",
-    "description": "Pause between phases for explicit user confirmation before continuing",
-    "defaultValue": null,
-    "mandatory": false,
-    "hidden": false
-  },
-  {
     "flags": "--research [n]",
     "description": "Run N research+refine iterations between spec and plan (default 1)",
     "defaultValue": null,
@@ -93,6 +86,13 @@
   {
     "flags": "--sandbox <mode>",
     "description": "Sandbox mode: off | semi-locked (default) | strict",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
+    "flags": "--sequencing <mode>",
+    "description": "Phase execution: sequential (default) | manual | wave | wave-N",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

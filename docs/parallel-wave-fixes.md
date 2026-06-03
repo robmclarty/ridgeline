@@ -19,26 +19,14 @@ modified the identical set of files. The first auto-merged; the second hit a
 
 ## Tasks
 
-### 1. Add `--serial` / `--max-parallel <n>` to `ridgeline build`
+### 1. Add `--serial` / `--max-parallel <n>` to `ridgeline build` — RESOLVED
 
-**Why:** today there is no way to opt out of wave scheduling at the CLI. The
-only lever is editing each phase's `depends_on` frontmatter, which is brittle
-and per-build.
-
-**How to apply:**
-
-- Add the flag(s) to the command in `src/commands/build.ts` (next to
-  `--require-phase-approval`).
-- Plumb a `maxParallel` value into `executeWaveLoop` and clamp the result of
-  `getReadyPhases` to that size before handing off to `runParallelWave`.
-- `--serial` is sugar for `--max-parallel 1`. With max=1, prefer
-  `runAndTrackPhase` directly (skip worktree-isolation overhead since there's
-  no parallelism).
-- Update `docs/build-lifecycle.md` and the `--help` text.
-
-**Acceptance:** running `ridgeline build <name> --serial` produces exactly one
-phase per "wave" in the log; no `Wave: N parallel phases (...)` line where N
-> 1.
+Implemented as `--sequencing <mode>` (replaces `--require-phase-approval`).
+`build.sequencing` in `settings.json` accepts `sequential` (default), `manual`
+(sequential + pause), `wave` (current unbounded behavior), or `wave-N` for
+bounded parallel waves. `sequential` skips worktree-isolation entirely; the DAG
+is still computed, but every wave routes through `sequentialWavePath`. See
+`docs/help.md` for usage.
 
 ### 2. Detect file-overlap between phases scheduled in the same wave
 

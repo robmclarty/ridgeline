@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Breaking:** `--require-phase-approval` (CLI) and
+  `build.requirePhaseApproval` (settings.json) are replaced by a
+  single `--sequencing <mode>` / `build.sequencing` knob. Values:
+  `sequential` (default — phases run one at a time, no worktrees),
+  `manual` (sequential + pause between phases, replaces the old
+  approval flag), `wave` (the previous unbounded-parallel default),
+  and `wave-N` (parallel with a cap of N phases per wave). The new
+  default makes builds avoid worktree-merge conflicts unless the user
+  explicitly opts into parallel execution.
+
 ## v0.12.7 — 2026-05-30
 
 ### Added

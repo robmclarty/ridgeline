@@ -91,7 +91,7 @@ describe("requestPhaseApproval", () => {
     const output = chunks.join("")
     expect(output).toContain("non-TTY")
     expect(output).toContain("pausing build")
-    expect(output).toContain("--require-phase-approval")
+    expect(output).toContain("--sequencing sequential")
   })
 
   it("renders the completed and next phase ids in the prompt", async () => {
