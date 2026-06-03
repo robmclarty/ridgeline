@@ -43,28 +43,45 @@ the `fascicle-migration` build.
 
 ## Multi-model support
 
-Fascicle's `create_engine({ providers: { ... } })` supports multiple
-providers (`claude_cli`, `anthropic`, `openai`, `google`, `ollama`,
-`lmstudio`, `openrouter`). Ridgeline now wires both `claude_cli`
-(always) and `anthropic` (gated on `ANTHROPIC_API_KEY` being present in
-the environment). Ridgeline's own `RIDGELINE_ALIASES` table is gone;
-fascicle's built-in aliases handle resolution.
+Fascicle 0.5.0 resolves models on two axes: `model` names a **family**
+(`opus`, `sonnet`, `haiku`, `gpt`, `gemini`, …) or a concrete vendor id
+(`claude-opus-4-8`), and `provider` names the transport. Fascicle's
+`MODEL_FAMILIES` catalog owns the latest-version mapping, so ridgeline
+defines **no aliases** and pins no versions — `opus` resolves to whatever
+fascicle (and the Claude CLI) consider latest, currently `claude-opus-4-8`.
 
-Resulting model selection surface (`--model <name>`):
+`engine.factory.ts` activates providers and sets a default provider; it
+does not define models:
 
-| Name | Routes to | Notes |
-|---|---|---|
-| `cli-opus`, `cli-sonnet`, `cli-haiku` | `claude_cli` | Subscription / OAuth auth. **Default is `cli-opus`.** |
-| `opus`, `sonnet`, `haiku` | `anthropic` API | Requires `ANTHROPIC_API_KEY`. |
-| `claude-opus`, `claude-sonnet`, `claude-haiku` | `anthropic` API | Same as bare names. |
-| `anthropic:claude-haiku-4-5` (etc.) | `anthropic` API | Pin a specific model id. |
-| `openai:…`, `google:…`, `openrouter:…`, `ollama:…`, `lmstudio:…` | other providers | Resolved by fascicle. *Not yet wired in `engine.factory.ts`.* |
+- `claude_cli` — always (subscription/OAuth via the local CLI), with
+  ridgeline's sandbox/plugin/timeout wiring. Reserved: a `claude_cli`
+  entry in the settings `providers` block is ignored.
+- `anthropic`, `openai`, `google`, `openrouter` — activated when the
+  matching API key is in the environment (`ANTHROPIC_API_KEY`,
+  `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `OPENROUTER_API_KEY`).
+- Anything else (`ollama`/`lmstudio` `base_url`, per-provider overrides)
+  via a `providers` block in `.ridgeline/settings.json`.
+- `defaults.provider` is set explicitly — `anthropic` when a key is
+  present, else `claude_cli` — so bare families stay resolvable once more
+  than one provider is configured. The settings `provider` field overrides it.
 
-Adding the remaining providers is a config-only change in
-`engine.factory.ts` plus the corresponding `@ai-sdk/*` peer dep. Skills,
-tools, and agent discovery still depend on `claude_cli` provider
-specifics — that's why bare model name resolution differs from
-mainline Claude Code's defaults.
+Selecting a model/provider:
+
+| Form | Effect |
+|---|---|
+| `opus` / `sonnet` / `haiku` | Family → latest id for the default provider. |
+| `claude-opus-4-8` (etc.) | Concrete Claude id on the default provider. |
+| `openai:gpt-4o`, `openrouter:…`, `google:…`, `ollama:…` | `provider:id` picks both axes at once (overrides the default provider). |
+| settings `"provider": "openai"` + `--model gpt` | Family → that provider's latest id. |
+
+**Where this takes effect.** Only the engine-backed flows
+(`retrospective`, `retro-refine`, `vision`, `qa`) route model calls
+through fascicle's provider resolution today. The core flows (`build`,
+`plan`, `research`, `review`, `refine`) still spawn the Claude CLI
+directly (`runClaudeProcess`), so they are Claude-only and ignore the
+`provider` axis until those leaf calls move onto the engine (a planned
+follow-up). `ridgeline build` therefore validates that its model is
+Claude-resolvable and errors early otherwise.
 
 ## New capabilities the migration unlocks
 
