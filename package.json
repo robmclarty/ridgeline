@@ -1,6 +1,6 @@
 {
   "name": "ridgeline",
-  "version": "0.12.9",
+  "version": "0.12.10",
   "description": "Build harness for long-horizon software execution",
   "license": "Apache-2.0",
   "bin": {

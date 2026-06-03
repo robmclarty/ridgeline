@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.12.10 — 2026-06-03
+
+### Fixed
+
+- Cleared all `npm audit` advisories (1 high, 3 moderate) by pinning the
+  patched versions of three transitive dev dependencies — `brace-expansion`
+  (5.0.6), `fast-uri` (3.1.2), and `qs` (6.15.2) — through `package.json`
+  overrides. All were nested under `@stryker-mutator/core`, which is
+  already at its latest release.
+
 ## v0.12.9 — 2026-06-03
 
 ### Added
