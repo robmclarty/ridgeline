@@ -210,4 +210,4 @@ Resolution order: `--thorough` or `--count <n>` flag → `settings.directions.co
 | `--count <n>` | from settings, else `2` | Number of directions (2 or 3) |
 | `--thorough` | -- | Alias for `--count 3` |
 | `--skip` | -- | Explicit no-op |
-| `-y, --yes` | off | Skip the preflight confirmation prompt |
+| `--no-preflight` | preflight on | Skip the preflight confirmation pause (also settable as `"preflight": false` in settings.json) |

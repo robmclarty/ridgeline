@@ -1,5 +1,7 @@
 {
   "model": "opus",
+  "preflight": true,
+  "maxBudgetUsd": 50,
   "specialistTimeoutSeconds": 1800,
   "timeoutMinutes": "unlimited",
   "planner": {

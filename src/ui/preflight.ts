@@ -9,7 +9,8 @@ export interface StablePromptInfo {
 }
 
 export interface PreflightOptions {
-  yes: boolean
+  /** Whether to pause for the confirmation prompt under TTY. Default true; false skips the pause. */
+  preflight: boolean
   isTTY: boolean
   stream?: NodeJS.WritableStream
   input?: NodeJS.ReadableStream
@@ -56,7 +57,7 @@ export const renderPreflight = (
   report: DetectionReport,
   opts: {
     isTTY: boolean
-    yes: boolean
+    preflight: boolean
     isStderrTTY?: boolean
     isPlaywrightResolvable?: () => boolean
     stablePromptInfo?: StablePromptInfo
@@ -135,7 +136,7 @@ export const renderPreflight = (
 
   if (!opts.isTTY) {
     lines.push(hint("(auto-proceeding in CI)", { stream }))
-  } else if (!opts.yes) {
+  } else if (opts.preflight) {
     lines.push(hint("  Press Enter to continue, Ctrl+C to abort", { stream }))
   }
 
@@ -159,14 +160,14 @@ export const runPreflight = async (
   const stream = opts.stream ?? process.stdout
   const rendered = renderPreflight(report, {
     isTTY: opts.isTTY,
-    yes: opts.yes,
+    preflight: opts.preflight,
     isPlaywrightResolvable: opts.isPlaywrightResolvable,
     stablePromptInfo: opts.stablePromptInfo,
   })
   stream.write(rendered)
 
   if (!opts.isTTY) return
-  if (opts.yes) return
+  if (!opts.preflight) return
 
   const input = opts.input ?? process.stdin
   await waitForEnter(input)

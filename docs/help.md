@@ -40,7 +40,7 @@ Three flags shape preflight behavior on every pipeline-entry command:
 |------|---------|-------------|
 | `--specialists <n>` | `3` | Dispatch 1, 2, or 3 specialists. Default is 3 (was 2 prior to 0.9.0). |
 | `--thorough` | -- | Alias for `--specialists 3` (the default). Retained for back-compat. |
-| `-y`, `--yes` | off | Skip the Enter-to-continue prompt (useful for scripts) |
+| `--no-preflight` | preflight on | Skip the Enter-to-continue prompt (useful for scripts; also settable as `"preflight": false` in settings.json) |
 
 See [Preflight, Detection, and Sensors](preflight-and-sensors.md) for the
 detection rules, the four built-in sensors, and the `shape.md` `## Runtime`

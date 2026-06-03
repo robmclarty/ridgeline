@@ -26,7 +26,7 @@ describe("preflight ordering", () => {
     const input = new PassThrough()
 
     // Simulate a pipeline-entry action: preflight first, then model call.
-    await runPreflight(visualReport, { isTTY: false, yes: false, stream, input })
+    await runPreflight(visualReport, { isTTY: false, preflight: true, stream, input })
     events.push("MODEL_CALL::shape")
 
     const preflightIdx = events.findIndex((e) => e.startsWith("PREFLIGHT::"))
@@ -38,7 +38,7 @@ describe("preflight ordering", () => {
   it("preflight rejects when stdin is closed without input in TTY mode (Ctrl+C analogue)", async () => {
     const stream = new Writable({ write(_c, _e, cb) { cb() } })
     const input = new PassThrough()
-    const promise = runPreflight(visualReport, { isTTY: true, yes: false, stream, input })
+    const promise = runPreflight(visualReport, { isTTY: true, preflight: true, stream, input })
 
     // Closing the input mid-wait simulates the readline being torn down on Ctrl+C.
     setTimeout(() => input.end(), 50)

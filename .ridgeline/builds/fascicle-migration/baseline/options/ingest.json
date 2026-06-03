@@ -21,6 +21,13 @@
     "hidden": false
   },
   {
+    "flags": "--no-preflight",
+    "description": "Skip the preflight confirmation pause (settings: \"preflight\": false)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
     "flags": "--specialists <n>",
     "description": "Number of ensemble specialists (1, 2, or 3). Default: 3",
     "defaultValue": null,
@@ -38,13 +45,6 @@
     "flags": "--timeout <minutes>",
     "description": "Max duration per turn in minutes",
     "defaultValue": "10",
-    "mandatory": false,
-    "hidden": false
-  },
-  {
-    "flags": "-y, --yes",
-    "description": "Skip the preflight confirmation prompt",
-    "defaultValue": null,
     "mandatory": false,
     "hidden": false
   }

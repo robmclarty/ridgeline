@@ -70,6 +70,13 @@
     "hidden": false
   },
   {
+    "flags": "--no-preflight",
+    "description": "Skip the preflight confirmation pause (settings: \"preflight\": false)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
     "flags": "--no-refine",
     "description": "Skip retro-refine at the end of an --auto run",
     "defaultValue": null,
@@ -142,13 +149,6 @@
   {
     "flags": "-V, --version",
     "description": "output the version number",
-    "defaultValue": null,
-    "mandatory": false,
-    "hidden": false
-  },
-  {
-    "flags": "-y, --yes",
-    "description": "Skip the preflight confirmation prompt",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

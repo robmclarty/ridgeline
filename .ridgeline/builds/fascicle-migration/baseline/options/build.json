@@ -56,6 +56,13 @@
     "hidden": false
   },
   {
+    "flags": "--no-preflight",
+    "description": "Skip the preflight confirmation pause (settings: \"preflight\": false)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
     "flags": "--no-structured-log",
     "description": "Disable structured logging to log.jsonl",
     "defaultValue": null,
@@ -107,13 +114,6 @@
   {
     "flags": "--unsafe",
     "description": "Alias for --sandbox=off (deprecated)",
-    "defaultValue": null,
-    "mandatory": false,
-    "hidden": false
-  },
-  {
-    "flags": "-y, --yes",
-    "description": "Skip the preflight confirmation prompt",
     "defaultValue": null,
     "mandatory": false,
     "hidden": false

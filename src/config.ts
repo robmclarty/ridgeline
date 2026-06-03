@@ -13,6 +13,7 @@ import {
   resolveSandboxExtras,
   resolveTimeoutMinutes,
   resolveSequencing,
+  resolveMaxBudgetUsd,
 } from "./stores/settings.js"
 
 // Load version from package.json at runtime
@@ -93,7 +94,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     timeoutMinutes: resolveTimeoutMinutes(ridgelineDir, opts.timeout as string | undefined, 120),
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),
     checkCommand,
-    maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : null,
+    maxBudgetUsd: resolveMaxBudgetUsd(ridgelineDir, opts.maxBudgetUsd as string | undefined),
     unsafe: sandboxMode === "off",
     sandboxMode,
     sandboxExtras: resolveSandboxExtras(ridgelineDir),

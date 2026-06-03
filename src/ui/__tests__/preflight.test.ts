@@ -59,7 +59,7 @@ describe("preflight", () => {
 
   describe("rendering", () => {
     it("renders the three required label lines in order", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: false })
       const stripped = stripAnsi(out)
       const lines = stripped.split("\n")
       expect(lines[0]).toMatch(/^Detected\s+react,\s*vite,\s*design\.md\s+→\s+enabling\s+Playwright,\s*vision,\s*pa11y,\s*contrast$/)
@@ -69,12 +69,12 @@ describe("preflight", () => {
     })
 
     it("contains no Unicode box-drawing characters", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: false })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: true })
       expect(BOX_DRAWING.test(out)).toBe(false)
     })
 
     it("uses bold for labels and dim for values", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: false })
       // Bold is SGR 1, dim is SGR 2
       expect(out).toContain(`${ESC}[1mDetected${ESC}[0m`)
       expect(out).toContain(`${ESC}[1menabling${ESC}[0m`)
@@ -84,25 +84,25 @@ describe("preflight", () => {
     })
 
     it("renders the arrow in dim cyan (SGR 2;36)", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: false })
       expect(out).toContain(`${ESC}[2;36m→${ESC}[0m`)
     })
 
     it("appends the CI auto-proceed suffix when not a TTY", () => {
-      const out = renderPreflight(visualReport, { isTTY: false, yes: false })
+      const out = renderPreflight(visualReport, { isTTY: false, preflight: true })
       expect(stripAnsi(out)).toContain("(auto-proceeding in CI)")
       expect(stripAnsi(out)).not.toContain("Press Enter")
     })
 
     it("emits the Press Enter prompt indented exactly 2 spaces in TTY interactive mode", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: false })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: true })
       const stripped = stripAnsi(out)
       expect(stripped).toContain("\n  Press Enter to continue, Ctrl+C to abort")
       expect(stripped).not.toContain("(auto-proceeding in CI)")
     })
 
-    it("omits both the prompt and the CI suffix when --yes in TTY mode", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true })
+    it("omits both the prompt and the CI suffix when preflight disabled in TTY mode", () => {
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: false })
       const stripped = stripAnsi(out)
       expect(stripped).not.toContain("Press Enter")
       expect(stripped).not.toContain("(auto-proceeding in CI)")
@@ -110,14 +110,14 @@ describe("preflight", () => {
 
     it("omits the --thorough hint when ensemble size is already 3", () => {
       const thoroughReport: DetectionReport = { ...visualReport, suggestedEnsembleSize: 3 }
-      const out = renderPreflight(thoroughReport, { isTTY: true, yes: true })
+      const out = renderPreflight(thoroughReport, { isTTY: true, preflight: false })
       const stripped = stripAnsi(out)
       expect(stripped).toContain("3 specialists")
       expect(stripped).not.toContain("--thorough")
     })
 
     it("renders a fallback for projects with no signals", () => {
-      const out = renderPreflight(nodeReport, { isTTY: true, yes: true })
+      const out = renderPreflight(nodeReport, { isTTY: true, preflight: false })
       const stripped = stripAnsi(out)
       expect(stripped).toContain("no project signals")
       expect(stripped).toContain("no sensors")
@@ -134,14 +134,14 @@ describe("preflight", () => {
         suggestedSensors: ["playwright", "vision", "a11y", "contrast"],
         suggestedEnsembleSize: 2,
       }
-      const stripped = stripAnsi(renderPreflight(fileOnlyReport, { isTTY: true, yes: true }))
+      const stripped = stripAnsi(renderPreflight(fileOnlyReport, { isTTY: true, preflight: false }))
       expect(stripped).toContain("html/tsx files")
       expect(stripped).not.toContain("no project signals")
     })
 
     it("renders without color when NO_COLOR is set", () => {
       process.env.NO_COLOR = "1"
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: false })
       // No ANSI escape sequences should be present
       expect(out).toBe(stripAnsi(out))
     })
@@ -150,17 +150,17 @@ describe("preflight", () => {
   describe("snapshots", () => {
     const resolvable = () => true
     it("matches the TTY interactive rendering snapshot", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: false, isPlaywrightResolvable: resolvable })
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: true, isPlaywrightResolvable: resolvable })
       expect(stripAnsi(out)).toMatchSnapshot()
     })
 
-    it("matches the --yes rendering snapshot", () => {
-      const out = renderPreflight(visualReport, { isTTY: true, yes: true, isPlaywrightResolvable: resolvable })
+    it("matches the preflight-disabled rendering snapshot", () => {
+      const out = renderPreflight(visualReport, { isTTY: true, preflight: false, isPlaywrightResolvable: resolvable })
       expect(stripAnsi(out)).toMatchSnapshot()
     })
 
     it("matches the non-TTY (CI) rendering snapshot", () => {
-      const out = renderPreflight(visualReport, { isTTY: false, yes: false, isPlaywrightResolvable: resolvable })
+      const out = renderPreflight(visualReport, { isTTY: false, preflight: true, isPlaywrightResolvable: resolvable })
       expect(stripAnsi(out)).toMatchSnapshot()
     })
   })
@@ -170,26 +170,26 @@ describe("preflight", () => {
       const { stream, chunks } = captureWritable()
       const input = new PassThrough()
       const before = Date.now()
-      await runPreflight(visualReport, { isTTY: false, yes: false, stream, input })
+      await runPreflight(visualReport, { isTTY: false, preflight: true, stream, input })
       const elapsed = Date.now() - before
       expect(elapsed).toBeLessThan(200)
       expect(chunks.join("")).toContain("(auto-proceeding in CI)")
     })
 
-    it("auto-proceeds without waiting when --yes is set in TTY mode", async () => {
+    it("auto-proceeds without waiting when preflight disabled in TTY mode", async () => {
       const { stream } = captureWritable()
       const input = new PassThrough()
       const before = Date.now()
-      await runPreflight(visualReport, { isTTY: true, yes: true, stream, input })
+      await runPreflight(visualReport, { isTTY: true, preflight: false, stream, input })
       const elapsed = Date.now() - before
       expect(elapsed).toBeLessThan(200)
     })
 
-    it("waits for a newline on stdin when interactive (no --yes)", async () => {
+    it("waits for a newline on stdin when interactive (preflight enabled)", async () => {
       const { stream } = captureWritable()
       const input = new PassThrough()
       let resolved = false
-      const promise = runPreflight(visualReport, { isTTY: true, yes: false, stream, input })
+      const promise = runPreflight(visualReport, { isTTY: true, preflight: true, stream, input })
         .then(() => { resolved = true })
 
       await new Promise((r) => setTimeout(r, 200))
@@ -203,7 +203,7 @@ describe("preflight", () => {
     it("writes the rendered output to the configured stream", async () => {
       const { stream, chunks } = captureWritable()
       const input = new PassThrough()
-      await runPreflight(visualReport, { isTTY: false, yes: false, stream, input })
+      await runPreflight(visualReport, { isTTY: false, preflight: true, stream, input })
       const written = chunks.join("")
       expect(stripAnsi(written)).toContain("Detected")
       expect(stripAnsi(written)).toContain("enabling")

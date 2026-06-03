@@ -22,7 +22,7 @@ Options:
   --sequencing <mode>                    Phase execution: sequential (default) | manual | wave | wave-N
   --specialists <n>                      Number of ensemble specialists (1, 2, or 3). Default: 3
   --thorough                             Alias for --specialists 3 (the default)
-  -y, --yes                              Skip the preflight confirmation prompt
+  --no-preflight                         Skip the preflight confirmation pause (settings: "preflight": false)
   --auto                                 Non-interactive mode: skip Q&A; use Auto variants where applicable
   --stop-after <stage>                   Halt the auto run after this stage (shape|design|spec|plan|build)
   --no-refine                            Skip retro-refine at the end of an --auto run

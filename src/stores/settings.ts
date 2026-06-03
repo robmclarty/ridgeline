@@ -72,6 +72,16 @@ type RidgelineSettings = {
   assetDir?: string
   model?: string
   /**
+   * Whether pipeline-entry commands pause for the preflight confirmation prompt.
+   * Default true. Set to false (or pass `--no-preflight`) to skip the pause.
+   */
+  preflight?: boolean
+  /**
+   * Approximate cumulative USD ceiling for a run. The build halts once total
+   * cost exceeds this. CLI `--max-budget-usd` overrides. Default: no cap.
+   */
+  maxBudgetUsd?: number
+  /**
    * Per-call specialist timeout in seconds. Recommended 180–600.
    * Applies to ensemble specialist invocations (planner, specifier, researcher).
    */
@@ -140,6 +150,7 @@ export const DEFAULT_SPECIALIST_COUNT: 1 | 2 | 3 = 3
 export const DEFAULT_DIRECTION_COUNT: 2 | 3 = 2
 export const DEFAULT_SANDBOX_MODE: SandboxMode = "semi-locked"
 export const DEFAULT_SEQUENCING: SequencingMode = { kind: "sequential" }
+export const DEFAULT_PREFLIGHT = true
 /**
  * Catchall timeout applied when the user requests `"unlimited"` per-call timeout.
  * Far above any normal phase, but bounded so a truly hung Claude process eventually
@@ -153,6 +164,25 @@ export const resolveSpecialistTimeoutSeconds = (ridgelineDir: string): number =>
     return DEFAULT_SPECIALIST_TIMEOUT_SECONDS
   }
   return Math.floor(raw)
+}
+
+/** CLI override wins; settings.json is consulted next; default is true (run the confirmation pause). */
+export const resolvePreflight = (ridgelineDir: string, cliOverride?: boolean): boolean => {
+  if (typeof cliOverride === "boolean") return cliOverride
+  const raw = loadSettings(ridgelineDir).preflight
+  if (typeof raw === "boolean") return raw
+  return DEFAULT_PREFLIGHT
+}
+
+/** CLI override (string from --max-budget-usd) wins; settings.json next; default null (no cap). */
+export const resolveMaxBudgetUsd = (ridgelineDir: string, cliOverride?: string): number | null => {
+  if (cliOverride !== undefined && cliOverride !== "") {
+    const n = parseFloat(cliOverride)
+    if (Number.isFinite(n) && n > 0) return n
+  }
+  const raw = loadSettings(ridgelineDir).maxBudgetUsd
+  if (typeof raw === "number" && Number.isFinite(raw) && raw > 0) return raw
+  return null
 }
 
 export const resolvePhaseBudgetLimit = (ridgelineDir: string): number | null => {

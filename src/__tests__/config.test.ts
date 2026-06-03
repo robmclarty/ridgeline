@@ -16,6 +16,9 @@ vi.mock("../stores/settings.js", () => ({
   resolveSpecialistCount: vi.fn((_dir: string, cli?: number) => cli ?? 3),
   resolveSandboxMode: vi.fn((_dir: string, cli?: string) => cli ?? "semi-locked"),
   resolveSandboxExtras: vi.fn(() => ({ writePaths: [], readPaths: [], profiles: [], networkAllowlist: [] })),
+  resolveMaxBudgetUsd: vi.fn((_dir: string, cli?: string) =>
+    cli !== undefined && cli !== "" ? parseFloat(cli) : null,
+  ),
   resolveTimeoutMinutes: vi.fn((_dir: string, cli: string | undefined, defaultMinutes: number) =>
     cli !== undefined ? parseInt(cli, 10) : defaultMinutes,
   ),

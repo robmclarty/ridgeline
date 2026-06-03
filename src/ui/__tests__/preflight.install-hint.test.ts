@@ -29,7 +29,7 @@ describe("preflight playwright install-hint", () => {
   it("renders the install hint when visual surface detected and playwright unresolvable", () => {
     const out = renderPreflight(visualReport, {
       isTTY: false,
-      yes: false,
+      preflight: true,
       isPlaywrightResolvable: () => false,
     })
     const stripped = stripAnsi(out)
@@ -40,7 +40,7 @@ describe("preflight playwright install-hint", () => {
   it("emits the hint on a single line so copy-paste works", () => {
     const out = renderPreflight(visualReport, {
       isTTY: false,
-      yes: false,
+      preflight: true,
       isPlaywrightResolvable: () => false,
     })
     const stripped = stripAnsi(out)
@@ -52,7 +52,7 @@ describe("preflight playwright install-hint", () => {
   it("omits the hint when playwright is resolvable", () => {
     const out = renderPreflight(visualReport, {
       isTTY: false,
-      yes: false,
+      preflight: true,
       isPlaywrightResolvable: () => true,
     })
     const stripped = stripAnsi(out)
@@ -63,7 +63,7 @@ describe("preflight playwright install-hint", () => {
   it("omits the hint when no visual surface is detected", () => {
     const out = renderPreflight(nonVisualReport, {
       isTTY: false,
-      yes: false,
+      preflight: true,
       isPlaywrightResolvable: () => false,
     })
     const stripped = stripAnsi(out)

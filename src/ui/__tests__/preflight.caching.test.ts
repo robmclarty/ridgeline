@@ -20,7 +20,7 @@ describe("preflight caching threshold warning", () => {
   it("emits a warning when stable prompt is under the opus/haiku 4096-token minimum", () => {
     const out = renderPreflight(visualReport, {
       isTTY: true,
-      yes: true,
+      preflight: false,
       isPlaywrightResolvable: resolvable,
       stablePromptInfo: { tokens: 2000, model: "opus" },
     })
@@ -33,7 +33,7 @@ describe("preflight caching threshold warning", () => {
   it("emits a warning when sonnet stable prompt is under 2048-token minimum", () => {
     const out = renderPreflight(visualReport, {
       isTTY: true,
-      yes: true,
+      preflight: false,
       isPlaywrightResolvable: resolvable,
       stablePromptInfo: { tokens: 1000, model: "claude-sonnet-4-6" },
     })
@@ -45,7 +45,7 @@ describe("preflight caching threshold warning", () => {
   it("omits the warning when stable prompt meets the threshold", () => {
     const out = renderPreflight(visualReport, {
       isTTY: true,
-      yes: true,
+      preflight: false,
       isPlaywrightResolvable: resolvable,
       stablePromptInfo: { tokens: 5000, model: "opus" },
     })
@@ -56,7 +56,7 @@ describe("preflight caching threshold warning", () => {
   it("omits the warning when stablePromptInfo is absent", () => {
     const out = renderPreflight(visualReport, {
       isTTY: true,
-      yes: true,
+      preflight: false,
       isPlaywrightResolvable: resolvable,
     })
     const stripped = stripAnsi(out)

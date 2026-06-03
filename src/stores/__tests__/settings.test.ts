@@ -26,6 +26,9 @@ import {
   CLAUDE_REQUIRED_DOMAINS,
   parseSequencing,
   resolveSequencing,
+  resolvePreflight,
+  resolveMaxBudgetUsd,
+  DEFAULT_PREFLIGHT,
 } from "../settings.js"
 
 describe("settings", () => {
@@ -58,6 +61,56 @@ describe("settings", () => {
       fs.writeFileSync(path.join(tmpDir, "settings.json"), "not json")
       const settings = loadSettings(tmpDir)
       expect(settings).toEqual({})
+    })
+  })
+
+  describe("resolvePreflight", () => {
+    const writeSettings = (obj: unknown): void =>
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify(obj))
+
+    it("defaults to DEFAULT_PREFLIGHT (true) when unset", () => {
+      expect(resolvePreflight(tmpDir)).toBe(DEFAULT_PREFLIGHT)
+      expect(resolvePreflight(tmpDir)).toBe(true)
+    })
+
+    it("reads the settings.json value", () => {
+      writeSettings({ preflight: false })
+      expect(resolvePreflight(tmpDir)).toBe(false)
+    })
+
+    it("CLI override wins over settings.json", () => {
+      writeSettings({ preflight: true })
+      expect(resolvePreflight(tmpDir, false)).toBe(false)
+    })
+
+    it("ignores non-boolean settings values and falls back to the default", () => {
+      writeSettings({ preflight: "nope" })
+      expect(resolvePreflight(tmpDir)).toBe(true)
+    })
+  })
+
+  describe("resolveMaxBudgetUsd", () => {
+    const writeSettings = (obj: unknown): void =>
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify(obj))
+
+    it("defaults to null (no cap) when unset", () => {
+      expect(resolveMaxBudgetUsd(tmpDir)).toBeNull()
+    })
+
+    it("reads a numeric settings.json value", () => {
+      writeSettings({ maxBudgetUsd: 5 })
+      expect(resolveMaxBudgetUsd(tmpDir)).toBe(5)
+    })
+
+    it("CLI override (string) wins over settings.json", () => {
+      writeSettings({ maxBudgetUsd: 5 })
+      expect(resolveMaxBudgetUsd(tmpDir, "9.5")).toBe(9.5)
+    })
+
+    it("ignores non-positive or non-finite values and falls back", () => {
+      writeSettings({ maxBudgetUsd: 0 })
+      expect(resolveMaxBudgetUsd(tmpDir)).toBeNull()
+      expect(resolveMaxBudgetUsd(tmpDir, "abc")).toBeNull()
     })
   })
 

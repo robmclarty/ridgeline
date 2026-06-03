@@ -28,6 +28,13 @@
     "hidden": false
   },
   {
+    "flags": "--no-preflight",
+    "description": "Skip the preflight confirmation pause (settings: \"preflight\": false)",
+    "defaultValue": null,
+    "mandatory": false,
+    "hidden": false
+  },
+  {
     "flags": "--skip",
     "description": "Explicit no-op (skip direction generation)",
     "defaultValue": null,
@@ -45,13 +52,6 @@
     "flags": "--timeout <minutes>",
     "description": "Max duration in minutes",
     "defaultValue": "15",
-    "mandatory": false,
-    "hidden": false
-  },
-  {
-    "flags": "-y, --yes",
-    "description": "Skip the preflight confirmation prompt",
-    "defaultValue": null,
     "mandatory": false,
     "hidden": false
   }

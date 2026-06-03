@@ -41,7 +41,7 @@ In CI (no TTY) the prompt line is replaced with a dim
 | Flag | Applies to | Description |
 |------|------------|-------------|
 | `--thorough` | all pipeline-entry commands | Dispatch 3 specialists with two-round cross-annotation instead of the default 2. |
-| `-y`, `--yes` | all pipeline-entry commands | Skip the Enter-to-continue prompt even under TTY. Useful for scripts and local automation. |
+| `--no-preflight` | all pipeline-entry commands | Skip the Enter-to-continue prompt even under TTY. Useful for scripts and local automation. Also settable as `"preflight": false` in settings.json (CLI flag wins). |
 
 ### Detection
 

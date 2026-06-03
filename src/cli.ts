@@ -5,7 +5,7 @@ import { realpathSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config.js"
-import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount } from "./stores/settings.js"
+import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount, resolvePreflight } from "./stores/settings.js"
 import { RidgelineConfig } from "./types.js"
 import { disableLogger } from "./ui/logger.js"
 import { askBuildName } from "./ui/prompt.js"
@@ -124,7 +124,7 @@ const handleCommandError = (err: unknown): never => {
 
 const ridgelineDirFromCwd = (): string => path.join(process.cwd(), ".ridgeline")
 
-const detectPreflightFlags = (): { specialistCount: 1 | 2 | 3; isYes: boolean } => {
+const detectPreflightFlags = (): { specialistCount: 1 | 2 | 3; noPreflight: boolean } => {
   const argv = process.argv.slice(2)
   // --thorough / --deep-ensemble are aliases for --specialists 3 (now the default)
   const specialistsFlag = argv.indexOf("--specialists")
@@ -134,7 +134,7 @@ const detectPreflightFlags = (): { specialistCount: 1 | 2 | 3; isYes: boolean } 
     : 3
   return {
     specialistCount,
-    isYes: argv.includes("--yes") || argv.includes("-y"),
+    noPreflight: argv.includes("--no-preflight"),
   }
 }
 
@@ -149,10 +149,11 @@ const stablePromptInfoFromConfig = (config: RidgelineConfig): StablePromptInfo |
 }
 
 const runPreflightGuard = async (config?: RidgelineConfig): Promise<void> => {
-  const { specialistCount, isYes } = detectPreflightFlags()
+  const { specialistCount, noPreflight } = detectPreflightFlags()
+  const preflight = resolvePreflight(ridgelineDirFromCwd(), noPreflight ? false : undefined)
   const report = await detectProject(process.cwd(), { specialistCount })
   await runPreflight(report, {
-    yes: isYes,
+    preflight,
     isTTY: Boolean(process.stdin.isTTY),
     stablePromptInfo: config ? stablePromptInfoFromConfig(config) : undefined,
   })
@@ -181,7 +182,7 @@ const runPreflightGuard = async (config?: RidgelineConfig): Promise<void> => {
 const addPreflightOptions = (cmd: Command): Command => cmd
   .option("--specialists <n>", "Number of ensemble specialists (1, 2, or 3). Default: 3")
   .option("--thorough", "Alias for --specialists 3 (the default)")
-  .option("-y, --yes", "Skip the preflight confirmation prompt")
+  .option("--no-preflight", "Skip the preflight confirmation pause (settings: \"preflight\": false)")
 
 /** Adds the uniform `--auto` flag to a subcommand. */
 const addAutoOption = (cmd: Command): Command =>
@@ -339,7 +340,7 @@ addAutoOption(program
   .option("--thorough", "Alias for --count 3")
   .option("--skip", "Explicit no-op (skip direction generation)")
   .option("--inspiration <src>", "Inspiration source for the auto picker: file path, directory, or inline text")
-  .option("-y, --yes", "Skip the preflight confirmation prompt"))
+  .option("--no-preflight", "Skip the preflight confirmation pause (settings: \"preflight\": false)"))
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()

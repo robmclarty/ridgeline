@@ -9,6 +9,7 @@ import {
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
   DEFAULT_SPECIALIST_COUNT,
   resolveSandboxMode,
+  resolveMaxBudgetUsd,
 } from "../stores/settings.js"
 import { resolveInput } from "./input.js"
 import { askQuestion } from "./qa-workflow.js"
@@ -120,7 +121,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
         model: opts.model,
         timeoutMinutes: opts.timeout,
         specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
-        maxBudgetUsd: opts.maxBudgetUsd ?? null,
+        maxBudgetUsd: opts.maxBudgetUsd ?? resolveMaxBudgetUsd(ridgelineDir, undefined),
         buildDir: input.buildDir,
         matchedShapes: getMatchedShapes(input.buildDir),
         specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,

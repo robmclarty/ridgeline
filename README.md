@@ -161,7 +161,7 @@ Both `ridgeline my-name ./idea.md --auto` and `ridgeline ./idea.md
 | `--sandbox <mode>` | `semi-locked` | Sandbox mode: `off`, `semi-locked`, or `strict` |
 | `--specialists <n>` | `3` | Ensemble specialists per stage (1, 2, or 3) |
 | `--thorough` | -- | Alias for `--specialists 3` (the default) |
-| `-y, --yes` | off | Skip the preflight confirmation prompt |
+| `--no-preflight` | preflight on | Skip the preflight confirmation pause (also settable as `"preflight": false` in settings.json) |
 
 In `--auto` mode the pipeline always produces a `design.md` (even for
 non-visual builds, where it's a short placeholder) so downstream agents
@@ -210,7 +210,7 @@ interactive prompt.
 | `--count <n>` | from settings, else `2` | Number of directions to generate |
 | `--thorough` | -- | Alias for `--count 3` |
 | `--skip` | -- | Explicit no-op (skip direction generation) |
-| `-y, --yes` | off | Skip the preflight confirmation prompt |
+| `--no-preflight` | preflight on | Skip the preflight confirmation pause (also settable as `"preflight": false` in settings.json) |
 
 Typical cost is $2-5 per run with opus (interactive); $1.50-$2.50 per
 specialist in `--auto` mode.
@@ -488,7 +488,10 @@ Constraint and taste files are resolved in order:
 
 Project-level settings (default model, sandbox extras, directions count,
 specialist count, network allowlist, etc.) are loaded from
-`.ridgeline/settings.json`. See [SECURITY.md](SECURITY.md) for details
+`.ridgeline/settings.json`. Run-wide knobs also live here: `"preflight"`
+(set `false` to skip the confirmation pause, same as `--no-preflight`) and
+`"maxBudgetUsd"` (cumulative cost cap, same as `--max-budget-usd`). For both,
+the CLI flag overrides the setting. See [SECURITY.md](SECURITY.md) for details
 on the sandbox model.
 
 ## Development

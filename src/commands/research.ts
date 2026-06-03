@@ -9,6 +9,7 @@ import { recordCost } from "../stores/budget.js"
 import {
   resolveResearchAllowlist,
   resolveSandboxMode,
+  resolveMaxBudgetUsd,
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
   DEFAULT_SPECIALIST_COUNT,
 } from "../stores/settings.js"
@@ -78,7 +79,7 @@ const runSingleResearch = async (
         model: opts.model,
         timeoutMinutes: opts.timeout,
         specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
-        maxBudgetUsd: opts.maxBudgetUsd ?? null,
+        maxBudgetUsd: opts.maxBudgetUsd ?? resolveMaxBudgetUsd(ridgelineDir, undefined),
         buildDir: input.buildDir,
         isQuick: input.isQuick,
         specialistCount: opts.specialistCount ?? DEFAULT_SPECIALIST_COUNT,
