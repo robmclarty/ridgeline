@@ -1,5 +1,37 @@
 # Changelog
 
+## v0.12.9 — 2026-06-03
+
+### Added
+
+- Multi-provider model support via fascicle 0.5.0: the `openai`,
+  `google`, and `openrouter` providers activate automatically from
+  their API keys (`OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`,
+  `OPENROUTER_API_KEY`), and local providers (`ollama`/`lmstudio`) can
+  be configured through a `providers` block in `.ridgeline/settings.json`.
+  A `provider` setting and `provider:model` strings select the
+  transport. This reaches the engine-backed flows (retrospective,
+  retro-refine, vision, qa); the core build/plan/research flows stay
+  Claude-only for now.
+- `preflight` and `maxBudgetUsd` options in `.ridgeline/settings.json`.
+
+### Changed
+
+- Model versions are now sourced from fascicle's `MODEL_FAMILIES`
+  catalog instead of being pinned in ridgeline, so `opus`/`sonnet`/`haiku`
+  track the latest — `opus` now resolves to `claude-opus-4-8` (was
+  `claude-opus-4-7`).
+- **Breaking:** the `--yes` flag is renamed to `--no-preflight`.
+- `ridgeline build` validates that the selected model is
+  Claude-resolvable and errors early otherwise (the autonomous builder
+  remains Claude-CLI-only).
+
+### Internal
+
+- Bumped fascicle to 0.5.0.
+- Refreshed the fascicle migration docs for the 0.5.0 two-axis model and
+  added a Tier 3 plan for moving the core flows onto the engine.
+
 ## v0.12.8 — 2026-06-02
 
 ### Changed
