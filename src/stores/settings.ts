@@ -1,5 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import type { ProviderConfigMap } from "fascicle"
 
 /** Domains Claude needs for authentication and API access — always allowlisted. */
 export const CLAUDE_REQUIRED_DOMAINS: string[] = [
@@ -71,6 +72,25 @@ type RidgelineSettings = {
   }
   assetDir?: string
   model?: string
+  /**
+   * Default provider transport for engine-backed model calls (one of
+   * anthropic | claude_cli | openai | google | openrouter | ollama | lmstudio).
+   * When omitted, the engine factory picks `anthropic` if ANTHROPIC_API_KEY is
+   * set, else `claude_cli`. Per-call colon-form (`openai:gpt-4o`) overrides it.
+   *
+   * Note: only the engine-backed flows (retrospective, retro-refine, vision,
+   * qa) consult this today; the core spawn-based flows (build/plan/research)
+   * always use the Claude CLI until they move onto the engine.
+   */
+  provider?: string
+  /**
+   * Extra fascicle providers to activate, keyed by provider name — e.g.
+   * `{ "ollama": { "base_url": "http://localhost:11434" } }`. The API providers
+   * (anthropic/openai/google/openrouter) are also auto-activated from their env
+   * keys; entries here override that. `claude_cli` is reserved (configured by
+   * ridgeline) and is ignored if present.
+   */
+  providers?: ProviderConfigMap
   /**
    * Whether pipeline-entry commands pause for the preflight confirmation prompt.
    * Default true. Set to false (or pass `--no-preflight`) to skip the pause.
@@ -329,6 +349,18 @@ export const loadSettings = (ridgelineDir: string): RidgelineSettings => {
   } catch {
     return {}
   }
+}
+
+/**
+ * Provider slice for `makeRidgelineEngine`: the settings-supplied default
+ * `provider` and any extra `providers` to activate. The factory layers env-key
+ * activation and the reserved `claude_cli` wiring on top of these.
+ */
+export const resolveEngineProviders = (
+  ridgelineDir: string,
+): { provider?: string; providers?: ProviderConfigMap } => {
+  const settings = loadSettings(ridgelineDir)
+  return { provider: settings.provider, providers: settings.providers }
 }
 
 export const resolveNetworkAllowlist = (ridgelineDir: string): string[] => {

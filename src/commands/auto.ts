@@ -9,7 +9,7 @@ import {
 } from "../stores/state.js"
 import { PipelineStage } from "../types.js"
 import { resolveBuildDir } from "../config.js"
-import { resolveSandboxMode, resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
+import { resolveSandboxMode, resolveSpecialistTimeoutSeconds, resolveEngineProviders } from "../stores/settings.js"
 import { runCreate, CreateOptions, persistInputSourceIfPath } from "./create.js"
 import { runDirectionsAuto } from "./directions.js"
 import { runResearch } from "./research.js"
@@ -236,6 +236,7 @@ export const runAuto = async (buildName: string, opts: AutoOptions): Promise<voi
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: buildDir,
+    ...resolveEngineProviders(ridgelineDir),
   })
 
   const flow = autoFlow({

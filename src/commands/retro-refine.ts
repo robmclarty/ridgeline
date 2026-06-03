@@ -6,7 +6,7 @@ import { runClaudeOneShot } from "../engine/claude.runner.js"
 import { createStreamDisplay } from "../ui/claude-stream-display.js"
 import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
 import { getInputSource } from "../stores/state.js"
-import { resolveSandboxMode } from "../stores/settings.js"
+import { resolveSandboxMode, resolveEngineProviders } from "../stores/settings.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
 import { retroRefineFlow, type RetroRefineFlowInput } from "../engine/flows/retro-refine.flow.js"
 
@@ -135,6 +135,7 @@ export const runRetroRefine = async (
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: buildDir,
+    ...resolveEngineProviders(ridgelineDir),
   })
 
   const flow = retroRefineFlow({

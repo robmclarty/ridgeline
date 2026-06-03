@@ -10,6 +10,7 @@ import {
   resolveResearchAllowlist,
   resolveSandboxMode,
   resolveMaxBudgetUsd,
+  resolveEngineProviders,
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
   DEFAULT_SPECIALIST_COUNT,
 } from "../stores/settings.js"
@@ -71,6 +72,7 @@ const runSingleResearch = async (
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: buildDir,
+    ...resolveEngineProviders(ridgelineDir),
   })
 
   const flow = researchFlow({

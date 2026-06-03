@@ -8,7 +8,7 @@ import { logTrajectory } from "../stores/trajectory.js"
 import { recordCost } from "../stores/budget.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
 import { refineFlow, type RefineFlowInput } from "../engine/flows/refine.flow.js"
-import { resolveSandboxMode } from "../stores/settings.js"
+import { resolveSandboxMode, resolveEngineProviders } from "../stores/settings.js"
 
 type RefineOptions = {
   model: string
@@ -64,6 +64,7 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: buildDir,
+    ...resolveEngineProviders(ridgelineDir),
   })
 
   const flow = refineFlow({

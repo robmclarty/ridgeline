@@ -1,5 +1,7 @@
 import * as fs from "node:fs"
+import * as path from "node:path"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { resolveEngineProviders } from "../stores/settings.js"
 import { runClaudeOneShot } from "../engine/claude.runner.js"
 import type { SensorAdapter, SensorFinding, SensorInput } from "./index.js"
 
@@ -37,6 +39,7 @@ const defaultInvokeVision: InvokeVision = async (args) => {
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: args.cwd,
+    ...resolveEngineProviders(path.join(args.cwd, ".ridgeline")),
   })
   try {
     const result = await runClaudeOneShot({

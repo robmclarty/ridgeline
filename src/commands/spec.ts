@@ -10,6 +10,7 @@ import {
   DEFAULT_SPECIALIST_COUNT,
   resolveSandboxMode,
   resolveMaxBudgetUsd,
+  resolveEngineProviders,
 } from "../stores/settings.js"
 import { resolveInput } from "./input.js"
 import { askQuestion } from "./qa-workflow.js"
@@ -113,6 +114,7 @@ export const runSpec = async (buildName: string, opts: SpecOptions): Promise<voi
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: buildDir,
+    ...resolveEngineProviders(ridgelineDir),
   })
 
   const flow = specFlow({

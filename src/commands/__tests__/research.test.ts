@@ -23,6 +23,7 @@ vi.mock("../../stores/settings.js", () => ({
   resolveResearchAllowlist: vi.fn(() => []),
   resolveSandboxMode: vi.fn(() => "semi-locked"),
   resolveMaxBudgetUsd: vi.fn(() => null),
+  resolveEngineProviders: vi.fn(() => ({})),
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS: 600,
   DEFAULT_SPECIALIST_COUNT: 3,
 }))

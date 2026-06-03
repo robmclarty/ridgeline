@@ -10,6 +10,7 @@ import { runPlanReviewer, revisePlanWithFeedback, reportPhaseSizeWarnings } from
 import { advancePipeline } from "../stores/state.js"
 import { scanPhases } from "../stores/phases.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { resolveEngineProviders } from "../stores/settings.js"
 import { planFlow } from "../engine/flows/plan.flow.js"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
@@ -32,6 +33,7 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: config.buildDir,
+    ...resolveEngineProviders(config.ridgelineDir),
   })
 
   const flow = planFlow({

@@ -2,7 +2,7 @@ import * as readline from "node:readline"
 import type { Engine } from "fascicle"
 import { runClaudeOneShot } from "../engine/claude.runner.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
-import { resolveSandboxMode } from "../stores/settings.js"
+import { resolveSandboxMode, resolveEngineProviders } from "../stores/settings.js"
 import { createStreamDisplay } from "../ui/claude-stream-display.js"
 import { hint } from "../ui/color.js"
 import * as path from "node:path"
@@ -20,6 +20,7 @@ const ensureEngine = async <T>(
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: process.cwd(),
+    ...resolveEngineProviders(ridgelineDir),
   })
   try {
     return await fn(inline)

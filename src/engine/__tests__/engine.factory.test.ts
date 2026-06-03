@@ -177,24 +177,9 @@ describe("makeRidgelineEngine", () => {
     }
   })
 
-  it("registers anthropic-alias overrides routing to claude_cli when ANTHROPIC_API_KEY is unset", async () => {
+  it("passes no aliases — delegates model resolution to fascicle's catalog", async () => {
     const original = process.env.ANTHROPIC_API_KEY
     delete process.env.ANTHROPIC_API_KEY
-    try {
-      const make = await importFactory()
-      make({ ...baseCfg, sandboxFlag: "off" })
-      const aliases = lastConfig().aliases
-      expect(aliases?.opus).toEqual({ provider: "claude_cli", model_id: "claude-opus-4-7" })
-      expect(aliases?.sonnet).toEqual({ provider: "claude_cli", model_id: "claude-sonnet-4-6" })
-    } finally {
-      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
-      else process.env.ANTHROPIC_API_KEY = original
-    }
-  })
-
-  it("leaves fascicle's default aliases in place when ANTHROPIC_API_KEY is set", async () => {
-    const original = process.env.ANTHROPIC_API_KEY
-    process.env.ANTHROPIC_API_KEY = "sk-ant-test-key"
     try {
       const make = await importFactory()
       make({ ...baseCfg, sandboxFlag: "off" })
@@ -203,6 +188,75 @@ describe("makeRidgelineEngine", () => {
       if (original === undefined) delete process.env.ANTHROPIC_API_KEY
       else process.env.ANTHROPIC_API_KEY = original
     }
+  })
+
+  it("defaults the provider to claude_cli when ANTHROPIC_API_KEY is unset", async () => {
+    const original = process.env.ANTHROPIC_API_KEY
+    delete process.env.ANTHROPIC_API_KEY
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "off" })
+      expect(lastConfig().defaults?.provider).toBe("claude_cli")
+    } finally {
+      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
+      else process.env.ANTHROPIC_API_KEY = original
+    }
+  })
+
+  it("defaults the provider to anthropic (and passes no aliases) when ANTHROPIC_API_KEY is set", async () => {
+    const original = process.env.ANTHROPIC_API_KEY
+    process.env.ANTHROPIC_API_KEY = "sk-ant-test-key"
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "off" })
+      expect(lastConfig().defaults?.provider).toBe("anthropic")
+      expect(lastConfig().aliases).toBeUndefined()
+    } finally {
+      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
+      else process.env.ANTHROPIC_API_KEY = original
+    }
+  })
+
+  it("uses cfg.provider as the default provider when supplied", async () => {
+    const original = process.env.ANTHROPIC_API_KEY
+    delete process.env.ANTHROPIC_API_KEY
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "off", provider: "openai" })
+      expect(lastConfig().defaults?.provider).toBe("openai")
+    } finally {
+      if (original === undefined) delete process.env.ANTHROPIC_API_KEY
+      else process.env.ANTHROPIC_API_KEY = original
+    }
+  })
+
+  it("activates the openai provider from OPENAI_API_KEY", async () => {
+    const original = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = "sk-openai-test"
+    try {
+      const make = await importFactory()
+      make({ ...baseCfg, sandboxFlag: "off" })
+      expect(lastConfig().providers.openai).toEqual({ api_key: "sk-openai-test" })
+    } finally {
+      if (original === undefined) delete process.env.OPENAI_API_KEY
+      else process.env.OPENAI_API_KEY = original
+    }
+  })
+
+  it("merges cfg.providers but reserves the ridgeline-owned claude_cli wiring", async () => {
+    const make = await importFactory()
+    make({
+      ...baseCfg,
+      sandboxFlag: "off",
+      providers: {
+        ollama: { base_url: "http://localhost:11434" },
+        claude_cli: { binary: "should-be-ignored" },
+      },
+    })
+    const cfg = lastConfig()
+    expect(cfg.providers.ollama).toEqual({ base_url: "http://localhost:11434" })
+    expect(cfg.providers.claude_cli?.auth_mode).toBe("auto")
+    expect(cfg.providers.claude_cli?.binary).toBeUndefined()
   })
 
   it("named export is `makeRidgelineEngine` (camelCase)", async () => {

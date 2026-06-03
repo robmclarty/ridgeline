@@ -21,6 +21,7 @@ import { ensureGitRepo } from "../engine/worktree.js"
 import { requestPhaseApproval } from "../ui/phase-prompt.js"
 import { installGracefulStopListener } from "../ui/graceful-stop.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
+import { resolveEngineProviders } from "../stores/settings.js"
 import { buildFlow, type BuildFlowInput, type BuildPhaseResult, type RunPhaseStepInput } from "../engine/flows/build.flow.js"
 import type { WorktreeDriver, WorktreeItem } from "../engine/composites/index.js"
 import * as fs from "node:fs"
@@ -288,7 +289,28 @@ const makeBudgetSubscriber = (
   }
 }
 
+/**
+ * The autonomous builder runs on the Claude CLI (`runClaudeProcess`), so a build
+ * model must be Claude-resolvable. Non-Claude providers are reachable on the
+ * engine-backed flows; cross-provider builds are a planned follow-up.
+ */
+const isClaudeBuildModel = (model: string): boolean => {
+  const colon = model.indexOf(":")
+  const provider = colon > 0 ? model.slice(0, colon) : ""
+  const id = colon > 0 ? model.slice(colon + 1) : model
+  if (provider && provider !== "anthropic" && provider !== "claude_cli") return false
+  return /^(opus|sonnet|haiku)$/i.test(id) || /^claude[-/]/i.test(id)
+}
+
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
+  if (!isClaudeBuildModel(config.model)) {
+    throw new Error(
+      `'ridgeline build' requires a Claude model (opus | sonnet | haiku, or a claude-* id); got '${config.model}'. `
+      + `The autonomous builder runs on the Claude CLI; non-Claude providers are available on the engine-backed `
+      + `flows (e.g. retrospective, retro-refine) via the settings "provider" field or a "provider:model" string. `
+      + `Cross-provider build support is a planned follow-up.`,
+    )
+  }
   initLogger(config.buildDir)
   initTranscript(config.buildDir)
 
@@ -334,6 +356,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: config.buildDir,
+    ...resolveEngineProviders(config.ridgelineDir),
   })
 
   const flow = buildFlow({

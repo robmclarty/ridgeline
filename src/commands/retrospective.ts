@@ -8,7 +8,7 @@ import { buildAgentRegistry } from "../engine/discovery/agent.registry.js"
 import { loadBudget } from "../stores/budget.js"
 import { readTrajectory } from "../stores/trajectory.js"
 import { loadState } from "../stores/state.js"
-import { resolveSandboxMode } from "../stores/settings.js"
+import { resolveSandboxMode, resolveEngineProviders } from "../stores/settings.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
 import { retrospectiveFlow, type RetrospectiveFlowInput } from "../engine/flows/retrospective.flow.js"
 
@@ -87,6 +87,7 @@ export const runRetrospective = async (
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: buildDir,
+    ...resolveEngineProviders(ridgelineDir),
   })
 
   const flow = retrospectiveFlow({
