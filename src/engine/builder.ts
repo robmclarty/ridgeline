@@ -1,14 +1,21 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import type { Engine } from "fascicle"
 import { RidgelineConfig, PhaseInfo, ClaudeResult } from "../types.js"
 import { runClaudeProcess } from "./claude-process.js"
-import { createLegacyStdoutDisplay } from "../ui/claude-stream-display.js"
+import { runClaudeOneShot } from "./claude.runner.js"
+import { createLegacyStdoutDisplay, createStreamDisplay } from "../ui/claude-stream-display.js"
 import { readHandoff } from "../stores/handoff.js"
 import { cleanupPluginDirs } from "./discovery/plugin.scan.js"
 import { buildAgentRegistry } from "./discovery/agent.registry.js"
 import { prepareAgentsAndPlugins, appendConstraintsAndTaste, appendDesign, appendAssetCatalog, commonInvokeOptions } from "./legacy-shared.js"
 import { createPromptDocument } from "./prompt-document.js"
 import { getDiscoveriesPath, readDiscoveries } from "./discoveries.js"
+import { buildToolSurface } from "./tools/factory.js"
+import { toolContextFromConfig } from "./engine-inputs.js"
+
+/** Tool-loop step cap for an engine builder (many Read/Edit/Bash turns). */
+const ENGINE_BUILDER_MAX_STEPS = 80
 
 /**
  * Resolve the file path the builder should append handoff notes to.
@@ -149,6 +156,58 @@ export const runBuilder = async (
   } finally {
     flush()
     cleanupPluginDirs(prepared.pluginDirs)
+  }
+}
+
+/**
+ * Engine-path builder (AI-SDK providers). Builds the SAME prompt as the spawn
+ * `runBuilder` (`assembleUserPrompt` + `appendBuilderExtras`) and runs it through
+ * fascicle's in-process tool loop with the full builder tool surface. Continuation
+ * state, budget, and halt logic stay in `runBuilderLoop` — this is just the leaf.
+ */
+export const runBuilderViaEngine = async (
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+  feedbackPath: string | null,
+  cwd: string | undefined,
+  extras: BuilderInvocationExtras | undefined,
+  engine: Engine,
+): Promise<ClaudeResult> => {
+  const registry = buildAgentRegistry()
+  const systemPrompt = registry.getCorePrompt("builder.md")
+  const userPrompt = appendBuilderExtras(assembleUserPrompt(config, phase, feedbackPath, cwd), extras)
+  const tools = buildToolSurface("builder", toolContextFromConfig(config, cwd))
+  const { onChunk, flush } = createStreamDisplay({ projectRoot: cwd ?? process.cwd() })
+
+  // Own the timeout so an elapsed deadline surfaces the marker the builder loop
+  // classifies as a (retryable) timeout rather than a hard error.
+  const controller = new AbortController()
+  let timedOut = false
+  const timer = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, config.timeoutMinutes * 60 * 1000)
+  const wallStart = Date.now()
+  try {
+    const result = await runClaudeOneShot({
+      engine,
+      model: config.model,
+      system: systemPrompt,
+      prompt: userPrompt,
+      tools,
+      maxSteps: ENGINE_BUILDER_MAX_STEPS,
+      toolErrorPolicy: "feed_back",
+      onChunk,
+      abort: controller.signal,
+    })
+    if (result.durationMs === 0) result.durationMs = Date.now() - wallStart
+    return result
+  } catch (err) {
+    if (timedOut) throw new Error("Claude invocation timed out")
+    throw err
+  } finally {
+    clearTimeout(timer)
+    flush()
   }
 }
 

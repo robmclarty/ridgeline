@@ -10,8 +10,10 @@ import { logTrajectory } from "../stores/trajectory.js"
 import { updatePhaseStatus } from "../stores/state.js"
 import { printPhase, printWarn } from "../ui/output.js"
 import { commitAll, isWorkingTreeDirty } from "../git.js"
+import type { Engine } from "fascicle"
 import { runReviewer } from "./reviewer.js"
-import { runBuilderLoop } from "./builder-loop.js"
+import { runBuilderLoop, makeEngineBuilderInvoker } from "./builder-loop.js"
+import { isClaudeBuildModel } from "./provider-route.js"
 import { detectProject } from "./project-type.js"
 import { collectSensorFindings } from "./sensors-collect.js"
 import type { SensorFinding, SensorInput, Viewport } from "../sensors/index.js"
@@ -319,10 +321,15 @@ const executeBuild = async (
   feedbackFilePath: string | null,
   sandboxNote: string,
   cwd?: string,
+  engine?: Engine,
 ): Promise<{ result: ClaudeResult; isBudgetExceeded: boolean; sensorFindings: SensorFinding[]; halted: boolean }> => {
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
+
+  // Claude models keep the byte-stable spawn invoker; a non-Claude build model
+  // runs the engine invoker (when an engine was threaded down).
+  const invoker = engine && !isClaudeBuildModel(config.model) ? makeEngineBuilderInvoker(engine) : undefined
 
   // In the wave path the builder appends to a per-phase handoff fragment
   // inside the worktree; create it up-front so the file the prompt names exists.
@@ -339,6 +346,7 @@ const executeBuild = async (
     phase,
     feedbackPath: feedbackFilePath,
     cwd,
+    invoker,
     cumulativeCostStart,
     globalBudgetCheck: () => {
       const exceeded = isBudgetExceeded(getTotalCost(config.buildDir), config, phase, state)
@@ -408,13 +416,16 @@ const executeReview = async (
   sandboxNote: string,
   cwd?: string,
   sensorFindings?: SensorFinding[],
+  engine?: Engine,
 ): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
   printPhase(phase.id, "Reviewing...")
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
   logTrajectory(config.buildDir, "review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`)
 
+  // Match the builder: non-Claude build models review on the engine too.
+  const reviewerEngine = engine && !isClaudeBuildModel(config.model) ? engine : undefined
   const wallStart = Date.now()
-  const { result, verdict } = await runReviewer(config, phase, checkpointTag, cwd, sensorFindings)
+  const { result, verdict } = await runReviewer(config, phase, checkpointTag, cwd, sensorFindings, reviewerEngine)
   result.durationMs = Date.now() - wallStart
 
   logTrajectory(config.buildDir, "review_complete", phase.id, verdict.summary, trajectoryClaudeMeta(result))
@@ -458,6 +469,7 @@ export const executeBuildPhase = async (
   config: RidgelineConfig,
   state: BuildState,
   cwd?: string,
+  engine?: Engine,
 ): Promise<"passed" | "failed"> => {
   const phaseState = state.phases.find((p) => p.id === phase.id)
   if (!phaseState) throw new Error(`Phase ${phase.id} not found in state`)
@@ -496,7 +508,7 @@ export const executeBuildPhase = async (
 
     let sensorFindings: SensorFinding[] = []
     try {
-      const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd)
+      const build = await executeBuild(config, phase, state, attempt, feedbackFilePath, sandboxNote, cwd, engine)
       sensorFindings = build.sensorFindings
       if (build.isBudgetExceeded) return "failed"
       if (build.halted) {
@@ -515,7 +527,7 @@ export const executeBuildPhase = async (
 
     let verdict: ReviewVerdict
     try {
-      const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote, cwd, sensorFindings)
+      const review = await executeReview(config, phase, state, attempt, checkpointTag, sandboxNote, cwd, sensorFindings, engine)
       verdict = review.verdict
     } catch (err) {
       if (await retryOrFail(err, "review") === "fatal") return "failed"

@@ -1,8 +1,10 @@
 import * as fs from "node:fs"
+import type { Engine } from "fascicle"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../types.js"
 import type { SensorFinding } from "../sensors/index.js"
 import { runClaudeProcess } from "./claude-process.js"
-import { createLegacyStdoutDisplay } from "../ui/claude-stream-display.js"
+import { runClaudeOneShot } from "./claude.runner.js"
+import { createLegacyStdoutDisplay, createStreamDisplay } from "../ui/claude-stream-display.js"
 import { getDiff } from "../git.js"
 import { parseVerdict } from "../stores/feedback.verdict.js"
 import { cleanupPluginDirs } from "./discovery/plugin.scan.js"
@@ -11,6 +13,12 @@ import { prepareAgentsAndPlugins, commonInvokeOptions, appendDesign } from "./le
 import { getMatchedShapes } from "../stores/state.js"
 import { loadShapeDefinitions } from "../shapes/detect.js"
 import { createPromptDocument } from "./prompt-document.js"
+import { buildToolSurface } from "./tools/factory.js"
+import { toolContextFromConfig } from "./engine-inputs.js"
+import { reviewVerdictSchema } from "./schemas.js"
+
+/** Tool-loop step cap for an engine reviewer (read-only investigation turns). */
+const ENGINE_REVIEWER_MAX_STEPS = 12
 
 const assembleUserPrompt = (
   config: RidgelineConfig,
@@ -67,33 +75,86 @@ const assembleUserPrompt = (
   return doc.render()
 }
 
-export const runReviewer = async (
+/** Spawn-path reviewer (Claude CLI). Byte-stable; unchanged. */
+const runReviewerViaSpawn = async (
   config: RidgelineConfig,
   phase: PhaseInfo,
   checkpointTag: string,
   cwd?: string,
   sensorFindings?: SensorFinding[],
-): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
+): Promise<ClaudeResult> => {
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("reviewer.md")
   const userPrompt = assembleUserPrompt(config, phase, checkpointTag, cwd, sensorFindings)
   const { onStdout, flush } = createLegacyStdoutDisplay({ suppressJsonBlock: true, projectRoot: cwd ?? process.cwd() })
   const prepared = prepareAgentsAndPlugins(config)
-
   try {
-    const result = await runClaudeProcess({
+    return await runClaudeProcess({
       systemPrompt,
       userPrompt,
       model: config.model,
       allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent", "Skill"],
       ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
-
-    const parsed = parseVerdict(result.result)
-    const verdict: ReviewVerdict = { ...parsed, sensorFindings: sensorFindings ?? [] }
-    return { result, verdict }
   } finally {
     flush()
     cleanupPluginDirs(prepared.pluginDirs)
   }
+}
+
+/** Engine-path reviewer (AI-SDK providers): same prompt + read-only tool surface
+ *  + Zod-validated ReviewVerdict. */
+const runReviewerViaEngine = async (
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+  checkpointTag: string,
+  cwd: string | undefined,
+  sensorFindings: SensorFinding[] | undefined,
+  engine: Engine,
+): Promise<ClaudeResult> => {
+  const registry = buildAgentRegistry()
+  const roleSystem = registry.getCorePrompt("reviewer.md")
+  const userPrompt = assembleUserPrompt(config, phase, checkpointTag, cwd, sensorFindings)
+  const tools = buildToolSurface("reviewer", toolContextFromConfig(config, cwd))
+  const { onChunk, flush } = createStreamDisplay({ projectRoot: cwd ?? process.cwd() })
+  const wallStart = Date.now()
+  try {
+    const result = await runClaudeOneShot({
+      engine,
+      model: config.model,
+      system: roleSystem,
+      prompt: userPrompt,
+      tools,
+      maxSteps: ENGINE_REVIEWER_MAX_STEPS,
+      schema: reviewVerdictSchema,
+      toolErrorPolicy: "feed_back",
+      onChunk,
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+    })
+    if (result.durationMs === 0) result.durationMs = Date.now() - wallStart
+    return result
+  } finally {
+    flush()
+  }
+}
+
+/**
+ * Run the phase reviewer. Claude (the byte-stable spawn path) unless an `engine`
+ * is supplied (non-Claude build), in which case the in-process engine path runs.
+ * Verdict extraction (`parseVerdict` + sensor findings) is shared.
+ */
+export const runReviewer = async (
+  config: RidgelineConfig,
+  phase: PhaseInfo,
+  checkpointTag: string,
+  cwd?: string,
+  sensorFindings?: SensorFinding[],
+  engine?: Engine,
+): Promise<{ result: ClaudeResult; verdict: ReviewVerdict }> => {
+  const result = engine
+    ? await runReviewerViaEngine(config, phase, checkpointTag, cwd, sensorFindings, engine)
+    : await runReviewerViaSpawn(config, phase, checkpointTag, cwd, sensorFindings)
+  const parsed = parseVerdict(result.result)
+  const verdict: ReviewVerdict = { ...parsed, sensorFindings: sensorFindings ?? [] }
+  return { result, verdict }
 }

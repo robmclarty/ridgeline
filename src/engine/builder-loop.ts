@@ -9,11 +9,12 @@ import type {
   BuilderInvocation,
   BuilderInvocationEndReason,
 } from "../types.js"
+import type { Engine } from "fascicle"
 import { computeBuilderBudget } from "./builder-budget.js"
 import type { BuilderBudget } from "./builder-budget.js"
 import { parseBuilderMarker } from "./builder-marker.js"
 import { buildAgentRegistry } from "./discovery/agent.registry.js"
-import { assembleUserPrompt, runBuilder } from "./builder.js"
+import { assembleUserPrompt, runBuilder, runBuilderViaEngine, type BuilderInvocationExtras } from "./builder.js"
 
 export const DEFAULT_MAX_CONTINUATIONS = 5
 export const DEFAULT_PHASE_COST_CAP_MULTIPLIER = 5
@@ -137,24 +138,29 @@ const renderContinuationPreamble = (attempt: number, progressContent: string): s
   ].join("\n")
 }
 
+/** Budget + continuation extras the builder layers onto the user prompt. */
+const extrasFromCtx = (ctx: BuilderInvocationContext): BuilderInvocationExtras => ({
+  budgetInstruction: renderBudgetInstruction(ctx.budget),
+  continuationPreamble: ctx.isContinuation
+    ? renderContinuationPreamble(ctx.attempt, ctx.progressFileContent)
+    : undefined,
+  progressFilePath: ctx.progressFilePath,
+})
+
 /**
- * Default invoker: delegates to `runBuilder` with budget + continuation
- * extras layered on. Tests can override this hook to bypass Claude entirely.
+ * Default invoker: delegates to the spawn `runBuilder` (Claude CLI). Tests can
+ * override this hook to bypass Claude entirely.
  */
-export const defaultInvoker: BuilderInvoker = async (
-  config,
-  phase,
-  feedbackPath,
-  cwd,
-  ctx,
-) =>
-  runBuilder(config, phase, feedbackPath, cwd, {
-    budgetInstruction: renderBudgetInstruction(ctx.budget),
-    continuationPreamble: ctx.isContinuation
-      ? renderContinuationPreamble(ctx.attempt, ctx.progressFileContent)
-      : undefined,
-    progressFilePath: ctx.progressFilePath,
-  })
+export const defaultInvoker: BuilderInvoker = async (config, phase, feedbackPath, cwd, ctx) =>
+  runBuilder(config, phase, feedbackPath, cwd, extrasFromCtx(ctx))
+
+/**
+ * Engine invoker for AI-SDK providers: same prompt/extras, run through the
+ * in-process tool loop. Selected by the build phase for non-Claude models.
+ */
+export const makeEngineBuilderInvoker = (engine: Engine): BuilderInvoker =>
+  async (config, phase, feedbackPath, cwd, ctx) =>
+    runBuilderViaEngine(config, phase, feedbackPath, cwd, extrasFromCtx(ctx), engine)
 
 const readProgressFile = (filePath: string): string => {
   if (!fs.existsSync(filePath)) return ""

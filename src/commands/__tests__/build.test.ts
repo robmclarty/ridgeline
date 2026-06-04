@@ -136,6 +136,14 @@ describe("commands/run", () => {
     await expect(runBuild(config)).rejects.toThrow("No phases generated")
   })
 
+  it("rejects a non-Claude build model until its provider is enabled", async () => {
+    // The engine-builder allowlist starts empty, so a non-Claude model errors
+    // (no behavior change vs the old Claude-only guard).
+    await expect(runBuild({ ...config, model: "openai:gpt-4o" })).rejects.toThrow(
+      /does not yet support provider 'openai'/,
+    )
+  })
+
   it("runs phases sequentially until all complete", async () => {
     const phases = [
       { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: "/p/01-scaffold.md", dependsOn: [] },

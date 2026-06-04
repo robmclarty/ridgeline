@@ -22,6 +22,7 @@ import { requestPhaseApproval } from "../ui/phase-prompt.js"
 import { installGracefulStopListener } from "../ui/graceful-stop.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
 import { resolveEngineProviders } from "../stores/settings.js"
+import { isClaudeBuildModel, resolveRoute } from "../engine/provider-route.js"
 import { buildFlow, type BuildFlowInput, type BuildPhaseResult, type RunPhaseStepInput } from "../engine/flows/build.flow.js"
 import type { WorktreeDriver, WorktreeItem } from "../engine/composites/index.js"
 import * as fs from "node:fs"
@@ -290,26 +291,27 @@ const makeBudgetSubscriber = (
 }
 
 /**
- * The autonomous builder runs on the Claude CLI (`runClaudeProcess`), so a build
- * model must be Claude-resolvable. Non-Claude providers are reachable on the
- * engine-backed flows; cross-provider builds are a planned follow-up.
+ * Providers validated for the in-process engine builder. Starts EMPTY, so a
+ * non-Claude build still errors until a provider is proven end-to-end and added
+ * here — no behavior change versus the prior Claude-only guard. Claude models
+ * are unaffected: they keep the spawn/CLI path (see `isClaudeBuildModel`).
  */
-const isClaudeBuildModel = (model: string): boolean => {
-  const colon = model.indexOf(":")
-  const provider = colon > 0 ? model.slice(0, colon) : ""
-  const id = colon > 0 ? model.slice(colon + 1) : model
-  if (provider && provider !== "anthropic" && provider !== "claude_cli") return false
-  return /^(opus|sonnet|haiku)$/i.test(id) || /^claude[-/]/i.test(id)
-}
+const ENGINE_BUILDER_PROVIDERS: ReadonlySet<string> = new Set<string>()
+
+const isEngineBuilderEnabled = (provider: string): boolean => ENGINE_BUILDER_PROVIDERS.has(provider)
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   if (!isClaudeBuildModel(config.model)) {
-    throw new Error(
-      `'ridgeline build' requires a Claude model (opus | sonnet | haiku, or a claude-* id); got '${config.model}'. `
-      + `The autonomous builder runs on the Claude CLI; non-Claude providers are available on the engine-backed `
-      + `flows (e.g. retrospective, retro-refine) via the settings "provider" field or a "provider:model" string. `
-      + `Cross-provider build support is a planned follow-up.`,
-    )
+    const { provider } = resolveRoute(config.model, config.ridgelineDir)
+    if (!isEngineBuilderEnabled(provider)) {
+      throw new Error(
+        `'ridgeline build' does not yet support provider '${provider}' for model '${config.model}'. `
+        + `Claude models (opus | sonnet | haiku, or a claude-* id) run on the Claude CLI; the in-process `
+        + `engine builder is enabled per-provider once validated end-to-end. Non-Claude providers work now `
+        + `on the engine-backed flows (plan, refine, research) via a "provider:model" string or the `
+        + `settings "provider" field.`,
+      )
+    }
   }
   initLogger(config.buildDir)
   initTranscript(config.buildDir)
@@ -336,20 +338,6 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     : 1
   const waves = computeWaves(phases, state, maxConcurrency)
 
-  const runPhaseStep: Step<RunPhaseStepInput, BuildPhaseResult> = step(
-    "build.run_phase",
-    async ({ phase, cwd }) => {
-      const targetCwd = worktreePaths.get(phase.id) ?? cwd
-      if (!targetCwd) {
-        const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
-        printPhaseHeader(phaseIndex, phases.length, phase.id)
-      }
-      const result = await executeBuildPhase(phase, config, state, targetCwd)
-      if (result === "passed") completedIds.add(phase.id)
-      return result
-    },
-  )
-
   const engine = makeRidgelineEngine({
     sandboxFlag: config.sandboxMode,
     timeoutMinutes: config.timeoutMinutes,
@@ -358,6 +346,22 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     buildPath: config.buildDir,
     ...resolveEngineProviders(config.ridgelineDir),
   })
+
+  const runPhaseStep: Step<RunPhaseStepInput, BuildPhaseResult> = step(
+    "build.run_phase",
+    async ({ phase, cwd }) => {
+      const targetCwd = worktreePaths.get(phase.id) ?? cwd
+      if (!targetCwd) {
+        const phaseIndex = phases.findIndex((p) => p.id === phase.id) + 1
+        printPhaseHeader(phaseIndex, phases.length, phase.id)
+      }
+      // Claude models keep the spawn/CLI path inside executeBuildPhase; the
+      // engine is used only for an enabled non-Claude build model.
+      const result = await executeBuildPhase(phase, config, state, targetCwd, engine)
+      if (result === "passed") completedIds.add(phase.id)
+      return result
+    },
+  )
 
   const flow = buildFlow({
     runPhaseStep,
