@@ -22,7 +22,8 @@ export const runDryRun = async (config: RidgelineConfig): Promise<void> => {
 
     console.log(`--- ${title} ---`)
     if (goal) {
-      console.log(`\nGoal: ${goal.split("\n")[0]}`)
+      console.log(`\nGoal:`)
+      console.log(goal)
     }
     if (criteria) {
       console.log(`\nAcceptance Criteria:`)

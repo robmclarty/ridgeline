@@ -92,6 +92,31 @@ describe("commands/dry-run", () => {
     expect(console.log).toHaveBeenCalledWith(expect.stringContaining("Scaffold Project"))
   })
 
+  it("prints the full multi-line goal, not just the first line", async () => {
+    const phaseFile = path.join(config.phasesDir, "01-scaffold.md")
+    const goal = [
+      "Implement the project scaffold and wire up the build pipeline.",
+      "",
+      "1. Create the directory structure.",
+      "2. Add config files and a smoke test that runs on commit.",
+    ].join("\n")
+    fs.writeFileSync(
+      phaseFile,
+      `# Scaffold Project\n\n## Goal\n${goal}\n\n## Acceptance Criteria\n- Directory exists\n`,
+    )
+
+    vi.mocked(scanPhases).mockReturnValue([
+      { id: "01-scaffold", index: 1, slug: "scaffold", filename: "01-scaffold.md", filepath: phaseFile, dependsOn: [] },
+    ])
+
+    await runDryRun(config)
+
+    // The full goal is printed verbatim (regression guard against first-line truncation).
+    expect(console.log).toHaveBeenCalledWith(goal)
+    // In particular, a line after the first is present in the output.
+    expect(console.log).toHaveBeenCalledWith(expect.stringContaining("smoke test that runs on commit"))
+  })
+
   it("throws when no phases exist and planner generates none", async () => {
     // scanPhases returns empty both times (before and after plan)
     vi.mocked(scanPhases).mockReturnValue([])
