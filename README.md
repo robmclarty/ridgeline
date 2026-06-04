@@ -270,7 +270,8 @@ markdown rather than answering chat questions, before running `plan`.
 
 Researches the spec using web sources. Produces `research.md` in the
 build directory. Optional step between `spec` and `plan`. See
-[Research and Refine](docs/research.md) for details.
+[Research and Refine](docs/research.md) for details. On non-Claude
+providers, web search is opt-in — see [Web search](#web-search-opt-in).
 
 | Flag | Default | Description |
 |------|---------|-------------|
@@ -493,6 +494,35 @@ specialist count, network allowlist, etc.) are loaded from
 `"maxBudgetUsd"` (cumulative cost cap, same as `--max-budget-usd`). For both,
 the CLI flag overrides the setting. See [SECURITY.md](SECURITY.md) for details
 on the sandbox model.
+
+## Web search (opt-in)
+
+The Claude CLI path uses Anthropic's built-in web search. On **non-Claude
+providers**, research runs through Ridgeline's in-process tools: `WebFetch`
+(always available) and `WebSearch` (**off by default**). Enable `WebSearch` by
+configuring a backend in `.ridgeline/settings.json` — a self-hosted
+[SearXNG](https://github.com/searxng/searxng) instance (recommended) or the
+keyless DuckDuckGo fallback. No paid service required.
+
+Flip on SearXNG with Docker:
+
+```sh
+# 1. Run SearXNG (first run writes ./searxng/settings.yml)
+docker run --rm -d --name searxng -p 8888:8080 \
+  -v "$(pwd)/searxng:/etc/searxng" searxng/searxng:latest
+
+# 2. Enable the JSON API: add `json` under `search.formats` in
+#    ./searxng/settings.yml, then `docker restart searxng`
+
+# 3. Point Ridgeline at it
+#    .ridgeline/settings.json → { "search": { "url": "http://localhost:8888" } }
+```
+
+DuckDuckGo fallback (keyless, best-effort, ToS gray-area):
+`{ "search": { "duckduckgo": true } }`. See
+[docs/web-search.md](docs/web-search.md) for the JSON-format gotcha, the
+discover→retrieve flow, the network-allowlist interaction, and the security
+model.
 
 ## Development
 

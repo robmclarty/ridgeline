@@ -70,6 +70,37 @@ Constraints and taste files provide stable guardrails independent of model
 capability. The language is TypeScript, the framework is Fastify, the check
 command is `npm test` -- these don't change when the model changes.
 
+## Other Providers
+
+Model-agnostic also means provider-agnostic. Ridgeline runs on
+[fascicle](https://github.com/GreyhavenHQ/fascicle), which fronts seven provider
+adapters (Anthropic, OpenAI, Google, OpenRouter, Ollama, LM Studio, and the
+Claude CLI) behind one interface. Every flow -- `plan`, `refine`, `research`,
+and `build` -- can be driven by any of them.
+
+Two execution paths sit behind that interface. Claude models run on the Claude
+CLI (`claude_cli`), the subscription/OAuth path that delegates tools to the
+CLI's built-ins -- this stays byte-for-byte unchanged and remains the default.
+Every other provider runs the same work through fascicle's in-process tool loop
+against ridgeline's own tool surface (`Read`, `Write`, `Edit`, `Glob`, `Grep`,
+a greywall-sandboxed `Bash`, and `WebFetch`/`WebSearch` for research). Pick a
+provider with a `provider:model` string (`openai:gpt-4o`, `google:gemini-2.5-pro`)
+or the `provider` field in `.ridgeline/settings.json`.
+
+The single-shot flows (`plan`, `refine`, `research`) accept any configured
+provider today. The autonomous `build` is gated more conservatively: it is the
+longest, most expensive, most tool-intensive flow, and agent quality on a long
+build varies by provider. So non-Claude builds are enabled per-provider via an
+allowlist (`ENGINE_BUILDER_PROVIDERS` in `src/commands/build.ts`) that starts
+empty. To turn one on: run a small build on that provider in a throwaway
+sandboxed repo, confirm the phases pass review, then add the provider to the
+allowlist. Claude builds are unaffected -- they keep the CLI path regardless of
+whether an API key is present, so a key never silently reroutes a build onto a
+metered API.
+
+This is the same theme as the rest of this document: the harness encodes a sound
+process, and it benefits from whatever model -- or provider -- you point it at.
+
 ## Industry Convergence
 
 Ridgeline implements patterns that the broader AI tooling ecosystem is
