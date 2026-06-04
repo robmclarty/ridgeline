@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.12.11 — 2026-06-03
+
+### Fixed
+
+- `ridgeline dry-run` now prints each phase's full Goal instead of only
+  the first line. The previous rendering kept just the first physical line
+  of the Goal, so multi-paragraph goals were cut off after ~68 characters;
+  the full wrapped text now displays, matching how Acceptance Criteria is
+  already shown.
+
 ## v0.12.10 — 2026-06-03
 
 ### Fixed
