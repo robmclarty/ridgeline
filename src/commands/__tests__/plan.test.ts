@@ -140,6 +140,7 @@ describe("commands/plan", () => {
     })
 
     await runPlan(config)
-    expect(runEnsemblePlanner).toHaveBeenCalledWith(config)
+    // Planner is invoked with the config plus the engine (used only on non-Claude routes).
+    expect(runEnsemblePlanner).toHaveBeenCalledWith(config, expect.anything())
   })
 })

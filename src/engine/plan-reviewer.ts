@@ -1,14 +1,26 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import type { Engine } from "fascicle"
 import { RidgelineConfig, PlanVerdict, ClaudeResult } from "../types.js"
 import { runClaudeProcess } from "./claude-process.js"
+import { runClaudeOneShot } from "./claude.runner.js"
+import { resolveRoute } from "./provider-route.js"
 import { buildAgentRegistry } from "./discovery/agent.registry.js"
 import { createPromptDocument } from "./prompt-document.js"
 import { appendBaseUserPrompt } from "./plan-prompt.js"
+import { shapePlanReviewModelCallInput, type PlanReviewArgs } from "./atoms/plan.review.atom.js"
+import { planReviewSchema } from "./schemas.js"
+import {
+  resolveSpecMd,
+  resolveConstraintsMd,
+  resolveTasteMd,
+  resolveProjectDesignMd,
+  resolveFeatureDesignMd,
+} from "./engine-inputs.js"
 import { scanPhases } from "../stores/phases.js"
 import { logTrajectory } from "../stores/trajectory.js"
 import { printInfo, printWarn } from "../ui/output.js"
-import { createLegacyStdoutDisplay } from "../ui/claude-stream-display.js"
+import { createLegacyStdoutDisplay, createStreamDisplay } from "../ui/claude-stream-display.js"
 import { createStderrHandler } from "./legacy-shared.js"
 
 /** Approximate output tokens a phase will require, based on its acceptance-criteria count and spec length. */
@@ -87,20 +99,28 @@ const parseVerdict = (raw: string): PlanVerdict => {
   return { approved, issues }
 }
 
-/** Run the adversarial plan reviewer against the synthesized plan files on disk. */
-export const runPlanReviewer = async (
-  config: RidgelineConfig,
-): Promise<{ verdict: PlanVerdict; result: ClaudeResult }> => {
+/** Extract the verdict from a reviewer result, treating malformed output as approved. */
+const verdictFromResult = (result: ClaudeResult): PlanVerdict => {
+  try {
+    return parseVerdict(result.result)
+  } catch (err) {
+    printWarn(
+      `Plan reviewer returned malformed output; treating as approved. (${err instanceof Error ? err.message : String(err)})`,
+    )
+    return { approved: true, issues: [] }
+  }
+}
+
+/** Spawn-path reviewer (Claude CLI). Byte-stable; unchanged. */
+const runPlanReviewerViaSpawn = async (config: RidgelineConfig): Promise<ClaudeResult> => {
   const registry = buildAgentRegistry()
   const systemPrompt = registry.getCorePrompt("plan-reviewer.md")
   const phasesMd = renderPhasesAsMarkdown(config)
   const userPrompt = buildReviewerUserPrompt(config, phasesMd)
 
-  printInfo("Running adversarial plan reviewer...")
   const { onStdout, flush } = createLegacyStdoutDisplay({ projectRoot: process.cwd(), dimText: true })
-  let result: ClaudeResult
   try {
-    result = await runClaudeProcess({
+    return await runClaudeProcess({
       systemPrompt,
       userPrompt,
       model: config.model,
@@ -112,19 +132,73 @@ export const runPlanReviewer = async (
   } finally {
     flush()
   }
+}
 
-  let verdict: PlanVerdict
+const buildPlanReviewArgs = (config: RidgelineConfig): PlanReviewArgs => ({
+  specMd: resolveSpecMd(config),
+  constraintsMd: resolveConstraintsMd(config),
+  tasteMd: resolveTasteMd(config),
+  extraContext: config.extraContext ?? null,
+  projectDesignMd: resolveProjectDesignMd(config),
+  featureDesignMd: resolveFeatureDesignMd(config),
+  model: config.model,
+  phaseTokenLimit: config.phaseTokenLimit,
+  phaseBudgetLimit: config.phaseBudgetLimit,
+  phasesMd: renderPhasesAsMarkdown(config),
+})
+
+/** Engine-path reviewer (AI-SDK providers): fascicle in-process call with the
+ *  same prompt (via the atom shaper) plus Zod schema validation; no tools. */
+const runPlanReviewerViaEngine = async (
+  config: RidgelineConfig,
+  engine: Engine,
+): Promise<ClaudeResult> => {
+  const registry = buildAgentRegistry()
+  const roleSystem = registry.getCorePrompt("plan-reviewer.md")
+  const { onChunk, flush } = createStreamDisplay({ projectRoot: process.cwd() })
+  const wallStart = Date.now()
   try {
-    verdict = parseVerdict(result.result)
-  } catch (err) {
-    printWarn(`Plan reviewer returned malformed output; treating as approved. (${err instanceof Error ? err.message : String(err)})`)
-    verdict = { approved: true, issues: [] }
+    const result = await runClaudeOneShot({
+      engine,
+      model: config.model,
+      system: roleSystem,
+      prompt: shapePlanReviewModelCallInput(buildPlanReviewArgs(config)),
+      schema: planReviewSchema,
+      onChunk,
+      timeoutMs: config.timeoutMinutes * 60 * 1000,
+    })
+    if (result.durationMs === 0) result.durationMs = Date.now() - wallStart
+    return result
+  } finally {
+    flush()
   }
+}
 
-  logTrajectory(config.buildDir, "plan_complete", null,
+/**
+ * Run the adversarial plan reviewer against the synthesized plan files on disk.
+ * Claude (claude_cli) runs the byte-stable spawn path; any other provider runs
+ * the in-process engine path (passed `engine`). Both feed the same verdict
+ * extraction and trajectory logging.
+ */
+export const runPlanReviewer = async (
+  config: RidgelineConfig,
+  engine?: Engine,
+): Promise<{ verdict: PlanVerdict; result: ClaudeResult }> => {
+  printInfo("Running adversarial plan reviewer...")
+  const route = resolveRoute(config.model, config.ridgelineDir)
+  const result =
+    !route.isClaudeCli && engine
+      ? await runPlanReviewerViaEngine(config, engine)
+      : await runPlanReviewerViaSpawn(config)
+
+  const verdict = verdictFromResult(result)
+  logTrajectory(
+    config.buildDir,
+    "plan_complete",
+    null,
     `Plan reviewer verdict: ${verdict.approved ? "approved" : `rejected (${verdict.issues.length} issue(s))`}`,
-    { reason: verdict.approved ? "approved" : "rejected" })
-
+    { reason: verdict.approved ? "approved" : "rejected" },
+  )
   return { verdict, result }
 }
 

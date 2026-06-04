@@ -37,8 +37,8 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   })
 
   const flow = planFlow({
-    runEnsemblePlanner,
-    runPlanReviewer,
+    runEnsemblePlanner: (cfg) => runEnsemblePlanner(cfg, engine),
+    runPlanReviewer: (cfg) => runPlanReviewer(cfg, engine),
     revisePlanWithFeedback,
     rescanPhases: scanPhases,
     onReviewerError: (err) => {

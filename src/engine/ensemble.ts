@@ -1,7 +1,11 @@
 import * as fs from "node:fs"
+import type { Engine } from "fascicle"
+import type { z } from "zod"
 import { RidgelineConfig, PhaseInfo, ClaudeResult, SpecialistProposal, EnsembleResult, SpecialistStage, SpecialistVerdict } from "../types.js"
 import { runClaudeProcess } from "./claude-process.js"
-import { createLegacyStdoutDisplay } from "../ui/claude-stream-display.js"
+import { runClaudeOneShot } from "./claude.runner.js"
+import { resolveRoute } from "./provider-route.js"
+import { createLegacyStdoutDisplay, createStreamDisplay } from "../ui/claude-stream-display.js"
 import { scanPhases } from "../stores/phases.js"
 import { printInfo, printError, printWarn } from "../ui/output.js"
 import { startSpinner, formatElapsed } from "../ui/spinner.js"
@@ -13,6 +17,10 @@ import { createPromptDocument } from "./prompt-document.js"
 import { logTrajectory } from "../stores/trajectory.js"
 import { DEFAULT_SPECIALIST_TIMEOUT_SECONDS } from "../stores/settings.js"
 import { parseSpecialistVerdict, skeletonsAgree } from "./specialist-verdict.js"
+import { buildTools } from "./tools/factory.js"
+import type { ToolFactoryContext } from "./tools/types.js"
+import { toolContextFromConfig } from "./engine-inputs.js"
+import { planArtifactSchema } from "./schemas.js"
 
 // ---------------------------------------------------------------------------
 // Robust JSON extraction — handles markdown fences and surrounding text
@@ -61,7 +69,37 @@ export const SYNTHESIZER_STALL_TIMEOUT_MS = 8 * 60 * 1000
 // Generic ensemble runner
 // ---------------------------------------------------------------------------
 
+/**
+ * One model invocation the ensemble needs, described provider-neutrally. The
+ * transport decides how to run it: the spawn transport maps it to
+ * `runClaudeProcess`; the engine transport maps it to `runClaudeOneShot` with
+ * in-process tools + Zod schema. Display/network/sandbox wiring is the
+ * transport's concern, keyed off `kind`/`stream`.
+ */
+type EnsembleCall = {
+  readonly kind: "specialist" | "annotation" | "synthesizer"
+  readonly systemPrompt: string
+  readonly userPrompt: string
+  readonly toolNames: readonly string[]
+  readonly jsonSchema?: string
+  readonly timeoutMs: number
+  readonly stallTimeoutMs?: number
+  readonly stderrLabel: string
+  readonly stream: boolean
+}
+
+type EnsembleTransport = (call: EnsembleCall) => Promise<ClaudeResult>
+
+/** Max tool-loop steps for an engine synthesizer (a few Write/Read turns). */
+const ENGINE_SYNTHESIZER_MAX_STEPS = 12
+
 type EnsembleConfig<TDraft> = {
+  /**
+   * Transport for every model call. When absent, a spawn transport
+   * (`runClaudeProcess`, byte-stable) is used; the engine path supplies one.
+   */
+  readonly transport?: EnsembleTransport
+
   /** Human label for spinner and error messages, e.g., "Planning" or "Specifying" */
   label: string
 
@@ -164,6 +202,66 @@ type EnsembleConfig<TDraft> = {
 
 type AnnotationEntry = { perspective: string; annotation: string; result: ClaudeResult }
 
+/** Spawn transport: reproduces the byte-stable `runClaudeProcess` calls. */
+const makeSpawnEnsembleTransport = <TDraft>(config: EnsembleConfig<TDraft>): EnsembleTransport =>
+  async (call) => {
+    const display = call.stream
+      ? createLegacyStdoutDisplay({ projectRoot: process.cwd(), dimText: true })
+      : null
+    try {
+      return await runClaudeProcess({
+        systemPrompt: call.systemPrompt,
+        userPrompt: call.userPrompt,
+        model: config.model,
+        allowedTools: [...call.toolNames],
+        cwd: process.cwd(),
+        timeoutMs: call.timeoutMs,
+        ...(call.stallTimeoutMs !== undefined ? { stallTimeoutMs: call.stallTimeoutMs } : {}),
+        ...(call.jsonSchema ? { jsonSchema: call.jsonSchema } : {}),
+        ...(display ? { onStdout: display.onStdout } : {}),
+        onStderr: createStderrHandler(call.stderrLabel),
+        // Only specialists get network/sandbox access (e.g. research web fetches).
+        ...(call.kind === "specialist"
+          ? { networkAllowlist: config.networkAllowlist, sandboxProvider: config.sandboxProvider }
+          : {}),
+      })
+    } finally {
+      display?.flush()
+    }
+  }
+
+type EngineEnsembleTransportOpts = {
+  readonly engine: Engine
+  readonly model: string
+  readonly toolContext: ToolFactoryContext
+  /** Zod schema for structured specialist output. Omit for prose specialists (research). */
+  readonly specialistSchema?: z.ZodType<unknown>
+}
+
+/** Engine transport: in-process tool loop + Zod-validated structured output. */
+export const makeEngineEnsembleTransport = (opts: EngineEnsembleTransportOpts): EnsembleTransport =>
+  async (call) => {
+    const tools = buildTools(call.toolNames, opts.toolContext)
+    const display = call.stream ? createStreamDisplay({ projectRoot: process.cwd() }) : null
+    const wallStart = Date.now()
+    try {
+      const result = await runClaudeOneShot({
+        engine: opts.engine,
+        model: opts.model,
+        system: call.systemPrompt,
+        prompt: call.userPrompt,
+        ...(tools.length > 0 ? { tools, maxSteps: ENGINE_SYNTHESIZER_MAX_STEPS, toolErrorPolicy: "feed_back" as const } : {}),
+        ...(call.kind === "specialist" && opts.specialistSchema ? { schema: opts.specialistSchema } : {}),
+        ...(display ? { onChunk: display.onChunk } : {}),
+        timeoutMs: call.timeoutMs,
+      })
+      if (result.durationMs === 0) result.durationMs = Date.now() - wallStart
+      return result
+    } finally {
+      display?.flush()
+    }
+  }
+
 const isTimeoutMessage = (msg: string): boolean => {
   const lower = msg.toLowerCase()
   return lower.includes("timed out") || lower.includes("timeout") || lower.includes("stall")
@@ -191,6 +289,7 @@ const logSpecialistFailure = (
 /** Run the optional two-round annotation pass where specialists review each other's drafts. */
 const runAnnotationPass = async <TDraft>(
   config: EnsembleConfig<TDraft>,
+  transport: EnsembleTransport,
   successful: { perspective: string; result: ClaudeResult; draft: TDraft }[],
 ): Promise<AnnotationEntry[]> => {
   if (!config.isTwoRound || !config.buildAnnotationPrompt || successful.length < 2) {
@@ -208,14 +307,14 @@ const runAnnotationPass = async <TDraft>(
     const annotationPrompt = config.buildAnnotationPrompt!(perspective, otherDrafts)
     const startTime = Date.now()
 
-    return runClaudeProcess({
+    return transport({
+      kind: "annotation",
       systemPrompt: config.buildSpecialistPrompt(""),
       userPrompt: annotationPrompt,
-      model: config.model,
-      allowedTools: [],
-      cwd: process.cwd(),
+      toolNames: [],
       timeoutMs: (config.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS) * 1000,
-      onStderr: createStderrHandler(`${perspective}-annotate`),
+      stderrLabel: `${perspective}-annotate`,
+      stream: false,
     }).then((result) => {
       const elapsed = formatElapsed(Date.now() - startTime)
       const line = `  ${perspective.padEnd(14)} annotated (${elapsed}, $${result.costUsd.toFixed(2)})`
@@ -289,6 +388,7 @@ type Successful<TDraft> = { perspective: string; result: ClaudeResult; draft: TD
 
 const dispatchSpecialists = async <TDraft>(
   config: EnsembleConfig<TDraft>,
+  transport: EnsembleTransport,
   spinner: Spinner,
 ): Promise<PromiseSettledResult<{ perspective: string; result: ClaudeResult }>[]> => {
   const specialistTimeoutMs = (config.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS) * 1000
@@ -297,17 +397,15 @@ const dispatchSpecialists = async <TDraft>(
   const promises = config.specialists.map(({ perspective, overlay }) => {
     const systemPrompt = config.buildSpecialistPrompt(overlay)
     const startTime = Date.now()
-    return runClaudeProcess({
+    return transport({
+      kind: "specialist",
       systemPrompt,
       userPrompt: config.specialistUserPrompt,
-      model: config.model,
-      allowedTools: config.specialistTools ?? [],
-      cwd: process.cwd(),
-      timeoutMs: specialistTimeoutMs,
+      toolNames: config.specialistTools ?? [],
       jsonSchema: isStructured ? config.specialistSchema : undefined,
-      onStderr: createStderrHandler(perspective),
-      networkAllowlist: config.networkAllowlist,
-      sandboxProvider: config.sandboxProvider,
+      timeoutMs: specialistTimeoutMs,
+      stderrLabel: perspective,
+      stream: false,
     }).then(
       (result) => {
         const elapsed = formatElapsed(Date.now() - startTime)
@@ -386,31 +484,26 @@ const aggregateResult = <TDraft>(
 
 const runSynthesizer = async <TDraft>(
   config: EnsembleConfig<TDraft>,
+  transport: EnsembleTransport,
   successful: Successful<TDraft>[],
   annotations: AnnotationEntry[],
 ): Promise<ClaudeResult> => {
   printInfo("Synthesizing from specialist proposals...")
-  const { onStdout, flush } = createLegacyStdoutDisplay({ projectRoot: process.cwd(), dimText: true })
   const synthUserPrompt = buildSynthPrompt(
     config,
     successful.map(({ perspective, draft }) => ({ perspective, draft })),
     annotations,
   )
-  try {
-    return await runClaudeProcess({
-      systemPrompt: config.synthesizerPrompt,
-      userPrompt: synthUserPrompt,
-      model: config.model,
-      allowedTools: config.synthesizerTools,
-      cwd: process.cwd(),
-      timeoutMs: config.timeoutMinutes * 60 * 1000,
-      stallTimeoutMs: config.stallTimeoutMs,
-      onStdout,
-      onStderr: createStderrHandler("synthesizer"),
-    })
-  } finally {
-    flush()
-  }
+  return transport({
+    kind: "synthesizer",
+    systemPrompt: config.synthesizerPrompt,
+    userPrompt: synthUserPrompt,
+    toolNames: config.synthesizerTools,
+    timeoutMs: config.timeoutMinutes * 60 * 1000,
+    stallTimeoutMs: config.stallTimeoutMs,
+    stderrLabel: "synthesizer",
+    stream: true,
+  })
 }
 
 const logSkip = (buildDir: string | undefined, count: number, stage: SpecialistStage): void => {
@@ -433,8 +526,9 @@ export const runEnsemble = async <TDraft>(
   }
 
   const spinner = startSpinner(config.label)
+  const transport = config.transport ?? makeSpawnEnsembleTransport(config)
 
-  const settled = await dispatchSpecialists(config, spinner)
+  const settled = await dispatchSpecialists(config, transport, spinner)
   const successful = collectSuccessful<TDraft>(config, settled)
 
   if (successful.length === 0) {
@@ -449,7 +543,7 @@ export const runEnsemble = async <TDraft>(
     printWarn(`Continuing with ${successful.length} of ${specialists.length} specialist proposals`)
   }
 
-  const annotations = await runAnnotationPass(config, successful)
+  const annotations = await runAnnotationPass(config, transport, successful)
 
   const specialistCost = successful.reduce((sum, s) => sum + s.result.costUsd, 0)
   const annotationCost = annotations.reduce((sum, a) => sum + a.result.costUsd, 0)
@@ -476,7 +570,7 @@ export const runEnsemble = async <TDraft>(
   }
 
   spinner.stop()
-  const synthResult = await runSynthesizer(config, successful, annotations)
+  const synthResult = await runSynthesizer(config, transport, successful, annotations)
   if (config.verify) config.verify()
   return aggregateResult(successful, annotations, preSynthCost, synthResult)
 }
@@ -685,14 +779,30 @@ const writePhasesFromProposal = async (
 
 export const runEnsemblePlanner = async (
   config: RidgelineConfig,
+  engine?: Engine,
 ): Promise<{ result: ClaudeResult; phases: PhaseInfo[]; ensemble: EnsembleResult }> => {
   const registry = buildAgentRegistry()
   const context = registry.getContext("planners") ?? ""
   const availableSpecialists = registry.getSpecialists("planners")
   const specialists = selectSpecialists(availableSpecialists, { specialistCount: config.specialistCount })
 
+  // Claude (claude_cli) keeps the byte-stable spawn transport; any other
+  // provider runs the in-process engine transport (specialists validated against
+  // planArtifactSchema, synthesizer driven by the Write tool surface).
+  const route = resolveRoute(config.model, config.ridgelineDir)
+  const transport =
+    !route.isClaudeCli && engine
+      ? makeEngineEnsembleTransport({
+          engine,
+          model: config.model,
+          toolContext: toolContextFromConfig(config),
+          specialistSchema: planArtifactSchema,
+        })
+      : undefined
+
   const ensemble = await runEnsemble<SpecialistProposal>({
     label: "Planning",
+    transport,
     specialists,
 
     buildSpecialistPrompt: (overlay) => buildPlannerSpecialistPrompt(context, overlay),

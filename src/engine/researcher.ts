@@ -1,8 +1,18 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
+import type { Engine } from "fascicle"
 import { EnsembleResult } from "../types.js"
-import { runEnsemble, selectSpecialists, appendSkipAuditNote, SYNTHESIZER_STALL_TIMEOUT_MS } from "./ensemble.js"
+import {
+  runEnsemble,
+  selectSpecialists,
+  appendSkipAuditNote,
+  SYNTHESIZER_STALL_TIMEOUT_MS,
+  makeEngineEnsembleTransport,
+} from "./ensemble.js"
 import { runClaudeProcess } from "./claude-process.js"
+import { runClaudeOneShot } from "./claude.runner.js"
+import { resolveRoute, type ResolvedRoute } from "./provider-route.js"
+import { nonSandboxedToolContext, resolveSearchBackends } from "./engine-inputs.js"
 import { buildAgentRegistry } from "./discovery/agent.registry.js"
 import { createStderrHandler } from "./legacy-shared.js"
 import { startSpinner } from "../ui/spinner.js"
@@ -67,14 +77,32 @@ const buildResearchAgenda = async (
   changelogMd: string | null,
   model: string,
   timeoutMinutes: number,
+  route: ResolvedRoute,
+  engine?: Engine,
 ): Promise<string> => {
+  const userPrompt = buildAgendaUserPrompt(specMd, gapsMd, existingResearchMd, changelogMd)
+  const timeoutMs = Math.min(timeoutMinutes * 60 * 1000, 3 * 60 * 1000) // cap at 3 min
+
+  if (!route.isClaudeCli && engine) {
+    // Engine path: use the configured model (the spawn path's hardcoded "sonnet"
+    // is Claude-only); no tools — agenda planning is a plain completion.
+    const result = await runClaudeOneShot({
+      engine,
+      model,
+      system: AGENDA_SYSTEM_PROMPT,
+      prompt: userPrompt,
+      timeoutMs,
+    })
+    return result.result ?? ""
+  }
+
   const result = await runClaudeProcess({
     systemPrompt: AGENDA_SYSTEM_PROMPT,
-    userPrompt: buildAgendaUserPrompt(specMd, gapsMd, existingResearchMd, changelogMd),
+    userPrompt,
     model: "sonnet",
     allowedTools: [],
     cwd: process.cwd(),
-    timeoutMs: Math.min(timeoutMinutes * 60 * 1000, 3 * 60 * 1000), // cap at 3 min
+    timeoutMs,
     onStderr: createStderrHandler("agenda"),
   })
 
@@ -169,6 +197,7 @@ const assembleSynthesizerUserPrompt = (
 
 export type ResearchConfig = {
   model: string
+  ridgelineDir: string
   timeoutMinutes: number
   specialistTimeoutSeconds: number
   maxBudgetUsd: number | null
@@ -187,6 +216,7 @@ export const runResearchEnsemble = async (
   constraintsMd: string,
   tasteMd: string | null,
   config: ResearchConfig,
+  engine?: Engine,
 ): Promise<EnsembleResult> => {
   const registry = buildAgentRegistry()
   const context = registry.getContext("researchers") ?? ""
@@ -198,6 +228,25 @@ export const runResearchEnsemble = async (
     ? [allSpecialists[Math.floor(Math.random() * allSpecialists.length)]]
     : selectSpecialists(allSpecialists, { specialistCount: config.specialistCount })
 
+  // Claude (claude_cli) keeps the byte-stable spawn transport; any other provider
+  // runs the engine transport. Research specialists output prose (no schema) and
+  // use the in-process WebFetch tool (Bash is dropped — no greywall here); the
+  // synthesizer writes research.md via the Write tool.
+  const route = resolveRoute(config.model, config.ridgelineDir)
+  const transport =
+    !route.isClaudeCli && engine
+      ? makeEngineEnsembleTransport({
+          engine,
+          model: config.model,
+          toolContext: nonSandboxedToolContext(
+            process.cwd(),
+            [config.buildDir],
+            config.networkAllowlist,
+            resolveSearchBackends(config.ridgelineDir),
+          ),
+        })
+      : undefined
+
   // Build a research agenda before dispatching specialists
   const agendaSpinner = startSpinner("Building agenda")
   const agenda = await buildResearchAgenda(
@@ -207,11 +256,14 @@ export const runResearchEnsemble = async (
     config.changelogMd,
     config.model,
     config.timeoutMinutes,
+    route,
+    engine,
   )
   agendaSpinner.stop()
 
   return runEnsemble<string>({
     label: "Researching",
+    transport,
     specialists,
     isStructured: false,
 

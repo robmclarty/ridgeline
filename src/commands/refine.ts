@@ -71,12 +71,13 @@ export const runRefine = async (buildName: string, opts: RefineOptions): Promise
     executor: async (input: RefineFlowInput) => {
       const config: RefineConfig = {
         model: input.model,
+        ridgelineDir,
         timeoutMinutes: input.timeoutMinutes,
         buildDir: input.buildDir,
         changelogMd: input.changelogMd,
         iterationNumber: input.iterationNumber,
       }
-      return runRefiner(input.specMd, input.researchMd, input.constraintsMd, input.tasteMd, config)
+      return runRefiner(input.specMd, input.researchMd, input.constraintsMd, input.tasteMd, config, engine)
     },
   })
 

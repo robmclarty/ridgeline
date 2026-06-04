@@ -79,6 +79,7 @@ const runSingleResearch = async (
     executor: async (input: ResearchFlowInput) => {
       const config: ResearchConfig = {
         model: opts.model,
+        ridgelineDir,
         timeoutMinutes: opts.timeout,
         specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
         maxBudgetUsd: opts.maxBudgetUsd ?? resolveMaxBudgetUsd(ridgelineDir, undefined),
@@ -90,7 +91,7 @@ const runSingleResearch = async (
         changelogMd,
         iterationNumber: input.iterationNumber,
       }
-      return runResearchEnsemble(input.specMd, input.constraintsMd, input.tasteMd, config)
+      return runResearchEnsemble(input.specMd, input.constraintsMd, input.tasteMd, config, engine)
     },
   })
 
