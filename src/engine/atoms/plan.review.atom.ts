@@ -3,7 +3,9 @@ import {
   appendConstraintsAndTasteData,
   appendDesignData,
   composeSystemPrompt,
+  toolingModelCallOpts,
   type StableInputs,
+  type ToolingDeps,
 } from "./_shape.js"
 import { createAtomPromptDocument } from "./_prompt.document.js"
 import { planReviewSchema, type PlanReviewSchema } from "../schemas.js"
@@ -54,7 +56,7 @@ export type PlanReviewAtomDeps = {
   readonly model: string
   readonly roleSystem: string
   readonly stable?: StableInputs | null
-}
+} & ToolingDeps
 
 export const planReviewAtom = (
   deps: PlanReviewAtomDeps,
@@ -66,6 +68,7 @@ export const planReviewAtom = (
     model: deps.model,
     system,
     schema: planReviewSchema,
+    ...toolingModelCallOpts(deps),
   })
   return compose("plan.review", sequence([shaper, caller]))
 }

@@ -66,10 +66,23 @@ export type SequencingMode =
   | { kind: "manual" }
   | { kind: "wave"; maxConcurrency: number }
 
+/**
+ * Web search backend configuration. WebSearch is OPT-IN — the tool is only
+ * offered to engine-backed research when at least one backend is configured.
+ */
+type SearchConfig = {
+  /** Self-hosted SearXNG base URL with the JSON API enabled, e.g. "http://localhost:8888". */
+  url?: string
+  /** Explicit opt-in to the keyless DuckDuckGo HTML fallback (ToS gray-area, best-effort). */
+  duckduckgo?: boolean
+}
+
 type RidgelineSettings = {
   network?: {
     allowlist?: string[]
   }
+  /** Web search backends (opt-in). See {@link SearchConfig}. */
+  search?: SearchConfig
   assetDir?: string
   model?: string
   /**
@@ -362,6 +375,10 @@ export const resolveEngineProviders = (
   const settings = loadSettings(ridgelineDir)
   return { provider: settings.provider, providers: settings.providers }
 }
+
+/** Resolve the (opt-in) web search backend configuration from settings. */
+export const resolveSearchConfig = (ridgelineDir: string): SearchConfig =>
+  loadSettings(ridgelineDir).search ?? {}
 
 export const resolveNetworkAllowlist = (ridgelineDir: string): string[] => {
   const settings = loadSettings(ridgelineDir)

@@ -1,4 +1,5 @@
-import type { Engine, GenerateResult, StreamChunk } from "fascicle"
+import type { Engine, GenerateResult, StreamChunk, Tool } from "fascicle"
+import type { z } from "zod"
 import type { ClaudeResult } from "../types.js"
 
 export type RunClaudeAgents = Record<string, { description: string; prompt: string; model?: string }>
@@ -17,6 +18,24 @@ export type RunClaudeOptions = {
   readonly agents?: RunClaudeAgents
   /** Per-call deadline in ms; if elapsed, the call is aborted via AbortSignal. */
   readonly timeoutMs?: number
+  /**
+   * In-process fascicle tools (with `execute` closures) for AI-SDK providers.
+   * Ignored by `claude_cli`, which uses `allowedTools`/built-ins instead — so
+   * callers pass one or the other, never both. Drives the in-process tool loop.
+   */
+  readonly tools?: readonly Tool[]
+  /** Max tool-loop steps for AI-SDK providers (ignored by `claude_cli`). */
+  readonly maxSteps?: number
+  /** How tool errors are handled; defaults to fascicle's behavior when unset. */
+  readonly toolErrorPolicy?: "feed_back" | "throw"
+  /**
+   * Zod schema for structured output on AI-SDK providers — fascicle validates
+   * (and repairs) the model output against it in-process. `claude_cli` instead
+   * uses `outputJsonSchema` (a JSON-schema string), so the two are mutually
+   * exclusive per provider. When set, `result.result` is the JSON-stringified
+   * validated object.
+   */
+  readonly schema?: z.ZodType<unknown>
 }
 
 const extractSessionId = (result: GenerateResult<unknown>): string => {
@@ -94,6 +113,13 @@ export const runClaudeOneShot = async (opts: RunClaudeOptions): Promise<ClaudeRe
       prompt: opts.prompt,
       abort: signal,
       on_chunk: opts.onChunk,
+      // tools/max_steps drive the AI-SDK in-process tool loop; spread only when
+      // present so the claude_cli call shape (and its byte-stable behavior)
+      // is unchanged when they're absent.
+      ...(opts.tools && opts.tools.length > 0 ? { tools: [...opts.tools] } : {}),
+      ...(opts.maxSteps !== undefined ? { max_steps: opts.maxSteps } : {}),
+      ...(opts.toolErrorPolicy ? { tool_error_policy: opts.toolErrorPolicy } : {}),
+      ...(opts.schema ? { schema: opts.schema } : {}),
       ...(provider_options ? { provider_options } : {}),
     })
     return toClaudeResult(result)

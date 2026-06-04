@@ -1,7 +1,9 @@
 import { compose, model_call, sequence, step, type Engine, type GenerateResult, type Step } from "fascicle"
 import {
   composeSystemPrompt,
+  toolingModelCallOpts,
   type StableInputs,
+  type ToolingDeps,
 } from "./_shape.js"
 import { createAtomPromptDocument } from "./_prompt.document.js"
 
@@ -46,11 +48,11 @@ export type RefinerAtomDeps = {
   readonly model: string
   readonly roleSystem: string
   readonly stable?: StableInputs | null
-}
+} & ToolingDeps
 
 export const refinerAtom = (deps: RefinerAtomDeps): Step<RefinerArgs, GenerateResult<unknown>> => {
   const system = composeSystemPrompt(deps.roleSystem, deps.stable)
   const shaper = step("refiner.shape", (args: RefinerArgs) => shapeRefinerModelCallInput(args))
-  const caller = model_call({ engine: deps.engine, model: deps.model, system })
+  const caller = model_call({ engine: deps.engine, model: deps.model, system, ...toolingModelCallOpts(deps) })
   return compose("refiner", sequence([shaper, caller]))
 }

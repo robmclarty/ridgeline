@@ -1,3 +1,4 @@
+import type { Tool } from "fascicle"
 import { buildStablePrompt, type StablePromptParts } from "../claude/stable.prompt.js"
 import type { AtomPromptDocument } from "./_prompt.document.js"
 
@@ -49,6 +50,26 @@ export const appendDesignData = (
     doc.data("Feature Design", parts.featureDesignMd)
   }
 }
+
+/**
+ * Optional tool-loop deps shared by every atom. Carrying tools turns an atom
+ * into a tool-using agent on AI-SDK providers; omitting them leaves a plain
+ * completion (and the `claude_cli` byte-stable shape) untouched.
+ */
+export type ToolingDeps = {
+  readonly tools?: ReadonlyArray<Tool>
+  readonly maxSteps?: number
+  readonly toolErrorPolicy?: "feed_back" | "throw"
+}
+
+/** Spread into `model_call`; emits nothing when no tools are supplied. */
+export const toolingModelCallOpts = (
+  deps: ToolingDeps,
+): { tools?: ReadonlyArray<Tool>; max_steps?: number; tool_error_policy?: "feed_back" | "throw" } => ({
+  ...(deps.tools && deps.tools.length > 0 ? { tools: deps.tools } : {}),
+  ...(deps.maxSteps !== undefined ? { max_steps: deps.maxSteps } : {}),
+  ...(deps.toolErrorPolicy ? { tool_error_policy: deps.toolErrorPolicy } : {}),
+})
 
 export const appendAssetCatalogInstruction = (doc: AtomPromptDocument, catalogPath: string | null | undefined): void => {
   if (!catalogPath) return

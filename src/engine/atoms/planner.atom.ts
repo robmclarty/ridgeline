@@ -3,7 +3,9 @@ import {
   appendConstraintsAndTasteData,
   appendDesignData,
   composeSystemPrompt,
+  toolingModelCallOpts,
   type StableInputs,
+  type ToolingDeps,
 } from "./_shape.js"
 import { createAtomPromptDocument } from "./_prompt.document.js"
 import { planArtifactSchema, type PlanArtifactSchema } from "../schemas.js"
@@ -77,7 +79,7 @@ export type PlannerAtomDeps = {
   /** Specialist system context — prepended to the JSON directive. */
   readonly roleSystem: string
   readonly stable?: StableInputs | null
-}
+} & ToolingDeps
 
 export const plannerAtom = (
   deps: PlannerAtomDeps,
@@ -90,6 +92,7 @@ export const plannerAtom = (
     model: deps.model,
     system,
     schema: planArtifactSchema,
+    ...toolingModelCallOpts(deps),
   })
   return compose("planner", sequence([shaper, caller]))
 }

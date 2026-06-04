@@ -4,7 +4,9 @@ import {
   appendConstraintsAndTasteData,
   appendDesignData,
   composeSystemPrompt,
+  toolingModelCallOpts,
   type StableInputs,
+  type ToolingDeps,
 } from "./_shape.js"
 import { createAtomPromptDocument } from "./_prompt.document.js"
 
@@ -92,11 +94,11 @@ export type BuilderAtomDeps = {
   readonly model: string
   readonly roleSystem: string
   readonly stable?: StableInputs | null
-}
+} & ToolingDeps
 
 export const builderAtom = (deps: BuilderAtomDeps): Step<BuilderArgs, GenerateResult<unknown>> => {
   const system = composeSystemPrompt(deps.roleSystem, deps.stable)
   const shaper = step("builder.shape", (args: BuilderArgs) => shapeBuilderModelCallInput(args))
-  const caller = model_call({ engine: deps.engine, model: deps.model, system })
+  const caller = model_call({ engine: deps.engine, model: deps.model, system, ...toolingModelCallOpts(deps) })
   return compose("builder", sequence([shaper, caller]))
 }

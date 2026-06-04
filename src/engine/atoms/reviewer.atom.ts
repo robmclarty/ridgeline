@@ -2,7 +2,9 @@ import { compose, model_call, sequence, step, type Engine, type GenerateResult, 
 import {
   appendDesignData,
   composeSystemPrompt,
+  toolingModelCallOpts,
   type StableInputs,
+  type ToolingDeps,
 } from "./_shape.js"
 import { createAtomPromptDocument } from "./_prompt.document.js"
 import { reviewVerdictSchema, type ReviewVerdictSchema } from "../schemas.js"
@@ -75,7 +77,7 @@ export type ReviewerAtomDeps = {
   readonly model: string
   readonly roleSystem: string
   readonly stable?: StableInputs | null
-}
+} & ToolingDeps
 
 export const reviewerAtom = (
   deps: ReviewerAtomDeps,
@@ -87,6 +89,7 @@ export const reviewerAtom = (
     model: deps.model,
     system,
     schema: reviewVerdictSchema,
+    ...toolingModelCallOpts(deps),
   })
   return compose("reviewer", sequence([shaper, caller]))
 }
