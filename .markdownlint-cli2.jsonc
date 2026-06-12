@@ -16,6 +16,7 @@
     "node_modules/**",
     "dist/**",
     "examples/**",
+    "docs/plans/**",
     ".worktrees/**",
     ".ridgeline/**",
     ".stryker-tmp/**",
