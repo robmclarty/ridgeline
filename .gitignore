@@ -1,4 +1,6 @@
 .DS_Store
+.env
+.ridgeline/.env
 dist/
 node_modules/
 .fallow/
@@ -11,3 +13,4 @@ coverage/
 .worktrees/
 .ridgeline/worktrees/
 .ridgeline/builds/*/discoveries.jsonl
+docs/plans

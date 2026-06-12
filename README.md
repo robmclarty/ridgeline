@@ -495,6 +495,30 @@ specialist count, network allowlist, etc.) are loaded from
 the CLI flag overrides the setting. See [SECURITY.md](SECURITY.md) for details
 on the sandbox model.
 
+## Provider API keys
+
+Non-Claude providers read their keys from the environment
+(`OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`,
+`ANTHROPIC_API_KEY`). Real environment variables always take precedence; as a
+convenience, Ridgeline also loads two `.env` files at startup (Node's built-in
+loader — no `dotenv` dependency), in this order:
+
+1. `.ridgeline/.env` (per-project — sibling of `settings.json`)
+2. `~/.config/ridgeline/.env` (global — one key set for every project;
+   honors `XDG_CONFIG_HOME`)
+
+The project-root `./.env` is intentionally **not** loaded: Ridgeline runs
+inside other projects that keep their own `./.env` of application secrets, and
+loading those into Ridgeline's own process would be surprising. Keep keys in a
+Ridgeline-namespaced file instead. Both `.env` locations are gitignored by
+Ridgeline; make sure your own project ignores `.ridgeline/.env` too.
+
+```sh
+# Global key, used by every build on this machine:
+mkdir -p ~/.config/ridgeline
+printf 'OPENROUTER_API_KEY=sk-or-...\n' >> ~/.config/ridgeline/.env
+```
+
 ## Web search (opt-in)
 
 The Claude CLI path uses Anthropic's built-in web search. On **non-Claude

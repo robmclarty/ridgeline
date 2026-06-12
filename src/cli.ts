@@ -5,6 +5,7 @@ import { realpathSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config.js"
+import { loadDotenvFiles } from "./stores/dotenv.js"
 import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount, resolvePreflight } from "./stores/settings.js"
 import { RidgelineConfig } from "./types.js"
 import { disableLogger } from "./ui/logger.js"
@@ -48,6 +49,10 @@ const isMainModule = (): boolean => {
 }
 
 if (isMainModule()) {
+  // Load provider keys from .ridgeline/.env (or ~/.config/ridgeline/.env) before
+  // any command resolves a provider. Real env vars still win. See loadDotenvFiles.
+  loadDotenvFiles()
+
   enforceFlavourRemoved(process.argv.slice(2))
 
   // Deprecation pre-check: --deep-ensemble is renamed to --thorough.
