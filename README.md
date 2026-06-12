@@ -512,7 +512,10 @@ Roles: `planner`, `builder`, `reviewer`, `researcher`, `specifier`, `refiner`.
 A role absent from `models` falls back to `model`; an explicit `--model`
 overrides every role. See
 [docs/future-models.md](docs/future-models.md#hybrid-routing-per-role-models)
-for the recommended routing matrix and caveats.
+for the recommended routing matrix and caveats, and
+[docs/costs.md](docs/costs.md) for what a build costs per provider tier (with
+real numbers), how `maxBudgetUsd` caps it, and how this routing makes a build
+roughly 10x cheaper.
 
 ## Provider API keys
 
