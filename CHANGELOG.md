@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.12.14 — 2026-06-12
+
+### Added
+
+- `docs/costs.md` — a guide to what a `ridgeline build` costs after Anthropic's
+  June 15, 2026 programmatic-billing change. Covers current per-MTok model
+  rates, a measured per-provider-tier cost table anchored to
+  `examples/helloworld` (all-frontier ~$1.5–1.8 per pass vs all-cheap
+  ~$0.12–0.18 — the ~10x span), a nightly-build estimate formula, how
+  `maxBudgetUsd` caps spend across priced and unpriced providers and interacts
+  with any plan credit, and the per-role routing matrix that makes a build
+  roughly 10x cheaper. Linked from the README's Configuration-resolution
+  section.
+
 ## v0.12.13 — 2026-06-12
 
 ### Added
