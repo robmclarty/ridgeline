@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.12.13 — 2026-06-12
+
+### Added
+
+- Per-role model routing via a `"models"` map in `.ridgeline/settings.json`.
+  A single build can now run each pipeline role on a different model — e.g.
+  the planner and reviewer on a frontier model for judgment while the builder
+  and researcher run on a cheap provider for volume — with no new CLI flags. A
+  role absent from the map falls back to the global `model`; an explicit
+  `--model` still overrides every role. Precedence per role is
+  `--model` > `settings.models.<role>` > `settings.model` > default. The build
+  gate, the `--max-budget-usd` warning, the `phase_provider` trajectory events,
+  and the builder's context-window budgeting all evaluate the per-role model.
+  Validated end-to-end: one `ridgeline build` ran the builder on OpenRouter and
+  the reviewer on the Claude CLI in the same invocation. See
+  [docs/future-models.md](docs/future-models.md#hybrid-routing-per-role-models)
+  for the recommended routing matrix.
+
+### Fixed
+
+- `--model` was resolved before the multi-stage commands ran, which would have
+  silently overwritten per-role `settings.models` on every bare `ridgeline
+  <build>` and `--auto` invocation. The create/research/auto commands now thread
+  the raw override and resolve per role at each stage.
+
 ## v0.12.12 — 2026-06-11
 
 ### Added
