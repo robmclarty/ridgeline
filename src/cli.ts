@@ -222,11 +222,18 @@ const invokeWithConfig = async (
   }
 }
 
+// Read options with `optsWithGlobals()`, not the local `opts` arg: options like
+// `--model` / `--sandbox` are also declared on the root (default) command, so
+// commander stores them in the GLOBAL option set. Reading only the subcommand's
+// local opts silently drops them (e.g. `build --model X` fell back to the default
+// model and ran on the wrong provider). The merged view sees both.
 const withConfig = (fn: (config: RidgelineConfig) => Promise<void>) =>
-  (buildName: string | undefined, opts: Opts) => invokeWithConfig(buildName, opts, false, fn)
+  (buildName: string | undefined, _opts: Opts, command: Command) =>
+    invokeWithConfig(buildName, command.optsWithGlobals() as Opts, false, fn)
 
 const withConfigAndPreflight = (fn: (config: RidgelineConfig) => Promise<void>) =>
-  (buildName: string | undefined, opts: Opts) => invokeWithConfig(buildName, opts, true, fn)
+  (buildName: string | undefined, _opts: Opts, command: Command) =>
+    invokeWithConfig(buildName, command.optsWithGlobals() as Opts, true, fn)
 
 const program = new Command()
 
