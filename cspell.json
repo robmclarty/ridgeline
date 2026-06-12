@@ -12,6 +12,7 @@
     ".ridgeline/**",
     ".fallow/**",
     "examples/**",
+    "docs/plans/**",
     "package-lock.json",
     "package.json",
     "CHANGELOG.md"
