@@ -293,14 +293,15 @@ const makeBudgetSubscriber = (
 /**
  * Providers validated for the in-process engine builder. A non-Claude build
  * errors unless its provider is listed here, proven end-to-end first. Claude
- * models are unaffected: they keep the spawn/CLI path (see `isClaudeBuildModel`).
+ * models keep the spawn/CLI path (see `isClaudeBuildModel`).
  *
- * - openrouter: validated 2026-06-12 — full build → review → checkpoint of
- *   examples/helloworld on `openrouter:qwen/qwen3-coder:free` under fascicle
- *   0.6.0, passed on the first attempt. Known caveat: cost attribution is
- *   inflated for non-Claude providers (budget.json applies Claude-shaped
- *   pricing), so `--max-budget-usd` is unreliable on this path until the cost
- *   calc is provider-aware.
+ * - openrouter: requires the optional `@openrouter/ai-sdk-provider` package.
+ *   Validated 2026-06-12 — full build → review → checkpoint of
+ *   examples/helloworld on `openrouter:qwen/qwen3-coder-30b-a3b-instruct`,
+ *   confirmed against OpenRouter's own API (the request registered there and
+ *   reported provider-shaped, non-Claude usage). Cost is reported as unpriced
+ *   ($0) for OpenRouter models — fascicle has no pricing entry for them, so
+ *   `--max-budget-usd` does not cap this path yet (see docs/plans/fixes.md).
  */
 const ENGINE_BUILDER_PROVIDERS: ReadonlySet<string> = new Set<string>(["openrouter"])
 
