@@ -92,7 +92,7 @@ const runReviewerViaSpawn = async (
     return await runClaudeProcess({
       systemPrompt,
       userPrompt,
-      model: config.model,
+      model: config.models.reviewer,
       allowedTools: ["Read", "Bash", "Glob", "Grep", "Agent", "Skill"],
       ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
@@ -121,7 +121,7 @@ const runReviewerViaEngine = async (
   try {
     const result = await runClaudeOneShot({
       engine,
-      model: config.model,
+      model: config.models.reviewer,
       system: roleSystem,
       prompt: userPrompt,
       tools,

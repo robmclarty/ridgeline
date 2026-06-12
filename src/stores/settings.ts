@@ -86,6 +86,16 @@ type RidgelineSettings = {
   assetDir?: string
   model?: string
   /**
+   * Per-role model overrides, keyed by pipeline role. Values take the same
+   * form as `model`: a bare family (`opus`) or colon-form
+   * (`openrouter:qwen/qwen3-coder-30b-a3b-instruct`). A role absent here falls
+   * back to `model`, then the built-in default. An explicit CLI `--model`
+   * overrides every role. Unknown keys are ignored. This is what makes hybrid
+   * routing the default: frontier model for judgment roles (planner,
+   * reviewer), cheap volume model for builder/researcher — no flags needed.
+   */
+  models?: Partial<Record<keyof StageModels, string>>
+  /**
    * Default provider transport for engine-backed model calls (one of
    * anthropic | claude_cli | openai | google | openrouter | ollama | lmstudio).
    * When omitted, the engine factory picks `anthropic` if ANTHROPIC_API_KEY is
@@ -364,6 +374,54 @@ export const resolveSandboxExtras = (ridgelineDir: string): SandboxExtras => {
 /** Resolve the model to use: CLI opt wins, then settings.json, then built-in default. */
 export const resolveModel = (optModel: string | undefined, ridgelineDir: string): string =>
   optModel ?? loadSettings(ridgelineDir).model ?? "opus"
+
+/**
+ * Fully-resolved per-role models: every pipeline role that can carry its own
+ * model via settings `models`, present after precedence.
+ */
+export type StageModels = Readonly<Record<
+  "planner" | "builder" | "reviewer" | "researcher" | "specifier" | "refiner",
+  string
+>>
+
+const STAGE_MODEL_ROLES: readonly (keyof StageModels)[] = [
+  "planner",
+  "builder",
+  "reviewer",
+  "researcher",
+  "specifier",
+  "refiner",
+]
+
+/**
+ * Resolve one role's model: explicit CLI `--model` overrides all roles, then
+ * settings `models.<role>`, then settings `model`, then the built-in default.
+ * Non-string or empty role values are ignored (same laissez-faire posture as
+ * `loadSettings`), falling through to the global model.
+ */
+export const resolveStageModel = (
+  role: keyof StageModels,
+  cliModel: string | undefined,
+  ridgelineDir: string,
+): string => {
+  if (cliModel !== undefined) return cliModel
+  const settings = loadSettings(ridgelineDir)
+  const roleModel = settings.models?.[role]
+  if (typeof roleModel === "string" && roleModel.length > 0) return roleModel
+  return settings.model ?? "opus"
+}
+
+/** Resolve every role's model in one pass (see {@link resolveStageModel}). */
+export const resolveStageModels = (
+  ridgelineDir: string,
+  cliModel?: string,
+): StageModels => {
+  const resolved = {} as Record<keyof StageModels, string>
+  for (const role of STAGE_MODEL_ROLES) {
+    resolved[role] = resolveStageModel(role, cliModel, ridgelineDir)
+  }
+  return resolved
+}
 
 export const loadSettings = (ridgelineDir: string): RidgelineSettings => {
   const settingsPath = path.join(ridgelineDir, "settings.json")

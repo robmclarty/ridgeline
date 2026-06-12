@@ -20,8 +20,7 @@ import { runRetrospective } from "./retrospective.js"
 import { ensureGitRepo } from "../engine/worktree.js"
 import { requestPhaseApproval } from "../ui/phase-prompt.js"
 import { installGracefulStopListener } from "../ui/graceful-stop.js"
-import { makeRidgelineEngine } from "../engine/engine.factory.js"
-import { resolveEngineProviders, resolveEnginePricing } from "../stores/settings.js"
+import { makeEngineForConfig } from "../engine/engine.factory.js"
 import { isClaudeBuildModel, resolveRoute, unpriceableBudgetTarget } from "../engine/provider-route.js"
 import { buildFlow, type BuildFlowInput, type BuildPhaseResult, type RunPhaseStepInput } from "../engine/flows/build.flow.js"
 import type { WorktreeDriver, WorktreeItem } from "../engine/composites/index.js"
@@ -309,34 +308,50 @@ const ENGINE_BUILDER_PROVIDERS: ReadonlySet<string> = new Set<string>(["openrout
 const isEngineBuilderEnabled = (provider: string): boolean => ENGINE_BUILDER_PROVIDERS.has(provider)
 
 /**
- * Guard against a *silent* uncapped run: when a budget cap is set but the build
- * model routes to a non-Claude provider fascicle can't price, every cost reads
- * `$0` and `--max-budget-usd` never trips. Warn loudly and say how to fix it
- * (settings `pricing`) rather than letting the cap look active when it isn't.
+ * The role models a `ridgeline build` invocation will actually run, deduped by
+ * model string so a uniform configuration is checked (and warned about) once.
+ */
+const buildRoleModels = (config: RidgelineConfig): { roles: string; model: string }[] => {
+  const byModel = new Map<string, string[]>()
+  for (const [role, model] of [["builder", config.models.builder], ["reviewer", config.models.reviewer]]) {
+    byModel.set(model, [...(byModel.get(model) ?? []), role])
+  }
+  return [...byModel.entries()].map(([model, roles]) => ({ roles: roles.join("/"), model }))
+}
+
+/**
+ * Guard against a *silent* uncapped run: when a budget cap is set but a build
+ * role's model routes to a non-Claude provider fascicle can't price, that
+ * role's cost reads `$0` and `--max-budget-usd` never trips. Warn loudly per
+ * unpriced model and say how to fix it (settings `pricing`) rather than
+ * letting the cap look active when it isn't.
  */
 const warnIfBudgetCapUnpriceable = (config: RidgelineConfig, engine: Engine): void => {
-  const target = unpriceableBudgetTarget(
-    config.model,
-    config.ridgelineDir,
-    config.maxBudgetUsd,
-    (provider, modelId) => engine.resolve_price(provider, modelId),
-  )
-  if (!target) return
-  const key = `${target.provider}:${target.modelId}`
-  printWarn(
-    `--max-budget-usd $${config.maxBudgetUsd} cannot bound this build: no pricing is known for `
-    + `'${key}', so its cost is recorded as $0 and the cap will never trip. `
-    + `Add a "pricing" entry keyed "${key}" to settings.json (per-million-token rates) `
-    + `to enable cost tracking and the budget cap for this model.`,
-  )
+  for (const { roles, model } of buildRoleModels(config)) {
+    const target = unpriceableBudgetTarget(
+      model,
+      config.ridgelineDir,
+      config.maxBudgetUsd,
+      (provider, modelId) => engine.resolve_price(provider, modelId),
+    )
+    if (!target) continue
+    const key = `${target.provider}:${target.modelId}`
+    printWarn(
+      `--max-budget-usd $${config.maxBudgetUsd} cannot bound the ${roles} model: no pricing is known for `
+      + `'${key}', so its cost is recorded as $0 and the cap will never trip. `
+      + `Add a "pricing" entry keyed "${key}" to settings.json (per-million-token rates) `
+      + `to enable cost tracking and the budget cap for this model.`,
+    )
+  }
 }
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
-  if (!isClaudeBuildModel(config.model)) {
-    const { provider } = resolveRoute(config.model, config.ridgelineDir)
+  for (const { roles, model } of buildRoleModels(config)) {
+    if (isClaudeBuildModel(model)) continue
+    const { provider } = resolveRoute(model, config.ridgelineDir)
     if (!isEngineBuilderEnabled(provider)) {
       throw new Error(
-        `'ridgeline build' does not yet support provider '${provider}' for model '${config.model}'. `
+        `'ridgeline build' does not yet support provider '${provider}' for the ${roles} model '${model}'. `
         + `Claude models (opus | sonnet | haiku, or a claude-* id) run on the Claude CLI; the in-process `
         + `engine builder is enabled per-provider once validated end-to-end. Non-Claude providers work now `
         + `on the engine-backed flows (plan, refine, research) via a "provider:model" string or the `
@@ -369,15 +384,7 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     : 1
   const waves = computeWaves(phases, state, maxConcurrency)
 
-  const engine = makeRidgelineEngine({
-    sandboxFlag: config.sandboxMode,
-    timeoutMinutes: config.timeoutMinutes,
-    pluginDirs: [],
-    settingSources: ["user", "project", "local"],
-    buildPath: config.buildDir,
-    pricing: resolveEnginePricing(config.ridgelineDir),
-    ...resolveEngineProviders(config.ridgelineDir),
-  })
+  const engine = makeEngineForConfig(config)
 
   warnIfBudgetCapUnpriceable(config, engine)
 

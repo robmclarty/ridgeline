@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { uniformStageModels } from "../../../test/factories.js"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
@@ -69,6 +70,7 @@ describe("runEnsemblePlanner — engine transport", () => {
       handoffPath: path.join(buildDir, "handoff.md"),
       phasesDir,
       model: "opus",
+      models: uniformStageModels("opus"),
       maxRetries: 2,
       timeoutMinutes: 120,
       checkTimeoutSeconds: 1200,

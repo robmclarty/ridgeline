@@ -1,4 +1,16 @@
 import type { RidgelineConfig, PhaseInfo, ClaudeResult, ReviewVerdict } from "../src/types.js"
+import type { StageModels } from "../src/stores/settings.js"
+
+// Per-role models record for RidgelineConfig fixtures: every role on one model,
+// mirroring a run with no settings `models` overrides.
+export const uniformStageModels = (model: string): StageModels => ({
+  planner: model,
+  builder: model,
+  reviewer: model,
+  researcher: model,
+  specifier: model,
+  refiner: model,
+})
 
 export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfig => ({
   buildName: "test-build",
@@ -8,7 +20,10 @@ export const makeConfig = (overrides?: Partial<RidgelineConfig>): RidgelineConfi
   tastePath: null,
   handoffPath: "/tmp/build/handoff.md",
   phasesDir: "/tmp/build/phases",
-  model: "opus",
+  model: overrides?.model ?? "opus",
+  // Derive from the (possibly overridden) model so `makeConfig({ model })`
+  // behaves like a run with no per-role settings; pass `models` to split roles.
+  models: uniformStageModels(overrides?.model ?? "opus"),
   maxRetries: 2,
   timeoutMinutes: 120,
   checkTimeoutSeconds: 1200,

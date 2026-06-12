@@ -12,7 +12,10 @@ export const appendBaseUserPrompt = (doc: PromptDocument, config: RidgelineConfi
   appendConstraintsAndTaste(doc, config)
   appendDesign(doc, config)
 
-  doc.instruction("Target Model", `The builder will use the \`${config.model}\` model.`)
+  // Name the *builder's* model: the planner sizes phases for the model that
+  // will execute them, which under hybrid routing may differ from the model
+  // running the planning stage itself.
+  doc.instruction("Target Model", `The builder will use the \`${config.models.builder}\` model.`)
   const tokenPhrase = `~${config.phaseTokenLimit.toLocaleString()} output tokens`
   const costPhrase = config.phaseBudgetLimit !== null ? ` (~$${config.phaseBudgetLimit} USD)` : ""
   doc.instruction(

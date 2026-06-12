@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup.js"
+import { uniformStageModels } from "../../../test/factories.js"
 import type { RidgelineConfig } from "../../types.js"
 
 vi.mock("../../ui/output.js", () => ({
@@ -104,6 +105,7 @@ describe("commands/run", () => {
       handoffPath: path.join(tmpDir, "handoff.md"),
       phasesDir: path.join(tmpDir, "phases"),
       model: "opus",
+      models: uniformStageModels("opus"),
       maxRetries: 2,
       timeoutMinutes: 120,
       checkTimeoutSeconds: 1200,
@@ -138,11 +140,29 @@ describe("commands/run", () => {
   })
 
   it("rejects a non-Claude build model until its provider is enabled", async () => {
-    // The engine-builder allowlist starts empty, so a non-Claude model errors
-    // (no behavior change vs the old Claude-only guard).
-    await expect(runBuild({ ...config, model: "openai:gpt-4o" })).rejects.toThrow(
-      /does not yet support provider 'openai'/,
-    )
+    // openai is not in the engine-builder allowlist, so a non-Claude model
+    // errors (no behavior change vs the old Claude-only guard).
+    await expect(
+      runBuild({ ...config, model: "openai:gpt-4o", models: uniformStageModels("openai:gpt-4o") }),
+    ).rejects.toThrow(/does not yet support provider 'openai' for the builder\/reviewer model/)
+  })
+
+  it("rejects a non-enabled provider on the reviewer role alone", async () => {
+    await expect(
+      runBuild({ ...config, models: { ...config.models, reviewer: "openai:gpt-4o" } }),
+    ).rejects.toThrow(/does not yet support provider 'openai' for the reviewer model/)
+  })
+
+  it("passes the gate with a hybrid builder=openrouter + reviewer=opus split", async () => {
+    vi.mocked(scanPhases).mockReturnValue([])
+    // openrouter is enabled for the engine builder and opus is Claude, so the
+    // gate lets the hybrid through — the run proceeds to phase scanning.
+    await expect(
+      runBuild({
+        ...config,
+        models: { ...config.models, builder: "openrouter:qwen/qwen3-coder-30b-a3b-instruct" },
+      }),
+    ).rejects.toThrow("No phases generated")
   })
 
   it("runs phases sequentially until all complete", async () => {

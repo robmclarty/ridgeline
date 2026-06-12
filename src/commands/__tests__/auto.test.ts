@@ -36,6 +36,7 @@ vi.mock("../../stores/settings.js", () => ({
   resolveSpecialistTimeoutSeconds: vi.fn(() => 600),
   resolveSandboxMode: vi.fn(() => "off"),
   resolveEngineProviders: vi.fn(() => ({})),
+  resolveModel: vi.fn((optModel: string | undefined) => optModel ?? "opus"),
 }))
 
 vi.mock("../../ui/output.js", () => ({

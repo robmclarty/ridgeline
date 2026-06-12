@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { uniformStageModels } from "../../../../test/factories.js"
 import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types.js"
 
 vi.mock("../../../stores/tags.js", () => ({
@@ -110,6 +111,7 @@ const config: RidgelineConfig = {
   handoffPath: "/tmp/build/handoff.md",
   phasesDir: "/tmp/build/phases",
   model: "opus",
+  models: uniformStageModels("opus"),
   maxRetries: 2,
   timeoutMinutes: 120,
   checkTimeoutSeconds: 1200,

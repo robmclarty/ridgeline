@@ -9,13 +9,18 @@ import { PipelineStage } from "../types.js"
 import { runShape, runShapeAuto, ShapeOptions } from "./shape.js"
 import { runSpec, SpecOptions } from "./spec.js"
 import { resolveBuildDir, resolveConfig } from "../config.js"
-import { resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
+import { resolveModel, resolveStageModel, resolveSpecialistTimeoutSeconds } from "../stores/settings.js"
 import { runPlan } from "./plan.js"
 import { runBuild } from "./build.js"
 import { resolveInputBundle } from "./input.js"
 
 export type CreateOptions = {
-  model: string
+  /**
+   * Raw `--model` override (undefined when the flag wasn't passed). Kept
+   * unresolved so each stage dispatch can apply its own per-role resolution
+   * (settings `models.<role>`); resolving it up front would clobber those.
+   */
+  model?: string
   timeout: string
   maxBudgetUsd?: string
   constraints?: string
@@ -109,7 +114,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
   switch (nextStage) {
     case "shape": {
       const shapeOpts: ShapeOptions = {
-        model: opts.model,
+        model: resolveModel(opts.model, path.join(process.cwd(), ".ridgeline")),
         timeout: parseInt(opts.timeout, 10),
         input: opts.input,
       }
@@ -134,7 +139,7 @@ export const runCreate = async (buildName: string, opts: CreateOptions): Promise
     }
     case "spec": {
       const specOpts: SpecOptions = {
-        model: opts.model,
+        model: resolveStageModel("specifier", opts.model, path.join(process.cwd(), ".ridgeline")),
         timeout: parseInt(opts.timeout, 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(opts.maxBudgetUsd) : undefined,
         specialistCount: opts.specialistCount,

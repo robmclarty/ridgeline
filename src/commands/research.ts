@@ -11,6 +11,7 @@ import {
   resolveSandboxMode,
   resolveMaxBudgetUsd,
   resolveEngineProviders,
+  resolveStageModel,
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
   DEFAULT_SPECIALIST_COUNT,
 } from "../stores/settings.js"
@@ -20,7 +21,8 @@ import { makeRidgelineEngine } from "../engine/engine.factory.js"
 import { researchFlow, type ResearchFlowInput } from "../engine/flows/research.flow.js"
 
 type ResearchOptions = {
-  model: string
+  /** Raw `--model` override; the researcher/refiner roles resolve per-call. */
+  model?: string
   timeout: number
   maxBudgetUsd?: number
   isQuick: boolean
@@ -78,7 +80,7 @@ const runSingleResearch = async (
   const flow = researchFlow({
     executor: async (input: ResearchFlowInput) => {
       const config: ResearchConfig = {
-        model: opts.model,
+        model: resolveStageModel("researcher", opts.model, ridgelineDir),
         ridgelineDir,
         timeoutMinutes: opts.timeout,
         specialistTimeoutSeconds: opts.specialistTimeoutSeconds ?? DEFAULT_SPECIALIST_TIMEOUT_SECONDS,
@@ -150,7 +152,7 @@ const runSingleRefine = async (
   iterationNumber: number,
 ): Promise<void> => {
   await runRefine(buildName, {
-    model: opts.model,
+    model: resolveStageModel("refiner", opts.model, path.join(process.cwd(), ".ridgeline")),
     timeout: opts.timeout,
     iterationNumber,
   })

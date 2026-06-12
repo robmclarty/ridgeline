@@ -1,5 +1,10 @@
 export type CreateOptions = {
-    model: string;
+    /**
+     * Raw `--model` override (undefined when the flag wasn't passed). Kept
+     * unresolved so each stage dispatch can apply its own per-role resolution
+     * (settings `models.<role>`); resolving it up front would clobber those.
+     */
+    model?: string;
     timeout: string;
     maxBudgetUsd?: string;
     constraints?: string;

@@ -6,6 +6,8 @@ import {
   loadSettings,
   resolveNetworkAllowlist,
   resolveModel,
+  resolveStageModel,
+  resolveStageModels,
   resolveSpecialistTimeoutSeconds,
   resolvePhaseBudgetLimit,
   resolvePhaseTokenLimit,
@@ -203,6 +205,76 @@ describe("settings", () => {
 
     it("falls back to 'opus' when neither is set", () => {
       expect(resolveModel(undefined, tmpDir)).toBe("opus")
+    })
+  })
+
+  describe("resolveStageModel", () => {
+    it("CLI --model overrides both models.<role> and model", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({
+        model: "opus",
+        models: { builder: "openrouter:qwen/qwen3-coder-30b-a3b-instruct" },
+      }))
+      expect(resolveStageModel("builder", "sonnet", tmpDir)).toBe("sonnet")
+    })
+
+    it("models.<role> overrides the global model", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({
+        model: "opus",
+        models: { builder: "openrouter:qwen/qwen3-coder-30b-a3b-instruct" },
+      }))
+      expect(resolveStageModel("builder", undefined, tmpDir))
+        .toBe("openrouter:qwen/qwen3-coder-30b-a3b-instruct")
+    })
+
+    it("falls back to the global model for roles absent from models", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({
+        model: "sonnet",
+        models: { builder: "openrouter:qwen/x" },
+      }))
+      expect(resolveStageModel("reviewer", undefined, tmpDir)).toBe("sonnet")
+    })
+
+    it("falls back to 'opus' when nothing is configured", () => {
+      expect(resolveStageModel("planner", undefined, tmpDir)).toBe("opus")
+    })
+
+    it("ignores empty and non-string role values", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({
+        model: "sonnet",
+        models: { builder: "", reviewer: 42 },
+      }))
+      expect(resolveStageModel("builder", undefined, tmpDir)).toBe("sonnet")
+      expect(resolveStageModel("reviewer", undefined, tmpDir)).toBe("sonnet")
+    })
+  })
+
+  describe("resolveStageModels", () => {
+    it("returns every role, split by settings models with global fallback", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({
+        model: "opus",
+        models: {
+          builder: "openrouter:qwen/qwen3-coder-30b-a3b-instruct",
+          researcher: "openrouter:qwen/qwen3-coder-30b-a3b-instruct",
+          unknownRole: "ignored",
+        },
+      }))
+      expect(resolveStageModels(tmpDir)).toEqual({
+        planner: "opus",
+        builder: "openrouter:qwen/qwen3-coder-30b-a3b-instruct",
+        reviewer: "opus",
+        researcher: "openrouter:qwen/qwen3-coder-30b-a3b-instruct",
+        specifier: "opus",
+        refiner: "opus",
+      })
+    })
+
+    it("an explicit CLI model overrides every role", () => {
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify({
+        model: "opus",
+        models: { builder: "openrouter:qwen/x" },
+      }))
+      const models = resolveStageModels(tmpDir, "sonnet")
+      expect(new Set(Object.values(models))).toEqual(new Set(["sonnet"]))
     })
   })
 

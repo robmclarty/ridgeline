@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url"
 import { Command, Option } from "commander"
 import { loadVersion, resolveConfig } from "./config.js"
 import { loadDotenvFiles } from "./stores/dotenv.js"
-import { resolveModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount, resolvePreflight } from "./stores/settings.js"
+import { resolveModel, resolveStageModel, resolveSpecialistTimeoutSeconds, resolveDirectionCount, resolvePreflight } from "./stores/settings.js"
 import { RidgelineConfig } from "./types.js"
 import { disableLogger } from "./ui/logger.js"
 import { askBuildName } from "./ui/prompt.js"
@@ -268,7 +268,9 @@ addAutoOrchestratorOptions(addAutoOption(addPreflightOptions(program
       const { specialistCount } = detectPreflightFlags()
 
       const baseCreateOpts = {
-        model: resolveModel(opts.model as string | undefined, ridgelineDirFromCwd()),
+        // Raw --model override: per-role resolution (settings models.<role>)
+        // happens at each stage dispatch, so resolving here would clobber it.
+        model: opts.model as string | undefined,
         timeout: String(opts.timeout ?? "10"),
         maxBudgetUsd: opts.maxBudgetUsd as string | undefined,
         maxRetries: opts.maxRetries as string | undefined,
@@ -414,7 +416,7 @@ addAutoOption(addPreflightOptions(program
       const { specialistCount } = detectPreflightFlags()
       const ridgelineDir = ridgelineDirFromCwd()
       await runSpec(await requireBuildName(buildName), {
-        model: resolveModel(opts.model as string | undefined, ridgelineDir),
+        model: resolveStageModel("specifier", opts.model as string | undefined, ridgelineDir),
         timeout: parseInt(String(opts.timeout ?? "10"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         input,
@@ -479,7 +481,8 @@ addPreflightOptions(program
       const { specialistCount } = detectPreflightFlags()
       const ridgelineDir = ridgelineDirFromCwd()
       await runResearch(await requireBuildName(buildName), {
-        model: resolveModel(opts.model as string | undefined, ridgelineDir),
+        // Raw --model override; the researcher/refiner roles resolve inside.
+        model: opts.model as string | undefined,
         timeout: parseInt(String(opts.timeout ?? "15"), 10),
         maxBudgetUsd: opts.maxBudgetUsd ? parseFloat(String(opts.maxBudgetUsd)) : undefined,
         isQuick: opts.quick === true,
@@ -500,7 +503,10 @@ addAutoOption(addPreflightOptions(program
   .action(async (buildName: string | undefined, opts: Opts) => {
     try {
       await runPreflightGuard()
-      await runRefine(await requireBuildName(buildName), parseBaseOpts(opts))
+      await runRefine(await requireBuildName(buildName), {
+        model: resolveStageModel("refiner", opts.model as string | undefined, ridgelineDirFromCwd()),
+        timeout: parseInt(String(opts.timeout ?? "10"), 10),
+      })
     } catch (err) {
       handleCommandError(err)
     }

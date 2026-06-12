@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest"
+import { uniformStageModels } from "../../../../test/factories.js"
 import { run, step } from "fascicle"
 import type { TrajectoryEvent, TrajectoryLogger } from "fascicle"
 import type { PhaseInfo } from "../../../types.js"
@@ -83,6 +84,7 @@ const minimalConfig = {
   handoffPath: "",
   phasesDir: "",
   model: "opus",
+  models: uniformStageModels("opus"),
   maxRetries: 0,
   timeoutMinutes: 1,
   checkTimeoutSeconds: 30,

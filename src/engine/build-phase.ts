@@ -335,14 +335,14 @@ const executeBuild = async (
   // the intended provider/model even before any result lands. Each recorded
   // cost entry below carries the *actual* transport — a mismatch is the misroute
   // signal that #2 hid for so long.
-  const route = resolveRoute(config.model, config.ridgelineDir)
+  const route = resolveRoute(config.models.builder, config.ridgelineDir)
   logTrajectory(config.buildDir, "phase_provider", phase.id,
-    `Routing ${phase.id} to ${route.provider} (${route.modelId})`,
+    `Routing ${phase.id} builder to ${route.provider} (${route.modelId})`,
     { provider: route.provider, model: route.modelId })
 
-  // Claude models keep the byte-stable spawn invoker; a non-Claude build model
+  // Claude models keep the byte-stable spawn invoker; a non-Claude builder model
   // runs the engine invoker (when an engine was threaded down).
-  const invoker = engine && !isClaudeBuildModel(config.model) ? makeEngineBuilderInvoker(engine) : undefined
+  const invoker = engine && !isClaudeBuildModel(config.models.builder) ? makeEngineBuilderInvoker(engine) : undefined
 
   // In the wave path the builder appends to a per-phase handoff fragment
   // inside the worktree; create it up-front so the file the prompt names exists.
@@ -435,8 +435,15 @@ const executeReview = async (
   updatePhaseStatus(config.buildDir, state, phase.id, { status: "reviewing" })
   logTrajectory(config.buildDir, "review_start", phase.id, `Review attempt ${attempt + 1}${sandboxNote}`)
 
-  // Match the builder: non-Claude build models review on the engine too.
-  const reviewerEngine = engine && !isClaudeBuildModel(config.model) ? engine : undefined
+  // The reviewer routes on its own role model — under hybrid routing it may sit
+  // on a different provider than the builder, so record its decision too.
+  const reviewRoute = resolveRoute(config.models.reviewer, config.ridgelineDir)
+  logTrajectory(config.buildDir, "phase_provider", phase.id,
+    `Routing ${phase.id} reviewer to ${reviewRoute.provider} (${reviewRoute.modelId})`,
+    { provider: reviewRoute.provider, model: reviewRoute.modelId })
+
+  // Match the builder: a non-Claude reviewer model reviews on the engine.
+  const reviewerEngine = engine && !isClaudeBuildModel(config.models.reviewer) ? engine : undefined
   const wallStart = Date.now()
   const { result, verdict } = await runReviewer(config, phase, checkpointTag, cwd, sensorFindings, reviewerEngine)
   result.durationMs = Date.now() - wallStart

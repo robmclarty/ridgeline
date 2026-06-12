@@ -9,7 +9,7 @@ import {
 } from "../stores/state.js"
 import { PipelineStage } from "../types.js"
 import { resolveBuildDir } from "../config.js"
-import { resolveSandboxMode, resolveSpecialistTimeoutSeconds, resolveEngineProviders } from "../stores/settings.js"
+import { resolveModel, resolveSandboxMode, resolveSpecialistTimeoutSeconds, resolveEngineProviders } from "../stores/settings.js"
 import { runCreate, CreateOptions, persistInputSourceIfPath } from "./create.js"
 import { runDirectionsAuto } from "./directions.js"
 import { runResearch } from "./research.js"
@@ -71,7 +71,8 @@ const runDirectionsInsertion = async (
   if (!opts.directions || next !== "spec" || !isShapeVisual(buildDir)) return false
   printStageBanner(`directions (auto, ${opts.directions} specialists)`)
   await runDirectionsAuto(buildName, {
-    model: opts.model,
+    // Directions has no per-role settings key; resolve the global model here.
+    model: resolveModel(opts.model, path.join(process.cwd(), ".ridgeline")),
     timeout: parseInt(opts.timeout, 10),
     count: opts.directions,
     inspiration: opts.inspiration,
@@ -101,10 +102,12 @@ const runResearchInsertion = async (
 const runTailHooks = async (
   buildName: string, buildDir: string, opts: AutoOptions,
 ): Promise<void> => {
+  // The retro hooks have no per-role settings key; resolve the global model.
+  const tailModel = resolveModel(opts.model, path.join(process.cwd(), ".ridgeline"))
   printStageBanner("retrospective (auto)")
   try {
     await runRetrospective(buildName, {
-      model: opts.model,
+      model: tailModel,
       timeout: parseInt(opts.timeout, 10),
     })
   } catch (err) {
@@ -115,7 +118,7 @@ const runTailHooks = async (
     printStageBanner("retro-refine (auto)")
     try {
       await runRetroRefine(buildName, {
-        model: opts.model,
+        model: tailModel,
         timeout: parseInt(opts.timeout, 10),
       })
     } catch (err) {

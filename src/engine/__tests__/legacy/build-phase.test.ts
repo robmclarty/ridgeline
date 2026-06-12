@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { uniformStageModels } from "../../../../test/factories.js"
 import type { RidgelineConfig, PhaseInfo, BuildState, ClaudeResult, ReviewVerdict } from "../../../types.js"
 
 // Mock all external dependencies
@@ -38,8 +39,13 @@ vi.mock("../../../stores/trajectory.js", () => ({
   })),
 }))
 
+// Sentinel returned by the (mocked) engine-invoker factory so tests can assert
+// which role models route to the engine vs the spawn path. Hoisted because
+// vi.mock factories run before module-level const initializers.
+const { engineInvokerSentinel } = vi.hoisted(() => ({ engineInvokerSentinel: vi.fn() }))
 vi.mock("../../builder-loop.js", () => ({
   runBuilderLoop: vi.fn(),
+  makeEngineBuilderInvoker: vi.fn(() => engineInvokerSentinel),
 }))
 
 vi.mock("../../reviewer.js", () => ({
@@ -70,6 +76,7 @@ import { runReviewer } from "../../reviewer.js"
 import { createCheckpoint, createCompletionTag } from "../../../stores/tags.js"
 import { recordCost } from "../../../stores/budget.js"
 import { updatePhaseStatus } from "../../../stores/state.js"
+import { logTrajectory } from "../../../stores/trajectory.js"
 
 const makeResult = (cost = 0.05): ClaudeResult => ({
   success: true,
@@ -129,6 +136,7 @@ const config: RidgelineConfig = {
   handoffPath: "/tmp/build/handoff.md",
   phasesDir: "/tmp/build/phases",
   model: "opus",
+  models: uniformStageModels("opus"),
   maxRetries: 2,
   timeoutMinutes: 120,
   checkTimeoutSeconds: 1200,
@@ -321,6 +329,57 @@ describe("phaseRunner", () => {
         "01-scaffold",
         expect.objectContaining({ status: "complete" })
       )
+    })
+
+    describe("hybrid role routing", () => {
+      const qwen = "openrouter:qwen/qwen3-coder-30b-a3b-instruct"
+      const fakeEngine = {} as import("fascicle").Engine
+
+      beforeEach(() => {
+        // Pin bare-family routing to claude_cli regardless of the host env.
+        vi.stubEnv("ANTHROPIC_API_KEY", "")
+        vi.mocked(runBuilderLoop).mockResolvedValue(makeReadyOutcome())
+        vi.mocked(runReviewer).mockResolvedValue({
+          result: makeResult(),
+          verdict: passVerdict,
+        })
+      })
+
+      afterEach(() => {
+        vi.unstubAllEnvs()
+      })
+
+      const phaseProviderEvents = () =>
+        vi.mocked(logTrajectory).mock.calls.filter((c) => c[1] === "phase_provider")
+
+      it("logs builder and reviewer phase_provider events from their role models", async () => {
+        const hybrid = { ...config, models: { ...config.models, builder: qwen } }
+        await executeBuildPhase(phase, hybrid, makeState(), undefined, fakeEngine)
+
+        const events = phaseProviderEvents()
+        expect(events).toHaveLength(2)
+        expect(events[0][3]).toBe("Routing 01-scaffold builder to openrouter (qwen/qwen3-coder-30b-a3b-instruct)")
+        expect(events[0][4]).toEqual({ provider: "openrouter", model: "qwen/qwen3-coder-30b-a3b-instruct" })
+        expect(events[1][3]).toBe("Routing 01-scaffold reviewer to claude_cli (opus)")
+        expect(events[1][4]).toEqual({ provider: "claude_cli", model: "opus" })
+      })
+
+      it("routes only the non-Claude builder to the engine; the Claude reviewer stays on spawn", async () => {
+        const hybrid = { ...config, models: { ...config.models, builder: qwen } }
+        await executeBuildPhase(phase, hybrid, makeState(), undefined, fakeEngine)
+
+        expect(vi.mocked(runBuilderLoop).mock.calls[0][0].invoker).toBe(engineInvokerSentinel)
+        // 6th runReviewer arg is the reviewer engine: undefined keeps spawn.
+        expect(vi.mocked(runReviewer).mock.calls[0][5]).toBeUndefined()
+      })
+
+      it("routes only the non-Claude reviewer to the engine; the Claude builder keeps spawn", async () => {
+        const hybrid = { ...config, models: { ...config.models, reviewer: qwen } }
+        await executeBuildPhase(phase, hybrid, makeState(), undefined, fakeEngine)
+
+        expect(vi.mocked(runBuilderLoop).mock.calls[0][0].invoker).toBeUndefined()
+        expect(vi.mocked(runReviewer).mock.calls[0][5]).toBe(fakeEngine)
+      })
     })
   })
 })

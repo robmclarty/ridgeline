@@ -7,7 +7,8 @@ import {
   type SandboxFlag,
   type SandboxProviderConfig,
 } from "./claude/sandbox.policy.js"
-import type { EnginePriceEntry } from "../stores/settings.js"
+import { resolveEnginePricing, resolveEngineProviders, type EnginePriceEntry } from "../stores/settings.js"
+import type { RidgelineConfig } from "../types.js"
 
 const STARTUP_TIMEOUT_MS = 120_000
 const DEFAULT_STALL_TIMEOUT_MS = 300_000
@@ -105,3 +106,21 @@ export const makeRidgelineEngine = (cfg: RidgelineEngineConfig): Engine => {
 
   return engine
 }
+
+/**
+ * The standard engine for a config-driven pipeline command (build/plan):
+ * build-dir sandboxing, settings-supplied providers, and registered pricing so
+ * cost tracking and the budget cap work on engine-backed providers.
+ */
+export const makeEngineForConfig = (
+  config: Pick<RidgelineConfig, "sandboxMode" | "timeoutMinutes" | "buildDir" | "ridgelineDir">,
+): Engine =>
+  makeRidgelineEngine({
+    sandboxFlag: config.sandboxMode,
+    timeoutMinutes: config.timeoutMinutes,
+    pluginDirs: [],
+    settingSources: ["user", "project", "local"],
+    buildPath: config.buildDir,
+    pricing: resolveEnginePricing(config.ridgelineDir),
+    ...resolveEngineProviders(config.ridgelineDir),
+  })

@@ -29,6 +29,8 @@ vi.mock("../../config.js", () => ({
 
 vi.mock("../../stores/settings.js", () => ({
   resolveSpecialistTimeoutSeconds: vi.fn(() => 600),
+  resolveModel: vi.fn((optModel: string | undefined) => optModel ?? "opus"),
+  resolveStageModel: vi.fn((_role: string, optModel: string | undefined) => optModel ?? "opus"),
 }))
 
 vi.mock("../../ui/output.js", () => ({

@@ -130,6 +130,67 @@ entry.
 }
 ```
 
+### Hybrid routing (per-role models)
+
+One model rarely has the right cost profile for every role in the pipeline.
+Judgment roles (planning, review) shape or gate everything downstream, so they
+deserve a frontier model; volume roles (building, research) burn the most
+tokens doing comparatively mechanical work, so they are where a cheap provider
+pays off. A `models` map in `.ridgeline/settings.json` routes each role
+independently -- no flags, one invocation:
+
+```json
+{
+  "model": "opus",
+  "models": {
+    "builder": "openrouter:qwen/qwen3-coder-30b-a3b-instruct",
+    "researcher": "openrouter:qwen/qwen3-coder-30b-a3b-instruct"
+  },
+  "pricing": {
+    "openrouter:qwen/qwen3-coder-30b-a3b-instruct": {
+      "input_per_million": 0.07,
+      "output_per_million": 0.26
+    }
+  }
+}
+```
+
+With that settings file, `ridgeline build` runs the builder on OpenRouter while
+the reviewer stays on the Claude CLI -- in the same invocation, with both
+routing decisions logged as `phase_provider` trajectory events and every cost
+entry attributed to the provider that actually ran.
+
+Each value takes the same form as `model` (bare family or `provider:model_id`).
+A role absent from `models` falls back to `model`, then to the built-in
+default. An explicit `--model` on the command line overrides **every** role --
+the single-model invocation behaves exactly as before.
+
+The recommended matrix:
+
+| Role | Recommended | Why |
+| --- | --- | --- |
+| `planner` | frontier (`opus`) | decomposition judgment shapes the whole run |
+| `reviewer` | frontier (`opus`) | adversarial review is the quality gate |
+| `builder` | cheap volume (e.g. `openrouter:qwen/qwen3-coder-30b-a3b-instruct`) | highest token volume; the reviewer catches misses |
+| `researcher` | cheap volume (OpenRouter) | breadth over depth |
+| `specifier` | Claude family | the spec ensemble runs on the Claude CLI only today |
+| `refiner` | default or cheap | mechanical merge of research findings |
+
+Caveats worth knowing:
+
+- The planner sizes phases for the **builder's** model (context window, "Target
+  Model" in its prompt), so a small builder gets appropriately smaller phases
+  even when the planner itself runs on a frontier model.
+- Non-Claude `builder`/`reviewer` values are still gated by the
+  `ENGINE_BUILDER_PROVIDERS` allowlist above; the budget-cap warning checks
+  each role's model separately.
+- `specifier` and plan **revision** (the synthesizer re-run after a rejected
+  plan) run on the Claude CLI only today -- give those roles Claude-family
+  values. Choosing *which* Claude model (`opus` vs `sonnet`) works fine.
+- `contextWindows` overrides are keyed by the full model string, so a key like
+  `"openrouter:qwen/qwen3-coder-30b-a3b-instruct"` matches a builder role set
+  to that value.
+
 This is the same theme as the rest of this document: the harness encodes a sound
 process, and it benefits from whatever model -- or provider -- you point it at.
 

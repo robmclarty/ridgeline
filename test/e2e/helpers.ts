@@ -2,6 +2,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { execSync } from "node:child_process"
 import { RidgelineConfig } from "../../src/types.js"
+import { uniformStageModels } from "../factories.js"
 
 const SPEC_CONTENT = `# Hello World
 
@@ -61,6 +62,7 @@ export const setupE2eDir = (): { dir: string; config: RidgelineConfig; cleanup: 
     handoffPath: path.join(buildDir, "handoff.md"),
     phasesDir,
     model: "sonnet",
+    models: uniformStageModels("sonnet"),
     maxRetries: 1,
     timeoutMinutes: 5,
     checkTimeoutSeconds: 30,

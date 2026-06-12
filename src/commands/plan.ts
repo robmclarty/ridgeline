@@ -9,8 +9,7 @@ import { runEnsemblePlanner } from "../engine/ensemble.js"
 import { runPlanReviewer, revisePlanWithFeedback, reportPhaseSizeWarnings } from "../engine/plan-reviewer.js"
 import { advancePipeline } from "../stores/state.js"
 import { scanPhases } from "../stores/phases.js"
-import { makeRidgelineEngine } from "../engine/engine.factory.js"
-import { resolveEngineProviders } from "../stores/settings.js"
+import { makeEngineForConfig } from "../engine/engine.factory.js"
 import { planFlow } from "../engine/flows/plan.flow.js"
 
 export const runPlan = async (config: RidgelineConfig): Promise<void> => {
@@ -27,14 +26,7 @@ export const runPlan = async (config: RidgelineConfig): Promise<void> => {
   printInfo("Running planner...")
   logTrajectory(config.buildDir, "plan_start", null, "Planning started")
 
-  const engine = makeRidgelineEngine({
-    sandboxFlag: config.sandboxMode,
-    timeoutMinutes: config.timeoutMinutes,
-    pluginDirs: [],
-    settingSources: ["user", "project", "local"],
-    buildPath: config.buildDir,
-    ...resolveEngineProviders(config.ridgelineDir),
-  })
+  const engine = makeEngineForConfig(config)
 
   const flow = planFlow({
     runEnsemblePlanner: (cfg) => runEnsemblePlanner(cfg, engine),

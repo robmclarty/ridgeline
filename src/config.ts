@@ -5,6 +5,7 @@ import { resolveFile, parseCheckCommand } from "./stores/inputs.js"
 import {
   resolveNetworkAllowlist,
   resolveModel,
+  resolveStageModels,
   resolveSpecialistTimeoutSeconds,
   resolvePhaseBudgetLimit,
   resolvePhaseTokenLimit,
@@ -90,6 +91,7 @@ export const resolveConfig = (buildName: string, opts: Record<string, string | b
     handoffPath: path.join(buildDir, "handoff.md"),
     phasesDir,
     model: resolveModel(opts.model as string | undefined, ridgelineDir),
+    models: resolveStageModels(ridgelineDir, opts.model as string | undefined),
     maxRetries: parseInt(String(opts.maxRetries ?? "2"), 10),
     timeoutMinutes: resolveTimeoutMinutes(ridgelineDir, opts.timeout as string | undefined, 120),
     checkTimeoutSeconds: parseInt(String(opts.checkTimeout ?? "1200"), 10),

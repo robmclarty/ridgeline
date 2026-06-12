@@ -1,3 +1,4 @@
+import { uniformStageModels } from "../../../../test/factories.js"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
@@ -129,6 +130,7 @@ describe("build-phase cache-token logging", () => {
       handoffPath: path.join(buildDir, "handoff.md"),
       phasesDir: path.join(buildDir, "phases"),
       model: "opus",
+      models: uniformStageModels("opus"),
       maxRetries: 2,
       timeoutMinutes: 10,
       checkTimeoutSeconds: 1200,

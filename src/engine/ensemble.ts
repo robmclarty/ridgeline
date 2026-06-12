@@ -789,12 +789,12 @@ export const runEnsemblePlanner = async (
   // Claude (claude_cli) keeps the byte-stable spawn transport; any other
   // provider runs the in-process engine transport (specialists validated against
   // planArtifactSchema, synthesizer driven by the Write tool surface).
-  const route = resolveRoute(config.model, config.ridgelineDir)
+  const route = resolveRoute(config.models.planner, config.ridgelineDir)
   const transport =
     !route.isClaudeCli && engine
       ? makeEngineEnsembleTransport({
           engine,
-          model: config.model,
+          model: config.models.planner,
           toolContext: toolContextFromConfig(config),
           specialistSchema: planArtifactSchema,
         })
@@ -814,7 +814,7 @@ export const runEnsemblePlanner = async (
       assemblePlannerSynthesizerUserPrompt(config, drafts),
     synthesizerTools: ["Write", "Skill"],
 
-    model: config.model,
+    model: config.models.planner,
     timeoutMinutes: config.timeoutMinutes,
     specialistTimeoutSeconds: config.specialistTimeoutSeconds,
     maxBudgetUsd: config.maxBudgetUsd,

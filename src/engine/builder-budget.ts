@@ -60,7 +60,9 @@ export const computeBuilderBudget = (
   const softFraction = clampFraction(opts.softFraction, DEFAULT_SOFT_LIMIT_FRACTION)
   const hardFraction = clampFraction(opts.hardFraction, DEFAULT_HARD_LIMIT_FRACTION)
 
-  const contextWindow = resolveContextWindow(config.model, config.ridgelineDir)
+  // Budget against the builder's own model — under hybrid routing a cheap
+  // builder may have a much smaller window than the global/frontier model.
+  const contextWindow = resolveContextWindow(config.models.builder, config.ridgelineDir)
   const inputTokensEstimate = approximateTokenCount(systemPrompt) + approximateTokenCount(userPrompt)
   const rawOutputBudget = contextWindow - inputTokensEstimate - SAFETY_MARGIN_TOKENS
   const outputBudget = Math.max(rawOutputBudget, 0)

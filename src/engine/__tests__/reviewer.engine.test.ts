@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { uniformStageModels } from "../../../test/factories.js"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
@@ -58,6 +59,7 @@ describe("runReviewer — provider branch", () => {
       handoffPath: path.join(buildDir, "handoff.md"),
       phasesDir: buildDir,
       model: "openai:gpt-4o",
+      models: uniformStageModels("openai:gpt-4o"),
       maxRetries: 2,
       timeoutMinutes: 30,
       checkTimeoutSeconds: 1200,

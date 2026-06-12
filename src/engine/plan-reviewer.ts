@@ -123,7 +123,7 @@ const runPlanReviewerViaSpawn = async (config: RidgelineConfig): Promise<ClaudeR
     return await runClaudeProcess({
       systemPrompt,
       userPrompt,
-      model: config.model,
+      model: config.models.reviewer,
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,
       onStdout,
@@ -141,7 +141,9 @@ const buildPlanReviewArgs = (config: RidgelineConfig): PlanReviewArgs => ({
   extraContext: config.extraContext ?? null,
   projectDesignMd: resolveProjectDesignMd(config),
   featureDesignMd: resolveFeatureDesignMd(config),
-  model: config.model,
+  // Prompt content, not the calling model: tells the reviewer which model
+  // will *execute* the plan (see shapePlanReviewModelCallInput "Target Model").
+  model: config.models.builder,
   phaseTokenLimit: config.phaseTokenLimit,
   phaseBudgetLimit: config.phaseBudgetLimit,
   phasesMd: renderPhasesAsMarkdown(config),
@@ -160,7 +162,7 @@ const runPlanReviewerViaEngine = async (
   try {
     const result = await runClaudeOneShot({
       engine,
-      model: config.model,
+      model: config.models.reviewer,
       system: roleSystem,
       prompt: shapePlanReviewModelCallInput(buildPlanReviewArgs(config)),
       schema: planReviewSchema,
@@ -185,7 +187,7 @@ export const runPlanReviewer = async (
   engine?: Engine,
 ): Promise<{ verdict: PlanVerdict; result: ClaudeResult }> => {
   printInfo("Running adversarial plan reviewer...")
-  const route = resolveRoute(config.model, config.ridgelineDir)
+  const route = resolveRoute(config.models.reviewer, config.ridgelineDir)
   const result =
     !route.isClaudeCli && engine
       ? await runPlanReviewerViaEngine(config, engine)
@@ -240,7 +242,9 @@ export const revisePlanWithFeedback = async (
     return await runClaudeProcess({
       systemPrompt: synthesizerPrompt,
       userPrompt: doc.render(),
-      model: config.model,
+      // The reviser is a synthesizer re-run, so it uses the planner's model.
+      // Spawn-only today: a non-CLI planner whose plan is rejected fails here.
+      model: config.models.planner,
       allowedTools: ["Write", "Skill"],
       cwd: process.cwd(),
       timeoutMs: config.timeoutMinutes * 60 * 1000,

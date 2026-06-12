@@ -10,6 +10,10 @@ vi.mock("../stores/settings.js", () => ({
   resolveNetworkAllowlist: vi.fn(() => ["registry.npmjs.org"]),
   loadSettings: vi.fn(() => ({})),
   resolveModel: vi.fn((optModel: string | undefined) => optModel ?? "opus"),
+  resolveStageModels: vi.fn((_dir: string, cliModel?: string) => {
+    const m = cliModel ?? "opus"
+    return { planner: m, builder: m, reviewer: m, researcher: m, specifier: m, refiner: m }
+  }),
   resolveSpecialistTimeoutSeconds: vi.fn(() => 180),
   resolvePhaseBudgetLimit: vi.fn(() => 15),
   resolvePhaseTokenLimit: vi.fn(() => 50000),
@@ -82,6 +86,10 @@ describe("config", () => {
       const config = resolveConfig("test", {})
 
       expect(config.model).toBe("opus")
+      expect(config.models).toEqual({
+        planner: "opus", builder: "opus", reviewer: "opus",
+        researcher: "opus", specifier: "opus", refiner: "opus",
+      })
       expect(config.maxRetries).toBe(2)
       expect(config.timeoutMinutes).toBe(120)
       expect(config.checkTimeoutSeconds).toBe(1200)
@@ -108,6 +116,11 @@ describe("config", () => {
       })
 
       expect(config.model).toBe("sonnet")
+      // An explicit --model overrides every role.
+      expect(config.models).toEqual({
+        planner: "sonnet", builder: "sonnet", reviewer: "sonnet",
+        researcher: "sonnet", specifier: "sonnet", refiner: "sonnet",
+      })
       expect(config.maxRetries).toBe(5)
       expect(config.timeoutMinutes).toBe(60)
       expect(config.checkTimeoutSeconds).toBe(300)

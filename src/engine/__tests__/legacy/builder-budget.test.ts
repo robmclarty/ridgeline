@@ -1,3 +1,4 @@
+import { uniformStageModels } from "../../../../test/factories.js"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
@@ -19,7 +20,8 @@ const makeConfig = (overrides: Partial<RidgelineConfig>): RidgelineConfig =>
     tastePath: null,
     handoffPath: "/unused",
     phasesDir: "/unused",
-    model: "claude-opus-4-7",
+    model: overrides.model ?? "claude-opus-4-7",
+    models: uniformStageModels(overrides.model ?? "claude-opus-4-7"),
     maxRetries: 2,
     timeoutMinutes: 120,
     checkTimeoutSeconds: 1200,

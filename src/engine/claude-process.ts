@@ -48,11 +48,17 @@ export type ClaudeProcessOptions = {
   helpRunner?: HelpRunner
 }
 
+// The Claude CLI takes bare model names (opus, claude-*-id). Settings role
+// models may carry a routing prefix (`claude_cli:opus`, `anthropic:opus`) —
+// strip it rather than break the spawn; those strings never worked here.
+const stripClaudeProviderPrefix = (model: string): string =>
+  model.replace(/^(claude_cli|anthropic):/, "")
+
 const buildBaseArgs = (opts: ClaudeProcessOptions): string[] => {
   const args: string[] = [
     "-p",
     "--output-format", "stream-json",
-    "--model", opts.model,
+    "--model", stripClaudeProviderPrefix(opts.model),
     "--verbose",
     "--setting-sources", "project,local",
   ]

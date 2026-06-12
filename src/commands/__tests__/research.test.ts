@@ -24,6 +24,7 @@ vi.mock("../../stores/settings.js", () => ({
   resolveSandboxMode: vi.fn(() => "semi-locked"),
   resolveMaxBudgetUsd: vi.fn(() => null),
   resolveEngineProviders: vi.fn(() => ({})),
+  resolveStageModel: vi.fn((_role: string, optModel: string | undefined) => optModel ?? "opus"),
   DEFAULT_SPECIALIST_TIMEOUT_SECONDS: 600,
   DEFAULT_SPECIALIST_COUNT: 3,
 }))

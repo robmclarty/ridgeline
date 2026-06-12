@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { uniformStageModels } from "../../../test/factories.js"
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { makeTempDir } from "../../../test/setup.js"
@@ -57,6 +58,7 @@ describe("commands/dry-run", () => {
       handoffPath: path.join(tmpDir, "handoff.md"),
       phasesDir,
       model: "opus",
+      models: uniformStageModels("opus"),
       maxRetries: 2,
       timeoutMinutes: 120,
       checkTimeoutSeconds: 1200,

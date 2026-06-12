@@ -442,7 +442,7 @@ associated WIP branches. Use this after inspecting a failed build.
 
 ```text
 .ridgeline/
-├── settings.json      # Optional project-level config (model, sandbox, network allowlist, etc.)
+├── settings.json      # Optional project-level config (model, per-role models, sandbox, etc.)
 ├── design.md          # Optional project-level visual design system
 ├── learnings.md       # Optional accumulated build learnings (from retrospective)
 ├── directions/        # Optional project-level visual direction options
@@ -494,6 +494,25 @@ specialist count, network allowlist, etc.) are loaded from
 `"maxBudgetUsd"` (cumulative cost cap, same as `--max-budget-usd`). For both,
 the CLI flag overrides the setting. See [SECURITY.md](SECURITY.md) for details
 on the sandbox model.
+
+Models can also be routed **per role** via a `"models"` map — e.g. keep the
+planner and reviewer on a frontier model while the builder runs on a cheap
+provider, in one invocation:
+
+```json
+{
+  "model": "opus",
+  "models": {
+    "builder": "openrouter:qwen/qwen3-coder-30b-a3b-instruct"
+  }
+}
+```
+
+Roles: `planner`, `builder`, `reviewer`, `researcher`, `specifier`, `refiner`.
+A role absent from `models` falls back to `model`; an explicit `--model`
+overrides every role. See
+[docs/future-models.md](docs/future-models.md#hybrid-routing-per-role-models)
+for the recommended routing matrix and caveats.
 
 ## Provider API keys
 

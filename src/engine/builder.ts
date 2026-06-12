@@ -147,7 +147,7 @@ export const runBuilder = async (
     const result = await runClaudeProcess({
       systemPrompt,
       userPrompt,
-      model: config.model,
+      model: config.models.builder,
       allowedTools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Agent", "Skill"],
       ...commonInvokeOptions(config, prepared, onStdout, cwd),
     })
@@ -191,7 +191,7 @@ export const runBuilderViaEngine = async (
   try {
     const result = await runClaudeOneShot({
       engine,
-      model: config.model,
+      model: config.models.builder,
       system: systemPrompt,
       prompt: userPrompt,
       tools,

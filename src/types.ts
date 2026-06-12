@@ -8,6 +8,8 @@ export type RidgelineConfig = {
   handoffPath: string
   phasesDir: string
   model: string
+  /** Per-role model resolution (CLI --model > settings.models.<role> > settings.model > default). */
+  models: import("./stores/settings.js").StageModels
   maxRetries: number
   timeoutMinutes: number
   checkTimeoutSeconds: number
