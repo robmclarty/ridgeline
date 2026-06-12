@@ -15,6 +15,8 @@ export type TrajectoryOpts = {
   promptStableHash?: string
   cacheReadInputTokens?: number
   cacheCreationInputTokens?: number
+  provider?: string
+  model?: string
 }
 
 export const makeTrajectoryEntry = (
@@ -36,6 +38,8 @@ export const makeTrajectoryEntry = (
   ...(opts?.promptStableHash ? { promptStableHash: opts.promptStableHash } : {}),
   ...(typeof opts?.cacheReadInputTokens === "number" ? { cacheReadInputTokens: opts.cacheReadInputTokens } : {}),
   ...(typeof opts?.cacheCreationInputTokens === "number" ? { cacheCreationInputTokens: opts.cacheCreationInputTokens } : {}),
+  ...(opts?.provider ? { provider: opts.provider } : {}),
+  ...(opts?.model ? { model: opts.model } : {}),
 })
 
 // Low-level append: writes one pre-formed entry as a single JSON line.

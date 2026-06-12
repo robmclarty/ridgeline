@@ -6,6 +6,7 @@ import type { RidgelineConfig } from "../../types.js"
 
 vi.mock("../../ui/output.js", () => ({
   printInfo: vi.fn(),
+  printWarn: vi.fn(),
   printError: vi.fn(),
   printPhaseHeader: vi.fn(),
 }))

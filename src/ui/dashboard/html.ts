@@ -63,6 +63,7 @@ ${renderCss()}</style>
       <div class="cost-label">Total cost</div>
       <div id="cost-total" class="cost-total mono">$0.00</div>
       <div id="cost-breakdown" class="cost-breakdown"></div>
+      <div id="cost-provider" class="cost-breakdown"></div>
     </section>
     <section id="phase-list" class="phase-list" aria-label="Phases"></section>
   </main>

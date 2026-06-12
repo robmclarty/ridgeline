@@ -7,6 +7,7 @@ import {
   type SandboxFlag,
   type SandboxProviderConfig,
 } from "./claude/sandbox.policy.js"
+import type { EnginePriceEntry } from "../stores/settings.js"
 
 const STARTUP_TIMEOUT_MS = 120_000
 const DEFAULT_STALL_TIMEOUT_MS = 300_000
@@ -32,6 +33,12 @@ export type RidgelineEngineConfig = {
    * and cannot be overridden here.
    */
   readonly providers?: ProviderConfigMap
+  /**
+   * Per-model prices to register, so cost tracking and the budget cap work on
+   * providers fascicle's built-in catalog doesn't price (e.g. OpenRouter).
+   * Each is registered via `engine.register_price(provider, modelId, …)`.
+   */
+  readonly pricing?: readonly EnginePriceEntry[]
 }
 
 const resolveSandbox = (cfg: RidgelineEngineConfig): SandboxProviderConfig | undefined => {
@@ -88,5 +95,13 @@ export const makeRidgelineEngine = (cfg: RidgelineEngineConfig): Engine => {
   // API, no key → subscription CLI — unless the caller pins a provider.
   const provider = cfg.provider ?? (anthropicKey ? "anthropic" : "claude_cli")
 
-  return create_engine({ providers, defaults: { provider } })
+  const engine = create_engine({ providers, defaults: { provider } })
+
+  // Register caller-supplied prices so fascicle's cost path (and ridgeline's
+  // budget cap) sees a real number for models its built-in catalog omits.
+  for (const p of cfg.pricing ?? []) {
+    engine.register_price(p.provider, p.modelId, p.pricing)
+  }
+
+  return engine
 }

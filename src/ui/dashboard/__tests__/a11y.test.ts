@@ -19,7 +19,7 @@ const fixture = (status: DashboardSnapshot["status"]): DashboardSnapshot => ({
       failedAt: status === "failed" ? "2026-04-22T12:00:45.000Z" : null,
     },
   ],
-  budget: { totalCostUsd: 0.42, perRole: [{ role: "builder", costUsd: 0.42 }] },
+  budget: { totalCostUsd: 0.42, perRole: [{ role: "builder", costUsd: 0.42 }], perProvider: [] },
   lastError: status === "failed" ? { phaseId: "02-core", message: "check failed" } : null,
 })
 

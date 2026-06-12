@@ -11,6 +11,22 @@ const dummyTool: Tool = {
   execute: (input: { x: string }) => input.x,
 } as unknown as Tool
 
+describe("runClaudeOneShot — provider/model attribution", () => {
+  it("stamps the engine's resolved provider/model (ground truth) onto the result", async () => {
+    const engine = stubEngine({
+      content: "ok",
+      tool_calls: [],
+      steps: [],
+      usage: { input_tokens: 1, output_tokens: 2 },
+      finish_reason: "stop",
+      model_resolved: { provider: "openrouter", model_id: "qwen/qwen3-coder-30b-a3b-instruct" },
+    } as unknown as Parameters<typeof stubEngine>[0])
+    const result = await runClaudeOneShot({ engine, model: "openrouter:qwen/qwen3-coder-30b-a3b-instruct", system: "s", prompt: "p" })
+    expect(result.provider).toBe("openrouter")
+    expect(result.model).toBe("qwen/qwen3-coder-30b-a3b-instruct")
+  })
+})
+
 describe("runClaudeOneShot — tool bridging", () => {
   it("forwards tools, maxSteps and toolErrorPolicy to engine.generate", async () => {
     const engine = stubEngine()

@@ -72,3 +72,27 @@ export const isClaudeBuildModel = (model: string): boolean => {
   if (provider && provider !== "anthropic" && provider !== "claude_cli") return false
   return /^(opus|sonnet|haiku)$/i.test(id) || /^claude[-/]/i.test(id)
 }
+
+/** Providers fascicle treats as free (cost always $0), so an absent price is correct, not a gap. */
+const FREE_ENGINE_PROVIDERS: ReadonlySet<string> = new Set(["ollama", "lmstudio"])
+
+/**
+ * Decide whether a budget cap is unenforceable for `model`: a non-Claude,
+ * non-free provider whose price `resolvePrice` doesn't know reports $0, so
+ * `--max-budget-usd` would never trip and the run is silently uncapped. Returns
+ * the resolved `provider`/`modelId` to name in a warning, or `null` when the cap
+ * is enforceable (no cap, a Claude model, a free provider, or a priced model).
+ */
+export const unpriceableBudgetTarget = (
+  model: string,
+  ridgelineDir: string,
+  maxBudgetUsd: number | null,
+  resolvePrice: (provider: string, modelId: string) => unknown,
+): { provider: string; modelId: string } | null => {
+  if (maxBudgetUsd == null) return null
+  if (isClaudeBuildModel(model)) return null
+  const { provider, modelId } = resolveRoute(model, ridgelineDir)
+  if (provider === "claude_cli" || FREE_ENGINE_PROVIDERS.has(provider)) return null
+  if (resolvePrice(provider, modelId) !== undefined) return null
+  return { provider, modelId }
+}

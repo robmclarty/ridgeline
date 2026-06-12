@@ -186,7 +186,7 @@ const collectContentFallbacks = (parsed: Record<string, unknown>, acc: ContentFa
   }
 }
 
-export const extractClaudeResultFromNdjson = (ndjsonStdout: string): ClaudeResult => {
+export const extractClaudeResultFromNdjson = (ndjsonStdout: string, model?: string): ClaudeResult => {
   const lines = ndjsonStdout.trim().split("\n")
   const fallbacks: ContentFallbacks = { textParts: [], structuredOutput: null }
   let resultEvent: ClaudeResult | null = null
@@ -208,6 +208,10 @@ export const extractClaudeResultFromNdjson = (ndjsonStdout: string): ClaudeResul
   } else if (!resultEvent.result) {
     resultEvent.result = fallbacks.textParts.length > 0 ? fallbacks.textParts.join("") : ""
   }
+  // The subprocess transport is the Claude CLI by definition; stamp the actual
+  // provider/model so budget.json attribution matches the engine path.
+  resultEvent.provider = "claude_cli"
+  if (model !== undefined) resultEvent.model = model
   return resultEvent
 }
 
@@ -319,7 +323,7 @@ export const runClaudeProcess = async (opts: ClaudeProcessOptions): Promise<Clau
         return
       }
       try {
-        resolve(extractClaudeResultFromNdjson(stdoutData))
+        resolve(extractClaudeResultFromNdjson(stdoutData, opts.model))
       } catch (err) {
         reject(new Error(`Failed to parse claude output: ${String(err)}`))
       }

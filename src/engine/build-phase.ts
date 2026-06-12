@@ -13,7 +13,7 @@ import { commitAll, isWorkingTreeDirty } from "../git.js"
 import type { Engine } from "fascicle"
 import { runReviewer } from "./reviewer.js"
 import { runBuilderLoop, makeEngineBuilderInvoker } from "./builder-loop.js"
-import { isClaudeBuildModel } from "./provider-route.js"
+import { isClaudeBuildModel, resolveRoute } from "./provider-route.js"
 import { detectProject } from "./project-type.js"
 import { collectSensorFindings } from "./sensors-collect.js"
 import type { SensorFinding, SensorInput, Viewport } from "../sensors/index.js"
@@ -305,12 +305,16 @@ const trajectoryClaudeMeta = (result: ClaudeResult): {
   costUsd: number
   cacheReadInputTokens: number
   cacheCreationInputTokens: number
+  provider?: string
+  model?: string
 } => ({
   duration: result.durationMs,
   tokens: { input: result.usage.inputTokens, output: result.usage.outputTokens },
   costUsd: result.costUsd,
   cacheReadInputTokens: result.usage.cacheReadInputTokens,
   cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
+  ...(result.provider ? { provider: result.provider } : {}),
+  ...(result.model ? { model: result.model } : {}),
 })
 
 const executeBuild = async (
@@ -326,6 +330,15 @@ const executeBuild = async (
   const isRetry = attempt > 0
   printPhase(phase.id, isRetry ? `Retry ${attempt}: building...` : "Building...")
   logTrajectory(config.buildDir, "build_start", phase.id, `Build attempt ${attempt + 1}${sandboxNote}`)
+
+  // Log the routing decision for this phase up front, so the trajectory records
+  // the intended provider/model even before any result lands. Each recorded
+  // cost entry below carries the *actual* transport — a mismatch is the misroute
+  // signal that #2 hid for so long.
+  const route = resolveRoute(config.model, config.ridgelineDir)
+  logTrajectory(config.buildDir, "phase_provider", phase.id,
+    `Routing ${phase.id} to ${route.provider} (${route.modelId})`,
+    { provider: route.provider, model: route.modelId })
 
   // Claude models keep the byte-stable spawn invoker; a non-Claude build model
   // runs the engine invoker (when an engine was threaded down).

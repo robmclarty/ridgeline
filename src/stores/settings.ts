@@ -1,6 +1,6 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
-import type { ProviderConfigMap } from "fascicle"
+import type { ProviderConfigMap, Pricing } from "fascicle"
 
 /** Domains Claude needs for authentication and API access — always allowlisted. */
 export const CLAUDE_REQUIRED_DOMAINS: string[] = [
@@ -104,6 +104,17 @@ type RidgelineSettings = {
    * ridgeline) and is ignored if present.
    */
   providers?: ProviderConfigMap
+  /**
+   * Per-model pricing for engine-backed providers, keyed by the same
+   * `"provider:model_id"` colon form you pass to `--model` (e.g.
+   * `"openrouter:qwen/qwen3-coder-30b-a3b-instruct"`). Each value gives
+   * per-million-token rates. fascicle prices its built-in catalog (Anthropic,
+   * OpenAI, …) automatically; providers it doesn't price — notably OpenRouter —
+   * otherwise report `$0`, which means `--max-budget-usd` can't bound them.
+   * Supplying an entry here makes cost tracking and the budget cap work for that
+   * model. ollama/lmstudio are treated as free and need no entry.
+   */
+  pricing?: Record<string, Pricing>
   /**
    * Whether pipeline-entry commands pause for the preflight confirmation prompt.
    * Default true. Set to false (or pass `--no-preflight`) to skip the pause.
@@ -374,6 +385,25 @@ export const resolveEngineProviders = (
 ): { provider?: string; providers?: ProviderConfigMap } => {
   const settings = loadSettings(ridgelineDir)
   return { provider: settings.provider, providers: settings.providers }
+}
+
+/** One registrable price: the `"provider:model_id"` settings key, split for `engine.register_price`. */
+export type EnginePriceEntry = { provider: string; modelId: string; pricing: Pricing }
+
+/**
+ * Parse settings `pricing` into registrable entries for `makeRidgelineEngine`.
+ * Keys must be the `"provider:model_id"` colon form; malformed keys (no
+ * provider segment) are skipped so one bad entry can't break engine setup.
+ */
+export const resolveEnginePricing = (ridgelineDir: string): EnginePriceEntry[] => {
+  const settings = loadSettings(ridgelineDir)
+  const entries: EnginePriceEntry[] = []
+  for (const [key, pricing] of Object.entries(settings.pricing ?? {})) {
+    const colon = key.indexOf(":")
+    if (colon <= 0 || colon === key.length - 1) continue
+    entries.push({ provider: key.slice(0, colon), modelId: key.slice(colon + 1), pricing })
+  }
+  return entries
 }
 
 /** Resolve the (opt-in) web search backend configuration from settings. */

@@ -66,6 +66,10 @@ export const toClaudeResult = (result: GenerateResult<unknown>): ClaudeResult =>
   costUsd: result.cost?.total_usd ?? 0,
   usage: toClaudeUsage(result),
   sessionId: extractSessionId(result),
+  // Ground truth: the provider/model the engine actually dispatched to, not the
+  // requested string. This is what makes a misroute visible in the artifacts.
+  provider: result.model_resolved.provider,
+  model: result.model_resolved.model_id,
 })
 
 const buildProviderOptions = (opts: RunClaudeOptions): Record<string, unknown> | undefined => {

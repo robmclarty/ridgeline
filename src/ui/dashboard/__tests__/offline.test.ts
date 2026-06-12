@@ -9,7 +9,7 @@ const snap: DashboardSnapshot = {
   phases: [
     { id: "01-scaffold", slug: "scaffold", status: "complete", retries: 0, duration: 30_000, completedAt: null, failedAt: null },
   ],
-  budget: { totalCostUsd: 0.25, perRole: [{ role: "builder", costUsd: 0.25 }] },
+  budget: { totalCostUsd: 0.25, perRole: [{ role: "builder", costUsd: 0.25 }], perProvider: [] },
   lastError: null,
 }
 

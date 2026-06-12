@@ -7,7 +7,7 @@ const emptySnap: DashboardSnapshot = {
   startedAt: null,
   status: "idle",
   phases: [],
-  budget: { totalCostUsd: 0, perRole: [] },
+  budget: { totalCostUsd: 0, perRole: [], perProvider: [] },
   lastError: null,
 }
 
@@ -35,7 +35,7 @@ const attachedSnap = (status: DashboardSnapshot["status"]): DashboardSnapshot =>
       failedAt: status === "failed" ? "2026-04-22T12:00:40.000Z" : null,
     },
   ],
-  budget: { totalCostUsd: 1.25, perRole: [{ role: "builder", costUsd: 0.75 }, { role: "reviewer", costUsd: 0.5 }] },
+  budget: { totalCostUsd: 1.25, perRole: [{ role: "builder", costUsd: 0.75 }, { role: "reviewer", costUsd: 0.5 }], perProvider: [] },
   lastError: status === "failed" ? { phaseId: "02-core", message: "check command failed" } : null,
 })
 

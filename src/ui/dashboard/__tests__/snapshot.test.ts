@@ -71,6 +71,33 @@ describe("buildSnapshot", () => {
     expect(snap.budget.perRole.map((r) => r.role)).toEqual(["planner", "builder", "reviewer"])
   })
 
+  it("groups budget cost by the provider/model that ran", () => {
+    const budget: BudgetState = {
+      totalCostUsd: 3,
+      entries: [
+        { phase: "01", role: "builder", attempt: 1, costUsd: 1, inputTokens: 0, outputTokens: 0, durationMs: 0, timestamp: "t", provider: "openrouter", model: "qwen/q" },
+        { phase: "01", role: "reviewer", attempt: 1, costUsd: 0.5, inputTokens: 0, outputTokens: 0, durationMs: 0, timestamp: "t", provider: "openrouter", model: "qwen/q" },
+        { phase: "02", role: "builder", attempt: 1, costUsd: 1.5, inputTokens: 0, outputTokens: 0, durationMs: 0, timestamp: "t", provider: "claude_cli", model: "opus" },
+      ],
+    }
+    const snap = buildSnapshot("demo", baseState(), budget, [])
+    expect(snap.budget.perProvider).toEqual([
+      { provider: "openrouter", model: "qwen/q", costUsd: 1.5 },
+      { provider: "claude_cli", model: "opus", costUsd: 1.5 },
+    ])
+  })
+
+  it("buckets entries without provider/model under 'unknown'", () => {
+    const budget: BudgetState = {
+      totalCostUsd: 1,
+      entries: [
+        { phase: "01", role: "builder", attempt: 1, costUsd: 1, inputTokens: 0, outputTokens: 0, durationMs: 0, timestamp: "t" },
+      ],
+    }
+    const snap = buildSnapshot("demo", baseState(), budget, [])
+    expect(snap.budget.perProvider).toEqual([{ provider: "unknown", model: "", costUsd: 1 }])
+  })
+
   it("returns the latest phase_fail / budget_exceeded as lastError", () => {
     const trajectory: TrajectoryEntry[] = [
       { timestamp: "t1", type: "build_start", phaseId: "01", duration: null, tokens: null, costUsd: null, summary: "start" },

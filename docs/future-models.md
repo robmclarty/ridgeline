@@ -91,12 +91,44 @@ The single-shot flows (`plan`, `refine`, `research`) accept any configured
 provider today. The autonomous `build` is gated more conservatively: it is the
 longest, most expensive, most tool-intensive flow, and agent quality on a long
 build varies by provider. So non-Claude builds are enabled per-provider via an
-allowlist (`ENGINE_BUILDER_PROVIDERS` in `src/commands/build.ts`) that starts
-empty. To turn one on: run a small build on that provider in a throwaway
-sandboxed repo, confirm the phases pass review, then add the provider to the
-allowlist. Claude builds are unaffected -- they keep the CLI path regardless of
-whether an API key is present, so a key never silently reroutes a build onto a
-metered API.
+allowlist (`ENGINE_BUILDER_PROVIDERS` in `src/commands/build.ts`); OpenRouter is
+the first provider validated end-to-end and on the list. To turn another on: run
+a small build on that provider in a throwaway sandboxed repo, confirm the phases
+pass review, then add the provider to the allowlist. Claude builds are
+unaffected -- they keep the CLI path regardless of whether an API key is present,
+so a key never silently reroutes a build onto a metered API.
+
+### Provider attribution and cost
+
+Each recorded cost entry in `budget.json` -- and the matching `trajectory.jsonl`
+events -- carries the **actual** `provider` and `model` that produced it (ground
+truth from the engine, not the requested string), plus a `phase_provider`
+trajectory event logging the routing decision per phase. So the artifacts always
+show which provider ran each phase; a `claude_cli` entry on a run you launched
+elsewhere is the misroute signal. `ridgeline ui` surfaces a per-provider cost
+breakdown alongside the per-role one.
+
+fascicle prices its built-in model catalog (Anthropic, OpenAI, …) automatically,
+so cost tracking and the `--max-budget-usd` cap work out of the box there.
+Providers it does not price -- notably **OpenRouter** -- otherwise report `$0`,
+which means a budget cap silently can't bound them. Two things close that gap:
+supply per-model rates under a `pricing` key in `.ridgeline/settings.json`, keyed
+by the same `provider:model_id` colon form you pass to `--model`, and the cap
+starts working for that model; and if you set a cap on an unpriced non-Claude
+model without supplying rates, `build` warns up front rather than running
+silently uncapped. `ollama`/`lmstudio` are treated as free, so they need no
+entry.
+
+```json
+{
+  "pricing": {
+    "openrouter:qwen/qwen3-coder-30b-a3b-instruct": {
+      "input_per_million": 0.07,
+      "output_per_million": 0.26
+    }
+  }
+}
+```
 
 This is the same theme as the rest of this document: the harness encodes a sound
 process, and it benefits from whatever model -- or provider -- you point it at.

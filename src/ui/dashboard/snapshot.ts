@@ -20,6 +20,8 @@ export interface DashboardSnapshot {
   budget: {
     totalCostUsd: number
     perRole: { role: string; costUsd: number }[]
+    /** Cost grouped by the provider/model that actually ran. Reveals a misroute at a glance. */
+    perProvider: { provider: string; model: string; costUsd: number }[]
   }
   lastError: { phaseId: string | null; message: string } | null
 }
@@ -44,8 +46,15 @@ const slugOf = (id: string): string => {
 
 const summarizeBudget = (budget: BudgetState): DashboardSnapshot["budget"] => {
   const byRole = new Map<string, number>()
+  const byProvider = new Map<string, { provider: string; model: string; costUsd: number }>()
   for (const entry of budget.entries) {
     byRole.set(entry.role, (byRole.get(entry.role) ?? 0) + entry.costUsd)
+    const provider = entry.provider ?? "unknown"
+    const model = entry.model ?? ""
+    const key = `${provider} ${model}`
+    const acc = byProvider.get(key)
+    if (acc) acc.costUsd += entry.costUsd
+    else byProvider.set(key, { provider, model, costUsd: entry.costUsd })
   }
   const perRole: { role: string; costUsd: number }[] = []
   for (const role of roleOrder) {
@@ -54,7 +63,8 @@ const summarizeBudget = (budget: BudgetState): DashboardSnapshot["budget"] => {
   for (const [role, cost] of byRole) {
     if (!roleOrder.includes(role)) perRole.push({ role, costUsd: cost })
   }
-  return { totalCostUsd: budget.totalCostUsd, perRole }
+  const perProvider = [...byProvider.values()]
+  return { totalCostUsd: budget.totalCostUsd, perRole, perProvider }
 }
 
 const findLastError = (trajectory: TrajectoryEntry[]): DashboardSnapshot["lastError"] => {

@@ -90,6 +90,19 @@ describe("budget", () => {
       expect(budget.totalCostUsd).toBeCloseTo(0.35)
     })
 
+    it("records provider/model from the result when present", () => {
+      const result = { ...makeClaudeResult(0.10), provider: "openrouter", model: "qwen/qwen3-coder-30b-a3b-instruct" }
+      const budget = recordCost(tmpDir, "01-scaffold", "builder", 0, result)
+      expect(budget.entries[0].provider).toBe("openrouter")
+      expect(budget.entries[0].model).toBe("qwen/qwen3-coder-30b-a3b-instruct")
+    })
+
+    it("omits provider/model when the result has none", () => {
+      const budget = recordCost(tmpDir, "01-scaffold", "builder", 0, makeClaudeResult(0.10))
+      expect(budget.entries[0]).not.toHaveProperty("provider")
+      expect(budget.entries[0]).not.toHaveProperty("model")
+    })
+
     it("records token counts from result", () => {
       const result = makeClaudeResult(0.10, 500, 250)
       const budget = recordCost(tmpDir, "phase", "builder", 0, result)

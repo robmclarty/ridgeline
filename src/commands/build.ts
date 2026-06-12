@@ -1,6 +1,6 @@
-import { run, step, type Step } from "fascicle"
+import { run, step, type Step, type Engine } from "fascicle"
 import { RidgelineConfig, PhaseInfo } from "../types.js"
-import { printInfo, printError, printPhaseHeader } from "../ui/output.js"
+import { printInfo, printWarn, printError, printPhaseHeader } from "../ui/output.js"
 import { formatDuration, formatTokens } from "../ui/summary.js"
 import { initLogger } from "../ui/logger.js"
 import { initTranscript } from "../ui/transcript.js"
@@ -21,8 +21,8 @@ import { ensureGitRepo } from "../engine/worktree.js"
 import { requestPhaseApproval } from "../ui/phase-prompt.js"
 import { installGracefulStopListener } from "../ui/graceful-stop.js"
 import { makeRidgelineEngine } from "../engine/engine.factory.js"
-import { resolveEngineProviders } from "../stores/settings.js"
-import { isClaudeBuildModel, resolveRoute } from "../engine/provider-route.js"
+import { resolveEngineProviders, resolveEnginePricing } from "../stores/settings.js"
+import { isClaudeBuildModel, resolveRoute, unpriceableBudgetTarget } from "../engine/provider-route.js"
 import { buildFlow, type BuildFlowInput, type BuildPhaseResult, type RunPhaseStepInput } from "../engine/flows/build.flow.js"
 import type { WorktreeDriver, WorktreeItem } from "../engine/composites/index.js"
 import * as fs from "node:fs"
@@ -299,13 +299,37 @@ const makeBudgetSubscriber = (
  *   Validated 2026-06-12 — full build → review → checkpoint of
  *   examples/helloworld on `openrouter:qwen/qwen3-coder-30b-a3b-instruct`,
  *   confirmed against OpenRouter's own API (the request registered there and
- *   reported provider-shaped, non-Claude usage). Cost is reported as unpriced
- *   ($0) for OpenRouter models — fascicle has no pricing entry for them, so
- *   `--max-budget-usd` does not cap this path yet (see docs/plans/fixes.md).
+ *   reported provider-shaped, non-Claude usage). fascicle has no built-in price
+ *   for OpenRouter models, so cost reads $0 unless a settings `pricing` entry is
+ *   supplied; `--max-budget-usd` caps the path once priced, and warns up front
+ *   when a cap is set but no price is known (see `warnIfBudgetCapUnpriceable`).
  */
 const ENGINE_BUILDER_PROVIDERS: ReadonlySet<string> = new Set<string>(["openrouter"])
 
 const isEngineBuilderEnabled = (provider: string): boolean => ENGINE_BUILDER_PROVIDERS.has(provider)
+
+/**
+ * Guard against a *silent* uncapped run: when a budget cap is set but the build
+ * model routes to a non-Claude provider fascicle can't price, every cost reads
+ * `$0` and `--max-budget-usd` never trips. Warn loudly and say how to fix it
+ * (settings `pricing`) rather than letting the cap look active when it isn't.
+ */
+const warnIfBudgetCapUnpriceable = (config: RidgelineConfig, engine: Engine): void => {
+  const target = unpriceableBudgetTarget(
+    config.model,
+    config.ridgelineDir,
+    config.maxBudgetUsd,
+    (provider, modelId) => engine.resolve_price(provider, modelId),
+  )
+  if (!target) return
+  const key = `${target.provider}:${target.modelId}`
+  printWarn(
+    `--max-budget-usd $${config.maxBudgetUsd} cannot bound this build: no pricing is known for `
+    + `'${key}', so its cost is recorded as $0 and the cap will never trip. `
+    + `Add a "pricing" entry keyed "${key}" to settings.json (per-million-token rates) `
+    + `to enable cost tracking and the budget cap for this model.`,
+  )
+}
 
 export const runBuild = async (config: RidgelineConfig): Promise<void> => {
   if (!isClaudeBuildModel(config.model)) {
@@ -351,8 +375,11 @@ export const runBuild = async (config: RidgelineConfig): Promise<void> => {
     pluginDirs: [],
     settingSources: ["user", "project", "local"],
     buildPath: config.buildDir,
+    pricing: resolveEnginePricing(config.ridgelineDir),
     ...resolveEngineProviders(config.ridgelineDir),
   })
+
+  warnIfBudgetCapUnpriceable(config, engine)
 
   const runPhaseStep: Step<RunPhaseStepInput, BuildPhaseResult> = step(
     "build.run_phase",

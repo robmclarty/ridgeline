@@ -106,6 +106,31 @@ describe("makeRidgelineEngine", () => {
     expect(lastConfig().providers.claude_cli?.stall_timeout_ms).toBe(300_000)
   })
 
+  it("registers each supplied price on the engine", async () => {
+    const eng = mockEngine()
+    createEngineMock.mockImplementation(() => eng)
+    const make = await importFactory()
+    make({
+      ...baseCfg,
+      sandboxFlag: "off",
+      pricing: [
+        { provider: "openrouter", modelId: "qwen/q", pricing: { input_per_million: 0.07, output_per_million: 0.26 } },
+      ],
+    })
+    expect(eng.register_price).toHaveBeenCalledWith("openrouter", "qwen/q", {
+      input_per_million: 0.07,
+      output_per_million: 0.26,
+    })
+  })
+
+  it("registers no prices when pricing is omitted", async () => {
+    const eng = mockEngine()
+    createEngineMock.mockImplementation(() => eng)
+    const make = await importFactory()
+    make({ ...baseCfg, sandboxFlag: "off" })
+    expect(eng.register_price).not.toHaveBeenCalled()
+  })
+
   it("sets skip_probe to true when VITEST==='true'", async () => {
     expect(process.env.VITEST).toBe("true")
     const make = await importFactory()

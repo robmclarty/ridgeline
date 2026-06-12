@@ -111,6 +111,17 @@ const CLIENT_SCRIPT = `(function () {
       html += '<div><div class="dim">' + escape(r.role) + '</div><div class="cost-stage-value mono">' + escape(fmtCost(r.costUsd)) + '</div></div>';
     }
     breakdown.innerHTML = html;
+
+    var providerEl = document.getElementById("cost-provider");
+    if (!providerEl) return;
+    var providers = (state.budget && state.budget.perProvider) || [];
+    var phtml = "";
+    for (var j = 0; j < providers.length; j++) {
+      var p = providers[j];
+      var label = p.model ? p.provider + " · " + p.model : p.provider;
+      phtml += '<div><div class="dim">' + escape(label) + '</div><div class="cost-stage-value mono">' + escape(fmtCost(p.costUsd)) + '</div></div>';
+    }
+    providerEl.innerHTML = phtml;
   }
 
   function escape(s) {

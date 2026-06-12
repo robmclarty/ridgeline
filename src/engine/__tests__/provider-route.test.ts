@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { resolveRoute } from "../provider-route.js"
+import { resolveRoute, unpriceableBudgetTarget } from "../provider-route.js"
 
 const makeRidgelineDir = (settings?: Record<string, unknown>): string => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ridgeline-route-"))
@@ -103,6 +103,34 @@ describe("resolveRoute", () => {
       provider: "openai",
       modelId: "gpt-4o",
       isClaudeCli: false,
+    })
+  })
+
+  describe("unpriceableBudgetTarget", () => {
+    const noPrice = () => undefined
+    const hasPrice = () => ({ input_per_million: 1, output_per_million: 2 })
+
+    it("returns the provider/modelId when a cap is set on an unpriced non-Claude model", () => {
+      expect(unpriceableBudgetTarget("openrouter:qwen/q", ridgelineDir(), 10, noPrice)).toEqual({
+        provider: "openrouter",
+        modelId: "qwen/q",
+      })
+    })
+
+    it("returns null when no budget cap is set", () => {
+      expect(unpriceableBudgetTarget("openrouter:qwen/q", ridgelineDir(), null, noPrice)).toBeNull()
+    })
+
+    it("returns null for a Claude build model (priced on the subscription path)", () => {
+      expect(unpriceableBudgetTarget("opus", ridgelineDir(), 10, noPrice)).toBeNull()
+    })
+
+    it("returns null when the model has a registered price", () => {
+      expect(unpriceableBudgetTarget("openrouter:qwen/q", ridgelineDir(), 10, hasPrice)).toBeNull()
+    })
+
+    it("returns null for a free provider (cost is legitimately $0)", () => {
+      expect(unpriceableBudgetTarget("ollama:llama3", ridgelineDir(), 10, noPrice)).toBeNull()
     })
   })
 })

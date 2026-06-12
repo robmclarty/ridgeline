@@ -28,6 +28,7 @@ import {
   resolveSequencing,
   resolvePreflight,
   resolveMaxBudgetUsd,
+  resolveEnginePricing,
   DEFAULT_PREFLIGHT,
 } from "../settings.js"
 
@@ -86,6 +87,44 @@ describe("settings", () => {
     it("ignores non-boolean settings values and falls back to the default", () => {
       writeSettings({ preflight: "nope" })
       expect(resolvePreflight(tmpDir)).toBe(true)
+    })
+  })
+
+  describe("resolveEnginePricing", () => {
+    const writeSettings = (obj: unknown): void =>
+      fs.writeFileSync(path.join(tmpDir, "settings.json"), JSON.stringify(obj))
+
+    it("returns [] when pricing is unset", () => {
+      expect(resolveEnginePricing(tmpDir)).toEqual([])
+    })
+
+    it("splits a provider:model_id key into provider + modelId", () => {
+      writeSettings({
+        pricing: {
+          "openrouter:qwen/qwen3-coder-30b-a3b-instruct": { input_per_million: 0.07, output_per_million: 0.26 },
+        },
+      })
+      expect(resolveEnginePricing(tmpDir)).toEqual([
+        {
+          provider: "openrouter",
+          modelId: "qwen/qwen3-coder-30b-a3b-instruct",
+          pricing: { input_per_million: 0.07, output_per_million: 0.26 },
+        },
+      ])
+    })
+
+    it("skips malformed keys (no provider segment or trailing colon)", () => {
+      writeSettings({
+        pricing: {
+          "no-colon": { input_per_million: 1, output_per_million: 2 },
+          "trailing:": { input_per_million: 1, output_per_million: 2 },
+          "openrouter:good": { input_per_million: 1, output_per_million: 2 },
+        },
+      })
+      const entries = resolveEnginePricing(tmpDir)
+      expect(entries).toHaveLength(1)
+      expect(entries[0].provider).toBe("openrouter")
+      expect(entries[0].modelId).toBe("good")
     })
   })
 

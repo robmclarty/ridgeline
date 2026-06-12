@@ -135,6 +135,14 @@ export type ClaudeResult = {
     cacheCreationInputTokens: number
   }
   sessionId: string
+  /**
+   * Provider/model that actually produced this result. Ground truth from the
+   * engine's `model_resolved` on the in-process path; `"claude_cli"` + the
+   * requested model on the subprocess path. Absent only on synthetic
+   * placeholder results (e.g. a failed specialist that never reached a model).
+   */
+  provider?: string
+  model?: string
 }
 
 // Structured issue from reviewer
@@ -239,6 +247,14 @@ export type BudgetEntry = {
   cacheCreationInputTokens?: number
   durationMs: number
   timestamp: string
+  /**
+   * Provider/model that produced this entry (the actual transport, not the
+   * requested one). Lets `budget.json` reveal which provider ran each phase —
+   * a `claude_cli` entry on a run requested elsewhere is the misroute signal.
+   * Absent on entries recorded before this was tracked.
+   */
+  provider?: string
+  model?: string
 }
 
 // Full budget.json structure
@@ -270,6 +286,7 @@ export type TrajectoryEntry = {
     | "builder_continuation"
     | "builder_loop_complete"
     | "builder_no_progress"
+    | "phase_provider"
   phaseId: string | null
   duration: number | null
   tokens: { input: number; output: number } | null
@@ -281,6 +298,9 @@ export type TrajectoryEntry = {
   promptStableHash?: string
   cacheReadInputTokens?: number
   cacheCreationInputTokens?: number
+  /** Provider/model attribution: the routing decision (`phase_provider`) or the actual transport that produced a cost-bearing event. */
+  provider?: string
+  model?: string
 }
 
 // Stage-specific structured skeletons used for ensemble agreement detection

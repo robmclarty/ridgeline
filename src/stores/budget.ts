@@ -35,6 +35,8 @@ export const makeBudgetEntry = (
   cacheCreationInputTokens: result.usage.cacheCreationInputTokens,
   durationMs: result.durationMs,
   timestamp: new Date().toISOString(),
+  ...(result.provider !== undefined ? { provider: result.provider } : {}),
+  ...(result.model !== undefined ? { model: result.model } : {}),
 })
 
 // Low-level append: persists one pre-formed entry under the file lock.
