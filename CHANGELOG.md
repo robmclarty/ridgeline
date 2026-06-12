@@ -1,5 +1,38 @@
 # Changelog
 
+## v0.12.12 — 2026-06-11
+
+### Added
+
+- Provider-agnostic execution: builds, single-shot flows, and the
+  autonomous builder/reviewer now run on any provider through the
+  in-process fascicle engine, not just the Claude CLI subprocess.
+- OpenRouter validated end-to-end as the first non-Claude provider (e.g.
+  `qwen/qwen3-coder-30b-a3b-instruct`), with the optional
+  `@openrouter/ai-sdk-provider` package wired in.
+- Provider API keys are now loaded automatically from `.ridgeline/.env`.
+- Run artifacts (`budget.json`, `trajectory.jsonl`) and `ridgeline ui`
+  now record the actual provider and model per phase — making a misroute
+  visible in the logs — and track real non-Claude cost so
+  `--max-budget-usd` caps spend on priced models (warning loudly when a
+  cap is set on an unpriced model).
+
+### Fixed
+
+- `--model`, `--sandbox`, and other options declared on both the root and
+  subcommands were silently dropped on subcommands, so non-Claude builds
+  fell back to the Claude CLI. The wrappers now read merged
+  (global + local) options.
+- Silenced the AI SDK "System messages … can be a security risk" warning
+  that flooded every engine-path model call, via fascicle 0.6.3 (which
+  delivers the system prompt through the SDK's top-level `system` option).
+
+### Internal
+
+- Bumped fascicle 0.5.x → 0.6.0 → 0.6.3.
+- Documented cross-provider flows and opt-in web search.
+- Excluded gitignored `docs/plans` from markdownlint and cspell.
+
 ## v0.12.11 — 2026-06-03
 
 ### Fixed
